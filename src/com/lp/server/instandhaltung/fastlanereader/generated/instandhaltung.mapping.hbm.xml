@@ -1,0 +1,262 @@
+<?xml version="1.0"?>
+<!--
+  HELIUM V, Open Source ERP software for sustained success
+  at small and medium-sized enterprises.
+  Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+  
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published 
+  by the Free Software Foundation, either version 3 of theLicense, or 
+  (at your option) any later version.
+  
+  According to sec. 7 of the GNU Affero General Public License, version 3, 
+  the terms of the AGPL are supplemented with the following terms:
+  
+  "HELIUM V" and "HELIUM 5" are registered trademarks of 
+  HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+  AGPL does not imply a trademark license. Therefore any rights, title and
+  interest in our trademarks remain entirely with us. If you want to propagate
+  modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
+  you may only do so if you have a written permission by HELIUM V IT-Solutions 
+  GmbH (to acquire a permission please contact HELIUM V IT-Solutions
+  at trademark@heliumv.com).
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+  
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  
+  Contact: developers@heliumv.com
+-->
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping
+	package="com.lp.server.instandhaltung.fastlanereader.generated">
+	<class name="FLRInstandhaltung" table="IS_INSTANDHALTUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="kunde_i_id" column="KUNDE_I_ID" type="java.lang.Integer" />
+		<property name="kategorie_i_id" column="KATEGORIE_I_ID" type="java.lang.Integer" />
+		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
+		<many-to-one name="flriskategorie"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRIskategorie"
+			column="KATEGORIE_I_ID" insert="false" update="false" />
+		<many-to-one name="flrkunde"
+			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
+			column="KUNDE_I_ID" insert="false" update="false" />
+
+
+		<set name="standortset" inverse="true">
+			<key column="INSTANDHALTUNG_I_ID" />
+			<one-to-many
+				class="com.lp.server.instandhaltung.fastlanereader.generated.FLRStandort" />
+
+		</set>
+
+	</class>
+	<class name="FLRStandort" table="IS_STANDORT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="partner_i_id" column="PARTNER_I_ID" type="java.lang.Integer" />
+		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
+		<many-to-one name="flrpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID" insert="false" update="false" />
+		<many-to-one name="flrauftrag"
+			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag"
+			column="AUFTRAG_I_ID" insert="false" update="false" />
+		<many-to-one name="flrinstandhaltung"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRInstandhaltung"
+			column="INSTANDHALTUNG_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRGeraetetyp" table="IS_GERAETETYP">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+	</class>
+	<class name="FLRHalle" table="IS_HALLE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<many-to-one name="flrstandort"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRStandort"
+			column="STANDORT_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRAnlage" table="IS_ANLAGE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<many-to-one name="flrhalle"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRHalle"
+			column="HALLE_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRIsmaschine" table="IS_ISMASCHINE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<many-to-one name="flranlage"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRAnlage"
+			column="ANLAGE_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRGeraet" table="IS_GERAET">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
+		<property name="c_standort" column="C_STANDORT" type="java.lang.String" />
+		<property name="x_bemerkung" column="X_BEMERKUNG" type="java.lang.String" />
+		<property name="n_grenzwertmin" column="N_GRENZWERTMIN" type="java.math.BigDecimal" />
+		<property name="n_grenzwertmax" column="N_GRENZWERTMAX" type="java.math.BigDecimal" />
+		<property name="n_grenzwert" column="N_GRENZWERT" type="java.math.BigDecimal" />
+		<many-to-one name="flrstandort"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRStandort"
+			column="STANDORT_I_ID" insert="false" update="false" />
+		<many-to-one name="flrhalle"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRHalle"
+			column="HALLE_I_ID" insert="false" update="false" />
+		<many-to-one name="flranlage"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRAnlage"
+			column="ANLAGE_I_ID" insert="false" update="false" />
+		<many-to-one name="flrismaschine"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRIsmaschine"
+			column="ISMASCHINE_I_ID" insert="false" update="false" />
+		<many-to-one name="flrgeraetetyp"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRGeraetetyp"
+			column="GERAETETYP_I_ID" insert="false" update="false" />
+		<many-to-one name="flrgewerk"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRGewerk"
+			column="GEWERK_I_ID" insert="false" update="false" />
+			<many-to-one name="flrhersteller"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRHersteller"
+			column="HERSTELLER_I_ID" insert="false" update="false" />
+
+
+		<set name="wartungslisteset" inverse="true">
+			<key column="GERAET_I_ID" />
+			<one-to-many
+				class="com.lp.server.instandhaltung.fastlanereader.generated.FLRWartungsliste" />
+
+		</set>
+
+	</class>
+	<class name="FLRIskategorie" table="IS_KATEGORIE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+
+	</class>
+	<class name="FLRGewerk" table="IS_GEWERK">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+
+	</class>
+	<class name="FLRWartungsliste" table="IS_WARTUNGSLISTE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="c_veraltet" column="C_VERALTET" type="java.lang.String" />
+		<property name="t_veraltet" column="T_VERALTET" type="java.sql.Timestamp" />
+		<property name="geraet_i_id" column="GERAET_I_ID" type="java.lang.Integer" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="x_bemerkung" column="X_BEMERKUNG" type="java.lang.String" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<many-to-one name="flrgeraet"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRGeraet"
+			column="GERAET_I_ID" insert="false" update="false" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<property name="b_verrechenbar" column="B_VERRECHENBAR" type="java.lang.Short" />
+		<property name="b_wartungsmaterial" column="B_WARTUNGSMATERIAL"
+			type="java.lang.Short" />
+
+
+	</class>
+
+	<class name="FLRWartungsschritte" table="IS_WARTUNGSSCHRITTE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="geraet_i_id" column="GERAET_I_ID" type="java.lang.Integer" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="auftragwiederholungsintervall_c_nr" column="AUFTRAGWIEDERHOLUNGSINTERVALL_C_NR"
+			type="java.lang.String" />
+		<property name="t_abdurchfuehren" column="T_ABDURCHFUEHREN"
+			type="java.sql.Timestamp" />
+		<property name="l_dauer" column="L_DAUER" type="java.lang.Long" />
+		<many-to-one name="flrgeraet"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRGeraet"
+			column="GERAET_I_ID" insert="false" update="false" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpersonalgruppe"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonalgruppe"
+			column="PERSONALGRUPPE_I_ID" insert="false" update="false" />
+
+
+
+	</class>
+	<class name="FLRGeraetehistorie" table="IS_GERAETEHISTORIE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="geraet_i_id" column="GERAET_I_ID" type="java.lang.Integer" />
+		<property name="personal_i_id_techniker" column="PERSONAL_I_ID_TECHNIKER"
+			type="java.lang.Integer" />
+		<property name="personal_i_id_aendern" column="PERSONAL_I_ID_AENDERN"
+			type="java.lang.Integer" />
+		<property name="t_wartung" column="T_WARTUNG" type="java.sql.Timestamp" />
+		<property name="t_aendern" column="T_AENDERN" type="java.sql.Timestamp" />
+		<property name="b_nichtmoeglich" column="B_NICHTMOEGLICH"
+			type="java.lang.Short" />
+		<many-to-one name="flrgeraet"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRGeraet"
+			column="GERAET_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrpersonal_techniker"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_TECHNIKER" insert="false" update="false" />
+		<many-to-one name="flrpersonal_aendern"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_AENDERN" insert="false" update="false" />
+
+
+	</class>
+
+	<class name="FLRStandorttechniker" table="IS_STANDORTTECHNIKER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="standort_i_id" column="STANDORT_I_ID" type="java.lang.Integer" />
+		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" />
+		<property name="b_verantwortlicher" column="B_VERANTWORTLICHER"
+			type="java.lang.Short" />
+		<many-to-one name="flrstandort"
+			class="com.lp.server.instandhaltung.fastlanereader.generated.FLRStandort"
+			column="STANDORT_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID" insert="false" update="false" />
+	</class>
+</hibernate-mapping>

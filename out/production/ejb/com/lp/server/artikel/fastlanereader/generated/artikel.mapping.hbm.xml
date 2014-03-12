@@ -1,0 +1,953 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="com.lp.server.artikel.fastlanereader.generated">
+	<class name="FLRArtikelgruppe" table="WW_ARTGRU">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" not-null="true"
+			type="java.lang.String" />
+		<many-to-one name="flrartikelgruppe"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe"
+			column="ARTGRU_I_ID" />
+		<many-to-one name="flrkonto"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID" />
+		<set name="artikelgruppesprset" inverse="true">
+			<key column="ARTGRU_I_ID" />
+			<one-to-many
+				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppespr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+	</class>
+	<class name="FLRArtikelgruppespr" table="WW_ARTGRUSPR">
+		<composite-id>
+			<key-many-to-one name="artgru" column="ARTGRU_I_ID"
+				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRArtikelklasse" table="WW_ARTKLA">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" not-null="true"
+			type="java.lang.String" />
+		<property name="b_tops" column="B_TOPS" type="java.lang.Short" />
+		<many-to-one name="flrartikelklasse"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelklasse"
+			column="ARTKLA_I_ID" />
+		<set name="artikelklassesprset" inverse="true">
+			<key column="ARTKLA_I_ID" />
+			<one-to-many
+				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelklassespr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+	</class>
+	<class name="FLRArtikelklassespr" table="WW_ARTKLASPR">
+		<composite-id>
+			<key-many-to-one name="artkla" column="ARTKLA_I_ID"
+				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelklasse" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+
+	<class name="FLRShopgruppe" table="WW_SHOPGRUPPE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" not-null="true"
+			type="java.lang.String" />
+		<many-to-one name="flrshopgruppe"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRShopgruppe"
+			column="SHOPGRUPPE_I_ID" />
+		<set name="shopgruppesprset" inverse="true">
+			<key column="SHOPGRUPPE_I_ID" />
+			<one-to-many
+				class="com.lp.server.artikel.fastlanereader.generated.FLRShopgruppespr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+	</class>
+	<class name="FLRShopgruppespr" table="WW_SHOPGRUPPESPR">
+		<composite-id>
+			<key-many-to-one name="shopgruppe" column="SHOPGRUPPE_I_ID"
+				class="com.lp.server.artikel.fastlanereader.generated.FLRShopgruppe" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+	<class name="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+		table="WW_ARTIKEL">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" not-null="true"
+			type="java.lang.String" />
+		<property name="einheit_c_nr" column="EINHEIT_C_NR" type="java.lang.String" />
+		<property name="artikelart_c_nr" column="ARTIKELART_C_NR"
+			type="java.lang.String" />
+		<property name="b_lagerbewertet" column="B_LAGERBEWERTET"
+			type="java.lang.Short" />
+		<property name="b_lagerbewirtschaftet" column="B_LAGERBEWIRTSCHAFTET"
+			type="java.lang.Short" />
+		<property name="b_seriennrtragend" column="B_SERIENNRTRAGEND"
+			type="java.lang.Short" />
+		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
+		<property name="b_chargennrtragend" column="B_CHARGENNRTRAGEND"
+			type="java.lang.Short" />
+		<property name="f_verschnittfaktor" column="F_VERSCHNITTFAKTOR"
+			type="java.lang.Double" />
+		<property name="f_verschnittbasis" column="F_VERSCHNITTBASIS"
+			type="java.lang.Double" />
+		<property name="f_vertreterprovisionmax" column="F_VERTRETERPROVISIONMAX"
+			type="java.lang.Double" />
+		<property name="f_lagermindest" column="F_LAGERMINDEST" type="java.lang.Double" />
+		<property name="f_lagersoll" column="F_LAGERSOLL" type="java.lang.Double" />
+		<property name="f_fertigungssatzgroesse" column="F_FERTIGUNGSSATZGROESSE"
+			type="java.lang.Double" />
+		<property name="c_artikelbezhersteller" column="C_ARTIKELBEZHERSTELLER"
+			not-null="false" type="java.lang.String" />
+		<property name="c_artikelnrhersteller" column="C_ARTIKELNRHERSTELLER"
+			not-null="false" type="java.lang.String" />
+		<property name="i_sofortverbrauch" column="I_SOFORTVERBRAUCH"
+			length="5" type="java.lang.Integer" />
+		<property name="i_wartungsintervall" column="I_WARTUNGSINTERVALL"
+			length="5" type="java.lang.Integer" />
+		<property name="einheit_c_nr_bestellung" column="EINHEIT_C_NR_BESTELLUNG"
+			type="java.lang.String" />
+		<property name="n_umrechnungsfaktor" column="N_UMRECHNUGSFAKTOR"
+			length="15" not-null="true" type="java.math.BigDecimal" />
+		<property name="b_bestellmengeneinheitinvers" column="B_BESTELLMENGENEINHEIT_INVERS"
+			type="java.lang.Short" />		
+		<many-to-one name="flrartikelgruppe"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe"
+			column="ARTGRU_I_ID" />
+		<many-to-one name="flrshopgruppe"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRShopgruppe"
+			column="SHOPGRUPPE_I_ID" />
+
+		<many-to-one name="flrartikelklasse"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelklasse"
+			column="ARTKLA_I_ID" />
+		<many-to-one name="flrliefergruppe"
+			class="com.lp.server.partner.fastlanereader.generated.FLRLiefergruppe"
+			column="LFLIEFERGRUPPE_I_ID" />
+	</class>
+	<class name="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+		table="WW_ARTIKEL">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property column="C_NR" length="25" name="c_nr" not-null="true"
+			type="java.lang.String" />
+		<property column="MANDANT_C_NR" name="mandant_c_nr" not-null="true"
+			type="java.lang.String" />
+		<property column="EINHEIT_C_NR" length="15" name="einheit_c_nr"
+			not-null="false" type="java.lang.String" />
+		<property column="B_LAGERBEWERTET" length="5" name="b_lagerbewertet"
+			not-null="true" type="java.lang.Short" />
+		<property column="B_LAGERBEWIRTSCHAFTET" length="5"
+			name="b_lagerbewirtschaftet" not-null="true" type="java.lang.Short" />
+		<property column="B_SERIENNRTRAGEND" length="5"
+			name="b_seriennrtragend" not-null="true" type="java.lang.Short" />
+		<property column="B_CHARGENNRTRAGEND" length="5"
+			name="b_chargennrtragend" not-null="true" type="java.lang.Short" />
+		<property column="B_VERSTECKT" length="5" name="b_versteckt"
+			not-null="true" type="java.lang.Short" />
+		<property column="I_GARANTIEZEIT" length="5" name="i_garantiezeit"
+			type="java.lang.Integer" />
+		<property column="ARTIKELART_C_NR" name="artikelart_c_nr"
+			not-null="true" type="java.lang.String" />
+		<property column="C_REFERENZNR" length="25" name="c_referenznr"
+			not-null="true" type="java.lang.String" />
+		<property column="EINHEIT_C_NR_BESTELLUNG" length="25"
+			name="einheit_c_nr_bestellung" not-null="true" type="java.lang.String" />
+		<property column="N_UMRECHNUGSFAKTOR" name="n_umrechnugsfaktor"
+			not-null="true" type="java.math.BigDecimal" />
+		<property name="f_fertigungssatzgroesse" column="F_FERTIGUNGSSATZGROESSE"
+			type="java.lang.Double" />
+		<property name="c_artikelbezhersteller" column="C_ARTIKELBEZHERSTELLER"
+			not-null="false" type="java.lang.String" />
+		<property name="c_artikelnrhersteller" column="C_ARTIKELNRHERSTELLER"
+			not-null="false" type="java.lang.String" />
+		<property name="mwstsatz_i_id" column="MWSTSATZ_I_ID"
+			not-null="false" type="java.lang.Integer" />
+
+		<many-to-one name="flrartikelgruppe"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe"
+			column="ARTGRU_I_ID" />
+		<many-to-one name="flrshopgruppe"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRShopgruppe"
+			column="SHOPGRUPPE_I_ID" />
+		<many-to-one name="flrartikelklasse"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelklasse"
+			column="ARTKLA_I_ID" />
+		<many-to-one name="flrgeometrie"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRGeometrie"
+			column="I_ID" insert="false" update="false" />
+		<set name="artikellieferantset" inverse="true">
+			<key column="ARTIKEL_I_ID" />
+			<one-to-many
+				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikellieferant" />
+		</set>
+		<set name="artikelsprset" inverse="true">
+			<key column="ARTIKEL_I_ID" />
+			<one-to-many
+				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikellistespr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<set name="artikellagerset" inverse="true">
+			<key column="ARTIKEL_I_ID" />
+			<one-to-many
+				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikellager" />
+			<filter name="filterMandant" condition=":paramMandant = MANDANT_C_NR" />
+		</set>
+		<set name="stuecklisten" inverse="true">
+			<key column="ARTIKEL_I_ID" />
+			<one-to-many
+				class="com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste" />
+			<filter name="filterMandant" condition=":paramMandant = MANDANT_C_NR" />
+		</set>
+		<set name="artikellagerplatzset" inverse="true">
+			<key column="ARTIKEL_I_ID" />
+			<one-to-many
+				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikellagerplaetze" />
+		</set>
+	</class>
+	<class name="FLRArtikellistespr" table="WW_ARTIKELSPR">
+		<composite-id
+			class="com.lp.server.artikel.fastlanereader.generated.service.FLRArtikellistesprPK"
+			name="Id">
+			<key-many-to-one
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale"
+				column="LOCALE_C_NR" name="locale" />
+			<key-many-to-one
+				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+				column="ARTIKEL_I_ID" name="artikelliste" />
+		</composite-id>
+		<property column="PERSONAL_I_ID_AENDERN" length="10"
+			name="personali_id_aendern" not-null="true" type="java.lang.Integer" />
+		<property column="C_ZBEZ" length="40" name="c_zbez" not-null="false"
+			type="java.lang.String" />
+		<property column="C_KBEZ" length="25" name="c_kbez" not-null="false"
+			type="java.lang.String" />
+		<property column="C_ZBEZ2" length="40" name="c_zbez2"
+			not-null="false" type="java.lang.String" />
+		<property column="T_AENDERN" length="23" name="t_aendern"
+			not-null="true" type="java.sql.Date" />
+		<property column="C_BEZ" length="40" name="c_bez" not-null="false"
+			type="java.lang.String" />
+		<property column="LOCALE_C_NR" length="10" name="locale_c_nr"
+			not-null="true" type="java.lang.String" insert="false" update="false" />
+	</class>
+	<class name="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+		table="WW_LAGER">
+		<id column="I_ID" name="i_id" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property column="C_NR" length="15" name="c_nr" not-null="true"
+			type="java.lang.String" />
+		<property column="MANDANT_C_NR" length="3" name="mandant_c_nr"
+			not-null="true" type="java.lang.String" />
+		<property column="LAGERART_C_NR" name="lagerart_c_nr" type="java.lang.String" />
+		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
+		<property name="b_konsignationslager" column="B_KONSIGNATIONSLAGER"
+			type="java.lang.Short" />
+		<property name="i_loslagersort" column="I_LOSLAGERSORT" type="java.lang.Integer" />
+		<set inverse="true" name="artikellagerset">
+			<key column="LAGER_I_ID" />
+			<one-to-many
+				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikellager" />
+		</set>
+	</class>
+	<class name="com.lp.server.artikel.fastlanereader.generated.FLRArtikellager"
+		table="WW_ARTIKELLAGER">
+		<composite-id
+			class="com.lp.server.artikel.fastlanereader.generated.service.WwArtikellagerPK"
+			name="compId">
+			<key-property name="artikel_i_id" column="ARTIKEL_I_ID"
+				type="java.lang.Integer" />
+			<key-property name="lager_i_id" column="LAGER_I_ID"
+				type="java.lang.Integer" />
+		</composite-id>
+		<property column="N_LAGERSTAND" length="15" name="n_lagerstand"
+			not-null="true" type="java.math.BigDecimal" />
+		<property column="N_GESTEHUNGSPREIS" length="15"
+			name="n_gestehungspreis" not-null="true" type="java.math.BigDecimal" />
+		<property column="MANDANT_C_NR" name="mandant_c_nr" not-null="true"
+			type="java.lang.String" />
+		<many-to-one name="flrlager"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+			column="LAGER_I_ID" insert="false" update="false" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrartikelliste"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRHersteller" table="WW_HERSTELLER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<many-to-one name="flrpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID" />
+	</class>
+	<class name="FLRGeometrie" table="WW_GEOMETRIE">
+		<id name="i_id" column="ARTIKEL_I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="f_breite" column="F_BREITE" type="java.lang.Double" />
+		<property name="f_hoehe" column="F_HOEHE" type="java.lang.Double" />
+		<property name="f_tiefe" column="F_TIEFE" type="java.lang.Double" />
+		<property name="c_breitetext" column="C_BREITETEXT" type="java.lang.String" />
+	</class>
+	<class name="FLRArtikellieferant" table="WW_ARTIKELLIEFERANT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="lieferant_i_id" column="LIEFERANT_I_ID" type="java.lang.Integer" />
+		<property name="c_artikelnrlieferant" column="C_ARTIKELNRLIEFERANT"
+			type="java.lang.String" />
+		<property column="T_PREISGUELTIGAB" name="t_preisgueltigab"
+			type="java.util.Date" />
+		<property name="c_bezbeilieferant" column="C_BEZBEILIEFERANT"
+			type="java.lang.String" />
+		<property name="n_einzelpreis" column="N_EINZELPREIS" type="java.math.BigDecimal" />
+		<property name="n_nettopreis" column="N_NETTOPREIS" type="java.math.BigDecimal" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="i_wiederbeschaffungszeit" column="I_WIEDERBESCHAFFUNGSZEIT"
+			type="java.lang.Integer" />
+		<property name="b_webshop" column="B_WEBSHOP" type="java.lang.Short" />
+		<many-to-one name="flrlieferant"
+			class="com.lp.server.partner.fastlanereader.generated.FLRLieferant"
+			column="LIEFERANT_I_ID" insert="false" update="false" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+
+		<set name="staffelset" inverse="true">
+			<key column="ARTIKELLIEFERANT_I_ID" />
+			<one-to-many
+				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikellieferantstaffel" />
+		</set>
+
+	</class>
+
+
+	<class name="FLRShopgruppewebshop" table="WW_SHOPGRUPPEWEBSHOP">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="shopgruppe_i_id" column="SHOPGRUPPE_I_ID"
+			type="java.lang.Integer" />
+		<property name="webshop_i_id" column="WEBSHOP_I_ID" type="java.lang.Integer" />
+
+		<many-to-one name="flrwebshop"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRWebshop"
+			column="WEBSHOP_I_ID" insert="false" update="false" />
+	</class>
+
+	<class name="FLRArtikellieferantstaffel" table="WW_ARTIKELLIEFERANTSTAFFEL">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikellieferant_i_id" column="ARTIKELLIEFERANT_I_ID"
+			type="java.lang.Integer" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="f_rabatt" column="F_RABATT" type="java.lang.Double" />
+		<property name="n_nettopreis" column="N_NETTOPREIS" type="java.math.BigDecimal" />
+		<property name="t_preisgueltigab" column="T_PREISGUELTIGAB"
+			type="java.util.Date" />
+		<property name="t_preisgueltigbis" column="T_PREISGUELTIGBIS"
+			type="java.util.Date" />
+		<many-to-one name="flrartikellieferant"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikellieferant"
+			column="ARTIKELLIEFERANT_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRKatalog" table="WW_KATALOG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="c_katalog" column="C_KATALOG" type="java.lang.String" />
+		<property name="c_seite" column="C_SEITE" type="java.lang.String" />
+	</class>
+	<class name="FLRMaterial" table="WW_MATERIAL">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<set name="materialsprset" inverse="true">
+			<key column="MATERIAL_I_ID" />
+			<one-to-many
+				class="com.lp.server.artikel.fastlanereader.generated.FLRMaterialspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+	</class>
+	<class name="FLRMaterialspr" table="WW_MATERIALSPR">
+		<composite-id>
+			<key-many-to-one name="material" column="MATERIAL_I_ID"
+				class="com.lp.server.artikel.fastlanereader.generated.FLRMaterial" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRMaterialzuschlag" table="WW_MATERIALZUSCHLAG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="material_i_id" column="MATERIAL_I_ID" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="t_gueltigab" column="T_GUELTIGAB" type="java.sql.Date" />
+		<property name="n_zuschlag" column="N_ZUSCHLAG" type="java.math.BigDecimal" />
+	</class>
+	<class name="FLRArtikelreservierung" table="WW_ARTIKELRESERVIERUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_belegartpositionid" column="I_BELEGARTPOSITIONID"
+			type="java.lang.Integer" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="t_liefertermin" column="T_LIEFERTERMIN" type="java.sql.Timestamp" />
+		<property name="c_belegartnr" column="C_BELEGARTNR" type="java.lang.String" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRArtikelbestellt" table="WW_ARTIKELBESTELLT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_belegartpositionid" column="I_BELEGARTPOSITIONID"
+			type="java.lang.Integer" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="t_liefertermin" column="T_LIEFERTERMIN" type="java.sql.Date" />
+		<property name="c_belegartnr" column="C_BELEGARTNR" type="java.lang.String" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRLagerbewegung" table="WW_LAGERBEWEGUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="t_buchungszeit" column="T_BUCHUNGSZEIT" type="java.sql.Timestamp" />
+		<property name="t_belegdatum" column="T_BELEGDATUM" type="java.sql.Timestamp" />
+		<property name="c_seriennrchargennr" column="C_SERIENNRCHARGENNR"
+			type="java.lang.String" />
+		<property name="c_belegartnr" column="C_BELEGARTNR" type="java.lang.String" />
+		<property name="i_belegartpositionid" column="I_BELEGARTPOSITIONID"
+			type="java.lang.Integer" />
+		<property name="i_belegartid" column="I_BELEGARTID" type="java.lang.Integer" />
+		<property name="i_id_buchung" column="I_ID_BUCHUNG" type="java.lang.Integer" />
+		<property name="b_abgang" column="B_ABGANG" type="java.lang.Short" />
+		<property name="b_historie" column="B_HISTORIE" type="java.lang.Short" />
+		<property name="c_version" column="C_VERSION" type="java.lang.String" />
+		<property name="b_vollstaendigverbraucht" column="B_VOLLSTAENDIGVERBRAUCHT"
+			type="java.lang.Short" />
+		<property name="n_verkaufspreis" column="N_VERKAUFSPREIS"
+			type="java.math.BigDecimal" />
+		<property name="n_einstandspreis" column="N_EINSTANDSPREIS"
+			type="java.math.BigDecimal" />
+		<property name="n_gestehungspreis" column="N_GESTEHUNGSPREIS"
+			type="java.math.BigDecimal" />
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="lager_i_id" column="LAGER_I_ID" type="java.lang.Integer" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrlager"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+			column="LAGER_I_ID" insert="false" update="false" />
+		<many-to-one name="flrbelegart"
+			class="com.lp.server.system.fastlanereader.generated.FLRBelegart"
+			column="C_BELEGARTNR" insert="false" update="false" />
+		<many-to-one name="flrhersteller"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRHersteller"
+			column="HERSTELLER_I_ID" insert="false" update="false" />
+		<many-to-one name="flrland"
+			class="com.lp.server.system.fastlanereader.generated.FLRLand" column="LAND_I_ID"
+			insert="false" update="false" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_MENGEGEAENDERT" insert="false" update="false" />
+	</class>
+	<class name="FLRHandlagerbewegung" table="WW_HANDLAGERBEWEGUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="n_verkaufspreis" column="N_VERKAUFSPREIS"
+			type="java.math.BigDecimal" />
+		<property name="n_einstandspreis" column="N_EINSTANDSPREIS"
+			type="java.math.BigDecimal" />
+		<property name="n_gestehungspreis" column="N_GESTEHUNGSPREIS"
+			type="java.math.BigDecimal" />
+		<property name="c_kommentar" column="C_KOMMENTAR" type="java.lang.String" />
+		<property name="t_buchungszeit" column="T_BUCHUNGSZEIT" type="java.sql.Timestamp" />
+		<property name="b_abgang" column="B_ABGANG" type="java.lang.Short" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" />
+		<many-to-one name="flrlager"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+			column="LAGER_I_ID" />
+	</class>
+	<class name="FLRVkpfartikelpreisliste" table="WW_VKPFARTIKELPREISLISTE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="b_preislisteaktiv" column="B_PREISLISTEAKTIV"
+			type="java.lang.Boolean" />
+		<property name="n_standardrabattsatz" column="N_STANDARDRABATTSATZ"
+			type="java.math.BigDecimal" />
+		<property name="waehrung_c_nr" column="WAEHRUNG_C_NR" type="java.lang.String" />
+	</class>
+	<class name="FLRVkpfartikelpreis" table="WW_VKPFARTIKELPREIS">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="vkpfartikelpreisliste_i_id" column="VKPFARTIKELPREISLISTE_I_ID"
+			type="java.lang.Integer" />
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="t_preisgueltigab" column="T_PREISGUELTIGAB"
+			type="java.sql.Timestamp" />
+		<property name="n_artikelstandardrabattsatz" column="N_ARTIKELSTANDARDRABATTSATZ"
+			type="java.math.BigDecimal" />
+		<property name="n_artikelfixpreis" column="N_ARTIKELFIXPREIS"
+			type="java.math.BigDecimal" />
+	</class>
+	<class name="FLRVkpfartikelverkaufspreisbasis" table="WW_VKPFARTIKELVERKAUFSPREISBASIS">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="t_verkaufspreisbasisgueltigab" column="T_VERKAUFSPREISBASISGUELTIGAB"
+			type="java.sql.Timestamp" />
+		<property name="n_verkaufspreisbasis" column="N_VERKAUFSPREISBASIS"
+			type="java.math.BigDecimal" />
+	</class>
+	<class name="FLRLagerplatz" table="WW_LAGERPLATZ">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_lagerplatz" column="C_LAGERPLATZ" type="java.lang.String" />
+		<property name="i_maxmenge" column="I_MAXMENGE" type="java.lang.Integer" />
+		<many-to-one name="flrlager"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+			column="LAGER_I_ID" />
+	</class>
+	<class name="FLRArtikellagerplaetze" table="WW_ARTIKELLAGERPLAETZE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="lagerplatz_i_id" column="LAGERPLATZ_I_ID"
+			type="java.lang.Integer" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrlagerplatz"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLagerplatz"
+			column="LAGERPLATZ_I_ID" insert="false" update="false" />
+	</class>
+
+
+	<class name="FLRArtikellog" table="WW_ARTIKELLOG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="c_key" column="C_KEY" type="java.lang.String" />
+		<property name="c_von" column="C_VON" type="java.lang.String" />
+		<property name="c_nach" column="C_NACH" type="java.lang.String" />
+		<property name="locale_c_nr" column="LOCALE_C_NR" type="java.lang.String" />
+		<property name="t_aendern" column="T_AENDERN" type="java.sql.Timestamp" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID" insert="false" update="false" />
+	</class>
+
+	<class name="FLRInventur" table="WW_INVENTUR">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="t_inventurdatum" column="T_INVENTURDATUM"
+			type="java.sql.Date" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="lager_i_id" column="LAGER_I_ID" type="java.lang.Integer" />
+		<property name="b_inventurdurchgefuehrt" column="B_INVENTURDURCHGEFUEHRT"
+			type="java.lang.Short" />
+		<many-to-one name="flrlager"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+			column="LAGER_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpersonalinventurdurchgefuehrt"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_INVENTURDURCHGEFUEHRT" insert="false" update="false" />
+	</class>
+	<class name="FLRInventurliste" table="WW_INVENTURLISTE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="n_inventurmenge" column="N_INVENTURMENGE"
+			type="java.math.BigDecimal" />
+		<property name="c_seriennrchargennr" column="C_SERIENNRCHARGENNR"
+			type="java.lang.String" />
+		<many-to-one name="flrinventur"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRInventur"
+			column="INVENTUR_I_ID" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" />
+		<many-to-one name="flrlager"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+			column="LAGER_I_ID" />
+	</class>
+	<class name="FLRInventurstand" table="WW_INVENTURSTAND">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="n_inventurmenge" column="N_INVENTURMENGE"
+			type="java.math.BigDecimal" />
+		<property name="n_abgewerteterpreis" column="N_ABGEWERTETERPREIS"
+			type="java.math.BigDecimal" />
+		<property name="n_inventurpreis" column="N_INVENTURPREIS"
+			type="java.math.BigDecimal" />
+		<property name="inventur_i_id" column="INVENTUR_I_ID" type="java.lang.Integer" />
+		<many-to-one name="flrinventur"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRInventur"
+			column="INVENTUR_I_ID" insert="false" update="false" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" />
+		<many-to-one name="flrlager"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+			column="LAGER_I_ID" />
+	</class>
+	<class name="FLRInventurprotokoll" table="WW_INVENTURPROTOKOLL">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="n_korrekturmenge" column="N_KORREKTURMENGE"
+			type="java.math.BigDecimal" />
+		<property name="t_zeitpunkt" column="T_ZEITPUNKT" type="java.sql.Timestamp" />
+		<property name="n_inventurpreis" column="N_INVENTURPREIS"
+			type="java.math.BigDecimal" />
+		<many-to-one name="flrinventurliste"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRInventurliste"
+			column="INVENTURLISTE_I_ID" />
+		<many-to-one name="flrinventur"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRInventur"
+			column="INVENTUR_I_ID" />
+	</class>
+	<class name="FLRFehlmenge" table="WW_ARTIKELFEHLMENGE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="c_belegartnr" column="C_BELEGARTNR" type="java.lang.String" />
+		<property name="i_belegartpositionid" column="I_BELEGARTPOSITIONID"
+			type="java.lang.Integer" />
+		<property name="t_liefertermin" column="T_LIEFERTERMIN" type="java.sql.Date" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrartikelliste"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrlossollmaterial"
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial"
+			column="I_BELEGARTPOSITIONID" insert="false" update="false" />
+	</class>
+
+	<class name="FLRLagercockpitumbuchung" table="WW_LAGERCOCKPITUMBUCHUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="diff" column="DIFF" type="java.math.BigDecimal" />
+		<property name="lagerstand" column="LAGERSTAND" type="java.math.BigDecimal" />
+		<property name="lager_i_id_lagerplatz" column="LAGER_I_ID_LAGERPLATZ"
+			type="java.math.BigDecimal" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrlos"
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
+			column="LOS_I_ID" insert="false" update="false" />
+		<many-to-one name="flrlager_lagerplatz"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+			column="LAGER_I_ID_LAGERPLATZ" insert="false" update="false" />
+	</class>
+
+	<class name="FLRArtikelkommentarart" table="WW_ARTIKELKOMMENTARART">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<set name="artikelkommentarartsprset" inverse="true">
+			<key column="ARTIKELKOMMENTARART_I_ID" />
+			<one-to-many
+				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelkommentarartspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+	</class>
+	<class name="FLRArtikelkommentarartspr" table="WW_ARTIKELKOMMENTARARTSPR">
+		<composite-id>
+			<key-many-to-one name="artikelkommentarart" column="ARTIKELKOMMENTARART_I_ID"
+				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelkommentarart" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRArtikelkommentar" table="WW_ARTIKELKOMMENTAR">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="datenformat_c_nr" column="DATENFORMAT_C_NR"
+			type="java.lang.String" />
+		<property name="b_defaultbild" column="B_DEFAULTBILD" type="java.lang.Short" />
+		<property name="i_art" column="I_ART" type="java.lang.Integer" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<many-to-one name="flrartikelkommentarart"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelkommentarart"
+			column="ARTIKELKOMMENTARART_I_ID" insert="false" update="false" />
+	</class>
+	<class
+		name="com.lp.server.artikel.fastlanereader.generated.FLRLagerabgangursprung"
+		table="WW_LAGERABGANGURSPRUNG">
+		<composite-id
+			class="com.lp.server.artikel.fastlanereader.generated.service.WwLagerabgangursprungPK"
+			name="compId">
+			<key-property name="i_lagerbewegungid" column="I_LAGERBEWEGUNGID"
+				type="java.lang.Integer" />
+			<key-property name="i_lagerbewegungidursprung" column="I_LAGERBEWEGUNGIDURSPRUNG"
+				type="java.lang.Integer" />
+		</composite-id>
+		<property column="N_VERBRAUCHTEMENGE" length="15"
+			name="n_verbrauchtemenge" not-null="true" type="java.math.BigDecimal" />
+		<property column="N_GESTEHUNGSPREIS" length="15"
+			name="n_gestehungspreis" not-null="true" type="java.math.BigDecimal" />
+	</class>
+	<class
+		name="com.lp.server.artikel.fastlanereader.generated.FLRLagerzugangursprung"
+		table="WW_LAGERZUGANGURSPRUNG">
+		<composite-id
+			class="com.lp.server.artikel.fastlanereader.generated.service.WwLagerzugangursprungPK"
+			name="compId">
+			<key-property name="i_lagerbewegungid" column="I_LAGERBEWEGUNGID"
+				type="java.lang.Integer" />
+			<key-property name="i_lagerbewegungidursprung" column="I_LAGERBEWEGUNGIDURSPRUNG"
+				type="java.lang.Integer" />
+		</composite-id>
+	</class>
+	<class
+		name="com.lp.server.artikel.fastlanereader.generated.FLRLagerumbuchung"
+		table="WW_LAGERUMBUCHUNG">
+		<composite-id
+			class="com.lp.server.artikel.fastlanereader.generated.service.WwLagerumbuchungPK"
+			name="compId">
+			<key-property name="i_lagerbewegungidzubuchung" column="I_LAGERBEWEGUNGIDZUBUCHUNG"
+				type="java.lang.Integer" />
+			<key-property name="i_lagerbewegungidabbuchung" column="I_LAGERBEWEGUNGIDABBUCHUNG"
+				type="java.lang.Integer" />
+		</composite-id>
+	</class>
+	<class name="FLRRahmenbedarfe" table="WW_RAHMENBEDARFE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="n_gesamtmenge" column="N_GESAMTMENGE" type="java.math.BigDecimal" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrauftrag"
+			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport"
+			column="AUFTRAG_I_ID" insert="false" update="false" />
+		<many-to-one name="flrlos"
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
+			column="LOS_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRVkpfStaffelmenge" table="WW_VKPFMENGENSTAFFEL">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="b_allepreislisten" column="B_ALLEPREISLISTEN"
+			type="java.lang.Short" />
+		<property name="f_rabattsatz" column="F_ARTIKELSTANDARDRABATTSATZ"
+			type="java.lang.Double" />
+		<property name="n_fixpreis" column="N_ARTIKELFIXPREIS" type="java.math.BigDecimal" />
+		<property name="t_preisgueltigab" column="T_PREISGUELTIGAB"
+			type="java.sql.Timestamp" />
+		<property name="t_preisgueltigbis" column="T_PREISGUELTIGBIS"
+			type="java.sql.Timestamp" />
+		<property name="vkpfartikelpreisliste_i_id" column="VKPFARTIKELPREISLISTE_I_ID"
+			type="java.lang.Integer" />
+		<many-to-one name="flrvkpfartikelpreisliste"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRVkpfartikelpreisliste"
+			column="VKPFARTIKELPREISLISTE_I_ID" insert="false" update="false" />
+
+
+	</class>
+	<class name="FLRFarbcode" table="WW_FARBCODE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+	<class name="FLRVorschlagstext" table="WW_VORSCHLAGSTEXT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="locale_c_nr" column="LOCALE_C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+	<class name="FLRSollverkauf" table="WW_SOLLVERKAUF">
+		<id name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="f_aufschlag" column="F_AUFSCHLAG" type="java.lang.Double" />
+		<property name="f_sollverkauf" column="F_SOLLVERKAUF" type="java.lang.Double" />
+	</class>
+	<class name="FLRSperren" table="WW_SPERREN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="b_gesperrt" column="B_GESPERRT" type="java.lang.Short" />
+		<property name="b_gesperrteinkauf" column="B_GESPERRTEINKAUF"
+			type="java.lang.Short" />
+		<property name="b_gesperrtverkauf" column="B_GESPERRTVERKAUF"
+			type="java.lang.Short" />
+		<property name="b_gesperrtlos" column="B_GESPERRTLOS" type="java.lang.Short" />
+		<property name="b_gesperrtstueckliste" column="B_GESPERRTSTUECKLISTE"
+			type="java.lang.Short" />
+		<property name="b_durchfertigung" column="B_DURCHFERTIGUNG"
+			type="java.lang.Short" />
+	</class>
+	<class name="FLRArtikelsperren" table="WW_ARTIKELSPERREN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="sperren_i_id" column="SPERREN_I_ID" type="java.lang.Integer" />
+		<property name="c_grund" column="C_GRUND" type="java.lang.String" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrsperren"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRSperren"
+			column="SPERREN_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRArtikelshopgruppe" table="WW_ARTIKELSHOPGRUPPE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="shopgruppe_i_id" column="SHOPGRUPPE_I_ID"
+			type="java.lang.Integer" />
+
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrshopgruppe"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRShopgruppe"
+			column="SHOPGRUPPE_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRTrumphtopslog" table="WW_TRUMPHTOPSLOG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="n_gestpreisneu" column="N_GESTPREISNEU" type="java.math.BigDecimal" />
+		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Date" />
+	</class>
+	<class name="FLREinkaufsean" table="WW_EINKAUFSEAN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="c_ean" column="C_EAN" type="java.lang.String" />
+	</class>
+	<class name="FLRZugehoerige" table="WW_ZUGEHOERIGE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="artikel_i_id_zugehoerig" column="ARTIKEL_I_ID_ZUGEHOERIG"
+			type="java.lang.Integer" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID_ZUGEHOERIG" insert="false" update="false" />
+	</class>
+
+	<class name="FLRPaternoster" table="WW_PATERNOSTER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="c_paternostertyp" column="C_PATERNOSTERTYP"
+			type="java.lang.String" />
+		<property name="lager_i_id" column="LAGER_I_ID" type="java.lang.Integer" />
+		<many-to-one name="flrlager"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+			column="LAGER_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRVerleih" table="WW_VERLEIH">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_tage" column="I_TAGE" type="java.lang.Integer" />
+		<property name="f_faktor" column="F_FAKTOR" type="java.lang.Double" />
+	</class>
+	<class name="FLRWebshop" table="WW_WEBSHOP">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+
+	</class>
+
+	<filter-def name="filterLocale">
+		<filter-param name="paramLocale" type="java.lang.String" />
+	</filter-def>
+	<filter-def name="filterMandant">
+		<filter-param name="paramMandant" type="java.lang.String" />
+	</filter-def>
+</hibernate-mapping>

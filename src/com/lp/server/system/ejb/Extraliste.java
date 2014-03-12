@@ -1,0 +1,118 @@
+/*******************************************************************************
+ * HELIUM V, Open Source ERP software for sustained success
+ * at small and medium-sized enterprises.
+ * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published 
+ * by the Free Software Foundation, either version 3 of theLicense, or 
+ * (at your option) any later version.
+ * 
+ * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ * the terms of the AGPL are supplemented with the following terms:
+ * 
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of 
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ * AGPL does not imply a trademark license. Therefore any rights, title and
+ * interest in our trademarks remain entirely with us. If you want to propagate
+ * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
+ * at trademark@heliumv.com).
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Contact: developers@heliumv.com
+ ******************************************************************************/
+package com.lp.server.system.ejb;
+
+import java.io.Serializable;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
+import javax.persistence.Table;
+
+@NamedQueries( {
+		@NamedQuery(name = "ExtralistefindByCBezBelegartCNr", query = "SELECT OBJECT(o) FROM Extraliste o WHERE o.cBez = ?1 AND o.belegartCNr = ?2"),
+		@NamedQuery(name = "ExtralistefindByBelegartCNr", query = "SELECT OBJECT(o) FROM Extraliste o WHERE o.belegartCNr = ?1") })
+@Entity
+@Table(name = "LP_EXTRALISTE")
+public class Extraliste implements Serializable {
+	@Id
+	@Column(name = "I_ID")
+	private Integer iId;
+
+	@Column(name = "C_BEZ")
+	private String cBez;
+
+	@Column(name = "X_QUERY")
+	private String xQuery;
+
+	@Column(name = "I_DIALOGBREITE")
+	private Integer iDialogbreite;
+
+	@Column(name = "BELEGART_C_NR")
+	private String belegartCNr;
+
+	private static final long serialVersionUID = 1L;
+
+	public Extraliste() {
+		super();
+	}
+
+	public Extraliste(Integer id, String bez, String belegartCNr) {
+		setIId(id);
+		setCBez(bez);
+		setBelegartCNr(belegartCNr);
+	}
+
+	public Integer getIId() {
+		return this.iId;
+	}
+
+	public void setIId(Integer iId) {
+		this.iId = iId;
+	}
+
+	public String getCBez() {
+		return this.cBez;
+	}
+
+	public void setCBez(String cBez) {
+		this.cBez = cBez;
+	}
+
+	public String getXQuery() {
+		return this.xQuery;
+	}
+
+	public void setXQuery(String xQuery) {
+		this.xQuery = xQuery;
+	}
+
+	public Integer getIDialogbreite() {
+		return this.iDialogbreite;
+	}
+
+	public void setIDialogbreite(Integer iDialogbreite) {
+		this.iDialogbreite = iDialogbreite;
+	}
+
+	public String getBelegartCNr() {
+		return this.belegartCNr;
+	}
+
+	public void setBelegartCNr(String belegart) {
+		this.belegartCNr = belegart;
+	}
+
+}

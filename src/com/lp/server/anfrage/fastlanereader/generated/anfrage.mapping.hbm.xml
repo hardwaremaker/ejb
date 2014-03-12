@@ -1,0 +1,189 @@
+<?xml version="1.0"?>
+<!--
+  HELIUM V, Open Source ERP software for sustained success
+  at small and medium-sized enterprises.
+  Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+  
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published 
+  by the Free Software Foundation, either version 3 of theLicense, or 
+  (at your option) any later version.
+  
+  According to sec. 7 of the GNU Affero General Public License, version 3, 
+  the terms of the AGPL are supplemented with the following terms:
+  
+  "HELIUM V" and "HELIUM 5" are registered trademarks of 
+  HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+  AGPL does not imply a trademark license. Therefore any rights, title and
+  interest in our trademarks remain entirely with us. If you want to propagate
+  modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
+  you may only do so if you have a written permission by HELIUM V IT-Solutions 
+  GmbH (to acquire a permission please contact HELIUM V IT-Solutions
+  at trademark@heliumv.com).
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+  
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  
+  Contact: developers@heliumv.com
+-->
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="com.lp.server.anfrage.fastlanereader.generated">
+	<class name="FLRAnfrage" table="ANF_ANFRAGE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="anfrageart_c_nr" column="ANFRAGEART_C_NR"
+			type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="t_belegdatum" column="T_BELEGDATUM" type="java.util.Date" />
+		<property name="lfliefergruppe_i_id" column="LFLIEFERGRUPPE_I_ID"
+			type="java.lang.Integer" />
+		<property name="anfragestatus_c_nr" column="ANFRAGESTATUS_C_NR"
+			type="java.lang.String" />
+		<property name="waehrung_c_nr_anfragewaehrung" column="WAEHRUNG_C_NR_ANFRAGEWAEHRUNG"
+			type="java.lang.String" />
+		<property name="f_wechselkursmandantwaehrungzuanfragewaehrung"
+			column="F_WECHSELKURSMANDANTWAEHRUNGZUANFRAGEWAEHRUNG" type="java.lang.Double" />
+		<property name="n_gesamtanfragewertinanfragewaehrung" column="N_GESAMTANFRAGEWERTINANFRAGEWAEHRUNG"
+			type="java.math.BigDecimal" />
+		<property name="t_versandzeitpunkt" column="T_VERSANDZEITPUNKT"
+			type="java.sql.Timestamp" not-null="false" />
+		<property name="c_versandtype" column="C_VERSANDTYPE" type="java.lang.String" />
+		<property name="projekt_i_id" column="PROJEKT_I_ID" type="java.lang.Integer" />
+		<many-to-one name="flrlieferant"
+			class="com.lp.server.partner.fastlanereader.generated.FLRLieferant"
+			column="LIEFERANT_I_ID_ANFRAGEADRESSE" unique="true" />
+
+		<many-to-one name="flrliefergruppe"
+			class="com.lp.server.partner.fastlanereader.generated.FLRLiefergruppe"
+			column="LFLIEFERGRUPPE_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrkostenstelle"
+			class="com.lp.server.system.fastlanereader.generated.FLRKostenstelle"
+			column="KOSTENSTELLE_I_ID" unique="true" />
+		<many-to-one name="flrprojekt"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
+			column="PROJEKT_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRAnfrageposition" table="ANF_ANFRAGEPOSITION">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="anfragepositionart_c_nr" column="ANFRAGEPOSITIONART_C_NR"
+			type="java.lang.String" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="einheit_c_nr" column="EINHEIT_C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="n_richtpreis" column="N_RICHTPREIS" type="java.math.BigDecimal" />
+		<property name="x_textinhalt" column="X_TEXTINHALT" type="java.lang.String" />
+		<many-to-one name="flranfrage"
+			class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfrage"
+			column="ANFRAGE_I_ID" unique="true" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" unique="true" />
+		<many-to-one name="flrmediastandard"
+			class="com.lp.server.system.fastlanereader.generated.FLRMediastandard"
+			column="MEDIASTANDARD_I_ID" unique="true" />
+	</class>
+	<class name="FLRAnfragetext" table="ANF_ANFRAGETEXT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="locale_c_nr" column="LOCALE_C_NR" type="java.lang.String" />
+		<property name="mediaart_c_nr" column="MEDIAART_C_NR" type="java.lang.String" />
+		<property name="x_textinhalt" column="X_TEXTINHALT" type="java.lang.String" />
+	</class>
+	<class name="FLRAnfragepositionlieferdaten" table="ANF_ANFRAGEPOSITIONLIEFERDATEN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_anlieferzeit" column="I_ANLIEFERZEIT" type="java.lang.Integer" />
+		<property name="n_anliefermenge" column="N_ANLIEFERMENGE"
+			type="java.math.BigDecimal" />
+		<property name="n_nettogesamtpreis" column="N_NETTOGESAMTPREIS"
+			type="java.math.BigDecimal" />
+		<property name="n_nettogesamtpreisminusrabatt" column="N_NETTOGESAMTPREISMINUSRABATT"
+			type="java.math.BigDecimal" />
+		<many-to-one name="flranfrageposition"
+			class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfrageposition"
+			column="ANFRAGEPOSITION_I_ID" unique="true" />
+	</class>
+	<class name="FLRAnfragepositionlieferdatenReport" table="ANF_ANFRAGEPOSITIONLIEFERDATEN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_anlieferzeit" column="I_ANLIEFERZEIT" type="java.lang.Integer" />
+		<property name="n_anliefermenge" column="N_ANLIEFERMENGE"
+			type="java.math.BigDecimal" />
+		<property name="n_nettogesamtpreis" column="N_NETTOGESAMTPREIS"
+			type="java.math.BigDecimal" />
+		<property name="n_nettogesamtpreisminusrabatt" column="N_NETTOGESAMTPREISMINUSRABATT"
+			type="java.math.BigDecimal" />
+		<many-to-one name="flranfragepositionreport"
+			class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfragepositionReport"
+			column="ANFRAGEPOSITION_I_ID" unique="true" />
+	</class>
+	<class name="FLRAnfragepositionReport" table="ANF_ANFRAGEPOSITION">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="anfragepositionart_c_nr" column="ANFRAGEPOSITIONART_C_NR"
+			type="java.lang.String" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="einheit_c_nr" column="EINHEIT_C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="n_richtpreis" column="N_RICHTPREIS" type="java.math.BigDecimal" />
+		<property name="c_zbez" column="C_ZBEZ" type="java.lang.String" />
+		<many-to-one name="flranfrage"
+			class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfrage"
+			column="ANFRAGE_I_ID" unique="true" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" unique="true" />
+	</class>
+	<class name="FLRAnfragepositionart" table="ANF_ANFRAGEPOSITIONART">
+		<id name="positionsart_c_nr" column="POSITIONSART_C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+	</class>
+	<class name="FLRAnfrageart" table="ANF_ANFRAGEART">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<set name="anfrageart_anfrageart_set" inverse="true">
+			<key column="ANFRAGEART_C_NR" />
+			<one-to-many
+				class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfrageartspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+	</class>
+	<class name="FLRAnfrageartspr" table="ANF_ANFRAGEARTSPR">
+		<composite-id>
+			<key-many-to-one name="anfrageart" column="ANFRAGEART_C_NR"
+				class="com.lp.server.anfrage.fastlanereader.generated.FLRAnfrageart" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRZertifikatart" table="ANF_ZERTIFIKATART">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+</hibernate-mapping>

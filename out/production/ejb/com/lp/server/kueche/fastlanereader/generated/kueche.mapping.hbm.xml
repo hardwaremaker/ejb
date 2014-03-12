@@ -1,0 +1,119 @@
+<?xml version="1.0"?>
+	<!--
+		edited with XMLSPY v2004 rel. 2 U (http://www.xmlspy.com) by Christian
+		Kollmann (Logistik Pur Software GmbH)
+	-->
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="com.lp.server.kueche.fastlanereader.generated">
+	<class name="FLRKassaartikel" table="KUE_KASSAARTIKEL">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="c_artikelnummerkassa" column="C_ARTIKELNUMMERKASSA"
+			type="java.lang.String" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+	</class>
+	<class name="FLRTageslos" table="KUE_TAGESLOS">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="b_sofortverbrauch" column="B_SOFORTVERBRAUCH"
+			type="java.lang.Short" />
+		<many-to-one name="flrkostenstelle"
+			class="com.lp.server.system.fastlanereader.generated.FLRKostenstelle"
+			column="KOSTENSTELLE_I_ID" unique="true" insert="false" update="false" />
+		<many-to-one name="flrlager"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+			column="LAGER_I_ID_ABBUCHUNG" />
+	</class>
+	<class name="FLRSpeiseplan" table="KUE_SPEISEPLAN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="t_datum" column="T_DATUM" type="java.sql.Timestamp" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<many-to-one name="flrkassaartikel"
+			class="com.lp.server.kueche.fastlanereader.generated.FLRKassaartikel"
+			column="KASSAARTIKEL_I_ID" unique="true" insert="false" update="false" />
+		<many-to-one name="flrstueckliste"
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste"
+			column="STUECKLISTE_I_ID" unique="true" />
+		<many-to-one name="flrfertigungsgruppe"
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe"
+			column="FERTIGUNGSGRUPPE_I_ID" unique="true" />
+		<set name="speiseplanpositionset" inverse="true">
+			<key column="SPEISEPLAN_I_ID" />
+			<one-to-many
+				class="com.lp.server.kueche.fastlanereader.generated.FLRSpeiseplanposition" />
+		</set>
+	</class>
+	<class name="FLRSpeiseplanposition" table="KUE_SPEISEPLANPOSITION">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<many-to-one name="flrspeiseplan"
+			class="com.lp.server.kueche.fastlanereader.generated.FLRSpeiseplan"
+			column="SPEISEPLAN_I_ID" unique="true" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID"  insert="false" update="false"  />
+	</class>
+	<class name="FLRKdc100log" table="KUE_KDC100LOG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_seriennummer" column="C_SERIENNUMMER" type="java.lang.String" />
+		<property name="c_barcode" column="C_BARCODE" type="java.lang.String" />
+		<property name="c_art" column="C_ART" type="java.lang.String" />
+		<property name="c_kommentar" column="C_KOMMENTAR" type="java.lang.String" />
+		<property name="t_buchungszeit" column="T_BUCHUNGSZEIT" type="java.sql.Timestamp" />
+		<property name="t_stiftzeit" column="T_STIFTZEIT" type="java.sql.Timestamp" />
+	</class>
+	<class name="FLRKassaimport" table="KUE_KASSAIMPORT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="speiseplan_i_id" column="SPEISEPLAN_I_ID"
+			type="java.lang.Integer" />
+		<property name="kunde_i_id" column="KUNDE_I_ID" type="java.lang.Integer" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="n_preis" column="N_PREIS" type="java.math.BigDecimal" />
+		<property name="t_kassa" column="T_KASSA" type="java.sql.Timestamp" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrkunde"
+			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
+			column="KUNDE_I_ID" insert="false" update="false" />
+		<many-to-one name="flrspeiseplan"
+			class="com.lp.server.kueche.fastlanereader.generated.FLRSpeiseplan"
+			column="SPEISEPLAN_I_ID" insert="false" update="false" />
+	</class>
+	
+	<class name="FLRKuecheumrechnung" table="KUE_KUECHEUMRECHNUNG">
+    <id name="i_id" column="I_ID" type="java.lang.Integer">
+      <generator class="native"/>
+    </id>
+    <property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer"/>
+    <property name="n_faktor" column="N_FAKTOR" type="java.math.BigDecimal"/>
+    <property name="c_artikelnummerkassa" column="C_ARTIKELNUMMERKASSA" type="java.lang.String"/>
+  </class>
+	<class name="FLRBedienerlager" table="KUE_BEDIENERLAGER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bedienernummer" column="C_BEDIENERNUMMER"
+			type="java.lang.String" />
+		<property name="lager_i_id" column="LAGER_I_ID" type="java.lang.Integer" />
+		<many-to-one name="flrlager"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+			column="LAGER_I_ID" insert="false" update="false" />
+	</class>
+	
+</hibernate-mapping>

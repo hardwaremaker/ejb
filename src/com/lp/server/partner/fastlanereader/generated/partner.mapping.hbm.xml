@@ -1,0 +1,659 @@
+<?xml version="1.0"?>
+<!--
+  HELIUM V, Open Source ERP software for sustained success
+  at small and medium-sized enterprises.
+  Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+  
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published 
+  by the Free Software Foundation, either version 3 of theLicense, or 
+  (at your option) any later version.
+  
+  According to sec. 7 of the GNU Affero General Public License, version 3, 
+  the terms of the AGPL are supplemented with the following terms:
+  
+  "HELIUM V" and "HELIUM 5" are registered trademarks of 
+  HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+  AGPL does not imply a trademark license. Therefore any rights, title and
+  interest in our trademarks remain entirely with us. If you want to propagate
+  modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
+  you may only do so if you have a written permission by HELIUM V IT-Solutions 
+  GmbH (to acquire a permission please contact HELIUM V IT-Solutions
+  at trademark@heliumv.com).
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+  
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  
+  Contact: developers@heliumv.com
+-->
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Diese Mappingdatei kuemmert sich um den Partner. Copyright Logistik 
+	Pur GmbH (c) 2004 Erstellungsdatum xx.xx.04 @author Josef Ornetsmueller @version 
+	1.0 -->
+<hibernate-mapping package="com.lp.server.partner.fastlanereader.generated">
+	<class name="FLRPartner" table="PART_PARTNER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="anrede_c_nr" column="ANREDE_C_NR" type="java.lang.String"
+			not-null="false" />
+		<property name="c_name1nachnamefirmazeile1" column="C_NAME1NACHNAMEFIRMAZEILE1"
+			type="java.lang.String" not-null="false" />
+		<property name="c_name2vornamefirmazeile2" column="C_NAME2VORNAMEFIRMAZEILE2"
+			type="java.lang.String" not-null="false" />
+		<property name="c_name3vorname2abteilung" column="C_NAME3VORNAME2ABTEILUNG"
+			type="java.lang.String" not-null="false" />
+		<property name="c_strasse" column="C_STRASSE" type="java.lang.String"
+			not-null="false" />
+		<property name="c_titel" column="C_TITEL" type="java.lang.String"
+			not-null="false" />
+		<property name="c_ntitel" column="C_NTITEL" type="java.lang.String"
+			not-null="false" />
+		<property name="partnerart_c_nr" column="PARTNERART_C_NR"
+			type="java.lang.String" not-null="false" />
+		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short"
+			not-null="false" />
+		<property name="c_kbez" column="C_KBEZ" type="java.lang.String"
+			not-null="false" />
+		<property name="locale_c_nr_kommunikation" column="LOCALE_C_NR_KOMMUNIKATION"
+			type="java.lang.String" not-null="false" />
+		<property name="x_bemerkung" column="X_BEMERKUNG" type="java.lang.String"
+			not-null="false" />
+		<property name="branche_i_id" column="BRANCHE_I_ID" type="java.lang.Integer"
+			not-null="false" />
+		<property name="partnerklasse_i_id" column="PARTNERKLASSE_I_ID"
+			type="java.lang.Integer" not-null="false" />
+		<property name="c_adressart" column="C_ADRESSART" type="java.lang.String"
+			not-null="false" />
+		<property name="c_iln" column="C_ILN" type="java.lang.String"
+			not-null="false" />
+		<property name="c_uid" column="C_UID" type="java.lang.String"
+			not-null="false" />
+		<property name="c_filialnummer" column="C_FILIALNUMMER" type="java.lang.String"
+			not-null="false" />
+		<property name="f_gmtversatz" column="F_GMTVERSATZ" type="java.lang.Double" />
+
+		<property name="c_email" column="C_EMAIL" type="java.lang.String"
+			not-null="false" />
+		<property name="c_fax" column="C_FAX" type="java.lang.String"
+			not-null="false" />
+		<property name="c_telefon" column="C_TELEFON" type="java.lang.String"
+			not-null="false" />
+		<property name="t_geburtsdatumansprechpartner" column="T_GEBURTSDATUMANSPRECHPARTNER"
+			type="java.sql.Timestamp" not-null="false" />
+		<many-to-one name="flrlandplzort"
+			class="com.lp.server.system.fastlanereader.generated.FLRLandplzort"
+			column="LANDPLZORT_I_ID" />
+		<many-to-one name="flrpartnerklasse"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartnerklasse"
+			column="PARTNERKLASSE_I_ID" insert="false" update="false" />
+
+		<set name="partner_paselektion_set" inverse="true">
+			<key column="PARTNER_I_ID" />
+			<one-to-many
+				class="com.lp.server.partner.fastlanereader.generated.FLRPASelektion" />
+		</set>
+		<set name="ansprechpartner" inverse="true">
+			<key column="PARTNER_I_ID" />
+			<one-to-many
+				class="com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner" />
+		</set>
+
+		<property name="t_aendern" column="T_AENDERN" type="java.util.Date"
+			not-null="false" />
+
+	</class>
+	<class name="FLRPartnerkommunikation" table="PART_PARTNERKOMMUNIKATION">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="partner_i_id" column="PARTNER_I_ID" type="java.lang.Integer"
+			not-null="false" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String"
+			not-null="false" />
+		<property name="c_inhalt" column="C_INHALT" type="java.lang.String"
+			not-null="false" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
+			not-null="false" />
+		<many-to-one name="flrkommunikationsart"
+			class="com.lp.server.partner.fastlanereader.generated.FLRKommunikationsart"
+			column="KOMMUNIKATIONSART_C_NR" insert="false" update="false" />
+
+	</class>
+	<class name="FLRAnsprechpartner" table="PART_ANSPRECHPARTNER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="partner_i_id" column="PARTNER_I_ID" type="java.lang.Integer"
+			not-null="false" />
+		<property name="partner_i_id_ansprechpartner" column="PARTNER_I_ID_ANSPRECHPARTNER"
+			type="java.lang.Integer" not-null="false" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer"
+			not-null="false" />
+		<property name="ansprechpartnerfunktion_i_id" column="ANSPRECHPARTNERFUNKTION_I_ID"
+			type="java.lang.Integer" not-null="false" />
+		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short"
+			not-null="false" />
+		<property name="b_newsletter_empfaenger" column="B_NEWSLETTER_EMPFAENGER" type="java.lang.Short"
+			not-null="false" />
+		<property name="x_bemerkung" column="X_BEMERKUNG" type="java.lang.String"
+			not-null="false" />
+
+		<property name="c_email" column="C_EMAIL" type="java.lang.String"
+			not-null="false" />
+		<property name="c_fax" column="C_FAX" type="java.lang.String"
+			not-null="false" />
+		<property name="c_telefon" column="C_TELEFON" type="java.lang.String"
+			not-null="false" />
+		<property name="c_handy" column="C_HANDY" type="java.lang.String"
+			not-null="false" />
+		<property name="c_direktfax" column="C_DIREKTFAX" type="java.lang.String"
+			not-null="false" />
+
+		<many-to-one name="flrpartneransprechpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID_ANSPRECHPARTNER" insert="false" update="false" />
+		<many-to-one name="flrpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID" insert="false" update="false" />
+		<many-to-one name="flransprechpartnerfunktion"
+			class="com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartnerfunktion"
+			column="ANSPRECHPARTNERFUNKTION_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRAnsprechpartnerfunktion" table="PART_ANSPRECHPARTNERFUNKTION">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<set name="ansprechpartnerfunktion_ansprechpartnerfunktionspr_set"
+			inverse="true">
+			<key column="ANSPRECHPARTNERFUNKTION_I_ID" />
+			<one-to-many
+				class="com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartnerfunktionspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<property name="c_nr" column="C_NR" type="java.lang.String"
+			not-null="false" />
+		<property name="c_reportname" column="C_REPORTNAME" type="java.lang.String" />
+	</class>
+	<class name="FLRAnsprechpartnerfunktionspr" table="PART_ANSPRECHPARTNERFUNKTIONSPR">
+		<composite-id>
+			<key-many-to-one name="ansprechpartnerfunktion"
+				column="ANSPRECHPARTNERFUNKTION_I_ID"
+				class="com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartnerfunktion" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRBranche" table="PART_BRANCHE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<set name="branche_branchespr_set" inverse="true">
+			<key column="BRANCHE_I_ID" />
+			<one-to-many
+				class="com.lp.server.partner.fastlanereader.generated.FLRBranchespr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<property name="c_nr" column="C_NR" type="java.lang.String"
+			not-null="false" />
+	</class>
+	<class name="FLRBranchespr" table="PART_BRANCHESPR">
+		<composite-id>
+			<key-many-to-one name="branche" column="BRANCHE_I_ID"
+				class="com.lp.server.partner.fastlanereader.generated.FLRBranche" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRPartnerklasse" table="PART_PARTNERKLASSE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<set name="partnerklasse_partnerklassespr_set" inverse="true">
+			<key column="PARTNERKLASSE_I_ID" />
+			<one-to-many
+				class="com.lp.server.partner.fastlanereader.generated.FLRPartnerklassespr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<property name="c_nr" column="C_NR" type="java.lang.String"
+			not-null="false" />
+		<property name="c_importart" column="C_IMPORTART" type="java.lang.String" />
+	</class>
+	<class name="FLRPartnerklassespr" table="PART_PARTNERKLASSESPR">
+		<composite-id>
+			<key-many-to-one name="partnerklasse" column="PARTNERKLASSE_I_ID"
+				class="com.lp.server.partner.fastlanereader.generated.FLRPartnerklasse" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRLiefergruppe" table="PART_LFLIEFERGRUPPE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<set name="liefergruppe_liefergruppespr_set" inverse="true">
+			<key column="LFLIEFERGRUPPE_I_ID" />
+			<one-to-many
+				class="com.lp.server.partner.fastlanereader.generated.FLRLiefergruppespr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<property name="c_nr" column="C_NR" type="java.lang.String"
+			not-null="false" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
+			not-null="false" />
+	</class>
+	<class name="FLRLiefergruppespr" table="PART_LFLIEFERGRUPPESPR">
+		<composite-id>
+			<key-many-to-one name="liefergruppe" column="LFLIEFERGRUPPE_I_ID"
+				class="com.lp.server.partner.fastlanereader.generated.FLRLiefergruppe" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRLFLiefergruppe" table="PART_LFLFLIEFERGRUPPE">
+		<composite-id name="id_comp"
+			class="com.lp.server.partner.fastlanereader.generated.service.FLRLFLiefergruppePK">
+			<key-property name="lieferant_i_id" column="LIEFERANT_I_ID"
+				type="java.lang.Integer" />
+			<key-property name="lfliefergruppe_i_id" column="LFLIEFERGRUPPE_I_ID"
+				type="java.lang.Integer" />
+		</composite-id>
+		<many-to-one name="flrlieferant"
+			class="com.lp.server.partner.fastlanereader.generated.FLRLieferant"
+			column="LIEFERANT_I_ID" insert="false" update="false" />
+		<many-to-one name="flrliefergruppe"
+			class="com.lp.server.partner.fastlanereader.generated.FLRLiefergruppe"
+			column="LFLIEFERGRUPPE_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRKommunikationsart" table="PART_KOMMUNIKATIONSART">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<set name="kommunikationsart_kommunikationsartspr_set" inverse="true">
+			<key column="KOMMUNIKATIONSART_C_NR" />
+			<one-to-many
+				class="com.lp.server.partner.fastlanereader.generated.FLRKommunikationsartspr" />
+		</set>
+	</class>
+	<class name="FLRKommunikationsartspr" table="PART_KOMMUNIKATIONSARTSPR">
+		<composite-id>
+			<key-many-to-one name="kommunikationsart" column="KOMMUNIKATIONSART_C_NR"
+				class="com.lp.server.partner.fastlanereader.generated.FLRKommunikationsart" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRPartnerbank" table="PART_PARTNERBANK">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="partner_i_id" column="PARTNER_I_ID" type="java.lang.String"
+			not-null="false" />
+		<property name="c_ktonr" column="C_KTONR" type="java.lang.String"
+			not-null="false" />
+		<property name="c_iban" column="C_IBAN" type="java.lang.String"
+			not-null="false" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer"
+			not-null="false" />
+		<many-to-one name="flrpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNERBANK_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRBank" table="PART_BANK">
+		<id name="i_id" column="PARTNER_I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_blz" column="C_BLZ" type="java.lang.String" />
+		<property name="c_bic" column="C_BIC" type="java.lang.String" />
+		<many-to-one name="flrpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRKunde" table="PART_KUNDE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
+			not-null="false" />
+		<property name="c_abc" column="C_ABC" type="java.lang.String"
+			not-null="false" />
+		<property name="t_liefersperream" column="T_LIEFERSPERREAM"
+			type="java.sql.Date" not-null="false" />
+		<property name="c_hinweisintern" column="C_HINWEISINTERN"
+			type="java.lang.String" not-null="false" />
+		<property name="c_hinweisextern" column="C_HINWEISEXTERN"
+			type="java.lang.String" not-null="false" />
+		<property name="x_kommentar" column="X_KOMMENTAR" type="java.lang.String"
+			not-null="false" />
+
+		<property name="i_kundennummer" column="I_KUNDENNUMMER" type="java.lang.Integer"
+			not-null="false" />
+		<property name="c_kurznr" column="C_KURZNR" type="java.lang.String"
+			not-null="false" />
+		<property name="konto_i_id_debitorenkonto" column="KONTO_I_ID_DEBITORENKONTO"
+			type="java.lang.Integer" not-null="false" />
+		<property name="lager_i_id_abbuchungslager" column="LAGER_I_ID_ABBUCHUNGSLAGER"
+			type="java.lang.Integer" not-null="false" />
+		<property name="i_lieferdauer" column="I_LIEFERDAUER" type="java.lang.Integer"
+			not-null="false" />
+		<property name="b_istinteressent" column="B_ISTINTERESSENT"
+			type="java.lang.Short" not-null="false" />
+		<property name="b_versteckterlieferant" column="B_VERSTECKTERLIEFERANT"
+			type="java.lang.Short" not-null="false" />
+		<property name="b_monatsrechnung" column="B_MONATSRECHNUNG"
+			type="java.lang.Short" not-null="false" />
+		<property name="personal_i_id_bekommeprovision" column="PERSONAL_I_ID_BEKOMMEPROVISION"
+			type="java.lang.Integer" not-null="false" />
+		<property name="vkpfartikelpreisliste_i_id_stdpreisliste"
+			column="VKPFARTIKELPREISLISTE_I_ID_STDPREISLISTE" type="java.lang.Integer" />
+		<!-- flrres: partner ist alias fuer com.lp.server.partner.fastlanereader.generated.FLRPartner 
+			meine tabelle -->
+		<many-to-one name="flrpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpartnerRechnungsAdresse"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID_RECHNUNGSADRESSE" insert="false" update="false" />
+		<many-to-one name="flrkonto"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID_DEBITORENKONTO" insert="false" update="false" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_BEKOMMEPROVISION" insert="false" update="false" />
+		<many-to-one name="flrkostenstelle"
+			class="com.lp.server.system.fastlanereader.generated.FLRKostenstelle"
+			column="KOSTENSTELLE_I_ID" unique="true" />
+		<property name="c_id_extern" column="C_ID_EXTERN" type="java.lang.String" />
+		<property name="t_aendern" column="T_AENDERN" type="java.util.Date"
+			not-null="false" />
+
+	</class>
+	<class name="FLRSachbearbeiter" table="PART_KUNDESACHBEARBEITER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="kunde_i_id" column="KUNDE_I_ID" type="java.lang.Integer"
+			not-null="false" />
+		<property name="t_gueltigab" column="T_GUELTIGAB" type="java.sql.Date"
+			not-null="false" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRLieferant" table="PART_LIEFERANT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
+			not-null="false" />
+		<property name="n_mindestbestellwert" column="N_MINDESTBESTELLWERT"
+			type="java.lang.String" not-null="false" />
+		<property name="n_kredit" column="N_KREDIT" type="java.lang.String"
+			not-null="false" />
+		<property name="n_rabatt" column="N_RABATT" type="java.lang.String"
+			not-null="false" />
+		<property name="c_hinweisintern" column="C_HINWEISINTERN"
+			type="java.lang.String" not-null="false" />
+		<property name="c_hinweisextern" column="C_HINWEISEXTERN"
+			type="java.lang.String" not-null="false" />
+		<property name="waehrung_c_nr" column="WAEHRUNG_C_NR" type="java.lang.String"
+			not-null="false" />
+		<property name="x_kommentar" column="X_KOMMENTAR" type="java.lang.String"
+			not-null="false" />
+		<property name="b_moeglicherlieferant" column="B_MOEGLICHERLIEFERANT"
+			type="java.lang.Short" not-null="false" />
+		<property name="b_zollimportpapier" column="B_ZOLLIMPORTPAPIER"
+			type="java.lang.Short" not-null="false" />
+		<property name="b_beurteilen" column="B_BEURTEILEN" type="java.lang.Short"
+			not-null="false" />
+		<property name="t_bestellsperream" column="T_BESTELLSPERREAM"
+			type="java.sql.Timestamp" not-null="false" />
+		<property name="t_freigabe" column="T_FREIGABE" type="java.sql.Timestamp"
+			not-null="false" />
+		<property name="konto_i_id_kreditorenkonto" column="KONTO_I_ID_KREDITORENKONTO"
+			type="java.lang.Integer" not-null="false" />
+		<many-to-one name="flrpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID" unique="true" />
+		<many-to-one name="flrkonto"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID_KREDITORENKONTO" insert="false" update="false" />
+
+		<set name="set_liefergruppen" inverse="true">
+			<key column="LIEFERANT_I_ID" />
+			<one-to-many
+				class="com.lp.server.partner.fastlanereader.generated.FLRLFLiefergruppe" />
+		</set>
+
+	</class>
+	<class name="FLRAnrede" table="PART_ANREDE">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<set name="anrede_anredespr_set" inverse="true">
+			<key column="ANREDE_C_NR" />
+			<one-to-many
+				class="com.lp.server.partner.fastlanereader.generated.FLRAnredespr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+	</class>
+	<class name="FLRAnredespr" table="PART_ANREDESPR">
+		<composite-id>
+			<key-many-to-one name="anrede" column="ANREDE_C_NR"
+				class="com.lp.server.partner.fastlanereader.generated.FLRAnrede" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRPartnerart" table="PART_PARTNERART">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<set name="partnerart_partnerartspr_set" inverse="true">
+			<key column="PARTNERART_C_NR" />
+			<one-to-many
+				class="com.lp.server.partner.fastlanereader.generated.FLRPartnerartspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+	</class>
+	<class name="FLRPartnerartspr" table="PART_PARTNERARTSPR">
+		<composite-id>
+			<key-many-to-one name="partnerart" column="PARTNERART_C_NR"
+				class="com.lp.server.partner.fastlanereader.generated.FLRPartnerart" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRSelektion" table="PART_SELEKTION">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<set name="selektion_selektionspr_set" inverse="true">
+			<key column="SELEKTION_I_ID" />
+			<one-to-many
+				class="com.lp.server.partner.fastlanereader.generated.FLRSelektionspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<property name="c_nr" column="C_NR" type="java.lang.String"
+			not-null="false" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
+			not-null="false" />
+		<property name="b_webshop" column="B_WEBSHOP" type="java.lang.Short" />			
+	</class>
+	<class name="FLRSelektionspr" table="PART_SELEKTIONSPR">
+		<composite-id>
+			<key-many-to-one name="selektion" column="SELEKTION_I_ID"
+				class="com.lp.server.partner.fastlanereader.generated.FLRSelektion" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRPASelektion" table="PART_PASELEKTION">
+		<composite-id name="id_comp"
+			class="com.lp.server.partner.fastlanereader.generated.service.FLRPASelektionPK">
+			<key-property name="partner_i_id" column="PARTNER_I_ID"
+				type="java.lang.Integer" />
+			<key-property name="selektion_i_id" column="SELEKTION_I_ID"
+				type="java.lang.Integer" />
+		</composite-id>
+		<property name="c_bemerkung" column="C_BEMERKUNG" type="java.lang.String" />
+		<many-to-one name="flrselektion"
+			class="com.lp.server.partner.fastlanereader.generated.FLRSelektion"
+			column="SELEKTION_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRKurzbrief" table="PART_KURZBRIEF">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_betreff" column="C_BETREFF" type="java.lang.String"
+			not-null="false" />
+		<property name="personal_i_id_aendern" column="PERSONAL_I_ID_AENDERN"
+			type="java.lang.Integer" not-null="false" />
+		<property name="t_aendern" column="T_AENDERN" type="java.util.Date"
+			not-null="false" />
+		<property name="partner_i_id" column="PARTNER_I_ID" type="java.lang.Integer"
+			not-null="false" />
+		<property name="belegart_c_nr" column="BELEGART_C_NR" type="java.lang.String" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_AENDERN" insert="false" update="false" />
+		<many-to-one name="flrpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID" insert="false" update="false" />
+		<many-to-one name="flransprechpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner"
+			column="ANSPRECHPARTNER_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRSerienbrief" table="PART_SERIENBRIEF">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String"
+			not-null="false" />
+		<property name="t_aendern" column="T_AENDERN" type="java.sql.Date"
+			not-null="false" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
+			not-null="false" />
+	</class>
+	<class name="FLRSerienbriefselektion" table="PART_SERIENBRIEFSELEKTION">
+		<composite-id name="id_comp"
+			class="com.lp.server.partner.fastlanereader.generated.service.FLRSerienbriefselektionPK">
+			<key-property name="serienbrief_i_id" column="SERIENBRIEF_I_ID"
+				type="java.lang.Integer" />
+			<key-property name="selektion_i_id" column="SELEKTION_I_ID"
+				type="java.lang.Integer" />
+		</composite-id>
+		<property name="c_bemerkung" column="C_BEMERKUNG" type="java.lang.String"
+			not-null="false" />
+		<many-to-one name="flrserienbrief"
+			class="com.lp.server.partner.fastlanereader.generated.FLRSerienbrief"
+			column="SERIENBRIEF_I_ID" insert="false" update="false" />
+		<many-to-one name="flrselektion"
+			class="com.lp.server.partner.fastlanereader.generated.FLRSelektion"
+			column="SELEKTION_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRKundesoko" table="PART_KUNDESOKO">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="kunde_i_id" column="KUNDE_I_ID" type="java.lang.Integer" />
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="c_kundeartikelnummer" column="C_KUNDEARTIKELNUMMER"
+			type="java.lang.String" />
+		<property name="artgru_i_id" column="ARTGRU_I_ID" type="java.lang.Integer" />
+		<property name="t_preisgueltigab" column="T_PREISGUELTIGAB"
+			type="java.sql.Date" />
+		<property name="t_preisgueltigbis" column="T_PREISGUELTIGBIS"
+			type="java.sql.Date" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrkunde"
+			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
+			column="KUNDE_I_ID" insert="false" update="false" />
+		<many-to-one name="flrartikelgruppe"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe"
+			column="ARTGRU_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRKundesokomengenstaffel" table="PART_KUNDESOKOMENGENSTAFFEL">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="kundesoko_i_id" column="KUNDESOKO_I_ID" type="java.lang.Integer" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="f_rabattsatz" column="F_ARTIKELSTANDARDRABATTSATZ"
+			type="java.lang.Double" />
+		<property name="n_fixpreis" column="N_ARTIKELFIXPREIS" type="java.math.BigDecimal" />
+		<many-to-one name="flrkundesoko"
+			class="com.lp.server.partner.fastlanereader.generated.FLRKundesoko"
+			column="KUNDESOKO_I_ID" insert="false" update="false" />
+	</class>
+
+	<class name="FLRLieferantbeurteilung" table="PART_LIEFERANTBEURTEILUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="lieferant_i_id" column="LIEFERANT_I_ID" type="java.lang.Integer" />
+		<property name="i_punkte" column="I_PUNKTE" type="java.lang.Integer" />
+		<property name="t_datum" column="T_DATUM" type="java.sql.Date" />
+		<property name="b_gesperrt" column="B_GESPERRT" type="java.lang.Short"
+			not-null="false" />
+
+		<many-to-one name="flrlieferant"
+			class="com.lp.server.partner.fastlanereader.generated.FLRLieferant"
+			column="LIEFERANT_I_ID" insert="false" update="false" />
+
+	</class>
+	<class name="FLRKontaktart" table="PART_KONTAKTART">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+
+	<class name="FLRKontakt" table="PART_KONTAKT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_titel" column="C_TITEL" type="java.lang.String" />
+		<property name="t_erledigt" column="T_ERLEDIGT" type="java.sql.Timestamp" />
+		<property name="t_kontakt" column="T_KONTAKT" type="java.sql.Timestamp" />
+		<property name="t_kontaktbis" column="T_KONTAKTBIS" type="java.sql.Timestamp" />
+		<property name="t_wiedervorlage" column="T_WIEDERVORLAGE"
+			type="java.sql.Timestamp" />
+		<property name="partner_i_id" column="PARTNER_I_ID" type="java.lang.Integer" />
+		<many-to-one name="flrpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID" insert="false" update="false" />
+		<many-to-one name="flrkontaktart"
+			class="com.lp.server.partner.fastlanereader.generated.FLRKontaktart"
+			column="KONTAKTART_I_ID" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ZUGEWIESENER" insert="false" update="false" />
+		<many-to-one name="flransprechpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner"
+			column="ANSPRECHPARTNER_I_ID" insert="false" update="false" />
+
+	</class>
+
+
+
+	<filter-def name="filterLocale">
+		<filter-param name="paramLocale" type="java.lang.String" />
+	</filter-def>
+</hibernate-mapping>

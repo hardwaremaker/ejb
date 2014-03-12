@@ -1,0 +1,420 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="com.lp.server.finanz.fastlanereader.generated">
+
+	<class name="FLRFinanzKonto" table="FB_KONTO">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<!-- flrmto: 3 spalten, die explizit verwendet werden und auch fuer die 
+			referenz muessen mit " insert="false" update="false"" gekennzeichnet werden. -->
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
+			insert="false" update="false" not-null="false" />
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="kontotyp_c_nr" column="KONTOTYP_C_NR" type="java.lang.String"
+			insert="false" update="false" not-null="false" />
+		<property name="ergebnisgruppe_i_id" column="ERGEBNISGRUPPE_I_ID"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="d_gueltigbis" column="T_GUELTIGBIS" type="java.sql.Date" />
+		<property name="b_allgemeinsichtbar" column="B_ALLGEMEINSICHTBAR"
+			type="java.lang.Short" />
+		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" />
+		<property name="kontoart_c_nr" column="KONTOART_C_NR" type="java.lang.String"
+			insert="false" update="false" />
+		<property name="b_manuellbebuchbar" column="B_MANUELLBEBUCHBAR"
+			type="java.lang.Short" />
+		<property name="uvaart_i_id" column="UVAART_I_ID" type="java.lang.Integer"
+			insert="false" update="false" />
+		<property name="finanzamt_i_id" column="FINANZAMT_I_ID" type="java.lang.Integer"
+			insert="false" update="false" />
+		<property name="c_sortierung" column="C_SORTIERT" type="java.lang.String"
+			insert="false" update="false" />
+		<property name="d_gueltigvon" column="T_GUELTIGVON" type="java.sql.Date"
+			insert="false" update="false" />
+		<property name="b_automeroeffnungsbuchung" column="B_AUTOMEROEFFNUNGSBUCHUNG"
+			type="java.lang.Short" insert="false" update="false" />
+		<property name="waehrung_c_nr_druck" column="WAEHRUNG_C_NR_DRUCK"
+			type="java.lang.String" insert="false" update="false" />
+		<property name="d_eb_anlegen" column="T_EB_ANLEGEN" type="java.sql.Timestamp" />
+		<property name="i_eb_geschaeftsjahr" column="I_GJ_EB" type="java.lang.Integer" />
+			
+		<many-to-one name="flrkontoust"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID_WEITERFUEHRENDUST" />
+		<many-to-one name="flrkontoskonto"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID_WEITERFUEHRENDSKONTO" />
+		<many-to-one name="flrkostenstelle"
+			class="com.lp.server.system.fastlanereader.generated.FLRKostenstelle"
+			column="KOSTENSTELLE_I_ID" />
+		<many-to-one name="flrergebnisgruppe"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzErgebnisgruppe"
+			column="ERGEBNISGRUPPE_I_ID" />
+		<many-to-one name="flrkontoart"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKontoart"
+			column="KONTOART_C_NR" />
+		<many-to-one name="flrsteuerkategorie"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRSteuerkategorie"
+			column="STEUERKATEGORIE_I_ID" insert="false" update="false" />
+		<many-to-one name="flruvaart"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzUVAArt"
+			column="UVAART_I_ID" insert="false" update="false" />
+	</class>
+
+	<class name="FLRFinanzFinanzamt" table="LP_FINANZAMT">
+		<composite-id>
+			<key-property name="i_id" column="PARTNER_I_ID" type="java.lang.Integer" />
+			<key-property name="mandant_c_nr" column="MANDANT_C_NR"
+				type="java.lang.String" />
+		</composite-id>
+		<property name="c_steuernummer" column="C_STEUERNUMMER" type="java.lang.String" />
+		<property name="c_referat" column="C_REFERAT" type="java.lang.String" />
+		<many-to-one name="flrpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID" insert="false" update="false" />
+	</class>
+
+	<class name="FLRFinanzBankkonto" table="FB_BANKVERBINDUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="c_kontonummer" column="C_KONTONUMMER" type="java.lang.String" />
+		<property name="c_iban" column="C_IBAN" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<many-to-one name="flrbank"
+			class="com.lp.server.partner.fastlanereader.generated.FLRBank"
+			column="BANK_I_ID" />
+		<many-to-one name="flrkonto"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID" />
+	</class>
+
+	<class name="FLRFinanzKassenbuch" table="FB_KASSENBUCH">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="b_hauptkassenbuch" column="B_HAUPTKASSENBUCH"
+			type="java.lang.Short" />
+		<many-to-one name="flrkonto"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID" />
+	</class>
+
+
+
+	<class name="FLRSteuerkategorie" table="FB_STEUERKATEGORIE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="b_reversecharge" column="B_REVERSECHARGE"
+			type="java.lang.Short" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="finanzamt_i_id" column="FINANZAMT_I_ID" type="java.lang.Integer" />
+	</class>
+
+
+	<class name="FLRSteuerkategoriekonto" table="FB_STEUERKATEGORIEKONTO">
+		<composite-id name="id_comp"
+			class="com.lp.server.finanz.ejb.SteuerkategoriekontoPK">
+			<key-property name="steuerkategorieiid" column="STEUERKATEGORIE_I_ID"
+				type="java.lang.Integer" />
+			<key-property name="mwstsatzbeziid" column="MWSTSATZBEZ_I_ID"
+				type="java.lang.Integer" />
+		</composite-id>
+
+		<many-to-one name="kontoiidvk"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID_VK" insert="false" update="false" />
+		<many-to-one name="kontoiidek"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID_EK" insert="false" update="false" />
+		<many-to-one name="flrsteuerkategorie"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRSteuerkategorie"
+			column="STEUERKATEGORIE_I_ID" insert="false" update="false" />
+		<many-to-one name="flrmwstsatzbez"
+			class="com.lp.server.system.fastlanereader.generated.FLRMwstsatzbez"
+			column="MWSTSATZBEZ_I_ID" insert="false" update="false" />
+		<many-to-one name="kontoiidskontovk"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID_SKONTOVK" insert="false" update="false" />
+		<many-to-one name="kontoiidskontoek"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID_SKONTOEK" insert="false" update="false" />
+		<many-to-one name="kontoiideinfuhrust"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID_EINFUHRUST" insert="false" update="false" />
+	</class>
+
+
+	<class name="FLRFinanzBuchung" table="FB_BUCHUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_text" column="C_TEXT" type="java.lang.String" />
+		<property name="c_belegnummer" column="C_BELEGNUMMER" type="java.lang.String" />
+		<property name="d_buchungsdatum" column="T_BUCHUNGSDATUM"
+			type="java.sql.Date" />
+		<property name="buchungsart_c_nr" column="BUCHUNGSART_C_NR"
+			type="java.lang.String" />
+		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Timestamp" />
+		<property name="t_storniert" column="T_STORNIERT" type="java.sql.Date" />
+		<property name="geschaeftsjahr_i_geschaeftsjahr" column="GESCHAEFTSJAHR_I_GESCHAEFTSJAHR"
+			type="java.lang.Integer" />
+		<property name="personal_i_id_anlegen" column="PERSONAL_I_ID_ANLEGEN"
+			type="java.lang.Integer" />
+		<property name="b_autombuchung" column="B_AUTOMBUCHUNG" type="java.lang.Short" />
+		<property name="b_autombuchungeb" column="B_AUTOMBUCHUNG_EB" type="java.lang.Short" />
+		<many-to-one name="flrkostenstelle"
+			class="com.lp.server.system.fastlanereader.generated.FLRKostenstelle"
+			column="KOSTENSTELLE_I_ID" insert="false" update="false" />
+		<many-to-one name="flrfbbelegart"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFbbelegart"
+			column="BELEGART_C_NR" insert="false" update="false" />
+		<many-to-one name="flrbuchungsart"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRBuchungsart"
+			column="BUCHUNGSART_C_NR" insert="false" update="false" />
+	</class>
+
+	<class name="FLRBuchungsart" table="FB_BUCHUNGSART">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<property name="c_kbez" column="C_KBEZ" type="java.lang.String" />
+	</class>
+
+	<class name="FLRFbbelegart" table="FB_BELEGART">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<property name="c_kbez" column="C_KBEZ" type="java.lang.String" />
+	</class>
+
+	<class name="FLRFinanzBuchungDetail" table="FB_BUCHUNGDETAIL">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="buchung_i_id" column="BUCHUNG_I_ID" type="java.lang.Integer" />
+		<property name="konto_i_id" column="KONTO_I_ID" type="java.lang.Integer" />
+		<property name="n_betrag" column="N_BETRAG" type="java.math.BigDecimal" />
+		<property name="n_ust" column="N_UST" type="java.math.BigDecimal" />
+		<property name="i_auszug" column="I_AUSZUG" type="java.lang.Integer" />
+		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Timestamp" />
+		<property name="buchungdetailart_c_nr" column="BUCHUNGDETAILART_C_NR"
+			type="java.lang.String" />
+		<property name="i_ausziffern" column="I_AUSZIFFERN" type="java.lang.Integer" />
+		<many-to-one name="flrbuchung"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzBuchung"
+			column="BUCHUNG_I_ID" insert="false" update="false" />
+		<many-to-one name="flrkonto"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID" insert="false" update="false" />
+		<many-to-one name="flrgegenkonto"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID_GEGENKONTO" insert="false" update="false" />
+	</class>
+
+	<class name="FLRFinanzUVAArt" table="FB_UVAART">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandantCNr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_kennzeichen" column="C_KENNZEICHEN" type="java.lang.String" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+	</class>
+
+	<class name="FLRFinanzKontoart" table="FB_KONTOART">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+	</class>
+
+	<class name="FLRFinanzLaenderart" table="FB_LAENDERART">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+	</class>
+
+	<class name="FLRFinanzMahnlauf" table="FB_MAHNLAUF">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
+			insert="false" update="false" not-null="false" />
+		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Timestamp" />
+		<many-to-one name="flrpersonalanleger"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ANLEGEN" unique="true" insert="false" update="false" />
+
+	</class>
+
+	<class name="FLRFinanzMahnung" table="FB_MAHNUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mahnlauf_i_id" column="MAHNLAUF_I_ID" type="java.lang.Integer" />
+		<property name="mahnstufe_i_id" column="MAHNSTUFE_I_ID" type="java.lang.Integer" />
+		<property name="d_mahndatum" column="T_MAHNDATUM" type="java.sql.Date" />
+		<property name="t_gedruckt" column="T_GEDRUCKT" type="java.sql.Date" />
+		<many-to-one name="flrrechnungreport"
+			class="com.lp.server.rechnung.fastlanereader.generated.FLRRechnungReport"
+			column="RECHNUNG_I_ID" insert="false" update="false" />
+		<many-to-one name="flrmahnlauf"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzMahnlauf"
+			column="MAHNLAUF_I_ID" insert="false" update="false" />
+	</class>
+
+	<class name="FLRFinanzErgebnisgruppe" table="FB_ERGEBNISGRUPPE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="ergebnisgruppe_i_id_summe" column="ERGEBNISGRUPPE_I_ID_SUMME"
+			type="java.lang.Integer" insert="false" update="false" />
+		<property name="b_summe_negativ" column="B_SUMMENEGATIV"
+			type="java.lang.Short" />
+		<property name="b_invertiert" column="B_INVERTIERT" type="java.lang.Short" />
+		<property name="b_bilanzgruppe" column="B_BILANZGRUPPE" type="java.lang.Short" />
+		<property name="b_prozentbasis" column="B_PROZENTBASIS" type="java.lang.Short" />
+		<property name="i_typ" column="I_TYP" type="java.lang.Integer" />
+		<property name="i_reihung" column="I_REIHUNG" type="java.lang.Integer" />
+		<many-to-one name="flrergebnisgruppe_summe"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzErgebnisgruppe"
+			column="ERGEBNISGRUPPE_I_ID_SUMME" />
+	</class>
+
+
+	<class name="FLRMahntext" table="FB_MAHNTEXT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="locale_c_nr" column="LOCALE_C_NR" type="java.lang.String" />
+		<property name="mahnstufe_i_id" column="MAHNSTUFE_I_ID" type="java.lang.Integer" />
+		<property name="c_textinhalt" column="X_TEXTINHALT" type="java.lang.String" />
+	</class>
+
+	<class name="FLRMahnstufe" table="FB_MAHNSTUFE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="i_tage" column="I_TAGE" type="java.lang.Integer" />
+		<property name="n_mahnspesen" column="N_MAHNSPESEN" type="java.math.BigDecimal" />
+		<property name="f_zinssatz" column="F_ZINSSATZ" type="java.lang.Float" />
+	</class>
+
+	<class name="FLRMahnspesen" table="FB_MAHNSPESEN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="mahnstufe_i_id" column="MAHNSTUFE_I_ID" type="java.lang.Integer" />
+		<property name="n_mahnspesen" column="N_MAHNSPESEN" type="java.math.BigDecimal" />
+		<property name="waehrung_c_nr" column="WAEHRUNG_C_NR" type="java.lang.String"
+			insert="false" update="false" />
+	</class>
+
+
+	<class name="FLRKontolaenderart" table="FB_KONTOLAENDERART">
+		<composite-id name="id_comp"
+			class="com.lp.server.finanz.service.FLRKontolaenderartPK">
+			<key-property name="konto_i_id" column="KONTO_I_ID"
+				type="java.lang.Integer" />
+			<key-property name="laenderart_c_nr" column="LAENDERART_C_NR"
+				type="java.lang.String" />
+			<key-property name="finanzamt_i_id" column="FINANZAMT_I_ID"
+				type="java.lang.Integer" />
+			<key-property name="mandant_c_nr" column="MANDANT_C_NR"
+				type="java.lang.String" />
+		</composite-id>
+		<many-to-one name="flrkonto"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID" insert="false" update="false" />
+		<many-to-one name="flrkonto_uebersetzt"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID_UEBERSETZT" insert="false" update="false" />
+	</class>
+
+	<class name="FLRKontoLand" table="FB_KONTOLAND">
+		<composite-id name="id_comp" class="com.lp.server.finanz.ejb.KontolandPK">
+			<key-property name="konto_i_id" column="KONTO_I_ID"
+				type="java.lang.Integer" />
+			<key-property name="land_i_id" column="LAND_I_ID"
+				type="java.lang.Integer" />
+		</composite-id>
+		<many-to-one name="flrland"
+			class="com.lp.server.system.fastlanereader.generated.FLRLand" column="LAND_I_ID"
+			insert="false" update="false" />
+		<many-to-one name="flrkonto"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID" insert="false" update="false" />
+		<many-to-one name="flrkonto_uebersetzt"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
+			column="KONTO_I_ID_UEBERSETZT" insert="false" update="false" />
+	</class>
+
+	<class name="FLRFinanzExportlauf" table="FB_EXPORTLAUF">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="t_aendern" column="T_AENDERN" type="java.sql.Timestamp" />
+		<property name="t_stichtag" column="T_STICHTAG" type="java.sql.Date" />
+		<set name="exportdatenset" inverse="true">
+			<key column="EXPORTLAUF_I_ID" />
+			<one-to-many
+				class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzExportdaten" />
+		</set>
+	</class>
+
+	<class name="FLRFinanzExportdaten" table="FB_EXPORTDATEN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<many-to-one name="flrexportlauf"
+			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzExportlauf"
+			column="EXPORTLAUF_I_ID" insert="false" update="false" />
+		<many-to-one name="flrbelegart"
+			class="com.lp.server.system.fastlanereader.generated.FLRBelegart"
+			column="BELEGART_C_NR" insert="false" update="false" />
+		<property name="belegart_c_nr" column="BELEGART_C_NR" type="java.lang.String"
+			insert="false" update="false" not-null="false" />
+		<property name="i_belegiid" column="I_BELEGIID" type="java.lang.Integer" />
+	</class>
+
+
+	<class name="FLRFinanzBelegbuchung" table="FB_BELEGBUCHUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<many-to-one name="flrbelegart"
+			class="com.lp.server.system.fastlanereader.generated.FLRBelegart"
+			column="BELEGART_C_NR" insert="false" update="false" />
+		<property name="belegart_c_nr" column="BELEGART_C_NR" type="java.lang.String"
+			insert="false" update="false" not-null="false" />
+		<property name="i_belegiid" column="I_BELEGIID" type="java.lang.Integer" />
+	</class>
+
+
+	<class name="FLRFinanzWarenverkehrsnummer" table="FB_WARENVERKEHRSNUMMER">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+</hibernate-mapping>
+

@@ -1,0 +1,227 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="com.lp.server.reklamation.fastlanereader.generated">
+
+	<class name="FLRFehler" table="REKLA_FEHLER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<set name="sprset" inverse="true">
+			<key column="FEHLER_I_ID" />
+			<one-to-many
+				class="com.lp.server.reklamation.fastlanereader.generated.FLRFehlerspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+	</class>
+	<class name="FLRFehlerspr" table="REKLA_FEHLERSPR">
+		<composite-id>
+			<key-many-to-one name="fehler" column="FEHLER_I_ID"
+				class="com.lp.server.reklamation.fastlanereader.generated.FLRFehler" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+	<class name="FLRFehlerangabe" table="REKLA_FEHLERANGABE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<set name="sprset" inverse="true">
+			<key column="FEHLERANGABE_I_ID" />
+			<one-to-many
+				class="com.lp.server.reklamation.fastlanereader.generated.FLRFehlerangabespr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+	</class>
+	<class name="FLRFehlerangabespr" table="REKLA_FEHLERANGABESPR">
+		<composite-id>
+			<key-many-to-one name="fehlerangabe" column="FEHLERANGABE_I_ID"
+				class="com.lp.server.reklamation.fastlanereader.generated.FLRFehlerangabe" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+	<class name="FLRMassnahme" table="REKLA_MASSNAHME">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<set name="sprset" inverse="true">
+			<key column="MASSNAHME_I_ID" />
+			<one-to-many
+				class="com.lp.server.reklamation.fastlanereader.generated.FLRMassnahmespr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+	</class>
+	<class name="FLRMassnahmespr" table="REKLA_MASSNAHMESPR">
+		<composite-id>
+			<key-many-to-one name="massnahme" column="MASSNAHME_I_ID"
+				class="com.lp.server.reklamation.fastlanereader.generated.FLRMassnahme" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRSchwere" table="REKLA_SCHWERE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="i_punkte" column="I_PUNKTE" length="5"
+			type="java.lang.Integer" />
+	</class>
+	<class name="FLRTermintreue" table="REKLA_TERMINTREUE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_tage" column="I_TAGE" length="5"
+			type="java.lang.Integer" />
+		<property name="i_punkte" column="I_PUNKTE" length="5"
+			type="java.lang.Integer" />
+	</class>
+	<class name="FLRBehandlung" table="REKLA_BEHANDLUNG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="i_punkte" column="I_PUNKTE" length="5"
+			type="java.lang.Integer" />
+	</class>
+	<class name="FLRAufnahmeart" table="REKLA_AUFNAHMEART">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<set name="sprset" inverse="true">
+			<key column="AUFNAHMEART_I_ID" />
+			<one-to-many
+				class="com.lp.server.reklamation.fastlanereader.generated.FLRAufnahmeartspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+	</class>
+	<class name="FLRAufnahmeartspr" table="REKLA_AUFNAHMEARTSPR">
+		<composite-id>
+			<key-many-to-one name="aufnahmeart" column="AUFNAHMEART_I_ID"
+				class="com.lp.server.reklamation.fastlanereader.generated.FLRAufnahmeart" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+
+	<class name="FLRReklamation" table="REKLA_REKLAMATION">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<property name="reklamationart_c_nr" column="REKLAMATIONART_C_NR"
+			type="java.lang.String" />
+		<property name="c_grund" column="C_GRUND" type="java.lang.String" />
+		<property name="c_seriennrchargennr" column="C_SERIENNRCHARGENNR" type="java.lang.String" />
+		<property name="c_handartikel" column="C_HANDARTIKEL" type="java.lang.String" />
+		<property name="c_projekt" column="C_PROJEKT" type="java.lang.String" />
+		<property name="status_c_nr" column="STATUS_C_NR" type="java.lang.String" />
+		<property name="x_analyse" column="X_ANALYSE" type="java.lang.String" />
+		<property name="t_belegdatum" not-null="true" column="T_BELEGDATUM"
+			length="23" type="java.util.Date" />
+		<property name="t_erledigt" not-null="true" column="T_ERLEDIGT"
+			type="java.util.Date" />
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="b_berechtigt" column="B_BERECHTIGT" type="java.lang.Short" />
+		<property name="n_kostenmaterial" column="N_KOSTENMATERIAL"
+			type="java.math.BigDecimal" />
+		<property name="n_kostenarbeitszeit" column="N_KOSTENARBEITSZEIT"
+			type="java.math.BigDecimal" />
+		<property name="kostenstelle_i_id" column="KOSTENSTELLE_I_ID"
+			length="5" type="java.lang.Integer" />
+		<property name="kunde_i_id" column="KUNDE_I_ID" length="5"
+			type="java.lang.Integer" />
+		<property name="lieferant_i_id" column="LIEFERANT_I_ID"
+			length="5" type="java.lang.Integer" />
+		<property name="los_i_id" column="LOS_I_ID" length="5"
+			type="java.lang.Integer" />
+		<property name="bestellung_i_id" column="BESTELLUNG_I_ID"
+			length="5" type="java.lang.Integer" />
+		<property name="rechnung_i_id" column="RECHNUNG_I_ID" length="5"
+			type="java.lang.Integer" />
+		<property name="lieferschein_i_id" column="LIEFERSCHEIN_I_ID"
+			length="5" type="java.lang.Integer" />
+		<property name="c_kdreklanr" column="C_KDREKLANR" type="java.lang.String" />
+		<property name="i_kundeunterart" column="I_KUNDEUNTERART" type="java.lang.Integer" />
+
+		<many-to-one name="flrfehlerangabe"
+			class="com.lp.server.reklamation.fastlanereader.generated.FLRFehlerangabe"
+			column="FEHLERANGABE_I_ID" />
+		<many-to-one name="flrverursacher"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_VERURSACHER" />
+		<many-to-one name="flrmaschine"
+			class="com.lp.server.personal.fastlanereader.generated.FLRMaschine"
+			column="MASCHINE_I_ID" />
+		<many-to-one name="flrkunde"
+			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
+			column="KUNDE_I_ID" insert="false" update="false" />
+		<many-to-one name="flrlieferant"
+			class="com.lp.server.partner.fastlanereader.generated.FLRLieferant"
+			column="LIEFERANT_I_ID" insert="false" update="false" />
+		<many-to-one name="flrfehler"
+			class="com.lp.server.reklamation.fastlanereader.generated.FLRFehler"
+			column="FEHLER_I_ID" />
+		<many-to-one name="flrlos"
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLos"
+			column="LOS_I_ID" insert="false" update="false" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+	</class>
+
+
+	<class name="FLRWirksamkeit" table="REKLA_WIRKSAMKEIT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<set name="sprset" inverse="true">
+			<key column="WIRKSAMKEIT_I_ID" />
+			<one-to-many
+				class="com.lp.server.reklamation.fastlanereader.generated.FLRWirksamkeitspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+	</class>
+
+	<class name="FLRWirksamkeitspr" table="REKLA_WIRKSAMKEITSPR">
+		<composite-id>
+			<key-many-to-one name="wirksamkeit" column="WIRKSAMKEIT_I_ID"
+				class="com.lp.server.reklamation.fastlanereader.generated.FLRWirksamkeit" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+	<class name="FLRReklamationbild" table="REKLA_REKLAMATIONBILD">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="reklamation_i_id" column="REKLAMATION_I_ID"
+			length="5" type="java.lang.Integer" />
+
+	</class>
+
+	<filter-def name="filterLocale">
+		<filter-param name="paramLocale" type="java.lang.String" />
+	</filter-def>
+
+</hibernate-mapping>

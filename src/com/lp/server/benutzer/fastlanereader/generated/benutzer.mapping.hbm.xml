@@ -1,0 +1,162 @@
+<?xml version="1.0"?>
+<!--
+  HELIUM V, Open Source ERP software for sustained success
+  at small and medium-sized enterprises.
+  Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+  
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published 
+  by the Free Software Foundation, either version 3 of theLicense, or 
+  (at your option) any later version.
+  
+  According to sec. 7 of the GNU Affero General Public License, version 3, 
+  the terms of the AGPL are supplemented with the following terms:
+  
+  "HELIUM V" and "HELIUM 5" are registered trademarks of 
+  HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+  AGPL does not imply a trademark license. Therefore any rights, title and
+  interest in our trademarks remain entirely with us. If you want to propagate
+  modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
+  you may only do so if you have a written permission by HELIUM V IT-Solutions 
+  GmbH (to acquire a permission please contact HELIUM V IT-Solutions
+  at trademark@heliumv.com).
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+  
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  
+  Contact: developers@heliumv.com
+-->
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="com.lp.server.benutzer.fastlanereader.generated">
+	<class name="FLRBenutzer" table="PERS_BENUTZER">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_benutzerkennung" column="C_BENUTZERKENNUNG"
+			type="java.lang.String" />
+		<property name="t_gueltigbis" column="T_GUELTIGBIS" type="java.sql.Date" />
+		<many-to-one name="flrmandantdefault"
+			class="com.lp.server.system.fastlanereader.generated.FLRMandant"
+			column="MANDANT_C_NR_DEFAULT" />
+	</class>
+	<class name="FLRSystemrolle" table="PERS_SYSTEMROLLE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+	<class name="FLRBenutzermandantsystemrolle" table="PERS_BENUTZERMANDANTSYSTEMROLLE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<many-to-one name="flrbenutzer"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRBenutzer"
+			column="BENUTZER_I_ID" />
+		<many-to-one name="flrsystemrolle"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
+			column="SYSTEMROLLE_I_ID" />
+		<many-to-one name="flrmandant"
+			class="com.lp.server.system.fastlanereader.generated.FLRMandant"
+			column="MANDANT_C_NR" />
+	</class>
+	<class name="FLRRecht" table="PERS_RECHT">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<property name="x_kommentar" column="X_KOMMENTAR" type="java.lang.String" />
+	</class>
+	<class name="FLRRollerecht" table="PERS_ROLLERECHT">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<many-to-one name="flrrecht"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRRecht"
+			column="RECHT_C_NR" />
+		<many-to-one name="flrsystemrolle"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
+			column="SYSTEMROLLE_I_ID" />
+	</class>
+	<class name="FLRThema" table="PERS_THEMA">
+		<id name="c_nr" column="C_NR" type="java.lang.String">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<set name="themarollen" table="PERS_THEMAROLLE">
+			<key column="THEMA_C_NR" />
+			<many-to-many column="SYSTEMROLLE_I_ID"
+				class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle" />
+		</set>
+	</class>
+	<class name="FLRThemarolle" table="PERS_THEMAROLLE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<many-to-one name="flrthema"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRThema"
+			column="THEMA_C_NR" />
+		<many-to-one name="flrsystemrolle"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
+			column="SYSTEMROLLE_I_ID" />
+	</class>
+	<class name="FLRNachrichtart" table="PERS_NACHRICHTART">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="b_popup" column="B_POPUP" type="java.lang.Short" />
+		<property name="b_archivieren" column="B_ARCHIVIEREN" type="java.lang.Short" />
+		<many-to-one name="flrthema"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRThema"
+			column="THEMA_C_NR" />
+	</class>
+	<class name="FLRNachrichtarchiv" table="PERS_NACHRICHTARCHIV">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nachricht" column="C_NACHRICHT" type="java.lang.String" />
+		<property name="c_erledigungsgrund" column="C_ERLEDIGUNGSGRUND" type="java.lang.String" />
+		<property name="t_zeit" column="T_ZEIT" type="java.sql.Timestamp" />
+		<property name="t_erledigt" column="T_ERLEDIGT" type="java.sql.Timestamp" />
+		<property name="t_bearbeitung" column="T_BEARBEITUNG" type="java.sql.Timestamp" />
+		<many-to-one name="flrpersonal_anlegen"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ANLEGEN" />
+		<many-to-one name="flrpersonal_bearbeiter"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_BEARBEITER" />
+		<many-to-one name="flrpersonal_erledigt"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_ERLEDIGT" />
+		<many-to-one name="flrnachrichtart"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRNachrichtart"
+			column="NACHRICHTART_I_ID" />
+	</class>
+	<class name="FLRLagerrolle" table="PERS_LAGERROLLE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<many-to-one name="flrlager"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
+			column="LAGER_I_ID" />
+		<many-to-one name="flrsystemrolle"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
+			column="SYSTEMROLLE_I_ID" />
+	</class>
+	<class name="FLRFertigungsgrupperolle" table="PERS_FERTIGUNGSGRUPPEROLLE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<many-to-one name="flrfertigungsgruppe"
+			class="com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe"
+			column="FERTIGUNGSGRUPPE_I_ID" />
+		<many-to-one name="flrsystemrolle"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
+			column="SYSTEMROLLE_I_ID" />
+	</class>
+</hibernate-mapping>
