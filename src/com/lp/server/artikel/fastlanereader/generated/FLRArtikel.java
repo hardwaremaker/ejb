@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,17 +19,17 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.artikel.fastlanereader.generated;
 
 import com.lp.server.partner.fastlanereader.generated.FLRLiefergruppe;
@@ -59,6 +59,9 @@ public class FLRArtikel implements Serializable {
 
     /** nullable persistent field */
     private Short b_lagerbewertet;
+
+    /** nullable persistent field */
+    private Short b_dokumentenpflicht;
 
     /** nullable persistent field */
     private Short b_lagerbewirtschaftet;
@@ -130,12 +133,13 @@ public class FLRArtikel implements Serializable {
     private Set artikellagerplatzset;
 
     /** full constructor */
-    public FLRArtikel(String c_nr, String mandant_c_nr, String einheit_c_nr, String artikelart_c_nr, Short b_lagerbewertet, Short b_lagerbewirtschaftet, Short b_seriennrtragend, Short b_versteckt, Short b_chargennrtragend, Double f_verschnittfaktor, Double f_verschnittbasis, Double f_vertreterprovisionmax, Double f_lagermindest, Double f_lagersoll, Double f_fertigungssatzgroesse, String c_artikelbezhersteller, String c_artikelnrhersteller, Integer i_sofortverbrauch, Integer i_wartungsintervall, String einheit_c_nr_bestellung, BigDecimal n_umrechnungsfaktor, Short b_bestellmengeneinheitinvers, com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe flrartikelgruppe, com.lp.server.artikel.fastlanereader.generated.FLRShopgruppe flrshopgruppe, com.lp.server.artikel.fastlanereader.generated.FLRMaterial flrmaterial, com.lp.server.artikel.fastlanereader.generated.FLRArtikelklasse flrartikelklasse, FLRLiefergruppe flrliefergruppe, Set artikellagerplatzset) {
+    public FLRArtikel(String c_nr, String mandant_c_nr, String einheit_c_nr, String artikelart_c_nr, Short b_lagerbewertet, Short b_dokumentenpflicht, Short b_lagerbewirtschaftet, Short b_seriennrtragend, Short b_versteckt, Short b_chargennrtragend, Double f_verschnittfaktor, Double f_verschnittbasis, Double f_vertreterprovisionmax, Double f_lagermindest, Double f_lagersoll, Double f_fertigungssatzgroesse, String c_artikelbezhersteller, String c_artikelnrhersteller, Integer i_sofortverbrauch, Integer i_wartungsintervall, String einheit_c_nr_bestellung, BigDecimal n_umrechnungsfaktor, Short b_bestellmengeneinheitinvers, com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe flrartikelgruppe, com.lp.server.artikel.fastlanereader.generated.FLRShopgruppe flrshopgruppe, com.lp.server.artikel.fastlanereader.generated.FLRMaterial flrmaterial, com.lp.server.artikel.fastlanereader.generated.FLRArtikelklasse flrartikelklasse, FLRLiefergruppe flrliefergruppe, Set artikellagerplatzset) {
         this.c_nr = c_nr;
         this.mandant_c_nr = mandant_c_nr;
         this.einheit_c_nr = einheit_c_nr;
         this.artikelart_c_nr = artikelart_c_nr;
         this.b_lagerbewertet = b_lagerbewertet;
+        this.b_dokumentenpflicht = b_dokumentenpflicht;
         this.b_lagerbewirtschaftet = b_lagerbewirtschaftet;
         this.b_seriennrtragend = b_seriennrtragend;
         this.b_versteckt = b_versteckt;
@@ -218,6 +222,14 @@ public class FLRArtikel implements Serializable {
 
     public void setB_lagerbewertet(Short b_lagerbewertet) {
         this.b_lagerbewertet = b_lagerbewertet;
+    }
+
+    public Short getB_dokumentenpflicht() {
+        return this.b_dokumentenpflicht;
+    }
+
+    public void setB_dokumentenpflicht(Short b_dokumentenpflicht) {
+        this.b_dokumentenpflicht = b_dokumentenpflicht;
     }
 
     public Short getB_lagerbewirtschaftet() {

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -95,6 +95,18 @@ public class Stundenabrechnung implements Serializable {
 	@Column(name = "N_UEST200")
 	private BigDecimal nUest200;
 	
+	@Column(name = "N_QUALIFIKATIONSFAKTOR")
+	private BigDecimal nQualifikationsfaktor;
+	
+	
+	public BigDecimal getNQualifikationsfaktor() {
+		return nQualifikationsfaktor;
+	}
+
+	public void setNQualifikationsfaktor(BigDecimal nQualifikationsfaktor) {
+		this.nQualifikationsfaktor = nQualifikationsfaktor;
+	}
+
 	public BigDecimal getNUest200() {
 		return nUest200;
 	}

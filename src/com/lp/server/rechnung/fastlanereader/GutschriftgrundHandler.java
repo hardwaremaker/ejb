@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.rechnung.fastlanereader;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -338,19 +339,17 @@ public class GutschriftgrundHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
+			String mandantCNr = theClientDto.getMandant();
+			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class }, new String[] {
-					"i_id",
-					getTextRespectUISpr("lp.kennung", theClientDto.getMandant(),
-							theClientDto.getLocUi()),
-					getTextRespectUISpr("lp.bezeichnung", theClientDto
-							.getMandant(), theClientDto.getLocUi()),
+					String.class, String.class }, new String[] { "i_id",
+					getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
+					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
 
 			}, new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 					QueryParameters.FLR_BREITE_SHARE_WITH_REST }, new String[] {
-					"branche.i_id", "branche.c_nr",
-					"branche_branchespr_set.c_bez" }));
+					"branche.i_id", "grund.c_nr", "c_bez" }));
 		}
 		return super.getTableInfo();
 	}

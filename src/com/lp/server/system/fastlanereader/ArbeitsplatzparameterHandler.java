@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.system.fastlanereader;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -47,6 +48,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -285,7 +287,7 @@ public class ArbeitsplatzparameterHandler extends UseCaseHandler {
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-				boolean idFound = false;
+//				boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {
@@ -325,14 +327,19 @@ public class ArbeitsplatzparameterHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-
+			String mandantCNr = theClientDto.getMandant();
+			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class }, new String[] {
-					"Id",
-					getTextRespectUISpr("lp.parameter", theClientDto
-							.getMandant(), theClientDto.getLocUi()),
-					getTextRespectUISpr("lp.wert", theClientDto.getMandant(),
-							theClientDto.getLocUi()) }, new String[] { "i_id",
+					String.class, String.class }, new String[] { "Id",
+					getTextRespectUISpr("lp.parameter", mandantCNr, locUI),
+					getTextRespectUISpr("lp.wert", mandantCNr, locUI) },
+
+			new int[] {
+					-1, // diese Spalte wird ausgeblendet
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
+			new String[] { "i_id",
 					SystemFac.FLR_ARBEITSPLATZPARAMETER_FLRPARAMETER + ".c_nr",
 					SystemFac.FLR_ARBEITSPLATZPARAMETER_C_WERT }));
 		}

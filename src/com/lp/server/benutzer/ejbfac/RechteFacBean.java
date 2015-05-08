@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.benutzer.ejbfac;
 
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -64,7 +65,7 @@ public class RechteFacBean extends Facade implements RechteFac {
 	private EntityManager em;
 
 	public Integer createRollerecht(RollerechtDto rollerechtDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		if (rollerechtDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("rollerechtDto == null"));
@@ -113,7 +114,7 @@ public class RechteFacBean extends Facade implements RechteFac {
 	}
 
 	public void removeRollerecht(RollerechtDto rollerechtDto)
-			throws EJBExceptionLP {
+			throws EJBExceptionLP, RemoteException {
 		myLogger.entry();
 		if (rollerechtDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
@@ -142,7 +143,7 @@ public class RechteFacBean extends Facade implements RechteFac {
 	}
 
 	public void updateRollerecht(RollerechtDto rollerechtDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 
 		if (rollerechtDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
@@ -319,7 +320,7 @@ public class RechteFacBean extends Facade implements RechteFac {
 
 	public void kopiereRechteEinerRolle(Integer systemrolleIIdQuelle,
 			Integer systemrolleIIdZiel, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+			throws EJBExceptionLP, RemoteException {
 		// try {
 		Query query = em.createNamedQuery("RollerechtfindBySystemrolleIId");
 		query.setParameter(1, systemrolleIIdQuelle);

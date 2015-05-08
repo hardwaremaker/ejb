@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -37,9 +37,12 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 import com.lp.server.artikel.service.ArtikelDto;
+import com.lp.server.partner.ejb.Ansprechpartner;
 import com.lp.server.stueckliste.ejb.Montageart;
+import com.lp.server.system.service.HvDtoLogAlways;
 import com.lp.server.system.service.HvDtoLogClass;
 import com.lp.server.system.service.HvDtoLogIdCBez;
+import com.lp.server.system.service.HvDtoLogIdEmail;
 import com.lp.server.system.service.HvDtoLogIgnore;
 import com.lp.service.BelegpositionDto;
 
@@ -57,6 +60,17 @@ public class StuecklistepositionDto extends BelegpositionDto implements
 	private Float fDimension3;
 	private String cPosition;
 	private BigDecimal nKalkpreis;
+	
+	private Double fLagermindeststandAusKopfartikel=null;
+
+	public Double getfLagermindeststandAusKopfartikel() {
+		return fLagermindeststandAusKopfartikel;
+	}
+
+	public void setfLagermindeststandAusKopfartikel(
+			Double fLagermindeststandAusKopfartikel) {
+		this.fLagermindeststandAusKopfartikel = fLagermindeststandAusKopfartikel;
+	}
 
 	// nicht in DB
 	private BigDecimal nZielmenge;
@@ -68,6 +82,7 @@ public class StuecklistepositionDto extends BelegpositionDto implements
 
 	
 	private Integer iBeginnterminoffset;
+	
 
 	public Integer getIBeginnterminoffset() {
 		return iBeginnterminoffset;
@@ -83,6 +98,11 @@ public class StuecklistepositionDto extends BelegpositionDto implements
 	private Timestamp tAendern;
 	private Timestamp tAnlegen;
 
+	private Timestamp tAendernAnsprechpartner ;
+	private Timestamp tAnlegenAnsprechpartner ;
+	private Integer ansprechpartnerIIdAnlegen ;
+	private Integer ansprechpartnerIIdAendern ;
+	
 	public Integer getStuecklisteIId() {
 		return super.getBelegIId();
 	}
@@ -240,69 +260,240 @@ public class StuecklistepositionDto extends BelegpositionDto implements
 		this.tAnlegen = tAnlegen;
 	}
 
+	public Timestamp getTAendernAnsprechpartner() {
+		return tAendernAnsprechpartner;
+	}
+
+	public void setTAendernAnsprechpartner(Timestamp tAendernAnsprechpartner) {
+		this.tAendernAnsprechpartner = tAendernAnsprechpartner;
+	}
+
+	@HvDtoLogIdEmail(entityClass=Ansprechpartner.class)
+	@HvDtoLogAlways
+	public Integer getAnsprechpartnerIIdAnlegen() {
+		return ansprechpartnerIIdAnlegen;
+	}
+
+	public void setAnsprechpartnerIIdAnlegen(Integer ansprechpartnerIIdAnlegen) {
+		this.ansprechpartnerIIdAnlegen = ansprechpartnerIIdAnlegen;
+	}
+
+	@HvDtoLogIdEmail(entityClass=Ansprechpartner.class)
+	@HvDtoLogAlways
+	public Integer getAnsprechpartnerIIdAendern() {
+		return ansprechpartnerIIdAendern;
+	}
+
+	public void setAnsprechpartnerIIdAendern(Integer ansprechpartnerIIdAendern) {
+		this.ansprechpartnerIIdAendern = ansprechpartnerIIdAendern;
+	}
+
+	public Timestamp getTAnlegenAnsprechpartner() {
+		return tAnlegenAnsprechpartner;
+	}
+
+	public void setTAnlegenAnsprechpartner(Timestamp tAnlegenAnsprechpartner) {
+		this.tAnlegenAnsprechpartner = tAnlegenAnsprechpartner;
+	}
+	
+	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
-		if (!(obj instanceof StuecklistepositionDto))
+		if (!super.equals(obj))
 			return false;
-		StuecklistepositionDto that = (StuecklistepositionDto) obj;
-		if (!(that.getIId() == null ? this.getIId() == null : that.getIId()
-				.equals(this.getIId())))
+		if (getClass() != obj.getClass())
 			return false;
-		if (!(that.getBelegIId() == null ? this.getBelegIId() == null : that
-				.getBelegIId().equals(this.getBelegIId())))
+		StuecklistepositionDto other = (StuecklistepositionDto) obj;
+		if (ansprechpartnerIIdAendern == null) {
+			if (other.ansprechpartnerIIdAendern != null)
+				return false;
+		} else if (!ansprechpartnerIIdAendern
+				.equals(other.ansprechpartnerIIdAendern))
 			return false;
-		if (!(that.getArtikelIId() == null ? this.getArtikelIId() == null
-				: that.getArtikelIId().equals(this.getArtikelIId())))
+		if (ansprechpartnerIIdAnlegen == null) {
+			if (other.ansprechpartnerIIdAnlegen != null)
+				return false;
+		} else if (!ansprechpartnerIIdAnlegen
+				.equals(other.ansprechpartnerIIdAnlegen))
 			return false;
-		if (!(that.getNMenge() == null ? this.getNMenge() == null : that
-				.getNMenge().equals(this.getNMenge())))
+		if (artikelDto == null) {
+			if (other.artikelDto != null)
+				return false;
+		} else if (!artikelDto.equals(other.artikelDto))
 			return false;
-		if (!(that.getEinheitCNr() == null ? this.getEinheitCNr() == null
-				: that.getEinheitCNr().equals(this.getEinheitCNr())))
+		if (bMitdrucken == null) {
+			if (other.bMitdrucken != null)
+				return false;
+		} else if (!bMitdrucken.equals(other.bMitdrucken))
 			return false;
-		if (!(that.fDimension1 == null ? this.fDimension1 == null
-				: that.fDimension1.equals(this.fDimension1)))
+		if (cKommentar == null) {
+			if (other.cKommentar != null)
+				return false;
+		} else if (!cKommentar.equals(other.cKommentar))
 			return false;
-		if (!(that.fDimension2 == null ? this.fDimension2 == null
-				: that.fDimension2.equals(this.fDimension2)))
+		if (cPosition == null) {
+			if (other.cPosition != null)
+				return false;
+		} else if (!cPosition.equals(other.cPosition))
 			return false;
-		if (!(that.fDimension3 == null ? this.fDimension3 == null
-				: that.fDimension3.equals(this.fDimension3)))
+		if (fDimension1 == null) {
+			if (other.fDimension1 != null)
+				return false;
+		} else if (!fDimension1.equals(other.fDimension1))
 			return false;
-		if (!(that.cPosition == null ? this.cPosition == null : that.cPosition
-				.equals(this.cPosition)))
+		if (fDimension2 == null) {
+			if (other.fDimension2 != null)
+				return false;
+		} else if (!fDimension2.equals(other.fDimension2))
 			return false;
-		if (!(that.cKommentar == null ? this.cKommentar == null
-				: that.cKommentar.equals(this.cKommentar)))
+		if (fDimension3 == null) {
+			if (other.fDimension3 != null)
+				return false;
+		} else if (!fDimension3.equals(other.fDimension3))
 			return false;
-		if (!(that.montageartIId == null ? this.montageartIId == null
-				: that.montageartIId.equals(this.montageartIId)))
+		if (fLagermindeststandAusKopfartikel == null) {
+			if (other.fLagermindeststandAusKopfartikel != null)
+				return false;
+		} else if (!fLagermindeststandAusKopfartikel
+				.equals(other.fLagermindeststandAusKopfartikel))
 			return false;
-		if (!(that.iLfdnummer == null ? this.iLfdnummer == null
-				: that.iLfdnummer.equals(this.iLfdnummer)))
+		if (iBeginnterminoffset == null) {
+			if (other.iBeginnterminoffset != null)
+				return false;
+		} else if (!iBeginnterminoffset.equals(other.iBeginnterminoffset))
 			return false;
-		if (!(that.getISort() == null ? this.getISort() == null : that
-				.getISort().equals(this.getISort())))
+		if (iLfdnummer == null) {
+			if (other.iLfdnummer != null)
+				return false;
+		} else if (!iLfdnummer.equals(other.iLfdnummer))
+			return false;
+		if (montageartDto == null) {
+			if (other.montageartDto != null)
+				return false;
+		} else if (!montageartDto.equals(other.montageartDto))
+			return false;
+		if (montageartIId == null) {
+			if (other.montageartIId != null)
+				return false;
+		} else if (!montageartIId.equals(other.montageartIId))
+			return false;
+		if (nKalkpreis == null) {
+			if (other.nKalkpreis != null)
+				return false;
+		} else if (!nKalkpreis.equals(other.nKalkpreis))
+			return false;
+		if (nZielmenge == null) {
+			if (other.nZielmenge != null)
+				return false;
+		} else if (!nZielmenge.equals(other.nZielmenge))
+			return false;
+		if (personalIIdAendern == null) {
+			if (other.personalIIdAendern != null)
+				return false;
+		} else if (!personalIIdAendern.equals(other.personalIIdAendern))
+			return false;
+		if (personalIIdAnlegen == null) {
+			if (other.personalIIdAnlegen != null)
+				return false;
+		} else if (!personalIIdAnlegen.equals(other.personalIIdAnlegen))
+			return false;
+		if (sHandeingabe == null) {
+			if (other.sHandeingabe != null)
+				return false;
+		} else if (!sHandeingabe.equals(other.sHandeingabe))
+			return false;
+		if (tAendern == null) {
+			if (other.tAendern != null)
+				return false;
+		} else if (!tAendern.equals(other.tAendern))
+			return false;
+		if (tAendernAnsprechpartner == null) {
+			if (other.tAendernAnsprechpartner != null)
+				return false;
+		} else if (!tAendernAnsprechpartner
+				.equals(other.tAendernAnsprechpartner))
+			return false;
+		if (tAnlegen == null) {
+			if (other.tAnlegen != null)
+				return false;
+		} else if (!tAnlegen.equals(other.tAnlegen))
+			return false;
+		if (tAnlegenAnsprechpartner == null) {
+			if (other.tAnlegenAnsprechpartner != null)
+				return false;
+		} else if (!tAnlegenAnsprechpartner
+				.equals(other.tAnlegenAnsprechpartner))
 			return false;
 		return true;
 	}
 
+	@Override
 	public int hashCode() {
-		int result = 17;
-		result = 37 * result + this.getIId().hashCode();
-		result = 37 * result + this.getBelegIId().hashCode();
-		result = 37 * result + this.getArtikelIId().hashCode();
-		result = 37 * result + this.getNMenge().hashCode();
-		result = 37 * result + this.getEinheitCNr().hashCode();
-		result = 37 * result + this.fDimension1.hashCode();
-		result = 37 * result + this.fDimension2.hashCode();
-		result = 37 * result + this.fDimension3.hashCode();
-		result = 37 * result + this.cPosition.hashCode();
-		result = 37 * result + this.cKommentar.hashCode();
-		result = 37 * result + this.montageartIId.hashCode();
-		result = 37 * result + this.iLfdnummer.hashCode();
-		result = 37 * result + this.getISort().hashCode();
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime
+				* result
+				+ ((ansprechpartnerIIdAendern == null) ? 0
+						: ansprechpartnerIIdAendern.hashCode());
+		result = prime
+				* result
+				+ ((ansprechpartnerIIdAnlegen == null) ? 0
+						: ansprechpartnerIIdAnlegen.hashCode());
+		result = prime * result
+				+ ((artikelDto == null) ? 0 : artikelDto.hashCode());
+		result = prime * result
+				+ ((bMitdrucken == null) ? 0 : bMitdrucken.hashCode());
+		result = prime * result
+				+ ((cKommentar == null) ? 0 : cKommentar.hashCode());
+		result = prime * result
+				+ ((cPosition == null) ? 0 : cPosition.hashCode());
+		result = prime * result
+				+ ((fDimension1 == null) ? 0 : fDimension1.hashCode());
+		result = prime * result
+				+ ((fDimension2 == null) ? 0 : fDimension2.hashCode());
+		result = prime * result
+				+ ((fDimension3 == null) ? 0 : fDimension3.hashCode());
+		result = prime
+				* result
+				+ ((fLagermindeststandAusKopfartikel == null) ? 0
+						: fLagermindeststandAusKopfartikel.hashCode());
+		result = prime
+				* result
+				+ ((iBeginnterminoffset == null) ? 0 : iBeginnterminoffset
+						.hashCode());
+		result = prime * result
+				+ ((iLfdnummer == null) ? 0 : iLfdnummer.hashCode());
+		result = prime * result
+				+ ((montageartDto == null) ? 0 : montageartDto.hashCode());
+		result = prime * result
+				+ ((montageartIId == null) ? 0 : montageartIId.hashCode());
+		result = prime * result
+				+ ((nKalkpreis == null) ? 0 : nKalkpreis.hashCode());
+		result = prime * result
+				+ ((nZielmenge == null) ? 0 : nZielmenge.hashCode());
+		result = prime
+				* result
+				+ ((personalIIdAendern == null) ? 0 : personalIIdAendern
+						.hashCode());
+		result = prime
+				* result
+				+ ((personalIIdAnlegen == null) ? 0 : personalIIdAnlegen
+						.hashCode());
+		result = prime * result
+				+ ((sHandeingabe == null) ? 0 : sHandeingabe.hashCode());
+		result = prime * result
+				+ ((tAendern == null) ? 0 : tAendern.hashCode());
+		result = prime
+				* result
+				+ ((tAendernAnsprechpartner == null) ? 0
+						: tAendernAnsprechpartner.hashCode());
+		result = prime * result
+				+ ((tAnlegen == null) ? 0 : tAnlegen.hashCode());
+		result = prime
+				* result
+				+ ((tAnlegenAnsprechpartner == null) ? 0
+						: tAnlegenAnsprechpartner.hashCode());
 		return result;
 	}
 

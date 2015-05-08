@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -38,6 +38,8 @@ import java.util.Locale;
 
 import javax.ejb.Remote;
 
+import com.lp.server.system.service.IImportHead;
+import com.lp.server.system.service.IImportPositionen;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.util.EJBExceptionLP;
 
@@ -58,6 +60,9 @@ public interface AngebotstklpositionFac {
 
 	public Integer createAgstklposition(AgstklpositionDto agstklpositionDtoI,
 			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP;
+	
+	public Integer createAngebotpositions(
+			AgstklpositionDto[] agstklpositionDtos, TheClientDto theClientDto);
 
 	public void removeAgstklposition(AgstklpositionDto agstklpositionDtoI,
 			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP;
@@ -107,5 +112,21 @@ public interface AngebotstklpositionFac {
 
 	public void vertauscheAgstklpositionen(Integer idPosition1I,
 			Integer idPosition2I) throws EJBExceptionLP, RemoteException;
-	public void preiseGemaessKalkulationsart2Updaten(Integer agstklIId,TheClientDto theClientDto);
+	public void preiseGemaessKalkulationsartUpdaten(Integer agstklIId,TheClientDto theClientDto);
+
+	/**
+	 * Liefert die Bean als PositionImporter zur&uuml;ck, um auf die Methoden
+	 * des Interfaces {@link IImportPositionen} zuzugreifen.
+	 * 
+	 * @return this
+	 */
+	public IImportPositionen asPositionImporter() ;
+
+	/**
+	 * Liefert die Bean als HeadImporter zur&uuml;ck, um auf die Methoden
+	 * des Interfaces {@link IImportHead} zuzugreifen.
+	 * 
+	 * @return this
+	 */
+	public IImportHead asHeadImporter();
 }

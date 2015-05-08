@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -45,7 +45,9 @@ import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
 
+import com.lp.server.artikel.ejb.Artklaspr;
 import com.lp.server.fertigung.ejb.Losbereich;
 import com.lp.server.fertigung.ejb.Losklasse;
 import com.lp.server.fertigung.ejb.Losklassespr;
@@ -237,6 +239,15 @@ public class FertigungServiceFacBean extends Facade implements
 		try {
 			if (losklasseDto != null) {
 				Integer iId = losklasseDto.getIId();
+				Query query = em.createNamedQuery("LosklassesprfindByLosklasseIId");
+				query.setParameter(1, iId);
+				Collection<?> allLosklassespr = query.getResultList();
+				Iterator<?> iter = allLosklassespr.iterator();
+				while (iter.hasNext()) {
+					Losklassespr losklassesprTemp = (Losklassespr) iter.next();
+					em.remove(losklassesprTemp);
+				}
+				
 				Losklasse toRemove = em.find(Losklasse.class, iId);
 				if (toRemove == null) {
 					throw new EJBExceptionLP(

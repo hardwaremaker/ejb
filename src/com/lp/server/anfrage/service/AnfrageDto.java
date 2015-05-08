@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -55,6 +55,17 @@ public class AnfrageDto extends BelegDto implements Cloneable {
 	// private String waehrungCNrAnfragewaehrung;
 	// private Double fWechselkursmandantwaehrungzuanfragewaehrung;
 	private Timestamp tAnliefertermin;
+
+	private Integer anfrageerledigungsgrundIId;
+
+	public Integer getAnfrageerledigungsgrundIId() {
+		return anfrageerledigungsgrundIId;
+	}
+
+	public void setAnfrageerledigungsgrundIId(Integer anfrageerledigungsgrundIId) {
+		this.anfrageerledigungsgrundIId = anfrageerledigungsgrundIId;
+	}
+
 	private Timestamp tAngebotdatum;
 
 	public Timestamp getTAngebotdatum() {
@@ -160,8 +171,6 @@ public class AnfrageDto extends BelegDto implements Cloneable {
 	public void setCLieferartort(String cLieferartort) {
 		this.cLieferartort = cLieferartort;
 	}
-
-	
 
 	public String toString() {
 		String returnString = super.toString();

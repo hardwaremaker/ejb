@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -158,8 +158,8 @@ public interface WareneingangFac {
 			WareneingangspositionDto weposDtoI, boolean bLoescheBuchung,
 			TheClientDto theClientDto) throws EJBExceptionLP;
 
-	public BigDecimal getBerechnetenEinstandspreisEinerWareneingangsposition(
-			Integer weposIId, TheClientDto theClientDto);
+	public EinstandspreiseEinesWareneingangsDto getBerechnetenEinstandspreisEinerWareneingangsposition(
+			Integer wareneingangIId, TheClientDto theClientDto);
 
 	public void geliefertPreiseAllerWEPRueckpflegen(java.sql.Date dVon,
 			java.sql.Date dBis, TheClientDto theClientDto);

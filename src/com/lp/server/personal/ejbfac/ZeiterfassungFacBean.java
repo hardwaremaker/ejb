@@ -1,33 +1,33 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.personal.ejbfac;
@@ -37,6 +37,7 @@ import java.rmi.RemoteException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.text.DateFormatSymbols;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -62,10 +63,6 @@ import javax.persistence.NonUniqueResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
-import net.sf.jasperreports.engine.JRDataSource;
-import net.sf.jasperreports.engine.JRException;
-import net.sf.jasperreports.engine.JRField;
-
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Expression;
@@ -74,6 +71,7 @@ import org.hibernate.criterion.Restrictions;
 
 import com.lp.server.angebot.service.AngebotDto;
 import com.lp.server.artikel.service.ArtikelDto;
+import com.lp.server.artikel.service.BelegInfos;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragpositionDto;
 import com.lp.server.auftrag.service.AuftragzeitenDto;
@@ -96,8 +94,10 @@ import com.lp.server.personal.ejb.Maschine;
 import com.lp.server.personal.ejb.Maschinengruppe;
 import com.lp.server.personal.ejb.Maschinenkosten;
 import com.lp.server.personal.ejb.Maschinenzeitdaten;
+import com.lp.server.personal.ejb.Personal;
 import com.lp.server.personal.ejb.Personalzeitmodell;
 import com.lp.server.personal.ejb.Reise;
+import com.lp.server.personal.ejb.ReisekostenDiaetenScript;
 import com.lp.server.personal.ejb.Reiselog;
 import com.lp.server.personal.ejb.Schichtzeitmodell;
 import com.lp.server.personal.ejb.Sonderzeiten;
@@ -129,6 +129,8 @@ import com.lp.server.personal.fastlanereader.generated.FLRPersonalverfuegbarkeit
 import com.lp.server.personal.fastlanereader.generated.FLRReise;
 import com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit;
 import com.lp.server.personal.fastlanereader.generated.FLRTaetigkeitspr;
+import com.lp.server.personal.fastlanereader.generated.FLRTelefonzeiten;
+import com.lp.server.personal.fastlanereader.generated.FLRZeitabschluss;
 import com.lp.server.personal.fastlanereader.generated.FLRZeitdaten;
 import com.lp.server.personal.fastlanereader.generated.FLRZeitdatenLos;
 import com.lp.server.personal.service.ArtikelzulageDto;
@@ -187,13 +189,17 @@ import com.lp.server.personal.service.TelefonzeitenDto;
 import com.lp.server.personal.service.TelefonzeitenDtoAssembler;
 import com.lp.server.personal.service.UrlaubsabrechnungDto;
 import com.lp.server.personal.service.UrlaubsanspruchDto;
+import com.lp.server.personal.service.VonBisErfassungTagesdatenDto;
+import com.lp.server.personal.service.WochenabschlussReportDto;
 import com.lp.server.personal.service.ZeileMonatsabrechnungDto;
+import com.lp.server.personal.service.ZeitabschlussDto;
 import com.lp.server.personal.service.ZeitdatenDto;
 import com.lp.server.personal.service.ZeitdatenDtoAssembler;
 import com.lp.server.personal.service.ZeitdatenDtoBelegzeiten;
 import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.personal.service.ZeiterfassungFacAll;
 import com.lp.server.personal.service.ZeiterfassungFacLocal;
+import com.lp.server.personal.service.ZeiterfassungReportFac;
 import com.lp.server.personal.service.ZeitmodellDto;
 import com.lp.server.personal.service.ZeitmodellDtoAssembler;
 import com.lp.server.personal.service.ZeitmodellsprDto;
@@ -210,6 +216,9 @@ import com.lp.server.personal.service.ZulageDto;
 import com.lp.server.projekt.service.ProjektDto;
 import com.lp.server.projekt.service.ProjektServiceFac;
 import com.lp.server.stueckliste.service.StuecklisteFac;
+import com.lp.server.system.jcr.service.PrintInfoDto;
+import com.lp.server.system.jcr.service.docnode.DocNodeWochenabschlussBeleg;
+import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.KostenstelleDto;
@@ -219,6 +228,8 @@ import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.DatumsfilterVonBis;
+import com.lp.server.util.HelperServer;
 import com.lp.server.util.LPReport;
 import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
@@ -226,8 +237,11 @@ import com.lp.server.util.logger.HvDtoLogger;
 import com.lp.server.util.report.JasperPrintLP;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
-import com.lp.util.HelperDateTime;
 import com.lp.util.LPDatenSubreport;
+
+import net.sf.jasperreports.engine.JRDataSource;
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JRField;
 
 @Stateless
 @SuppressWarnings("unused")
@@ -274,7 +288,10 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	public static int REPORT_MONATSABRECHNUNG_ZEITMODELL = 30;
 	public static int REPORT_MONATSABRECHNUNG_KINDKRANK = 31;
 	public static int REPORT_MONATSABRECHNUNG_SUBREPORT_ZULAGEN = 32;
-	public static int REPORT_MONATSABRECHNUNG_ANZAHL_SPALTEN = 33;
+	public static int REPORT_MONATSABRECHNUNG_PLATZHALTER_FUER_SUREPORTZEIDATENJOURNAL = 33;
+	public static int REPORT_MONATSABRECHNUNG_MONAT = 34;
+	public static int REPORT_MONATSABRECHNUNG_QUALIFIKATIONSFAKTOR = 35;
+	public static int REPORT_MONATSABRECHNUNG_ANZAHL_SPALTEN = 36;
 
 	private static int REPORT_ANWESENHEITSLISTE_ANWESEND = 0;
 	private static int REPORT_ANWESENHEITSLISTE_NAME = 1;
@@ -297,7 +314,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	private static int REPORT_SONDERTAETIGKEITENLISTE_WARNMEDLUNG_IN_KALENDERTAGEN = 7;
 	public static int REPORT_SONDERTAETIGKEITENLISTE_ANZAHL_SPALTEN = 8;
 
-	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PERSON = 0;
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PERSONAL_ID = 0;
 	private static int REPORT_PRODUKTIVITAETISSTATISTIK_AUFTRAG = 1;
 	private static int REPORT_PRODUKTIVITAETISSTATISTIK_LOS = 2;
 	private static int REPORT_PRODUKTIVITAETISSTATISTIK_ANGEBOT = 3;
@@ -324,7 +341,22 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	private static int REPORT_PRODUKTIVITAETISSTATISTIK_LOS_AGNUMMER = 23;
 	private static int REPORT_PRODUKTIVITAETISSTATISTIK_LOS_UAGNUMMER = 24;
 	private static int REPORT_PRODUKTIVITAETISSTATISTIK_LOS_RUESTEN_MITRECHNEN = 25;
-	private static int REPORT_PRODUKTIVITAETISSTATISTIK_ANZAHL_SPALTEN = 26;
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKT_PROJEKTKLAMMER = 26;
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKTKATEGORIE_PROJEKTKLAMMER = 27;
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_TELEFONZEIT = 28;
+
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_NAME = 29;
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_IST_GESAMT = 30;
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_INTERN = 31;
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_EXTERN = 32;
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_PROZENTINTERN = 33;
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_PROZENTEXTERN = 34;
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_LEISTUNGSWERT = 35;
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_SUBREPORT_SONDERTAETIGKEITEN = 36;
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_KOSTENSTELLE = 37;
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_ABTEILUNG = 38;
+
+	private static int REPORT_PRODUKTIVITAETISSTATISTIK_ANZAHL_SPALTEN = 39;
 
 	private static int REPORT_SONDERTAETIGKEITEN_KENNUNG = 0;
 	private static int REPORT_SONDERTAETIGKEITEN_BEZEICHNUNG = 1;
@@ -378,11 +410,29 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	private static int REPORT_ZEITSALDO_KIND_KRANK = 46;
 	private static int REPORT_ZEITSALDO_ANZAHL_ZEILEN = 47;
 
+	private static int REPORT_WOCHENABSCHLUSS_DATUM = 0;
+	private static int REPORT_WOCHENABSCHLUSS_KOMMT = 1;
+	private static int REPORT_WOCHENABSCHLUSS_GEHT = 2;
+	private static int REPORT_WOCHENABSCHLUSS_SOLL = 3;
+	private static int REPORT_WOCHENABSCHLUSS_IST = 4;
+	private static int REPORT_WOCHENABSCHLUSS_SUBREPORT_BELEGZEITEN = 5;
+	private static int REPORT_WOCHENABSCHLUSS_FEIERTAG = 6;
+	private static int REPORT_WOCHENABSCHLUSS_ARZT = 7;
+	private static int REPORT_WOCHENABSCHLUSS_KRANK = 8;
+	private static int REPORT_WOCHENABSCHLUSS_KINDKRANK = 9;
+	private static int REPORT_WOCHENABSCHLUSS_BEHOERDE = 10;
+	private static int REPORT_WOCHENABSCHLUSS_URLAUB = 11;
+	private static int REPORT_WOCHENABSCHLUSS_SONSTIGE_BEZAHLT = 12;
+	private static int REPORT_WOCHENABSCHLUSS_SONSTIGE_UNBEZAHLT = 13;
+	private static int REPORT_WOCHENABSCHLUSS_FEHLER = 14;
+	private static int REPORT_WOCHENABSCHLUSS_WOCHENTAG = 15;
+	private static int REPORT_WOCHENABSCHLUSS_ANZAHL_SPALTEN = 16;
+
 	/**
 	 * Berechne die TagesArbeitszeit eines Tages zu einer Person, ohne
 	 * Paarweisen Sondertaetigkeiten meldet Fehler, wenn die Tagesarbeitszeit
 	 * nicht berechnet werden konnte
-	 * 
+	 *
 	 * @param personalIId
 	 *            Die Person
 	 * @param d_datum
@@ -392,6 +442,158 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	 * @return String beinhaltet Tagesarbeitszeit
 	 * @exception EJBExceptionLP
 	 */
+
+	public VonBisErfassungTagesdatenDto berechneTagesArbeitszeitVonBisZeiterfassungOhneKommtGeht(
+			Integer personalIId, java.sql.Date d_datum,
+			TheClientDto theClientDto) {
+
+		VonBisErfassungTagesdatenDto vonBisDto = new VonBisErfassungTagesdatenDto();
+
+		// Hole Dto der Unterbrechung
+		TaetigkeitDto taetigkeitDto_Unter = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_UNTER, theClientDto);
+		// Hole Dto des Arztbesuchs
+		TaetigkeitDto taetigkeitDto_Arzt = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_ARZT, theClientDto);
+		// Hole Dto der Behoerde
+		TaetigkeitDto taetigkeitDto_Behoerde = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_BEHOERDE, theClientDto);
+		// Hole Dto des Urlaub
+		TaetigkeitDto taetigkeitDto_Urlaub = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_URLAUB, theClientDto);
+		// Hole Dto des Zeitausgleichs
+		TaetigkeitDto taetigkeitDto_ZA = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_ZEITAUSGLEICH, theClientDto);
+		// Hole Dto der Behoerde
+		TaetigkeitDto taetigkeitDto_Krank = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_KRANK, theClientDto);
+		TaetigkeitDto taetigkeitDto_Kindkrank = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_KINDKRANK, theClientDto);
+
+		// Berechnungsdatum abschneiden, damit nur mehr JJJJ.MM.TT ueberbleibt
+		Calendar c = Calendar.getInstance();
+		c.setTime(d_datum);
+		c.set(Calendar.HOUR_OF_DAY, 0);
+		c.set(Calendar.MINUTE, 0);
+		c.set(Calendar.SECOND, 0);
+		c.set(Calendar.MILLISECOND, 0);
+		d_datum = new java.sql.Date(c.getTime().getTime());
+		// Heutiges Datum herausfinden und abschneiden, damit nur mehr
+		// JJJJ.MM.TT ueberbleibt
+		c.setTimeInMillis(System.currentTimeMillis());
+		c.set(Calendar.HOUR_OF_DAY, 0);
+		c.set(Calendar.MINUTE, 0);
+		c.set(Calendar.SECOND, 0);
+		c.set(Calendar.MILLISECOND, 0);
+		java.sql.Date d_heute = new java.sql.Date(c.getTime().getTime());
+
+		ZeitdatenDto[] zeitdatenDtos = null;
+
+		// try {
+		// Hole Zeitdaten eines Tages
+		Query query = em
+				.createNamedQuery("ZeitdatenfindZeitdatenEinesTagesUndEinerPerson");
+		query.setParameter(1, personalIId);
+		query.setParameter(2, new java.sql.Timestamp(d_datum.getTime()));
+		query.setParameter(3, new java.sql.Timestamp(
+				d_datum.getTime() + 24 * 3600000));
+		Collection<?> cl = query.getResultList();
+		// if (cl.isEmpty()) {
+		// zeitdatenDtos = null;
+		// }
+		// else {
+
+		zeitdatenDtos = assembleZeitdatenDtosOhneEnde(cl);
+
+		for (int i = 0; i < zeitdatenDtos.length; i++) {
+			ZeitdatenDto zeitdatenDto_Aktuell = zeitdatenFindByPrimaryKey(
+					zeitdatenDtos[i].getIId(), theClientDto);
+
+			if (zeitdatenDto_Aktuell.getCBelegartnr() != null) {
+
+				// eigentlich sollte nun eine Bis-Zeit vorhanden sein
+				if (zeitdatenDto_Aktuell.gettZeit_Bis() != null) {
+
+					java.sql.Time tDauer = new java.sql.Time(
+							zeitdatenDto_Aktuell.gettZeit_Bis().getTime()
+									- zeitdatenDto_Aktuell.getTZeit().getTime()
+									- 3600000);
+
+					double dIstZeile = Helper.time2Double(tDauer);
+					vonBisDto.setdIst(vonBisDto.getdIst() + dIstZeile);
+				}
+
+			} else if (zeitdatenDto_Aktuell.getTaetigkeitIId() != null) {
+
+				if (zeitdatenDto_Aktuell.gettZeit_Bis() != null) {
+
+					java.sql.Time tDauer = new java.sql.Time(
+							zeitdatenDto_Aktuell.gettZeit_Bis().getTime()
+									- zeitdatenDto_Aktuell.getTZeit().getTime()
+									- 3600000);
+
+					double dIstZeile = Helper.time2Double(tDauer);
+
+					if (zeitdatenDto_Aktuell.getTaetigkeitIId().equals(
+							taetigkeitDto_Unter.getIId())) {
+						vonBisDto.setdUnter(vonBisDto.getdUnter() + dIstZeile);
+					} else if (zeitdatenDto_Aktuell.getTaetigkeitIId().equals(
+							taetigkeitDto_Arzt.getIId())) {
+						vonBisDto.setdArzt(vonBisDto.getdArzt() + dIstZeile);
+					} else if (zeitdatenDto_Aktuell.getTaetigkeitIId().equals(
+							taetigkeitDto_Behoerde.getIId())) {
+						vonBisDto.setdBehoerde(vonBisDto.getdBehoerde()
+								+ dIstZeile);
+					} else if (zeitdatenDto_Aktuell.getTaetigkeitIId().equals(
+							taetigkeitDto_Kindkrank.getIId())) {
+						vonBisDto.setdKindkrank(vonBisDto.getdKindkrank()
+								+ dIstZeile);
+					} else if (zeitdatenDto_Aktuell.getTaetigkeitIId().equals(
+							taetigkeitDto_Krank.getIId())) {
+						vonBisDto.setdKrank(vonBisDto.getdKrank() + dIstZeile);
+					} else if (zeitdatenDto_Aktuell.getTaetigkeitIId().equals(
+							taetigkeitDto_Urlaub.getIId())) {
+						vonBisDto
+								.setdUrlaub(vonBisDto.getdUrlaub() + dIstZeile);
+					} else if (zeitdatenDto_Aktuell.getTaetigkeitIId().equals(
+							taetigkeitDto_ZA.getIId())) {
+						vonBisDto.setdZeitausgleich(vonBisDto
+								.getdZeitausgleich() + dIstZeile);
+					} else {
+						TaetigkeitDto tDto = taetigkeitFindByPrimaryKey(
+								zeitdatenDto_Aktuell.getTaetigkeitIId(),
+								theClientDto);
+
+						if (tDto.getFBezahlt() == 0) {
+							vonBisDto.setdSonstigeNichtBezahlt(vonBisDto
+									.getdSonstigeNichtBezahlt() + dIstZeile);
+						} else {
+
+							double dSumme = Helper
+									.rundeKaufmaennisch(
+											new BigDecimal(dIstZeile)
+													.multiply(new BigDecimal(
+															tDto.getFBezahlt()
+																	.doubleValue() / 100)),
+											2).doubleValue();
+
+							vonBisDto.setdSontigeBezahlt(vonBisDto
+									.getdSontigeBezahlt() + dSumme);
+
+						}
+
+					}
+
+				}
+
+			}
+
+		}
+
+		return vonBisDto;
+
+	}
+
 	public Double berechneTagesArbeitszeit(Integer personalIId,
 			java.sql.Date d_datum, TheClientDto theClientDto)
 			throws EJBExceptionLP {
@@ -910,6 +1112,13 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					new Exception("tVon == null || tBis == null"));
 		}
 
+		tVon = Helper.cutTimestamp(tVon);
+		tBis = Helper.cutTimestamp(tBis);
+
+		Calendar c = Calendar.getInstance();
+		c.setTime(tVon);
+		int iAnzahlTage = Helper.getDifferenzInTagen(tVon, tBis);
+
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = factory.openSession();
 		// MASCHINENARBEITSZEITEN
@@ -925,8 +1134,24 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		while (resultListIterator.hasNext()) {
 			FLRMaschine flrmaschine = (FLRMaschine) resultListIterator.next();
 			// Maschinen haben jeden Tag dieselbe Verfuegbarkeit
-			double stunden = 0.24 * flrmaschine.getF_verfuegbarkeitinprozent()
-					.doubleValue();
+
+			double stunden = 0;
+			for (int i = 0; i < iAnzahlTage; i++) {
+
+				BigDecimal bdVerfuegbarkeitInStunden = getMaschineFac()
+						.getVerfuegbarkeitInStundenZuDatum(
+								flrmaschine.getI_id(),
+								new java.sql.Date(c.getTimeInMillis()),
+								theClientDto);
+
+				if (bdVerfuegbarkeitInStunden != null) {
+					stunden += bdVerfuegbarkeitInStunden.doubleValue();
+				}
+
+				c.set(c.DATE, c.get(c.DATE) + 1);
+
+			}
+
 			BigDecimal verfuegbareStungen = new BigDecimal(stunden);
 
 			if (maschinengruppen.containsKey(flrmaschine
@@ -962,12 +1187,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		} catch (RemoteException ex) {
 		}
 
-		tVon = Helper.cutTimestamp(tVon);
-		tBis = Helper.cutTimestamp(tBis);
-
-		Calendar c = Calendar.getInstance();
 		c.setTime(tVon);
-		int iAnzahlTage = Helper.getDifferenzInTagen(tVon, tBis);
 		ArrayList<SollverfuegbarkeitDto> alArtikelgruppen = new ArrayList<SollverfuegbarkeitDto>();
 		for (int i = 0; i < iAnzahlTage; i++) {
 			// getsoll
@@ -1178,7 +1398,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	 * Berechne die TagesArbeitszeit eines Zeitraumes zu einer Person, ohne
 	 * Paarweisen Sondertaetigkeiten meldet Fehler, wenn die Tagesarbeitszeit
 	 * nicht berechnet werden konnte
-	 * 
+	 *
 	 * @param personalIId
 	 *            Die Person
 	 * @param dDatumVon
@@ -1193,7 +1413,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	@SuppressWarnings("static-access")
 	public Double berechneArbeitszeitImZeitraum(Integer personalIId,
 			java.sql.Date dDatumVon, java.sql.Date dDatumBis,
-			TheClientDto theClientDto) {
+			boolean bAbzueglichTelefonzeiten, TheClientDto theClientDto) {
 		if (personalIId == null || dDatumVon == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
@@ -1211,6 +1431,9 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		// Hole id der Taetigkeit GEHT
 		Integer taetigkeitIId_Geht = taetigkeitFindByCNr(
 				ZeiterfassungFac.TAETIGKEIT_GEHT, theClientDto).getIId();
+		// Hole id der Taetigkeit GEHT
+		Integer taetigkeitIId_Telefon = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_TELEFON, theClientDto).getIId();
 
 		ArrayList<Object> daten = new ArrayList<Object>();
 		// Alle Zeitdaten des Zeitraums holen
@@ -1382,7 +1605,18 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 										.getTZeit().getTime());
 								long l_pause = u_pause.getTime()
 										- u_before.getTime();
-								u_gesamt.setTime(u_gesamt.getTime() - l_pause);
+
+								if (bAbzueglichTelefonzeiten == false) {
+									if (!sTaetigkeit_aktuell
+											.equals(taetigkeitIId_Telefon)) {
+										u_gesamt.setTime(u_gesamt.getTime()
+												- l_pause);
+									}
+								} else {
+									u_gesamt.setTime(u_gesamt.getTime()
+											- l_pause);
+								}
+
 								bEnde = true;
 
 							}
@@ -1411,7 +1645,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				dGesamt = dGesamt + Helper.time2Double(u_gesamt).doubleValue();
 			}
 		} catch (EJBExceptionLP ex) {
-			// OHNE EXCEPTION
+			// SP2936
+			return -1D;
 		}
 		return new Double(dGesamt);
 	}
@@ -1455,7 +1690,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	/**
 	 * Ermittelt die Summe paarweiser Sondertaetigkeiten eines Tages (dezimal in
 	 * Stunden)
-	 * 
+	 *
 	 * @param personalIId
 	 * @param iMonat
 	 * @param iJahr
@@ -1650,6 +1885,15 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			zeitmodellDto.setIMinutenabzug(0);
 		}
 
+		if (zeitmodellDto.getBFeiertagssollAddieren() == null) {
+			zeitmodellDto.setBFeiertagssollAddieren(Helper.boolean2Short(true));
+		}
+
+		if (zeitmodellDto.getBFixepauseTrotzkommtgeht() == null) {
+			zeitmodellDto.setBFixepauseTrotzkommtgeht(Helper
+					.boolean2Short(false));
+		}
+
 		// generieren von primary key
 		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
 		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ZEITMODELL);
@@ -1663,7 +1907,9 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					zeitmodellDto.getPersonalIIdAendern(),
 					zeitmodellDto.getFUrlaubstageprowoche(),
 					zeitmodellDto.getBDynamisch(),
-					zeitmodellDto.getIMinutenabzug());
+					zeitmodellDto.getIMinutenabzug(),
+					zeitmodellDto.getBFeiertagssollAddieren(),
+					zeitmodellDto.getBFixepauseTrotzkommtgeht());
 			em.persist(zeitmodell);
 			em.flush();
 			if (zeitmodellDto.getBTeilzeit() == null) {
@@ -1942,6 +2188,12 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		zeitmodell.setNSollstundenfix(zeitmodellDto.getNSollstundenfix());
 		zeitmodell.setBDynamisch(zeitmodellDto.getBDynamisch());
 		zeitmodell.setIMinutenabzug(zeitmodellDto.getIMinutenabzug());
+		zeitmodell.setBFeiertagssollAddieren(zeitmodellDto
+				.getBFeiertagssollAddieren());
+		zeitmodell.setNMaximalesWochenist(zeitmodellDto
+				.getNMaximalesWochenist());
+		zeitmodell.setBFixepauseTrotzkommtgeht(zeitmodellDto
+				.getBFixepauseTrotzkommtgeht());
 		em.merge(zeitmodell);
 		em.flush();
 	}
@@ -2028,6 +2280,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ZEITMODELLTAG);
 		zeitmodelltagDto.setIId(pk);
 		zeitmodelltagDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+		zeitmodelltagDto.setTAendern(new Timestamp(System.currentTimeMillis()));
 		try {
 			Zeitmodelltag zeitmodelltag = new Zeitmodelltag(
 					zeitmodelltagDto.getIId(),
@@ -2109,6 +2362,22 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 
+		try {
+			Query query = em
+					.createNamedQuery("ZeitmodelltagfindByZeitmodellIIdTagesartIId");
+			query.setParameter(1, zeitmodelltagDto.getZeitmodellIId());
+			query.setParameter(2, zeitmodelltagDto.getTagesartIId());
+			Integer iIdVorhanden = ((Zeitmodelltag) query.getSingleResult())
+					.getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"PERS_ZEITMODELLTAG.UK"));
+			}
+		} catch (NoResultException ex) {
+
+		}
+
 		zeitmodelltagDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
 		zeitmodelltagDto.setTAendern(new java.sql.Timestamp(System
 				.currentTimeMillis()));
@@ -2181,6 +2450,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				.getUErlaubteanwesenheitszeit());
 		zeitmodelltag.setPersonalIIdAendern(zeitmodelltagDto
 				.getPersonalIIdAendern());
+		zeitmodelltag.setTAendern(zeitmodelltagDto.getTAendern());
 		em.merge(zeitmodelltag);
 		em.flush();
 	}
@@ -2206,7 +2476,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	/**
 	 * Hole alle Tagesarten nach Spr.
-	 * 
+	 *
 	 * @param cNrSpracheI
 	 *            String
 	 * @throws EJBExceptionLP
@@ -2249,7 +2519,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	/**
 	 * Hole alle Tagesarten, die in einem Zeitmodell definiert sind nach Spr.
-	 * 
+	 *
 	 * @param cNrSpracheI
 	 *            String
 	 * @param zeitmodellIId
@@ -2309,7 +2579,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	/**
 	 * Hole alle Taetigkeitarten nach Spr.
-	 * 
+	 *
 	 * @param cNrSpracheI
 	 *            String
 	 * @throws EJBExceptionLP
@@ -2399,7 +2669,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	public JasperPrintLP printLohndatenexport(Integer personalIId,
 			Integer iJahr, Integer iMonat, boolean bisMonatsende,
 			java.sql.Date d_datum_bis, TheClientDto theClientDto,
-			Integer iOption, Integer iOptionSortierung, Boolean bPlusVersteckte) {
+			Integer iOption, Integer iOptionSortierung,
+			Boolean bPlusVersteckte, boolean bNurAnwesende) {
 
 		try {
 
@@ -2453,6 +2724,12 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			} else {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
 						"OPTION NICHT VERFUEGBAR"));
+			}
+
+			if (bNurAnwesende) {
+				personalDtos = getZeiterfassungFac()
+						.entferneNichtAnwesendePersonen(iJahr, iMonat, iJahr,
+								iMonat, personalDtos, theClientDto);
 			}
 
 			int iJahrMitVersatz = iJahr;
@@ -2682,11 +2959,59 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	}
 
+	private Object[] befuelleProjektausauftragFuerProduktivitaetsstatistik(
+			Integer auftragIId, Object[] oZeile, TheClientDto theClientDto) {
+
+		if (auftragIId != null) {
+
+			AuftragDto aDto = getAuftragFac().auftragFindByPrimaryKey(
+					auftragIId);
+
+			Integer projektIId = aDto.getProjektIId();
+
+			try {
+				if (projektIId == null) {
+					// aus Angebot holen
+					if (aDto.getAngebotIId() != null) {
+						AngebotDto agDto = getAngebotFac()
+								.angebotFindByPrimaryKey(aDto.getAngebotIId(),
+										theClientDto);
+						projektIId = agDto.getProjektIId();
+
+					}
+
+				}
+
+				if (projektIId != null) {
+					ProjektDto projektDto = null;
+
+					projektDto = getProjektFac().projektFindByPrimaryKey(
+							projektIId);
+					oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKT_PROJEKTKLAMMER] = projektDto
+							.getCNr();
+					oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKTKATEGORIE_PROJEKTKLAMMER] = projektDto
+							.getKategorieCNr();
+				}
+
+			} catch (RemoteException ex3) {
+				throwEJBExceptionLPRespectOld(ex3);
+			}
+
+		}
+		return oZeile;
+	}
+
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printProduktivitaetsstatistik(Integer personalIId,
 			java.sql.Timestamp tVon, java.sql.Timestamp tBis, Integer iOption,
-			Boolean bPlusVersteckte, boolean bVerdichtet,
+			Boolean bPlusVersteckte, boolean bNurAnwesende,
+			boolean bVerdichtet, boolean bMonatsbetrachtung,
 			TheClientDto theClientDto) {
+		boolean bProjektklammer = false;
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+				MandantFac.ZUSATZFUNKTION_PROJEKTKLAMMER, theClientDto)) {
+			bProjektklammer = true;
+		}
 
 		if (tVon == null || tBis == null || personalIId == iOption) {
 			throw new EJBExceptionLP(
@@ -2748,9 +3073,37 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
 						"OPTION NICHT VERFUEGBAR"));
 			}
+
+			if (bNurAnwesende) {
+				personalDtos = getZeiterfassungFac()
+						.entferneNichtAnwesendePersonen(tVon, tBis,
+								personalDtos, theClientDto);
+			}
+
 		} catch (RemoteException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
+
+		HashMap parameter = new HashMap<Object, Object>();
+		parameter.put("P_VERDICHTET", new Boolean(bVerdichtet));
+		parameter.put("P_MONATSBETRACHTUNG", new Boolean(bMonatsbetrachtung));
+		parameter.put("P_VON", tVon);
+		parameter.put("P_NUR_ANWESENDE", new Boolean(bNurAnwesende));
+
+		parameter.put("P_BIS", new java.sql.Timestamp(
+				tBis.getTime() - 24 * 3600000));
+		try {
+			ParametermandantDto parameterVonBis = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_VON_BIS_ERFASSUNG);
+			parameter.put("P_VON_BIS_ERFASSUNG",
+					((Boolean) parameterVonBis.getCWertAsObject()));
+		} catch (RemoteException e1) {
+			throwEJBExceptionLPRespectOld(e1);
+		}
+
+		ArrayList alDatenGesamt = new ArrayList();
 
 		for (int i = 0; i < personalDtos.length; i++) {
 			ArrayList alDaten = new ArrayList();
@@ -2758,12 +3111,22 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 			personalDto.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(
 					personalDto.getPartnerIId(), theClientDto));
+			if (personalDto.getKostenstelleIIdAbteilung() != null) {
+				personalDto.setKostenstelleDto_Abteilung(getSystemFac()
+						.kostenstelleFindByPrimaryKey(
+								personalDto.getKostenstelleIIdAbteilung()));
+			}
+			if (personalDto.getKostenstelleIIdStamm() != null) {
+				personalDto.setKostenstelleDto_Stamm(getSystemFac()
+						.kostenstelleFindByPrimaryKey(
+								personalDto.getKostenstelleIIdStamm()));
+			}
 
 			// Anwesenheitszeit VON BIS berechnen
 			double dIstGesamt = 0;
 			Double dGesamt = berechneArbeitszeitImZeitraum(
 					personalDto.getIId(), new java.sql.Date(tVon.getTime()),
-					new java.sql.Date(tBis.getTime()), theClientDto);
+					new java.sql.Date(tBis.getTime()), false, theClientDto);
 
 			if (dGesamt != null) {
 				dIstGesamt = dGesamt.doubleValue();
@@ -2822,11 +3185,22 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			double dIntern = 0;
 			data = new Object[resultList.size()][REPORT_PRODUKTIVITAETISSTATISTIK_ANZAHL_SPALTEN];
 
+			// PJ18906
+			if (resultList.size() == 0) {
+				// Wenn keine Zeiten auf Auftraege, dann trotzdem in Statistik
+				// anzeigen
+				Object[] oZeile = new Object[REPORT_PRODUKTIVITAETISSTATISTIK_ANZAHL_SPALTEN];
+				oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_TELEFONZEIT] = Boolean.FALSE;
+				alDaten.add(oZeile);
+			}
+
 			while (resultListIterator.hasNext()) {
 
 				Object[] o = (Object[]) resultListIterator.next();
 
 				Object[] oZeile = new Object[REPORT_PRODUKTIVITAETISSTATISTIK_ANZAHL_SPALTEN];
+
+				oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_TELEFONZEIT] = Boolean.FALSE;
 
 				try {
 
@@ -2846,6 +3220,12 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						if (kundeDto != null) {
 							partnerDto = kundeDto.getPartnerDto();
 						}
+
+						if (bProjektklammer) {
+							befuelleProjektausauftragFuerProduktivitaetsstatistik(
+									auftragDto.getIId(), oZeile, theClientDto);
+						}
+
 					} else if (((String) o[0]).equals(LocaleFac.BELEGART_LOS)) {
 						com.lp.server.fertigung.service.LosDto losDto = getFertigungFac()
 								.losFindByPrimaryKey((Integer) o[1]);
@@ -2893,6 +3273,13 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 												auftragDto
 														.getKundeIIdAuftragsadresse(),
 												theClientDto);
+
+								if (bProjektklammer) {
+									befuelleProjektausauftragFuerProduktivitaetsstatistik(
+											auftragDto.getIId(), oZeile,
+											theClientDto);
+								}
+
 							} else if (losDto.getKundeIId() != null) {
 								kundeDto = getKundeFac()
 										.kundeFindByPrimaryKeyOhneExc(
@@ -2926,6 +3313,15 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKT] = "PJ"
 								+ projektDto.getCNr();
 
+						if (bProjektklammer) {
+
+							// PJ18422
+							oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKT_PROJEKTKLAMMER] = projektDto
+									.getCNr();
+							oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKTKATEGORIE_PROJEKTKLAMMER] = projektDto
+									.getKategorieCNr();
+						}
+
 						sBezeichnung = projektDto.getCTitel();
 						partnerDto = getPartnerFac().partnerFindByPrimaryKey(
 								projektDto.getPartnerIId(), theClientDto);
@@ -2946,6 +3342,27 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						if (kundeDto != null) {
 							partnerDto = kundeDto.getPartnerDto();
 						}
+
+						// PJ18422
+						if (bProjektklammer) {
+							if (angebotDto.getProjektIId() != null) {
+
+								ProjektDto projektDto = null;
+								try {
+									projektDto = getProjektFac()
+											.projektFindByPrimaryKey(
+													angebotDto.getProjektIId());
+								} catch (EJBExceptionLP ex3) {
+									throw new EJBExceptionLP(ex3);
+								}
+
+								oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKT_PROJEKTKLAMMER] = projektDto
+										.getCNr();
+								oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKTKATEGORIE_PROJEKTKLAMMER] = projektDto
+										.getKategorieCNr();
+							}
+						}
+
 					}
 
 					if (partnerDto != null) {
@@ -2953,7 +3370,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 								.formatTitelAnrede();
 					}
 					oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKTBEZEICHNUNG] = sBezeichnung;
-					oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_PERSON] = personalDto
+					oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_PERSONAL_ID] = personalDto
 							.getIId();
 
 					Double dDauer = new Double(0);
@@ -3189,24 +3606,169 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			}
 			session.close();
 
-			Object[][] returnArray = new Object[alDaten.size()][13];
-			data = (Object[][]) alDaten.toArray(returnArray);
+			// Telefonzeiten
 
-			index = -1;
-			sAktuellerReport = ZeiterfassungFac.REPORT_PRODUKTIVITAETSSTATISTIK;
-			HashMap parameter = new HashMap<Object, Object>();
+			ArtikelDto artikelDto_DefaultAZ = null;
 
-			parameter.put("P_VON", tVon);
+			Session sessionTel = FLRSessionFactory.getFactory().openSession();
+
+			String sQueryTel = "SELECT t FROM FLRTelefonzeiten as t "
+
+					+ " WHERE t.t_von>='"
+					+ Helper.formatDateWithSlashes(new java.sql.Date(tVon
+							.getTime()))
+					+ "' AND t.t_bis<'"
+					+ Helper.formatDateWithSlashes(new java.sql.Date(tBis
+							.getTime())) + "' ";
+
+			sQueryTel += " AND t.personal_i_id=" + personalDto.getIId();
+
+			org.hibernate.Query queryTelefon = sessionTel
+					.createQuery(sQueryTel);
+
+			List<?> resultListTelefon = queryTelefon.list();
+
+			Iterator<?> resultListIteratorTelefon = resultListTelefon
+					.iterator();
+
+			TreeMap<String, Object[]> tmTelefonzeitenPJ = new TreeMap<String, Object[]>();
+			TreeMap<String, Object[]> tmTelefonzeitenRest = new TreeMap<String, Object[]>();
+			int k = 0;
+			while (resultListIteratorTelefon.hasNext()) {
+				FLRTelefonzeiten tel = (FLRTelefonzeiten) resultListIteratorTelefon
+						.next();
+				if (artikelDto_DefaultAZ == null) {
+					artikelDto_DefaultAZ = getZeiterfassungFac()
+							.getDefaultArbeitszeitartikel(theClientDto);
+				}
+
+				java.sql.Time tDauer = new java.sql.Time(tel.getT_bis()
+						.getTime() - tel.getT_von().getTime());
+				tDauer.setTime(tDauer.getTime() - 3600000);
+				Double dDauer = Helper.time2Double(tDauer);
+
+				k++;
+				try {
+					Object[] oZeile = new Object[REPORT_PRODUKTIVITAETISSTATISTIK_ANZAHL_SPALTEN];
+
+					oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_TELEFONZEIT] = Boolean.TRUE;
+
+					oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_DAUER] = dDauer;
+
+					oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_PERSONAL_ID] = personalDto
+							.getIId();
+
+					oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_TAETIGKEIT] = artikelDto_DefaultAZ
+							.getCNr();
+					if (artikelDto_DefaultAZ.getArtikelsprDto() != null) {
+						oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_TAETIGKEIT_BEZEICHNUNG] = artikelDto_DefaultAZ
+								.getArtikelsprDto().getCBez();
+					}
+
+					if (tel.getProjekt_i_id() != null) {
+
+						ProjektDto pjDto = getProjektFac()
+								.projektFindByPrimaryKey(tel.getProjekt_i_id());
+
+						PartnerDto partnerDto = getPartnerFac()
+								.partnerFindByPrimaryKey(pjDto.getPartnerIId(),
+										theClientDto);
+
+						if (mandantDto.getPartnerIId().equals(
+								partnerDto.getIId())) {
+							dIntern = dIntern + dDauer.doubleValue();
+						} else {
+							dExtern = dExtern + dDauer.doubleValue();
+						}
+
+						oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKT] = "PJ"
+								+ pjDto.getCNr();
+						oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKTBEZEICHNUNG] = pjDto
+								.getCTitel();
+						if (bVerdichtet) {
+
+							if (tmTelefonzeitenPJ.containsKey(pjDto.getCNr())) {
+								// Dauer addieren
+								Object[] oZeileTemp = tmTelefonzeitenPJ
+										.get(pjDto.getCNr());
+								Double dauerVorhanden = ((Double) oZeileTemp[REPORT_PRODUKTIVITAETISSTATISTIK_DAUER])
+										.doubleValue();
+								oZeileTemp[REPORT_PRODUKTIVITAETISSTATISTIK_DAUER] = dauerVorhanden
+										+ dDauer;
+
+								oZeileTemp[REPORT_PRODUKTIVITAETISSTATISTIK_KUNDE] = partnerDto
+										.formatTitelAnrede();
+
+								tmTelefonzeitenPJ.put(pjDto.getCNr(),
+										oZeileTemp);
+							} else {
+								tmTelefonzeitenPJ.put(pjDto.getCNr(), oZeile);
+							}
+
+						} else {
+							tmTelefonzeitenPJ.put(pjDto.getCNr() + k, oZeile);
+						}
+
+					} else {
+
+						String partner = "";
+						if (tel.getFlrpartner() != null) {
+							partner = HelperServer.formatNameAusFLRPartner(tel
+									.getFlrpartner());
+
+							if (mandantDto.getPartnerIId().equals(
+									tel.getFlrpartner().getI_id())) {
+								dIntern = dIntern + dDauer.doubleValue();
+							} else {
+								dExtern = dExtern + dDauer.doubleValue();
+							}
+
+						} else {
+							dExtern = dExtern + dDauer.doubleValue();
+						}
+
+						oZeile[REPORT_PRODUKTIVITAETISSTATISTIK_KUNDE] = partner;
+
+						if (bVerdichtet) {
+							// Dauer addieren
+
+							if (tmTelefonzeitenRest.containsKey(partner)) {
+
+								Object[] oZeileTemp = tmTelefonzeitenRest
+										.get(partner);
+								Double dauerVorhanden = ((Double) oZeileTemp[REPORT_PRODUKTIVITAETISSTATISTIK_DAUER])
+										.doubleValue();
+								oZeileTemp[REPORT_PRODUKTIVITAETISSTATISTIK_DAUER] = dauerVorhanden
+										+ dDauer;
+							} else {
+
+								tmTelefonzeitenRest.put(partner, oZeile);
+							}
+						} else {
+							tmTelefonzeitenRest.put(partner + k, oZeile);
+						}
+
+					}
+
+				} catch (RemoteException ex1) {
+					throwEJBExceptionLPRespectOld(ex1);
+				}
+
+			}
+
+			Iterator it = tmTelefonzeitenPJ.keySet().iterator();
+			while (it.hasNext()) {
+				alDaten.add(tmTelefonzeitenPJ.get(it.next()));
+			}
+			it = tmTelefonzeitenRest.keySet().iterator();
+			while (it.hasNext()) {
+				alDaten.add(tmTelefonzeitenRest.get(it.next()));
+			}
 
 			dIntern = Helper.rundeKaufmaennisch(
 					new java.math.BigDecimal(dIntern), 2).doubleValue();
 			dExtern = Helper.rundeKaufmaennisch(
 					new java.math.BigDecimal(dExtern), 2).doubleValue();
-
-			parameter.put("P_ISTGESAMT", new Double(dIstGesamt));
-			parameter.put("P_INTERN", new Double(dIntern));
-			parameter.put("P_EXTERN", new Double(dExtern));
-			parameter.put("P_VERDICHTET", new Boolean(bVerdichtet));
 
 			double dProzentExtern = 0;
 			double dProzentIntern = 0;
@@ -3221,26 +3783,23 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						new java.math.BigDecimal(dProzentIntern * 100), 2)
 						.doubleValue();
 			}
-			parameter.put("P_PROZENTINTERN", new Double(dProzentIntern));
-			parameter.put("P_PROZENTEXTERN", new Double(dProzentExtern));
-			parameter.put("P_BIS", new java.sql.Timestamp(
-					tBis.getTime() - 24 * 3600000));
-			parameter.put("P_PERSONEN", personalDto.getCPersonalnr() + " "
-					+ personalDto.getPartnerDto().formatAnrede());
 
 			Calendar c = Calendar.getInstance();
 			c.setTimeInMillis(tVon.getTime());
 
+			Double leistungswert = null;
 			try {
 				PersonalgehaltDto pgDto = getPersonalFac()
 						.personalgehaltFindLetztePersonalgehalt(personalIId,
 								c.get(Calendar.YEAR), c.get(Calendar.MONTH));
 				if (pgDto != null) {
-					parameter.put("P_LEISTUNGSWERT", pgDto.getFLeistungswert());
+					leistungswert = pgDto.getFLeistungswert();
 				}
+
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
 			}
+
 			// Zeit Sondertaetigkeiten:
 			TaetigkeitDto[] taetigkeitenDtos = getAllSondertaetigkeitenOhneKommtUndGeht(theClientDto);
 
@@ -3272,29 +3831,121 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			Object[][] dataSub = new Object[al.size()][fieldnames.length];
 			dataSub = (Object[][]) al.toArray(dataSub);
 
-			parameter.put("DATEN", new LPDatenSubreport(dataSub, fieldnames));
+			for (int m = 0; m < alDaten.size(); m++) {
+				Object[] zeile = (Object[]) alDaten.get(m);
 
-			initJRDS(parameter, ZeiterfassungFac.REPORT_MODUL,
-					ZeiterfassungFac.REPORT_PRODUKTIVITAETSSTATISTIK,
-					theClientDto.getMandant(), theClientDto.getLocUi(),
-					theClientDto);
+				zeile[REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_NAME] = personalDto
+						.getCPersonalnr()
+						+ " "
+						+ personalDto.getPartnerDto().formatAnrede();
+				if (personalDto.getKostenstelleDto_Stamm() != null) {
+					zeile[REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_KOSTENSTELLE] = personalDto
+							.getKostenstelleDto_Stamm()
+							.formatKostenstellenbezeichnung();
+				}
+				if (personalDto.getKostenstelleDto_Abteilung() != null) {
+					zeile[REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_ABTEILUNG] = personalDto
+							.getKostenstelleDto_Abteilung()
+							.formatKostenstellenbezeichnung();
+				}
+				zeile[REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_IST_GESAMT] = new Double(
+						dIstGesamt);
+				zeile[REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_INTERN] = new Double(
+						dIntern);
+				zeile[REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_EXTERN] = new Double(
+						dExtern);
+				zeile[REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_PROZENTINTERN] = new Double(
+						dProzentIntern);
+				zeile[REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_PROZENTEXTERN] = new Double(
+						dProzentExtern);
+				zeile[REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_LEISTUNGSWERT] = leistungswert;
+				zeile[REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_SUBREPORT_SONDERTAETIGKEITEN] = new LPDatenSubreport(
+						dataSub, fieldnames);
 
-			if (print != null) {
+				alDaten.set(m, zeile);
 
-				print = Helper.addReport2Report(print, getReportPrint()
-						.getPrint());
-			} else {
-				print = getReportPrint();
 			}
-		}
-		return print;
 
+			alDatenGesamt.addAll(alDaten);
+
+		}
+
+		Object[][] returnArray = new Object[alDatenGesamt.size()][REPORT_PRODUKTIVITAETISSTATISTIK_ANZAHL_SPALTEN];
+		data = (Object[][]) alDatenGesamt.toArray(returnArray);
+
+		index = -1;
+		sAktuellerReport = ZeiterfassungFac.REPORT_PRODUKTIVITAETSSTATISTIK;
+
+		initJRDS(parameter, ZeiterfassungFac.REPORT_MODUL,
+				ZeiterfassungFac.REPORT_PRODUKTIVITAETSSTATISTIK,
+				theClientDto.getMandant(), theClientDto.getLocUi(),
+				theClientDto);
+
+		return getReportPrint();
+
+	}
+
+	private LPDatenSubreport getSubreportZeitdatenjournalFuerWochenabrechnung(
+			Integer personalIId, int iKW, int iJahr, TheClientDto theClientDto) {
+
+		Calendar cVon = Calendar.getInstance();
+		cVon.set(Calendar.YEAR, iJahr);
+		cVon.set(Calendar.WEEK_OF_YEAR, iKW);
+		cVon.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+
+		Timestamp tVon = new Timestamp(cVon.getTimeInMillis());
+
+		cVon.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
+
+		Timestamp tBis = new Timestamp(cVon.getTimeInMillis());
+
+		Object[][] oDaten = getZeiterfassungReportFac()
+				.erstelleZeitdatenjournal(personalIId, tVon, tBis, theClientDto);
+
+		Object[][] dataSub = new Object[oDaten.length][2];
+		String[] fieldnames = new String[] { "Personalnummer", "Name", "Zeit",
+				"Taetigkeit", "Auftrag", "Projektbezeichnung", "Tagessumme",
+				"Maschine", "Position", "Buchungsart", "Bemerkung",
+				"Gutstueck", "Schlechtstueck", "Kunde", "Dauer", "Kommentar",
+				"Quelle", "TaetigkeitSonderzeit", "DauerSonderzeit",
+				"DatumSonderzeit", "Artikelbezeichnung", "Sollzeit" };
+
+		for (int i = 0; i < oDaten.length; i++) {
+			Object[] zeileSub = oDaten[i];
+
+			zeileSub[0] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_PERSONALNR];
+			zeileSub[1] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_NAME];
+			zeileSub[2] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_ZEIT];
+			zeileSub[3] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_TAETIGKEIT];
+			zeileSub[4] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_AUFTRAG];
+			zeileSub[5] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_PROJEKTBEZEICHNUNG];
+			zeileSub[6] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_TAGESSUMME];
+			zeileSub[7] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_MASCHINE];
+			zeileSub[8] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_POSITION];
+			zeileSub[9] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_BUCHUNGSART];
+			zeileSub[10] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_BEMERKUNG];
+			zeileSub[11] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_GUTSTK];
+			zeileSub[12] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_SCHLECHTSTK];
+			zeileSub[13] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_KUNDE];
+			zeileSub[14] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_DAUER];
+			zeileSub[15] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_KOMMENTAR];
+			zeileSub[16] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_QUELLE];
+			zeileSub[17] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_TAETIGKEIT_SONDERZEIT];
+			zeileSub[18] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_DAUER_SONDERZEIT];
+			zeileSub[19] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_DATUM_SONDERZEIT];
+			zeileSub[20] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_ARTIKELBEZEICHNUNG];
+			zeileSub[21] = oDaten[i][ZeiterfassungReportFac.REPORT_ZEITDATEN_SOLLZEIT];
+			dataSub[i] = zeileSub;
+		}
+
+		return new LPDatenSubreport(dataSub, fieldnames);
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP erstelleWochenabrechnung(Integer personalIId,
 			Timestamp tVon, Timestamp tBis,
-			boolean bMitUrlaubZumAbrechnungsbeginn, TheClientDto theClientDto) {
+			boolean bMitUrlaubZumAbrechnungsbeginn,
+			boolean bMitSubreportZeitdatenjournal, TheClientDto theClientDto) {
 
 		Calendar c = Calendar.getInstance();
 		c.setTimeInMillis(tVon.getTime());
@@ -3408,6 +4059,13 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				wochensummen.put(key, oTemp);
 
 			} else {
+
+				if (bMitSubreportZeitdatenjournal) {
+					zeileMonatsabrechnung[REPORT_MONATSABRECHNUNG_PLATZHALTER_FUER_SUREPORTZEIDATENJOURNAL] = getSubreportZeitdatenjournalFuerWochenabrechnung(
+							personalIId, iAktuelleKW, iAktuellesJahr,
+							theClientDto);
+				}
+
 				wochensummen.put(key, zeileMonatsabrechnung);
 
 			}
@@ -3471,10 +4129,537 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	}
 
+	private BigDecimal getSummeAusMonatsabrechnungsZeile(
+			ArrayList<Object[]> alTag, int field) {
+		BigDecimal bdSumme = BigDecimal.ZERO;
+
+		for (int i = 0; i < alTag.size(); i++) {
+
+			Object o = alTag.get(i)[field];
+			if (o instanceof BigDecimal) {
+				bdSumme = bdSumme.add((BigDecimal) o);
+			}
+
+		}
+
+		return bdSumme;
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public WochenabschlussReportDto printWochenabschluss(Integer personalIId,
+			java.sql.Timestamp tKW, TheClientDto theClientDto) {
+
+		HashMap<String, Object> parameter = new HashMap<String, Object>();
+		PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(
+				personalIId, theClientDto);
+		parameter.put("P_PERSON", personalDto.getPartnerDto()
+				.formatFixTitelName1Name2());
+		WochenabschlussReportDto wDto = new WochenabschlussReportDto();
+		// Vorher ev. 2 Monatsabrechnungen durchfuehren, wenn Woche ueber 2
+		// Monate
+		// geht
+
+		Calendar c = Calendar.getInstance();
+		c.setTimeInMillis(tKW.getTime());
+
+		int kwAktuell = c.get(Calendar.WEEK_OF_YEAR);
+
+		parameter.put("P_KW", kwAktuell);
+
+		Timestamp tKWVon = new Timestamp(tKW.getTime());
+		Timestamp tKWBis = new Timestamp(tKW.getTime());
+
+		Timestamp[] tVonBis = Helper.getTimestampVonBisEinerKW(tKW);
+		tKWVon = tVonBis[0];
+		tKWBis = tVonBis[1];
+
+		parameter.put("P_VON", tKWVon);
+		parameter.put("P_BIS", tKWBis);
+
+		String sQueryZeitabschluss = "SELECT za  from FLRZeitabschluss za WHERE za.personal_i_id="
+				+ personalIId + " ORDER BY za.t_abgeschlossen_bis DESC";
+
+		Session sessionZeitabschluss = FLRSessionFactory.getFactory()
+				.openSession();
+
+		org.hibernate.Query queryZeitabschluss = sessionZeitabschluss
+				.createQuery(sQueryZeitabschluss);
+		queryZeitabschluss.setMaxResults(1);
+
+		List<?> resultListZeitabschluss = queryZeitabschluss.list();
+
+		Iterator<?> resultListIteratorZeitabschluss = resultListZeitabschluss
+				.iterator();
+
+		if (resultListIteratorZeitabschluss.hasNext()) {
+			FLRZeitabschluss flr = (FLRZeitabschluss) resultListIteratorZeitabschluss
+					.next();
+			sessionZeitabschluss.close();
+
+			parameter.put("P_ZEITENABGESCHLOSSEN", new Timestamp(flr
+					.getT_abgeschlossen_bis().getTime()));
+		}
+
+		BigDecimal nMaxWochenanwesenheit = null;
+		BigDecimal nKumuliertesWochenist = BigDecimal.ZERO;
+
+		boolean bNurWarnung = false;
+		ParametermandantDto parameterMand = null;
+		try {
+			parameterMand = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_AUTOMATISCHE_PAUSEN_NUR_WARNUNG);
+
+			bNurWarnung = (Boolean) parameterMand.getCWertAsObject();
+
+			PersonalzeitmodellDto dto = getPersonalFac()
+					.personalzeitmodellFindZeitmodellZuDatum(personalIId,
+							Helper.cutTimestamp(tKW), theClientDto);
+
+			if (dto != null && dto.getZeitmodellIId() != null) {
+				ZeitmodellDto zmDto = getZeiterfassungFac()
+						.zeitmodellFindByPrimaryKey(dto.getZeitmodellIId(),
+								theClientDto);
+				nMaxWochenanwesenheit = zmDto.getNMaximalesWochenist();
+			}
+
+		} catch (RemoteException ex5) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex5);
+		}
+
+		Calendar cVon = Calendar.getInstance();
+		cVon.setTimeInMillis(tKWVon.getTime());
+		int iJahrVon = cVon.get(Calendar.YEAR);
+		int iMonatVon = cVon.get(Calendar.MONTH);
+
+		Calendar cBis = Calendar.getInstance();
+		cBis.setTimeInMillis(tKWBis.getTime());
+		int iJahrBis = cBis.get(Calendar.YEAR);
+		int iMonatBis = cBis.get(Calendar.MONTH);
+
+		ArrayList<Object[]> alDatenMonatsabrechnung = new ArrayList<Object[]>();
+
+		if (iMonatVon != iMonatBis) {
+			MonatsabrechnungDto moaDtoVormonat = erstelleMonatsAbrechnung(
+					personalIId,
+					iJahrVon,
+					iMonatVon,
+					true,
+					null,
+					theClientDto,
+					false,
+					ZeiterfassungFacAll.REPORT_MONATSABRECHNUNG_OPTION_SORTIERUNG_PERSONALNUMMER,
+					false, true);
+
+			Object[][] oZeilen = moaDtoVormonat.getData();
+			for (int i = 0; i < oZeilen.length; i++) {
+				Object[] oZeile = oZeilen[i];
+
+				int iKW = (Integer) oZeile[ZeiterfassungFacBean.REPORT_MONATSABRECHNUNG_KALENDERWOCHE];
+
+				if (iKW == kwAktuell) {
+					alDatenMonatsabrechnung.add(oZeile);
+				}
+
+			}
+
+		}
+
+		MonatsabrechnungDto report = erstelleMonatsAbrechnung(
+				personalDto.getIId(),
+				iJahrBis,
+				iMonatBis,
+				false,
+				new java.sql.Date(tKWBis.getTime()),
+				theClientDto,
+				false,
+				ZeiterfassungFacAll.REPORT_MONATSABRECHNUNG_OPTION_SORTIERUNG_PERSONALNUMMER,
+				false, true);
+
+		Object[][] oZeilen = report.getData();
+		for (int i = 0; i < oZeilen.length; i++) {
+			Object[] oZeile = oZeilen[i];
+
+			int iKW = (Integer) oZeile[ZeiterfassungFacBean.REPORT_MONATSABRECHNUNG_KALENDERWOCHE];
+
+			if (iKW == kwAktuell) {
+				alDatenMonatsabrechnung.add(oZeile);
+			}
+		}
+
+		
+		//SP3403
+		Calendar cEinenTagVorher=Calendar.getInstance();
+		cEinenTagVorher.setTime(new java.sql.Date(tKWVon.getTime()));
+		cEinenTagVorher.add(Calendar.DAY_OF_YEAR, -1);
+		
+		
+		
+		// PJ18816
+		// Damit ich die Parameter zum Von-datum habe
+		report = erstelleMonatsAbrechnung(
+				personalDto.getIId(),
+				cEinenTagVorher.get(Calendar.YEAR),
+				cEinenTagVorher.get(Calendar.MONTH),
+				false,
+				new java.sql.Date(cEinenTagVorher.getTime().getTime()),
+				theClientDto,
+				false,
+				ZeiterfassungFacAll.REPORT_MONATSABRECHNUNG_OPTION_SORTIERUNG_PERSONALNUMMER,
+				false, false);
+		HashMap hmParameterMonatsabrechnungVon = report.getParameter();
+
+		parameter.put("P_VERFUEGBARERURLAUBTAGE_ZUM_VON_DATUM",
+				hmParameterMonatsabrechnungVon.get("P_VERFUEGBARERURLAUBTAGE"));
+		parameter.put("P_VERFUEGBARERURLAUBSTUNDEN_ZUM_VON_DATUM",
+				hmParameterMonatsabrechnungVon
+						.get("P_VERFUEGBARERURLAUBSTUNDEN"));
+
+		parameter.put("P_VERFUEGBARERGLEITZEITSALDO_ZUM_VON_DATUM",
+				hmParameterMonatsabrechnungVon
+						.get("P_GLEITZEITSALDO_ABRECHNUNGSZEITPUNKT"));
+
+		// Nochmal rechnen zum Bis-Datum
+		report = erstelleMonatsAbrechnung(
+				personalDto.getIId(),
+				iJahrBis,
+				iMonatBis,
+				false,
+				new java.sql.Date(tKWBis.getTime()),
+				theClientDto,
+				false,
+				ZeiterfassungFacAll.REPORT_MONATSABRECHNUNG_OPTION_SORTIERUNG_PERSONALNUMMER,
+				false, false);
+
+		HashMap hmParameterMonatsabrechnung = report.getParameter();
+
+		parameter.put("P_VERFUEGBARERURLAUBTAGE",
+				hmParameterMonatsabrechnung.get("P_VERFUEGBARERURLAUBTAGE"));
+		parameter.put("P_VERFUEGBARERURLAUBSTUNDEN",
+				hmParameterMonatsabrechnung.get("P_VERFUEGBARERURLAUBSTUNDEN"));
+
+		parameter.put("P_VERFUEGBARERGLEITZEITSALDO",
+				hmParameterMonatsabrechnung
+						.get("P_GLEITZEITSALDO_ABRECHNUNGSZEITPUNKT"));
+
+		// Urlaubsanspruch zum Ende des Jahres
+
+		BigDecimal bdAlterAspruchStunden = (BigDecimal) hmParameterMonatsabrechnung
+				.get("P_ALTERURLAUBSANSPRUCHSTUNDEN");
+		BigDecimal bdAlterVerbrauchtStunden = (BigDecimal) hmParameterMonatsabrechnung
+				.get("P_ALTERURLAUBSVERBRAUCHTSTUNDEN");
+		BigDecimal bdAktuellerAnspruchStunden = (BigDecimal) hmParameterMonatsabrechnung
+				.get("P_AKTUELLERURLAUBSANSPRUCHSTUNDEN");
+		BigDecimal bdAktuellerAnspruchVerbrauchtStunden = (BigDecimal) hmParameterMonatsabrechnung
+				.get("P_AKTUELLERURLAUBSVERBRAUCHTSTUNDEN");
+
+		parameter.put(
+				"P_URLAUBSANSPRUCH_ZUM_ENDE_DES_JAHRES_STUNDEN",
+				bdAlterAspruchStunden.subtract(bdAlterVerbrauchtStunden).add(
+						bdAktuellerAnspruchStunden));
+		parameter.put(
+				"P_VERFUEGBARER_URLAUB_ZUM_ENDE_DES_JAHRES_STUNDEN",
+				bdAlterAspruchStunden.subtract(bdAlterVerbrauchtStunden)
+						.add(bdAktuellerAnspruchStunden)
+						.subtract(bdAktuellerAnspruchVerbrauchtStunden));
+
+		BigDecimal bdAlterAspruchTage = (BigDecimal) hmParameterMonatsabrechnung
+				.get("P_ALTERURLAUBSANSPRUCHTAGE");
+		BigDecimal bdAlterVerbrauchtTage = (BigDecimal) hmParameterMonatsabrechnung
+				.get("P_ALTERURLAUBSVERBRAUCHTTAGE");
+		BigDecimal bdAktuellerAnspruchTage = (BigDecimal) hmParameterMonatsabrechnung
+				.get("P_AKTUELLERURLAUBSANSPRUCHTAGE");
+		BigDecimal bdAktuellerAnspruchVerbrauchtTage = (BigDecimal) hmParameterMonatsabrechnung
+				.get("P_AKTUELLERURLAUBSVERBRAUCHTTAGE");
+
+		parameter.put(
+				"P_URLAUBSANSPRUCH_ZUM_ENDE_DES_JAHRES_TAGE",
+				bdAlterAspruchTage.subtract(bdAlterVerbrauchtTage).add(
+						bdAktuellerAnspruchTage));
+		parameter.put(
+				"P_VERFUEGBARER_URLAUB_ZUM_ENDE_DES_JAHRES_TAGE",
+				bdAlterAspruchTage.subtract(bdAlterVerbrauchtTage)
+						.add(bdAktuellerAnspruchTage)
+						.subtract(bdAktuellerAnspruchVerbrauchtTage));
+
+		Integer tagesartIId_Feiertag = tagesartFindByCNr(
+				ZeiterfassungFac.TAGESART_FEIERTAG, theClientDto).getIId();
+		Integer tagesartIId_Halbtag = tagesartFindByCNr(
+				ZeiterfassungFac.TAGESART_HALBTAG, theClientDto).getIId();
+
+		// Nun nach Tage gruppieren, da wir ja ansonsten mit Kommt-Geht-Bloecken
+		// rechnen
+
+		LinkedHashMap<Integer, ArrayList<Object[]>> hmDatenTageweise = new LinkedHashMap<Integer, ArrayList<Object[]>>();
+		for (int i = 0; i < alDatenMonatsabrechnung.size(); i++) {
+
+			Object[] oZeile = alDatenMonatsabrechnung.get(i);
+
+			Integer iTag = (Integer) oZeile[ZeiterfassungFacBean.REPORT_MONATSABRECHNUNG_DATUM];
+
+			if (hmDatenTageweise.containsKey(iTag)) {
+
+				ArrayList<Object[]> alTag = hmDatenTageweise.get(iTag);
+
+				alTag.add(oZeile);
+				hmDatenTageweise.put(iTag, alTag);
+
+			} else {
+				ArrayList<Object[]> alTag = new ArrayList<Object[]>();
+
+				alTag.add(oZeile);
+				hmDatenTageweise.put(iTag, alTag);
+
+			}
+		}
+
+		ArrayList alDaten = new ArrayList();
+
+		Iterator<Integer> it = hmDatenTageweise.keySet().iterator();
+		while (it.hasNext()) {
+			Integer iTag = it.next();
+			ArrayList<Object[]> alTag = hmDatenTageweise.get(iTag);
+
+			java.sql.Time kommt = (java.sql.Time) alTag.get(0)[REPORT_MONATSABRECHNUNG_VON];
+			java.sql.Time geht = (java.sql.Time) alTag.get(alTag.size() - 1)[REPORT_MONATSABRECHNUNG_BIS];
+
+			Object[] oZeileWochenabschluss = new Object[REPORT_WOCHENABSCHLUSS_ANZAHL_SPALTEN];
+
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_KOMMT] = kommt;
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_GEHT] = geht;
+
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_WOCHENTAG] = alTag
+					.get(0)[REPORT_MONATSABRECHNUNG_TAG];
+
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_SOLL] = getSummeAusMonatsabrechnungsZeile(
+					alTag, REPORT_MONATSABRECHNUNG_SOLL);
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_IST] = getSummeAusMonatsabrechnungsZeile(
+					alTag, REPORT_MONATSABRECHNUNG_IST);
+
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_FEIERTAG] = getSummeAusMonatsabrechnungsZeile(
+					alTag, REPORT_MONATSABRECHNUNG_FEIERTAG);
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_ARZT] = getSummeAusMonatsabrechnungsZeile(
+					alTag, REPORT_MONATSABRECHNUNG_ARZT);
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_KINDKRANK] = getSummeAusMonatsabrechnungsZeile(
+					alTag, REPORT_MONATSABRECHNUNG_KINDKRANK);
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_KRANK] = getSummeAusMonatsabrechnungsZeile(
+					alTag, REPORT_MONATSABRECHNUNG_KRANK);
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_BEHOERDE] = getSummeAusMonatsabrechnungsZeile(
+					alTag, REPORT_MONATSABRECHNUNG_BEHOERDE);
+
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_URLAUB] = getSummeAusMonatsabrechnungsZeile(
+					alTag, REPORT_MONATSABRECHNUNG_URLAUB);
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_SONSTIGE_BEZAHLT] = getSummeAusMonatsabrechnungsZeile(
+					alTag,
+					REPORT_MONATSABRECHNUNG_SONSTIGE_BEZAHLTETAETIGKEITEN);
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_SONSTIGE_UNBEZAHLT] = getSummeAusMonatsabrechnungsZeile(
+					alTag,
+					REPORT_MONATSABRECHNUNG_SONSTIGE_UNBEZAHLTETAETIGKEITEN);
+
+			Calendar cDatum = Calendar.getInstance();
+			cDatum.set(Calendar.YEAR,
+					(Integer) alTag.get(0)[REPORT_MONATSABRECHNUNG_JAHR]);
+			cDatum.set(Calendar.MONTH,
+					(Integer) alTag.get(0)[REPORT_MONATSABRECHNUNG_MONAT]);
+			cDatum.set(Calendar.DAY_OF_MONTH,
+					(Integer) alTag.get(0)[REPORT_MONATSABRECHNUNG_DATUM]);
+			java.sql.Timestamp tDatum = Helper.cutTimestamp(new Timestamp(
+					cDatum.getTimeInMillis()));
+
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_DATUM] = tDatum;
+
+			try {
+				Double dTagesanwesenheitszeit = getZeiterfassungFac()
+						.berechneTagesArbeitszeit(personalDto.getIId(),
+								new java.sql.Date(tDatum.getTime()),
+								theClientDto);
+				nKumuliertesWochenist = nKumuliertesWochenist
+						.add(new BigDecimal(dTagesanwesenheitszeit));
+
+				// Pruefen ob ueberschritten
+
+				ZeitmodelltagDto zmTagDto = getZeitmodelltagZuDatum(
+						personalIId, tDatum, tagesartIId_Feiertag,
+						tagesartIId_Halbtag, false, theClientDto);
+				if (zmTagDto != null
+						&& zmTagDto.getUErlaubteanwesenheitszeit() != null
+						&& zmTagDto.getUErlaubteanwesenheitszeit().getTime() != -3600000) {
+					double dMaxAnwesenheit = Helper.time2Double(zmTagDto
+							.getUErlaubteanwesenheitszeit());
+					if (dTagesanwesenheitszeit != null
+							&& dTagesanwesenheitszeit > dMaxAnwesenheit) {
+						wDto.setBFehlerVorhanden(true);
+						oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_FEHLER] = getTextRespectUISpr(
+								"pers.wochenabschluss.tagesarbeitszeitueberschritten",
+								theClientDto.getMandant(),
+								theClientDto.getLocUi());
+					}
+				}
+
+			} catch (javax.ejb.EJBException ex3) {
+
+				oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_FEHLER] = "Fehler in Zeitdaten";
+
+			} catch (EJBExceptionLP ex4) {
+
+				oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_FEHLER] = "Fehler in Zeitdaten";
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+
+			}
+
+			if (nMaxWochenanwesenheit != null
+					&& nKumuliertesWochenist.doubleValue() > nMaxWochenanwesenheit
+							.doubleValue()) {
+				wDto.setBFehlerVorhanden(true);
+				String sMsgVorhanden = (String) oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_FEHLER];
+				if (sMsgVorhanden != null) {
+					sMsgVorhanden += ";"
+							+ getTextRespectUISpr(
+									"pers.wochenabschluss.wochenarbeitszeitueberschritten",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi());
+				} else {
+					sMsgVorhanden = getTextRespectUISpr(
+							"pers.wochenabschluss.wochenarbeitszeitueberschritten",
+							theClientDto.getMandant(), theClientDto.getLocUi());
+				}
+				oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_FEHLER] = sMsgVorhanden;
+			}
+
+			if (geht != null && bNurWarnung == true) {
+
+				Calendar cUhrzeit = Calendar.getInstance();
+				cUhrzeit.setTimeInMillis(geht.getTime());
+
+				Calendar cDatumMitUhrzeit = Calendar.getInstance();
+				cDatumMitUhrzeit.setTimeInMillis(tDatum.getTime());
+				cDatumMitUhrzeit.set(Calendar.HOUR_OF_DAY,
+						cUhrzeit.get(Calendar.HOUR_OF_DAY));
+				cDatumMitUhrzeit.set(Calendar.MINUTE,
+						cUhrzeit.get(Calendar.MINUTE));
+				cDatumMitUhrzeit.set(Calendar.SECOND,
+						cUhrzeit.get(Calendar.SECOND));
+				cDatumMitUhrzeit.set(Calendar.MILLISECOND,
+						cUhrzeit.get(Calendar.MILLISECOND));
+
+				String sMeldung = erstelleAutomatischeMindestpause(
+						new Timestamp(cDatumMitUhrzeit.getTimeInMillis()),
+						personalIId, theClientDto);
+
+				if (sMeldung != null) {
+					wDto.setBFehlerVorhanden(true);
+					String sMsgVorhanden = (String) oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_FEHLER];
+					if (sMsgVorhanden != null) {
+						sMsgVorhanden += ";" + sMeldung;
+					} else {
+						sMsgVorhanden = sMeldung;
+					}
+					oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_FEHLER] = sMsgVorhanden;
+				}
+
+			}
+
+			// Belegzeiten verdichtet
+
+			String sQueryBelegzeiten = "SELECT distinct zeitdaten.c_belegartnr,zeitdaten.i_belegartid,zeitdaten.i_belegartpositionid  from FLRZeitdaten zeitdaten WHERE zeitdaten.flrpersonal.i_id="
+					+ personalDto.getIId()
+					+ "AND zeitdaten.c_belegartnr is not null AND zeitdaten.t_zeit>='"
+					+ Helper.formatTimestampWithSlashes(Helper
+							.cutTimestamp(tDatum))
+					+ "' AND zeitdaten.t_zeit<'"
+					+ Helper.formatTimestampWithSlashes(Helper
+							.cutTimestamp(new Timestamp(
+									tDatum.getTime() + 24 * 3600000))) + "'";
+
+			String[] fieldnames = new String[] { "Belegart", "Belegnummer",
+					"Bezeichnung", "Partner", "Dauer" };
+
+			Session session = FLRSessionFactory.getFactory().openSession();
+
+			org.hibernate.Query query = session.createQuery(sQueryBelegzeiten);
+
+			List<?> resultList = query.list();
+
+			Iterator<?> resultListIterator = resultList.iterator();
+
+			ArrayList alDataSub = new ArrayList();
+
+			while (resultListIterator.hasNext()) {
+				Object[] o = (Object[]) resultListIterator.next();
+
+				String belegartCNr = (String) o[0];
+				Integer belegartId = (Integer) o[1];
+				Integer belegartpositionId = (Integer) o[2];
+
+				BelegInfos bi = null;
+				try {
+					bi = getLagerFac().getBelegInfos(belegartCNr, belegartId,
+							null, theClientDto);
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+
+				Object[] oZeileSub = new Object[5];
+				oZeileSub[0] = belegartCNr;
+				oZeileSub[1] = bi.getBelegnummer();
+				oZeileSub[2] = bi.getBelegbezeichnung();
+				oZeileSub[3] = bi.getKundeLieferant();
+				if (belegartId != null) {
+
+					oZeileSub[4] = getSummeZeitenEinesBeleges(belegartCNr,
+							belegartId, null, personalIId,
+							Helper.cutTimestamp(tDatum),
+							Helper.cutTimestamp(new Timestamp(
+									tDatum.getTime() + 24 * 3600000)),
+							theClientDto);
+				} else {
+					int z = 0;
+				}
+				alDataSub.add(oZeileSub);
+			}
+
+			Object[][] dataSub = new Object[alDataSub.size()][fieldnames.length];
+			dataSub = (Object[][]) alDataSub.toArray(dataSub);
+
+			oZeileWochenabschluss[REPORT_WOCHENABSCHLUSS_SUBREPORT_BELEGZEITEN] = new LPDatenSubreport(
+					dataSub, fieldnames);
+
+			alDaten.add(oZeileWochenabschluss);
+
+		}
+
+		Object[][] returnArray = new Object[alDaten.size()][REPORT_WOCHENABSCHLUSS_ANZAHL_SPALTEN];
+		data = (Object[][]) alDaten.toArray(returnArray);
+
+		sAktuellerReport = ZeiterfassungFac.REPORT_WOCHENABSCHLUSS;
+
+		initJRDS(parameter, ZeiterfassungReportFac.REPORT_MODUL,
+				ZeiterfassungFac.REPORT_WOCHENABSCHLUSS,
+				theClientDto.getMandant(), theClientDto.getLocUi(),
+				theClientDto);
+
+		JasperPrintLP print = getReportPrint();
+
+		if (print != null) {
+			PrintInfoDto values = new PrintInfoDto();
+			values.setDocPath(new DocPath(new DocNodeWochenabschlussBeleg(
+					personalDto, personalDto.getPartnerDto(), tKWBis)));
+			print.setOInfoForArchive(values);
+		}
+
+		wDto.setJasperPrintLP(getReportPrint());
+
+		return wDto;
+	}
+
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printWochenabrechnung(Integer personalIId,
 			Timestamp tVon, Timestamp tBis, TheClientDto theClientDto,
-			Integer iOption, Boolean bPlusVersteckte) throws EJBExceptionLP {
+			Integer iOption, Boolean bPlusVersteckte, boolean bNurAnwesende)
+			throws EJBExceptionLP {
 		JasperPrintLP print = null;
 		try {
 
@@ -3516,6 +4701,12 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						"OPTION NICHT VERFUEGBAR"));
 			}
 
+			if (bNurAnwesende) {
+				personalDtos = getZeiterfassungFac()
+						.entferneNichtAnwesendePersonen(tVon, tBis,
+								personalDtos, theClientDto);
+			}
+
 			for (int i = 0; i < personalDtos.length; i++) {
 
 				try {
@@ -3525,11 +4716,11 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 								print,
 								erstelleWochenabrechnung(
 										personalDtos[i].getIId(), tVon, tBis,
-										false, theClientDto).getPrint());
+										false, false, theClientDto).getPrint());
 					} else {
 						print = erstelleWochenabrechnung(
 								personalDtos[i].getIId(), tVon, tBis, false,
-								theClientDto);
+								false, theClientDto);
 					}
 				} catch (javax.ejb.EJBException ex1) {
 					if (ex1.getCause() instanceof EJBExceptionLP) {
@@ -3556,7 +4747,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printWochenjournal(Integer personalIId,
 			Timestamp tVon, Timestamp tBis, TheClientDto theClientDto,
-			Integer iOption, Boolean bPlusVersteckte) {
+			Integer iOption, Boolean bPlusVersteckte, boolean bNurAnwesende) {
 		JasperPrintLP print = null;
 		try {
 
@@ -3598,6 +4789,12 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						"OPTION NICHT VERFUEGBAR"));
 			}
 
+			if (bNurAnwesende) {
+				personalDtos = getZeiterfassungFac()
+						.entferneNichtAnwesendePersonen(tVon, tBis,
+								personalDtos, theClientDto);
+			}
+
 			for (int i = 0; i < personalDtos.length; i++) {
 
 				try {
@@ -3607,11 +4804,11 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 								print,
 								erstelleWochenabrechnung(
 										personalDtos[i].getIId(), tVon, tBis,
-										true, theClientDto).getPrint());
+										true, true, theClientDto).getPrint());
 					} else {
 						print = erstelleWochenabrechnung(
 								personalDtos[i].getIId(), tVon, tBis, true,
-								theClientDto);
+								true, theClientDto);
 					}
 				} catch (javax.ejb.EJBException ex1) {
 					if (ex1.getCause() instanceof EJBExceptionLP) {
@@ -3685,6 +4882,10 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				.add(Restrictions.eq("m.mandant_c_nr",
 						theClientDto.getMandant()));
 
+		if (maschineIId != null) {
+			crit.add(Restrictions.eq("maschine_i_id", maschineIId));
+		}
+
 		crit.add(Restrictions.ge(ZeiterfassungFac.FLR_MASCHINENZEITDATEN_T_VON,
 				tZeitenVon));
 		crit.add(Restrictions.lt(ZeiterfassungFac.FLR_MASCHINENZEITDATEN_T_VON,
@@ -3721,6 +4922,212 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		}
 
 		return dtos;
+	}
+
+	public Map getAllMaschinen(TheClientDto theClientDto) {
+
+		LinkedHashMap<String, String> tmArten = new LinkedHashMap<String, String>();
+
+		String sQuery = "select m FROM FLRMaschine m WHERE m.mandant_c_nr = '"
+				+ theClientDto.getMandant()
+				+ "' ORDER BY m.flrmaschinengruppe.c_bez, m.c_bez ASC";
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		org.hibernate.Query query = session.createQuery(sQuery);
+
+		List<?> resultList = query.list();
+
+		Iterator<?> resultListIterator = resultList.iterator();
+
+		while (resultListIterator.hasNext()) {
+			FLRMaschine m = (FLRMaschine) resultListIterator.next();
+
+			if (!tmArten.containsValue(m.getFlrmaschinengruppe().getC_bez())) {
+				tmArten.put("G" + m.getFlrmaschinengruppe().getI_id(), m
+						.getFlrmaschinengruppe().getC_bez());
+			}
+
+			String cBez = "";
+			if (m.getC_bez() != null) {
+				cBez = m.getC_bez();
+			}
+
+			cBez = "    " + cBez;
+
+			tmArten.put("M" + m.getI_id(), cBez);
+
+		}
+
+		return tmArten;
+	}
+
+	public ArrayList<AuftragzeitenDto> getAllTelefonzeitenEinesProjekts(
+			Integer projektIId, Integer personalIId, java.sql.Timestamp tVon,
+			java.sql.Timestamp tZeitenBis, TheClientDto theClientDto) {
+
+		ArrayList<AuftragzeitenDto> alDaten = new ArrayList<AuftragzeitenDto>();
+
+		// PJ18444 Telefonzeiten hinzufuegen
+		int iOption = 0;
+		ParametermandantDto parameter = null;
+		try {
+			parameter = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_PERSONALKOSTEN_QUELLE);
+
+			iOption = ((Integer) parameter.getCWertAsObject()).intValue();
+
+		} catch (RemoteException ex5) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex5);
+		}
+
+		HashMap hmGestpreise = new HashMap();
+		ArtikelDto artikelDtoDefaultArbeiztszeit = getDefaultArbeitszeitartikel(theClientDto);
+
+		Session sessionTelefon = FLRSessionFactory.getFactory().openSession();
+
+		String sQuerytelefon = "SELECT tz FROM FLRTelefonzeiten tz WHERE tz.projekt_i_id="
+				+ projektIId;
+
+		if (tVon != null) {
+
+			sQuerytelefon += " AND tz.t_von>='"
+					+ Helper.formatTimestampWithSlashes(Helper
+							.cutTimestamp(tVon)) + "'";
+
+		}
+
+		if (tZeitenBis != null) {
+			sQuerytelefon += " AND tz.t_bis<='"
+					+ Helper.formatTimestampWithSlashes(tZeitenBis) + "'";
+		}
+
+		if (personalIId != null) {
+
+			sQuerytelefon += " AND tz.personal_i_id=" + personalIId;
+
+		}
+
+		org.hibernate.Query queryTelefon = sessionTelefon
+				.createQuery(sQuerytelefon);
+
+		List<?> resultListTelefon = queryTelefon.list();
+		Iterator<?> resultListIteratorTelefon = resultListTelefon.iterator();
+		while (resultListIteratorTelefon.hasNext()) {
+
+			FLRTelefonzeiten flrTelefonzeiten = (FLRTelefonzeiten) resultListIteratorTelefon
+					.next();
+
+			// 2 Zeilen hinzufuegen
+
+			AuftragzeitenDto dtoTemp = new AuftragzeitenDto();
+			dtoTemp.setBTelefonzeit(true);
+			dtoTemp.setSArtikelcnr(artikelDtoDefaultArbeiztszeit.getCNr());
+			dtoTemp.setArtikelIId(artikelDtoDefaultArbeiztszeit.getIId());
+
+			if (artikelDtoDefaultArbeiztszeit.getArtikelsprDto() != null) {
+				dtoTemp.setSArtikelbezeichnung(artikelDtoDefaultArbeiztszeit
+						.getArtikelsprDto().getCBez());
+				dtoTemp.setSArtikelzusatzbezeichnung(artikelDtoDefaultArbeiztszeit
+						.getArtikelsprDto().getCZbez());
+			}
+			dtoTemp.setTsBeginn(new Timestamp(flrTelefonzeiten.getT_von()
+					.getTime()));
+			dtoTemp.setTsEnde(new Timestamp(flrTelefonzeiten.getT_bis()
+					.getTime()));
+
+			java.sql.Time tDauer = new java.sql.Time(flrTelefonzeiten
+					.getT_bis().getTime()
+					- flrTelefonzeiten.getT_von().getTime());
+			tDauer.setTime(tDauer.getTime() - 3600000);
+			dtoTemp.setTDauer(tDauer);
+			Double dDauer = Helper.time2Double(tDauer);
+			dtoTemp.setDdDauer(dDauer);
+			dtoTemp.setSBewegungsart(ZeiterfassungFac.TAETIGKEIT_TELEFON);
+
+			String sName = flrTelefonzeiten.getFlrpersonal().getFlrpartner()
+					.getC_name1nachnamefirmazeile1();
+			if (flrTelefonzeiten.getFlrpersonal().getFlrpartner()
+					.getC_name2vornamefirmazeile2() != null) {
+				sName = flrTelefonzeiten.getFlrpersonal().getFlrpartner()
+						.getC_name2vornamefirmazeile2()
+						+ " " + sName;
+			}
+
+			dtoTemp.setSPersonalMaschinenname(sName);
+
+			String sNameNachnameVorname = flrTelefonzeiten.getFlrpersonal()
+					.getFlrpartner().getC_name1nachnamefirmazeile1();
+			if (flrTelefonzeiten.getFlrpersonal().getFlrpartner()
+					.getC_name2vornamefirmazeile2() != null) {
+				sNameNachnameVorname = sNameNachnameVorname
+						+ " "
+						+ flrTelefonzeiten.getFlrpersonal().getFlrpartner()
+								.getC_name2vornamefirmazeile2();
+			}
+
+			dtoTemp.setsPersonNachnameVorname(sNameNachnameVorname);
+
+			dtoTemp.setSPersonalKurzzeichen(flrTelefonzeiten.getFlrpersonal()
+					.getC_kurzzeichen());
+
+			dtoTemp.setSPersonalnummer(flrTelefonzeiten.getFlrpersonal()
+					.getC_personalnummer());
+			dtoTemp.setSZeitbuchungtext(flrTelefonzeiten.getX_kommentarext());
+
+			BigDecimal bdKostenProStunde = getPersonalKostenProStunde(
+					theClientDto, hmGestpreise, iOption,
+					artikelDtoDefaultArbeiztszeit.getIId(), flrTelefonzeiten
+							.getFlrpersonal().getI_id(), new Timestamp(
+							flrTelefonzeiten.getT_von().getTime()));
+			dtoTemp.setBdKosten(bdKostenProStunde.multiply(new BigDecimal(
+					dDauer)));
+
+			alDaten.add(dtoTemp);
+
+		}
+		sessionTelefon.close();
+
+		return alDaten;
+	}
+
+	public ArtikelDto getDefaultArbeitszeitartikel(TheClientDto theClientDto) {
+		ArtikelDto artikelDtoDefaultArbeiztszeit = null;
+		try {
+			ParametermandantDto parameterDtoDefaultarbeitszeit = getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ALLGEMEIN,
+							ParameterFac.PARAMETER_DEFAULT_ARBEITSZEITARTIKEL);
+
+			if (parameterDtoDefaultarbeitszeit != null
+					&& parameterDtoDefaultarbeitszeit.getCWert() != null
+					&& !parameterDtoDefaultarbeitszeit.getCWert().trim()
+							.equals("")) {
+				try {
+
+					artikelDtoDefaultArbeiztszeit = getArtikelFac()
+							.artikelFindByCNr(
+									parameterDtoDefaultarbeitszeit.getCWert(),
+									theClientDto);
+
+				} catch (EJBExceptionLP ex2) {
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_DEFAULT_ARBEITSZEITARTIKEL_NICHT_DEFINIERT,
+							new Exception(
+									"FEHLER_DEFAULT_ARBEITSZEITARTIKEL_NICHT_DEFINIERT"));
+				}
+			} else {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DEFAULT_ARBEITSZEITARTIKEL_NICHT_DEFINIERT,
+						new Exception(
+								"FEHLER_DEFAULT_ARBEITSZEITARTIKEL_NICHT_DEFINIERT"));
+			}
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+		return artikelDtoDefaultArbeiztszeit;
 	}
 
 	public AuftragzeitenDto[] getAllMaschinenzeitenEinesBeleges(Integer losIId,
@@ -3806,17 +5213,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			dto.setSArtikelcnr(flrBelege.getFlrlossollarbeitsplan()
 					.getFlrartikel().getC_nr());
 
-			String bez = (String) o[1]
-					+ ",AG:"
-					+ flrBelege.getFlrlossollarbeitsplan()
-							.getI_arbeitsgangsnummer();
-			if (flrBelege.getFlrlossollarbeitsplan().getI_unterarbeitsgang() != null) {
-				bez += ",UAG:"
-						+ flrBelege.getFlrlossollarbeitsplan()
-								.getI_unterarbeitsgang();
-			}
-
-			dto.setSArtikelbezeichnung(bez);
+			dto.setSArtikelbezeichnung((String) o[1]);
 			dto.setSArtikelzusatzbezeichnung((String) o[2]);
 
 			dto.setArtikelIId(flrBelege.getFlrlossollarbeitsplan()
@@ -3982,6 +5379,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		}
 
 		boolean bTheoretischeIstZeit = false;
+		boolean bVonBisErfassung = false;
 
 		try {
 			ParametermandantDto parameterIstZeit = (ParametermandantDto) getParameterFac()
@@ -3993,6 +5391,13 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			bTheoretischeIstZeit = ((Boolean) parameterIstZeit
 					.getCWertAsObject());
 
+			ParametermandantDto parameterVonBis = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_VON_BIS_ERFASSUNG);
+
+			bVonBisErfassung = ((Boolean) parameterVonBis.getCWertAsObject());
+
 		} catch (RemoteException ex5) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex5);
 		}
@@ -4003,6 +5408,9 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		// Hole id der Taetigkeit ENDE
 		Integer taetigkeitIId_Ende = taetigkeitFindByCNr(
 				ZeiterfassungFac.TAETIGKEIT_ENDE, theClientDto).getIId();
+		// Hole id der Taetigkeit UNTER
+		Integer taetigkeitIId_Unter = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_UNTER, theClientDto).getIId();
 		// try {
 
 		String sQueryAuftragzeiten = "SELECT z,(SELECT spr.c_bez FROM FLRArtikellistespr as spr WHERE spr.Id.artikelliste=z.flrartikel.i_id AND spr.Id.locale='"
@@ -4121,23 +5529,47 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			}
 
 			if (bZeitIstOffen == true) {
-				// Einen OFFEN Eintrag hinzufuegen
-				ZeitdatenDto[] tagesDatenTemp = ZeitdatenDto
-						.kopiereArray(tagesDaten);
-				ZeitdatenDto zDtoOffen = tagesDaten[0];
+				// Einen ENDE Eintrag hinzufuegen
 
-				tagesDaten = new ZeitdatenDto[tagesDatenTemp.length + 1];
-				for (int i = 0; i < tagesDatenTemp.length; i++) {
-					tagesDaten[i] = tagesDatenTemp[i];
+				ArrayList<ZeitdatenDto> alNeu = new ArrayList<ZeitdatenDto>();
+
+				ZeitdatenDto zDtoOffen = ZeitdatenDto.clone(tagesDaten[0]);
+
+				for (int i = 0; i < tagesDaten.length; i++) {
+					alNeu.add(tagesDaten[i]);
+				}
+
+				// SP3044 Wenn vorher auch noch ein Pause-Beginn jedoch kein
+				// Pause Ende gebucht wurde, dann muss die Pause ebenfalls
+				// beendet werden
+				ArrayList<ZeitdatenDto> alUnter = new ArrayList<ZeitdatenDto>();
+				for (int i = 0; i < alNeu.size(); i++) {
+					ZeitdatenDto zeitdatenDto = alNeu.get(i);
+					if (zeitdatenDto.getTaetigkeitIId() != null
+							&& zeitdatenDto.getTaetigkeitIId().equals(
+									taetigkeitIId_Unter)) {
+						alUnter.add(zeitdatenDto);
+					}
 				}
 
 				zDtoOffen.setArtikelIId(null);
 				zDtoOffen.setCBelegartnr(null);
 				zDtoOffen.setIBelegartid(null);
 				zDtoOffen.setIBelegartpositionid(null);
+
+				if (alUnter.size() % 2 == 1) {
+					zDtoOffen.setTaetigkeitIId(taetigkeitIId_Unter);
+					zDtoOffen
+							.setTZeit(new Timestamp(System.currentTimeMillis()));
+					alNeu.add(zDtoOffen);
+				}
+				zDtoOffen = ZeitdatenDto.clone(zDtoOffen);
 				zDtoOffen.setTaetigkeitIId(taetigkeitIId_Ende);
 				zDtoOffen.setTZeit(new Timestamp(System.currentTimeMillis()));
-				tagesDaten[tagesDatenTemp.length] = zDtoOffen;
+				alNeu.add(zDtoOffen);
+
+				tagesDaten = alNeu.toArray(new ZeitdatenDto[alNeu.size()]);
+
 			}
 
 			if (tagesDaten.length > 1) {
@@ -4188,6 +5620,24 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 								dtoTemp.setZusatzbezeichnung((String) o[2]);
 							}
 
+							if (auftragszeit.getC_belegartnr() != null
+									&& auftragszeit.getC_belegartnr().equals(
+											LocaleFac.BELEGART_LOS)
+									&& auftragszeit.getI_belegartpositionid() != null) {
+
+								LossollarbeitsplanDto sapDto = getFertigungFac()
+										.lossollarbeitsplanFindByPrimaryKeyOhneExc(
+												auftragszeit
+														.getI_belegartpositionid());
+
+								if (sapDto != null) {
+									dtoTemp.setArbeitsgang(sapDto
+											.getIArbeitsgangnummer());
+									dtoTemp.setUnterarbeitsgang(sapDto
+											.getIUnterarbeitsgang());
+								}
+							}
+
 							String sName = auftragszeit.getFlrpersonal()
 									.getFlrpartner()
 									.getC_name1nachnamefirmazeile1();
@@ -4214,6 +5664,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							}
 
 							dtoTemp.setPersonNachnameVorname(sNameNachnameVorname);
+							dtoTemp.setSPersonalKurzzeichen(auftragszeit
+									.getFlrpersonal().getC_kurzzeichen());
 
 							dtoTemp.setPersonalnummer(auftragszeit
 									.getFlrpersonal().getC_personalnummer());
@@ -4221,8 +5673,13 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							dtoTemp.setZeitdatenDto(tagesDaten[l]);
 
 							// Beim letzten OFFEN hinzufuegen
-							if (bZeitIstOffen == true && l == iZaehler - 1) {
-								dtoTemp.setbOffen(true);
+							// SP2596 Ausser bei Von-Bis-Erfassung
+
+							if (bVonBisErfassung == false) {
+
+								if (bZeitIstOffen == true && l == iZaehler - 1) {
+									dtoTemp.setbOffen(true);
+								}
 							}
 
 							alleZeitdatenEinesAuftrages[l] = dtoTemp;
@@ -4294,6 +5751,9 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 								.setSPersonalMaschinenname(einePositionDto[x]
 										.getPerson());
 						azDtos[iAktuellerDatensatz]
+								.setSPersonalKurzzeichen(einePositionDto[x]
+										.getSPersonalKurzzeichen());
+						azDtos[iAktuellerDatensatz]
 								.setsPersonNachnameVorname(einePositionDto[x]
 										.getPersonNachnameVorname());
 						azDtos[iAktuellerDatensatz]
@@ -4337,113 +5797,49 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 						azDtos[iAktuellerDatensatz].setDdDauer(new Double(
 								bdDauerGerundet.doubleValue()));
-						try {
 
-							if (einePositionDto[0].getZeitdatenDto()
-									.getArtikelIId() != null) {
+						if (einePositionDto[0].getZeitdatenDto()
+								.getArtikelIId() != null) {
 
-								azDtos[iAktuellerDatensatz]
-										.setArtikelgruppeIId(einePositionDto[0]
-												.getArtgruIId());
-								azDtos[iAktuellerDatensatz]
-										.setArtikelklasseIId(einePositionDto[0]
-												.getArtklaIId());
+							azDtos[iAktuellerDatensatz]
+									.setArtikelgruppeIId(einePositionDto[0]
+											.getArtgruIId());
+							azDtos[iAktuellerDatensatz]
+									.setArtikelklasseIId(einePositionDto[0]
+											.getArtklaIId());
 
-								azDtos[iAktuellerDatensatz]
-										.setSArtikelcnr(einePositionDto[0]
-												.getArtikel());
-								azDtos[iAktuellerDatensatz]
-										.setArtikelIId(einePositionDto[0]
-												.getZeitdatenDto()
-												.getArtikelIId());
-								azDtos[iAktuellerDatensatz]
-										.setSArtikelbezeichnung(einePositionDto[0]
-												.getBezeichnung());
+							azDtos[iAktuellerDatensatz]
+									.setSArtikelcnr(einePositionDto[0]
+											.getArtikel());
+							azDtos[iAktuellerDatensatz]
+									.setArtikelIId(einePositionDto[0]
+											.getZeitdatenDto().getArtikelIId());
+							azDtos[iAktuellerDatensatz]
+									.setSArtikelbezeichnung(einePositionDto[0]
+											.getBezeichnung());
 
-								azDtos[iAktuellerDatensatz]
-										.setSArtikelzusatzbezeichnung(einePositionDto[0]
-												.getZusatzbezeichnung());
+							azDtos[iAktuellerDatensatz]
+									.setSArtikelzusatzbezeichnung(einePositionDto[0]
+											.getZusatzbezeichnung());
 
-								if (iOption == 2) {
-									BigDecimal bdPreis = new BigDecimal(0);
-									// Stundensatz aus Personalgehalt holen
-									Calendar c = Calendar.getInstance();
-									c.setTimeInMillis(dtoBeginn.getTZeit()
-											.getTime());
+							BigDecimal bdKostenProStunde = getPersonalKostenProStunde(
+									theClientDto, hmGestpreise, iOption,
+									einePositionDto[0].getZeitdatenDto()
+											.getArtikelIId(),
+									dtoBeginn.getPersonalIId(),
+									einePositionDto[0].getZeitdatenDto()
+											.getTZeit());
+							azDtos[iAktuellerDatensatz]
+									.setBdKosten(bdKostenProStunde
+											.multiply(bdDauerGerundet));
 
-									PersonalgehaltDto pgDto = getPersonalFac()
-											.personalgehaltFindLetztePersonalgehalt(
-													dtoBeginn.getPersonalIId(),
-													c.get(Calendar.YEAR),
-													c.get(Calendar.MONTH));
-									if (pgDto != null
-											&& pgDto.getNStundensatz() != null) {
-										bdPreis = pgDto.getNStundensatz()
-												.multiply(bdDauerGerundet);
+							azDtos[iAktuellerDatensatz]
+									.setiArbeitsgang(einePositionDto[0]
+											.getArbeitsgang());
+							azDtos[iAktuellerDatensatz]
+									.setiUnterarbeitsgang(einePositionDto[0]
+											.getUnterarbeitsgang());
 
-									}
-
-									azDtos[iAktuellerDatensatz]
-											.setBdKosten(bdPreis);
-
-								} else if (iOption == 1) {
-									// Kosten aus Personalgruppe
-									BigDecimal bdPreis = new BigDecimal(0);
-
-									PersonalDto personalDto = getPersonalFac()
-											.personalFindByPrimaryKeySmall(
-													dtoBeginn.getPersonalIId());
-
-									if (personalDto.getPersonalgruppeIId() != null) {
-
-										BigDecimal bdKostenAusPersonalgruppe = getPersonalFac()
-												.getPersonalgruppeKostenZumZeitpunkt(
-														personalDto
-																.getPersonalgruppeIId(),
-														dtoBeginn.getTZeit());
-
-										if (bdKostenAusPersonalgruppe != null) {
-											bdPreis = bdKostenAusPersonalgruppe
-													.multiply(bdDauerGerundet);
-										}
-									}
-
-									azDtos[iAktuellerDatensatz]
-											.setBdKosten(bdPreis);
-
-								} else {
-
-									// Tel. mit UW (05-15-05): Preise werden in
-									// Mandantenwaehrung zurueckgeliefert.
-
-									if (!hmGestpreise
-											.containsKey(einePositionDto[0]
-													.getZeitdatenDto()
-													.getArtikelIId())) {
-										BigDecimal preis = getLagerFac()
-												.getGemittelterGestehungspreisAllerLaegerEinesMandanten(
-														einePositionDto[0]
-																.getZeitdatenDto()
-																.getArtikelIId(),
-														theClientDto);
-										hmGestpreise.put(einePositionDto[0]
-												.getZeitdatenDto()
-												.getArtikelIId(), preis);
-
-									}
-									BigDecimal preis = (BigDecimal) hmGestpreise
-											.get(einePositionDto[0]
-													.getZeitdatenDto()
-													.getArtikelIId());
-
-									azDtos[iAktuellerDatensatz]
-											.setBdKosten(preis
-													.multiply(bdDauerGerundet));
-								}
-
-							}
-						} catch (RemoteException ex1) {
-							/** @todo CK PJ 4659 */
 						}
 
 						String cBemerkung = dtoBeginn.getCBemerkungZuBelegart();
@@ -4482,7 +5878,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						 * dtoEnde.getArtikelIId(), idUser).getCNr()); } catch
 						 * (RemoteException ex2) {
 						 * throwEJBExceptionLPRespectOld(ex2); }
-						 * 
+						 *
 						 * }
 						 */
 
@@ -4634,6 +6030,76 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		}
 
 		return azDtos;
+	}
+
+	public BigDecimal getPersonalKostenProStunde(TheClientDto theClientDto,
+			HashMap hmGestpreise, int iOption, Integer artikelIId,
+			Integer personalIId, Timestamp tZeitpunkt) {
+
+		BigDecimal bdKostenProStunde = BigDecimal.ZERO;
+		try {
+			if (iOption == 2) {
+
+				// Stundensatz aus Personalgehalt holen
+				Calendar c = Calendar.getInstance();
+				c.setTimeInMillis(tZeitpunkt.getTime());
+
+				PersonalgehaltDto pgDto = getPersonalFac()
+						.personalgehaltFindLetztePersonalgehalt(personalIId,
+								c.get(Calendar.YEAR), c.get(Calendar.MONTH));
+				if (pgDto != null && pgDto.getNStundensatz() != null) {
+					bdKostenProStunde = pgDto.getNStundensatz();
+				}
+			} else if (iOption == 1) {
+				// Kosten aus Personalgruppe
+
+				PersonalDto personalDto = getPersonalFac()
+						.personalFindByPrimaryKeySmall(personalIId);
+
+				if (personalDto.getPersonalgruppeIId() != null) {
+
+					BigDecimal bdKostenAusPersonalgruppe = getPersonalFac()
+							.getPersonalgruppeKostenZumZeitpunkt(
+									personalDto.getPersonalgruppeIId(),
+									tZeitpunkt);
+
+					if (bdKostenAusPersonalgruppe != null) {
+						bdKostenProStunde = bdKostenAusPersonalgruppe;
+					}
+				}
+
+			} else {
+
+				// Tel. mit UW (05-15-05): Preise werden in
+				// Mandantenwaehrung zurueckgeliefert.
+
+				if (hmGestpreise != null) {
+					if (!hmGestpreise.containsKey(artikelIId)) {
+						BigDecimal preis = getLagerFac()
+								.getGemittelterGestehungspreisAllerLaegerEinesMandanten(
+										artikelIId, theClientDto);
+						hmGestpreise.put(artikelIId, preis);
+
+					}
+					BigDecimal preis = (BigDecimal) hmGestpreise
+							.get(artikelIId);
+					bdKostenProStunde = preis;
+				} else {
+
+					BigDecimal preis = getLagerFac()
+							.getGemittelterGestehungspreisAllerLaegerEinesMandanten(
+									artikelIId, theClientDto);
+					bdKostenProStunde = preis;
+
+				}
+
+			}
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		return bdKostenProStunde;
+
 	}
 
 	private AuftragzeitenDto[] theoretischeIstzeitHinzufuegen(
@@ -4868,6 +6334,9 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 												azDto.setsPersonNachnameVorname(personalDto
 														.formatFixName1Name2());
 
+												azDto.setSPersonalKurzzeichen(personalDto
+														.getCKurzzeichen());
+
 												azDto.setSPersonalnummer(personalDto
 														.getCPersonalnr() + "");
 
@@ -5004,7 +6473,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	/**
 	 * Hole alle Artikelarten ohne Montag bis Sonntag nach Spr.
-	 * 
+	 *
 	 * @param cNrSpracheI
 	 *            String
 	 * @throws EJBExceptionLP
@@ -5345,7 +6814,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	/**
 	 * Ermittlt den Schnitt der Sollzeit eines Tages eines Zeitmodells
-	 * 
+	 *
 	 * @param zeitmodellIId
 	 *            ID des Zeitmodells
 	 * @return String Ergebnis als String
@@ -5401,7 +6870,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	/**
 	 * Ermittlt Summe der Sollzeit einer fuer Feiertag, Sonntag und Halbtag
-	 * 
+	 *
 	 * @param zeitmodellIId
 	 *            ID des Zeitmodells
 	 * @return String Ergebnis als String
@@ -5527,6 +6996,80 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			em.flush();
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, e);
+		}
+	}
+
+	public void bringeFehlerWennZeitabschlussvorhanden(Integer personalIId,
+			java.sql.Timestamp tZeitWelcheGeaendertWerdenSoll,
+			TheClientDto theClientDto) {
+		if (getMandantFac().hatZusatzfunktionberechtigung(
+				MandantFac.ZUSATZFUNKTION_ZEITEN_ABSCHLIESSEN, theClientDto)) {
+			java.sql.Timestamp t = gibtEsBereitseinenZeitabschlussBisZurKW(
+					personalIId, tZeitWelcheGeaendertWerdenSoll, theClientDto);
+
+			if (t != null) {
+				ArrayList al = new ArrayList();
+				al.add(t);
+
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_ZEITEN_BEREITS_ABGESCHLOSSEN, al,
+						new Exception("FEHLER_ZEITEN_BEREITS_ABGESCHLOSSEN"));
+
+			}
+		}
+
+	}
+
+	public java.sql.Timestamp gibtEsBereitseinenZeitabschlussBisZurKW(
+			Integer personalIId, java.sql.Timestamp tKW,
+			TheClientDto theClientDto) {
+
+		Timestamp[] tVonBisEinerKW = Helper.getTimestampVonBisEinerKW(tKW);
+
+		Calendar c = Calendar.getInstance();
+		c.setTimeInMillis(tKW.getTime());
+
+		int kwAktuell = c.get(Calendar.WEEK_OF_YEAR);
+
+		String sQueryBelegzeiten = "SELECT za  from FLRZeitabschluss za WHERE za.personal_i_id="
+				+ personalIId
+				+ " AND za.t_abgeschlossen_bis>='"
+				+ Helper.formatTimestampWithSlashes(Helper
+						.cutTimestamp(new Timestamp(tVonBisEinerKW[0].getTime())))
+				+ "' ORDER BY za.t_abgeschlossen_bis DESC";
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		org.hibernate.Query query = session.createQuery(sQueryBelegzeiten);
+		query.setMaxResults(1);
+
+		List<?> resultList = query.list();
+
+		Iterator<?> resultListIterator = resultList.iterator();
+
+		ArrayList alDataSub = new ArrayList();
+
+		if (resultListIterator.hasNext()) {
+			FLRZeitabschluss flr = (FLRZeitabschluss) resultListIterator.next();
+			session.close();
+			return new Timestamp(flr.getT_abgeschlossen_bis().getTime());
+		} else {
+			session.close();
+			return null;
+		}
+
+	}
+
+	public void zeitenAbschliessen(Integer personalIId, java.sql.Timestamp tKW,
+			TheClientDto theClientDto) {
+		java.sql.Timestamp t = gibtEsBereitseinenZeitabschlussBisZurKW(
+				personalIId, tKW, theClientDto);
+		if (t == null) {
+			ZeitabschlussDto zaDto = new ZeitabschlussDto();
+			Timestamp[] tKWVonBis = Helper.getTimestampVonBisEinerKW(tKW);
+			zaDto.setPersonalIId(personalIId);
+			zaDto.setTAbgeschlossenBis(Helper.cutTimestamp(tKWVonBis[1]));
+			getPersonalFac().createZeitabschluss(zaDto, theClientDto);
 		}
 	}
 
@@ -5916,12 +7459,32 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		while (resultListIterator.hasNext()) {
 			FLRZeitdaten zeitdaten = (FLRZeitdaten) resultListIterator.next();
 
-			getZeiterfassungFac().pruefeUndErstelleAutomatischePausen(
-					new java.sql.Timestamp(zeitdaten.getT_zeit().getTime()),
-					zeitdaten.getPersonal_i_id(), theClientDto);
-			getZeiterfassungFac().erstelleAutomatischeMindestpause(
-					new java.sql.Timestamp(zeitdaten.getT_zeit().getTime()),
-					zeitdaten.getPersonal_i_id(), theClientDto);
+			boolean bNurWarnung = false;
+			ParametermandantDto parameter = null;
+			try {
+				parameter = (ParametermandantDto) getParameterFac()
+						.getMandantparameter(
+								theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_PERSONAL,
+								ParameterFac.PARAMETER_AUTOMATISCHE_PAUSEN_NUR_WARNUNG);
+
+				bNurWarnung = (Boolean) parameter.getCWertAsObject();
+
+			} catch (RemoteException ex5) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex5);
+			}
+			if (bNurWarnung == false) {
+				getZeiterfassungFac()
+						.pruefeUndErstelleAutomatischePausen(
+								new java.sql.Timestamp(zeitdaten.getT_zeit()
+										.getTime()),
+								zeitdaten.getPersonal_i_id(), theClientDto);
+				getZeiterfassungFac()
+						.erstelleAutomatischeMindestpause(
+								new java.sql.Timestamp(zeitdaten.getT_zeit()
+										.getTime()),
+								zeitdaten.getPersonal_i_id(), theClientDto);
+			}
 			getZeiterfassungFac().pruefeUndErstelleAutomatischesEndeBeiGeht(
 					new java.sql.Timestamp(zeitdaten.getT_zeit().getTime()),
 					zeitdaten.getPersonal_i_id(), theClientDto);
@@ -6054,10 +7617,9 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			ZeitmodelltagpauseDto[] zeitmodelltagpauseDtos = null;
 			// try {
 			Query query2 = em
-					.createNamedQuery("ZeitmodelltagpausefindByZeitmodelltagIIdUEnde");
+					.createNamedQuery("ZeitmodelltagpausefindByZeitmodelltagIId");
 			query2.setParameter(1, zmtagIId);
-			query2.setParameter(2,
-					HelperDateTime.getTimeFromTimestamp(tZeitpunkt));
+
 			Collection<?> cl = query2.getResultList();
 			// if (! cl.isEmpty()) {
 			zeitmodelltagpauseDtos = assembleZeitmodelltagpauseDtos(cl);
@@ -6131,6 +7693,30 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							tZeitpunkt).getTime()
 							+ zeitmodelltagpauseDto.getUEnde().getTime()
 							+ 3600000);
+
+					if (tVon.after(tZeitpunkt)) {
+						continue;
+					}
+
+					if (Helper.short2boolean(personalzeitmodellDto
+							.getZeitmodellDto().getBFixepauseTrotzkommtgeht())) {
+						// PJ18888 Wenn Kommt oder Geht zwischen VON_BIS bis,
+						// dann
+						// muss Pause mitgemacht werden
+						if (letztesKommt.after(tVon)
+								&& letztesKommt.before(tBis)) {
+							tVon = new Timestamp(letztesKommt.getTime() + 10);
+						}
+
+						if (tBis.after(tZeitpunkt)) {
+							tBis = new Timestamp(tZeitpunkt.getTime() - 10);
+						}
+					} else {
+						if (tBis.after(tZeitpunkt)) {
+							continue;
+						}
+					}
+
 					// Wenn KOMMT vor Automatischem UNTER, sonst Naechste
 					// Buchung
 					if (letztesKommt.before(tVon)) {
@@ -6183,25 +7769,35 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 										// Zeit
 										bBisAnlegen = false;
 									}
-									if (zeile.getTaetigkeit_i_id() != null) {
-										bVonAnlegen = false;
-										bBisAnlegen = false;
-									}
 
-									if (zeile.getT_zeit().getTime() > tVon
-											.getTime()
-											&& zeile.getT_zeit().getTime() < tBis
-													.getTime()) {
-										// Es gibt einen eintrag dazwischen ->
-										// Verschieben
-										bHatPlatz = false;
-										long diff = zeile.getT_zeit().getTime()
-												- tVon.getTime() + 1000;
-										tVon = new Timestamp(tVon.getTime()
-												+ diff);
-										tBis = new Timestamp(tBis.getTime()
-												+ diff);
+									if (!Helper
+											.short2boolean(personalzeitmodellDto
+													.getZeitmodellDto()
+													.getBFixepauseTrotzkommtgeht())) {
 
+										if (zeile.getTaetigkeit_i_id() != null) {
+											bVonAnlegen = false;
+											bBisAnlegen = false;
+										}
+
+										if (zeile.getT_zeit().getTime() > tVon
+												.getTime()
+												&& zeile.getT_zeit().getTime() < tBis
+														.getTime()) {
+											// Es gibt einen eintrag dazwischen
+											// ->
+											// Verschieben
+											bHatPlatz = false;
+											long diff = zeile.getT_zeit()
+													.getTime()
+													- tVon.getTime()
+													+ 1000;
+											tVon = new Timestamp(tVon.getTime()
+													+ diff);
+											tBis = new Timestamp(tBis.getTime()
+													+ diff);
+
+										}
 									}
 
 								}
@@ -6224,12 +7820,98 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 								autoPause.setTaetigkeitIId(taetigkeitIId_Unter);
 								if (bVonAnlegen) {
 									createZeitdaten(autoPause, false, false,
-											false, theClientDto);
+											false, false, theClientDto);
 								}
 								autoPause.setTZeit(tBis);
 								if (bBisAnlegen) {
 									createZeitdaten(autoPause, false, false,
-											false, theClientDto);
+											false, false, theClientDto);
+								}
+							}
+						} else {
+							if (Helper.short2boolean(personalzeitmodellDto
+									.getZeitmodellDto()
+									.getBFixepauseTrotzkommtgeht())) {
+								if (istPersonAnwesend(zeitdatenDtos,
+										taetigkeitIId_Kommt, tBis)) {
+
+									// Nun Pause-Ende buchen
+									// Automatische Pause eintragen
+
+									Integer taetigkeitIId_Unter = taetigkeitFindByCNr(
+											ZeiterfassungFac.TAETIGKEIT_UNTER,
+											theClientDto).getIId();
+
+									ZeitdatenDto autoPause = new ZeitdatenDto();
+									autoPause.setPersonalIId(personalIId);
+									autoPause.setTZeit(tBis);
+									autoPause.setBAutomatikbuchung(Helper
+											.boolean2Short(true));
+									autoPause
+											.setTaetigkeitIId(taetigkeitIId_Unter);
+
+									try {
+										Query query = em
+												.createNamedQuery("ZeitdatenfindByPersonalIIdTZeit");
+										query.setParameter(1,
+												autoPause.getPersonalIId());
+										query.setParameter(2,
+												autoPause.getTZeit());
+										Zeitdaten zeitdaten2 = (Zeitdaten) query
+												.getSingleResult();
+									} catch (NoResultException ex) {
+										// Wenn zu dem Zeitpunkt noch keine
+										// buchung
+										createZeitdaten(autoPause, false,
+												false, false, false,
+												theClientDto);
+
+										// Und Unter-Beginn zum Zeitpunkt der
+										// lettzen Taetigkeit eintragen (+ 10ms)
+
+										org.hibernate.Criteria zeitdaten = session
+												.createCriteria(FLRZeitdaten.class);
+
+										zeitdaten
+												.add(Restrictions
+														.lt(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT,
+																autoPause
+																		.getTZeit()));
+										zeitdaten
+												.add(Restrictions
+														.eq(ZeiterfassungFac.FLR_ZEITDATEN_PERSONAL_I_ID,
+																personalIId));
+										zeitdaten
+												.add(Restrictions
+														.isNotNull(ZeiterfassungFac.FLR_ZEITDATEN_TAETIGKEIT_I_ID));
+										zeitdaten
+												.addOrder(Order
+														.desc(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT));
+										zeitdaten.setMaxResults(1);
+										List resultListArtikel = zeitdaten
+												.list();
+
+										Iterator resultListIterator = resultListArtikel
+												.iterator();
+
+										boolean bVonAnlegen = true;
+										boolean bBisAnlegen = true;
+
+										if (resultListIterator.hasNext()) {
+											FLRZeitdaten zeile = (FLRZeitdaten) resultListIterator
+													.next();
+											autoPause
+													.setTZeit(new Timestamp(
+															zeile.getT_zeit()
+																	.getTime() + 10));
+											createZeitdaten(autoPause, false,
+													false, false, false,
+													theClientDto);
+
+										}
+
+									}
+
 								}
 							}
 						}
@@ -6536,7 +8218,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 										.getTime() + lDifferenz));
 								dto.setTaetigkeitIId(taetigkeitIId_Ende);
 								createZeitdaten(dto, false, false, false,
-										theClientDto);
+										false, theClientDto);
 							}
 							return;
 						}
@@ -6706,7 +8388,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 				// Beginneintrag des Auftrages erstellen, wenn Kommt
 				dto.setTZeit(tsAbDaFrei);
-				id = createZeitdaten(dto, false, false, false, theClientDto);
+				id = createZeitdaten(dto, false, false, false, false,
+						theClientDto);
 			}
 			// Ende-Eintrag erstellen
 			dto = new ZeitdatenDto();
@@ -6734,7 +8417,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				boolean bGespeichert = false;
 				while (bGespeichert == false) {
 					try {
-						createZeitdaten(dto, false, false, false, theClientDto);
+						createZeitdaten(dto, false, false, false, false,
+								theClientDto);
 						bGespeichert = true;
 					} catch (EJBExceptionLP ex1) {
 						if (ex1.getCode() == EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE) {
@@ -6803,7 +8487,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 					if (zeitdatenDto.bFertigFuerLossollarbeitsplan == false) {
 
-						createZeitdaten(zeitdatenDto, true, true, true,
+						createZeitdaten(zeitdatenDto, true, true, true, false,
 								theClientDto);
 
 					} else {
@@ -6944,28 +8628,141 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	public Integer createZeitdaten(ZeitdatenDto zeitdatenDto,
 			boolean bBucheAutoPausen, boolean bBucheMitternachtssprung,
-			boolean bZeitverteilen, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+			boolean bZeitverteilen, boolean bLospruefungAufFertig,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		return createZeitdaten(zeitdatenDto, bBucheAutoPausen,
-				bBucheMitternachtssprung, bZeitverteilen, theClientDto, false);
+				bBucheMitternachtssprung, bZeitverteilen,
+				bLospruefungAufFertig, theClientDto, false);
+	}
+
+	private boolean binIchZwischenEinerVonBisBuchung(Integer personalIId,
+			Timestamp tZeit, TheClientDto theclientDto) {
+
+		boolean b = false;
+
+		SessionFactory factory = FLRSessionFactory.getFactory();
+		Session session = factory.openSession();
+
+		org.hibernate.Criteria letztesKommtOderGeht = session
+				.createCriteria(FLRZeitdaten.class);
+
+		letztesKommtOderGeht.add(Expression.eq(
+				ZeiterfassungFac.FLR_ZEITDATEN_PERSONAL_I_ID, personalIId));
+		letztesKommtOderGeht.add(Expression.lt(
+				ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT, tZeit));
+		letztesKommtOderGeht.setMaxResults(1);
+		letztesKommtOderGeht.addOrder(Order
+				.desc(ZeiterfassungFac.FLR_ZEITDATEN_T_ZEIT));
+
+		List<?> resultLetztesKommtOderGeht = letztesKommtOderGeht.list();
+		Iterator it = resultLetztesKommtOderGeht.iterator();
+
+		if (it.hasNext()) {
+			FLRZeitdaten z = (FLRZeitdaten) it.next();
+			// Wenn vorher beleg dann bin ich dazwischen
+			if (z.getI_belegartid() != null) {
+				b = true;
+			}
+		}
+		session.close();
+		return b;
 	}
 
 	private Integer createZeitdaten(ZeitdatenDto zeitdatenDto,
 			boolean bBucheAutoPausen, boolean bBucheMitternachtssprung,
-			boolean bZeitverteilen, TheClientDto theClientDto, boolean bRekursiv)
-			throws EJBExceptionLP {
+			boolean bZeitverteilen, boolean bLospruefungAufFertig,
+			TheClientDto theClientDto, boolean bRekursiv) throws EJBExceptionLP {
 
-		/*
-		 * nur zum Test des JMS // Archiveintrag erstellen NachrichtarchivDto
-		 * naDto = new NachrichtarchivDto(
-		 * BenutzerFac.NA_RUESTZEIT_UEBERSCHRITTEN_ID,
-		 * theClientDto.getIDPersonal(), "Sollzeiten ueberschritten."); Integer
-		 * nachrichtArchivIId = getBenutzerFac().createNachrichtarchiv(naDto,
-		 * theClientDto); // JMS aufruf
-		 * HelperServer.sendJmsMessage(getInitialContext(),
-		 * LPTopicQsBean.TOPIC_NAME_QS, "Sollzeiten ueberschritten.",
-		 * nachrichtArchivIId, true, theClientDto);
-		 */
+		// PJ18356
+
+		boolean bVonBisErfassung = false;
+
+		try {
+			ParametermandantDto parameterVonBis = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_VON_BIS_ERFASSUNG);
+
+			bVonBisErfassung = ((Boolean) parameterVonBis.getCWertAsObject());
+
+			// Wenn von-bis erfassung, dann darf zwischen von-bis keine
+			// Zeitbuchung
+			// vorhanden sein
+
+			if (bVonBisErfassung && zeitdatenDto.getTaetigkeitIId() != null) {
+
+				Integer tetigkeitIId_Kommt = taetigkeitFindByCNr(
+						ZeiterfassungFac.TAETIGKEIT_KOMMT, theClientDto)
+						.getIId();
+				Integer tetigkeitIId_Geht = taetigkeitFindByCNr(
+						ZeiterfassungFac.TAETIGKEIT_GEHT, theClientDto)
+						.getIId();
+
+				if (zeitdatenDto.getTaetigkeitIId().equals(tetigkeitIId_Kommt)
+						|| zeitdatenDto.getTaetigkeitIId().equals(
+								tetigkeitIId_Geht)) {
+
+					zeitdatenDto.settZeit_Bis(null);
+				}
+			}
+
+			if (bVonBisErfassung && zeitdatenDto.gettZeit_Bis() != null) {
+				ZeitdatenDto[] dtos = getZeiterfassungFac()
+						.zeitdatenFindZeitdatenEinesTagesUndEinerPerson(
+								zeitdatenDto.getPersonalIId(),
+								zeitdatenDto.getTZeit(),
+								new Timestamp(zeitdatenDto.gettZeit_Bis()
+										.getTime()));
+				if (dtos.length > 0) {
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_BUCHUNG_ZWISCHEN_VON_BIS,
+							new Exception(
+									"EJBExceptionLP.FEHLER_BUCHUNG_ZWISCHEN_VON_BIS"));
+				}
+			}
+
+			if (bVonBisErfassung == true) {
+
+				Integer tetigkeitIId_Ende = taetigkeitFindByCNr(
+						ZeiterfassungFac.TAETIGKEIT_ENDE, theClientDto)
+						.getIId();
+
+				if (zeitdatenDto.getTaetigkeitIId() != null
+						&& zeitdatenDto.getTaetigkeitIId().equals(
+								tetigkeitIId_Ende)) {
+
+				} else {
+					boolean b = binIchZwischenEinerVonBisBuchung(
+							zeitdatenDto.getPersonalIId(),
+							zeitdatenDto.getTZeit(), theClientDto);
+					if (b == true) {
+						throw new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_BUCHUNG_EINFUEGEN_ZWISCHEN_VON_BIS_NICHT_ERLAUBT,
+								new Exception(
+										"EJBExceptionLP.FEHLER_BUCHUNG_EINFUEGEN_ZWISCHEN_VON_BIS_NICHT_ERLAUBT"));
+					}
+				}
+
+			}
+
+		} catch (RemoteException ex5) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex5);
+		}
+
+		boolean bNurWarnung = false;
+		ParametermandantDto parameterNurMarnung = null;
+		try {
+			parameterNurMarnung = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_AUTOMATISCHE_PAUSEN_NUR_WARNUNG);
+
+			bNurWarnung = (Boolean) parameterNurMarnung.getCWertAsObject();
+
+		} catch (RemoteException ex5) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex5);
+		}
 
 		if (zeitdatenDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
@@ -6999,6 +8796,10 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 		}
 
+		// SP3289
+		bringeFehlerWennZeitabschlussvorhanden(zeitdatenDto.getPersonalIId(),
+				zeitdatenDto.getTZeit(), theClientDto);
+
 		if (zeitdatenDto.getBAutomatikbuchung() == null) {
 			zeitdatenDto.setBAutomatikbuchung(Helper.boolean2Short(false));
 		}
@@ -7021,8 +8822,10 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		}
 
 		if (bBucheAutoPausen) {
-			pruefeUndErstelleAutomatischePausen(zeitdatenDto.getTZeit(),
-					zeitdatenDto.getPersonalIId(), theClientDto);
+			if (bNurWarnung == false) {
+				pruefeUndErstelleAutomatischePausen(zeitdatenDto.getTZeit(),
+						zeitdatenDto.getPersonalIId(), theClientDto);
+			}
 		}
 
 		// PJ 17048
@@ -7239,7 +9042,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							dtoKommt.setTZeit(new Timestamp(zeitdatenDto
 									.getTZeit().getTime() - 140));
 							createZeitdaten(dtoKommt, false, false, false,
-									theClientDto, true);
+									false, theClientDto, true);
 						}
 					} else {
 						// Wenn zuletzt Geht, dann vorher Kommt buchen
@@ -7276,7 +9079,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 								dtoKommt.setTZeit(new Timestamp(zeitdatenDto
 										.getTZeit().getTime() - 140));
 								createZeitdaten(dtoKommt, false, false, false,
-										theClientDto, true);
+										false, theClientDto, true);
 
 							} else {
 								if (letzeBuchungenFuerAutoKommt.length >= 1) {
@@ -7303,7 +9106,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 												zeitdatenDto.getTZeit()
 														.getTime() - 140));
 										createZeitdaten(dtoKommt, false, false,
-												false, theClientDto, true);
+												false, false, theClientDto,
+												true);
 
 									} else {
 
@@ -7344,7 +9148,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 																.getTime() - 140));
 												createZeitdaten(dtoUnter,
 														false, false, false,
-														theClientDto, true);
+														false, theClientDto,
+														true);
 											}
 										}
 									}
@@ -7363,7 +9168,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							dtoKommt.setTZeit(new Timestamp(zeitdatenDto
 									.getTZeit().getTime() - 140));
 							createZeitdaten(dtoKommt, false, false, false,
-									theClientDto, true);
+									false, theClientDto, true);
 						}
 
 					}
@@ -7381,8 +9186,12 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				}
 
 				// automatische Mindestpause
-				erstelleAutomatischeMindestpause(zeitdatenDto.getTZeit(),
-						zeitdatenDto.getPersonalIId(), theClientDto);
+				// PJ18736
+				if (bNurWarnung == false) {
+
+					erstelleAutomatischeMindestpause(zeitdatenDto.getTZeit(),
+							zeitdatenDto.getPersonalIId(), theClientDto);
+				}
 			}
 
 			// PJ 16849
@@ -7508,15 +9317,141 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 			}
 
+			boolean bAufAngelegteLoseBuchenMoeglich = false;
+			boolean bAufErledigteLoseAuftraegeBuchenMoeglich = false;
+			try {
+				ParametermandantDto parameterint = (ParametermandantDto) getParameterFac()
+						.getMandantparameter(
+								theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_PERSONAL,
+								ParameterFac.PARAMETER_ZEITBUCHUNG_AUF_ANGELEGTE_LOSE_MOEGLICH);
+
+				bAufAngelegteLoseBuchenMoeglich = ((Boolean) parameterint
+						.getCWertAsObject());
+				parameterint = (ParametermandantDto) getParameterFac()
+						.getMandantparameter(
+								theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_PERSONAL,
+								ParameterFac.PARAMETER_ZEITBUCHUNG_AUF_ERLEDIGTE_MOEGLICH);
+
+				bAufErledigteLoseAuftraegeBuchenMoeglich = ((Boolean) parameterint
+						.getCWertAsObject());
+
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+
+			if (zeitdatenDto.getCBelegartnr() != null
+					&& zeitdatenDto.getCBelegartnr().equals(
+							LocaleFac.BELEGART_ANGEBOT)) {
+				if (zeitdatenDto.getIBelegartid() != null) {
+					AngebotDto angebotDto = getAngebotFac()
+							.angebotFindByPrimaryKeyOhneExec(
+									zeitdatenDto.getIBelegartid());
+					if (angebotDto != null) {
+						if (angebotDto.getStatusCNr().equals(
+								LocaleFac.STATUS_ERLEDIGT)) {
+							throw new EJBExceptionLP(
+									EJBExceptionLP.FEHLER_ZEITBUCHUNG_ERLEDIGTES_ANGEBOT_NICHT_MOEGLICH,
+									"");
+						}
+						if (angebotDto.getStatusCNr().equals(
+								LocaleFac.STATUS_STORNIERT)) {
+							throw new EJBExceptionLP(
+									EJBExceptionLP.FEHLER_ZEITBUCHUNG_STORNIERTES_ANGEBOT_NICHT_MOEGLICH,
+									"");
+						}
+					}
+
+				}
+			}
+
+			if (zeitdatenDto.getCBelegartnr() != null
+					&& zeitdatenDto.getCBelegartnr().equals(
+							LocaleFac.BELEGART_AUFTRAG)) {
+				if (zeitdatenDto.getIBelegartid() != null) {
+					AuftragDto auftragDto = getAuftragFac()
+							.auftragFindByPrimaryKeyOhneExc(
+									zeitdatenDto.getIBelegartid());
+					if (auftragDto.getStatusCNr().equals(
+							LocaleFac.STATUS_ERLEDIGT)
+							&& bAufErledigteLoseAuftraegeBuchenMoeglich == false) {
+						throw new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_ZEITBUCHUNG_ERLEDIGTER_AUFTRAG_NICHT_MOEGLICH,
+								"");
+					}
+					if (auftragDto.getStatusCNr().equals(
+							LocaleFac.STATUS_STORNIERT)
+							&& bAufErledigteLoseAuftraegeBuchenMoeglich == false) {
+						throw new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_ZEITBUCHUNG_STORNIERTER_AUFTRAG_NICHT_MOEGLICH,
+								"");
+					}
+
+				}
+			}
+
 			// Losablieferungen auf "Neu Berechnen" setzen
 			if (zeitdatenDto.getCBelegartnr() != null
 					&& zeitdatenDto.getCBelegartnr().equals(
 							LocaleFac.BELEGART_LOS)) {
+
 				try {
 					if (zeitdatenDto.getIBelegartid() != null) {
+
+						LosDto losDto = getFertigungFac()
+								.losFindByPrimaryKeyOhneExc(
+										zeitdatenDto.getIBelegartid());
+
+						if (losDto.getStatusCNr().equals(
+								LocaleFac.STATUS_ERLEDIGT)
+								&& bAufErledigteLoseAuftraegeBuchenMoeglich == false) {
+							throw new EJBExceptionLP(
+									EJBExceptionLP.FEHLER_ZEITBUCHUNG_ERLEDIGTES_LOS_NICHT_MOEGLICH,
+									"");
+						}
+						if (losDto.getStatusCNr().equals(
+								LocaleFac.STATUS_ANGELEGT)
+								&& bAufAngelegteLoseBuchenMoeglich == false) {
+							throw new EJBExceptionLP(
+									EJBExceptionLP.FEHLER_ZEITBUCHUNG_ANGELEGTES_LOS_NICHT_MOEGLICH,
+									"");
+						}
+
+						if (losDto.getStatusCNr().equals(
+								LocaleFac.STATUS_GESTOPPT)) {
+							throw new EJBExceptionLP(
+									EJBExceptionLP.FEHLER_ZEITBUCHUNG_GESTOPPTES_LOS_NICHT_MOEGLICH,
+									"");
+						}
+						if (losDto.getStatusCNr().equals(
+								LocaleFac.STATUS_STORNIERT)) {
+							throw new EJBExceptionLP(
+									EJBExceptionLP.FEHLER_ZEITBUCHUNG_STORNIERTES_LOS_NICHT_MOEGLICH,
+									"");
+						}
+
 						getFertigungFac().setzeLosablieferungenAufNeuBerechnen(
 								zeitdatenDto.getIBelegartid(), theClientDto);
 					}
+
+					if (zeitdatenDto.getIBelegartpositionid() != null
+							&& bLospruefungAufFertig == true) {
+						LossollarbeitsplanDto sollaDto = getFertigungFac()
+								.lossollarbeitsplanFindByPrimaryKeyOhneExc(
+										zeitdatenDto.getIBelegartpositionid());
+
+						if (sollaDto != null
+								&& Helper.short2boolean(sollaDto.getBFertig())) {
+							// SP2410
+							throw new EJBExceptionLP(
+									EJBExceptionLP.FEHLER_ZEITBUCHUNG_AUF_FERTIGEN_ARBEITSGANG_NICHT_MOEGLICH,
+									"");
+
+						}
+
+					}
+
 				} catch (RemoteException ex2) {
 					throwEJBExceptionLPRespectOld(ex2);
 				}
@@ -7578,11 +9513,40 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 				if (pjDto.getStatusCNr().equals(
 						ProjektServiceFac.PROJEKT_STATUS_STORNIERT)) {
-
-					// Dann darf nicht storniert werden
 					throw new EJBExceptionLP(
 							EJBExceptionLP.FEHLER_ZEITBUCHUNG_STORNIERTES_PROJEKT_NICHT_MOEGLICH,
 							"");
+
+				}
+				if (pjDto.getStatusCNr().equals(
+						ProjektServiceFac.PROJEKT_STATUS_ERLEDIGT)) {
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_ZEITBUCHUNG_ERLEDIGTES_PROJEKT_NICHT_MOEGLICH,
+							"");
+
+				}
+
+				if (pjDto.getTInternerledigt() != null) {
+
+					try {
+						ParametermandantDto parameterint = (ParametermandantDto) getParameterFac()
+								.getMandantparameter(
+										theClientDto.getMandant(),
+										ParameterFac.KATEGORIE_PROJEKT,
+										ParameterFac.PARAMETER_INTERN_ERLEDIGT_BEBUCHBAR);
+
+						boolean bInterErledigteBebuchbar = ((Boolean) parameterint
+								.getCWertAsObject());
+
+						if (bInterErledigteBebuchbar == false) {
+							throw new EJBExceptionLP(
+									EJBExceptionLP.FEHLER_ZEITBUCHUNG_INTERN_ERLEDIGTES_PROJEKT_NICHT_MOEGLICH,
+									"");
+						}
+
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+					}
 
 				}
 
@@ -7721,6 +9685,27 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+
+		}
+
+		if (bVonBisErfassung && zeitdatenDto.gettZeit_Bis() != null) {
+			ZeitdatenDto zDtoBis = new ZeitdatenDto();
+
+			zDtoBis.setPersonalIId(zeitdatenDto.getPersonalIId());
+			zDtoBis.setTZeit(zeitdatenDto.gettZeit_Bis());
+
+			if (zeitdatenDto.getCBelegartnr() != null) {
+				zDtoBis.setTaetigkeitIId(taetigkeitFindByCNr(
+						ZeiterfassungFac.TAETIGKEIT_ENDE, theClientDto)
+						.getIId());
+			} else {
+				zDtoBis.setTaetigkeitIId(zeitdatenDto.getTaetigkeitIId());
+			}
+
+			zDtoBis.setCWowurdegebucht(zeitdatenDto.getCWowurdegebucht());
+			zDtoBis.setPersonalIId(zeitdatenDto.getPersonalIId());
+			createZeitdaten(zDtoBis, false, false, false, false, theClientDto,
+					true);
 
 		}
 
@@ -7967,7 +9952,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 			}
 
-			createZeitdaten(zeitdatenDto, false, false, false, theClientDto);
+			createZeitdaten(zeitdatenDto, false, false, false, false,
+					theClientDto);
 
 			// Hole alle Zeitdaten im Bereich
 
@@ -8031,18 +10017,232 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		return false;
 	}
 
-	public void erstelleAutomatischeMindestpause(java.sql.Timestamp tGeht,
+	public String pruefeObWiederholendePauseVorhanden(
+			java.sql.Timestamp tDatum, Integer personalIId,
+			TheClientDto theClientDto) {
+
+		String sWarnung = null;
+
+		Integer tagesartIId_Feiertag = tagesartFindByCNr(
+				ZeiterfassungFac.TAGESART_FEIERTAG, theClientDto).getIId();
+		Integer tagesartIId_Halbtag = tagesartFindByCNr(
+				ZeiterfassungFac.TAGESART_HALBTAG, theClientDto).getIId();
+		// Berechnungsdatum abschneiden, damit nur mehr JJJJ.MM.TT ueberbleibt
+
+		// Heutiges Datum herausfinden und abschneiden, damit nur mehr
+		// JJJJ.MM.TT ueberbleibt
+		ZeitmodelltagDto zeitmodelltagDto = getZeitmodelltagZuDatum(
+				personalIId, Helper.cutTimestamp(tDatum), tagesartIId_Feiertag,
+				tagesartIId_Halbtag, false, theClientDto);
+
+		if (zeitmodelltagDto != null
+				&& zeitmodelltagDto.getZeitmodellIId() != null) {
+
+			ZeitmodellDto zmDto = zeitmodellFindByPrimaryKey(
+					zeitmodelltagDto.getZeitmodellIId(), theClientDto);
+
+			// PAUSE1
+
+			java.sql.Time pausenZeit = zeitmodelltagDto.getUMindestpause();
+
+			Integer taetigkeitIId_Kommt = taetigkeitFindByCNr(
+					ZeiterfassungFac.TAETIGKEIT_KOMMT, theClientDto).getIId();
+			// Hole id der Taetigkeit GEHT
+			Integer taetigkeitIId_Geht = taetigkeitFindByCNr(
+					ZeiterfassungFac.TAETIGKEIT_GEHT, theClientDto).getIId();
+			// Hole id der Taetigkeit UNTER
+			Integer taetigkeitIId_Unter = taetigkeitFindByCNr(
+					ZeiterfassungFac.TAETIGKEIT_UNTER, theClientDto).getIId();
+
+			if (zeitmodelltagDto.getUAutopauseab() != null
+					&& pausenZeit != null) {
+				if ((zeitmodelltagDto.getUAutopauseab().getTime() != -3600000 && pausenZeit
+						.getTime() != -3600000)) {
+					try {
+
+						Query query = em
+								.createNamedQuery("ZeitdatenfindZeitdatenEinesTagesUndEinerPerson");
+						query.setParameter(1, personalIId);
+						query.setParameter(2, Helper.cutTimestamp(tDatum));
+						query.setParameter(3, Helper.cutTimestamp(Helper
+								.addiereTageZuTimestamp(tDatum, 1)));
+						Collection<?> cl = query.getResultList();
+						// if (! cl.isEmpty()) {
+						ZeitdatenDto[] zeitdatenDtos = assembleZeitdatenDtosOhneBelegzeiten(cl);
+
+						ArrayList<ZeitdatenDto> alZeitdaten = new ArrayList<ZeitdatenDto>();
+						for (int i = 0; i < zeitdatenDtos.length; i++) {
+							alZeitdaten.add(zeitdatenDtos[i]);
+						}
+
+						if (alZeitdaten.size() > 0) {
+
+							ArrayList<ZeitdatenDto> alUnter = new ArrayList<ZeitdatenDto>();
+							for (int i = 0; i < alZeitdaten.size(); i++) {
+								ZeitdatenDto zeitdatenDto = alZeitdaten.get(i);
+								if (zeitdatenDto.getTaetigkeitIId() != null
+										&& zeitdatenDto.getTaetigkeitIId()
+												.equals(taetigkeitIId_Unter)) {
+									alUnter.add(zeitdatenDto);
+								}
+							}
+
+							// Wenn Pausenanzahl gerade
+
+							// SP3037 Wenn am heutigen Tag ungerade Pausen, dann
+							// wird noch nicht fertig gebucht sein
+							if (alUnter.size() % 2 != 0 && alUnter.size() > 0) {
+
+								if (Helper.cutTimestamp(tDatum).getTime() == Helper
+										.cutTimestamp(
+												new Timestamp(System
+														.currentTimeMillis()))
+										.getTime()) {
+									alUnter.remove(alUnter.size() - 1);
+								}
+
+							}
+
+							if (zeitdatenDtos[zeitdatenDtos.length - 1]
+									.getTaetigkeitIId() != null
+									&& !zeitdatenDtos[zeitdatenDtos.length - 1]
+											.getTaetigkeitIId().equals(
+													taetigkeitIId_Geht)) {
+								// Wenn Heute und der letzte eintrag ist kein
+								// Geht,
+								// dann GEHT=JETZT simulieren
+								if (Helper.cutTimestamp(tDatum).getTime() == Helper
+										.cutTimestamp(
+												new Timestamp(System
+														.currentTimeMillis()))
+										.getTime()) {
+									ZeitdatenDto zDto_geht = ZeitdatenDto
+											.clone(zeitdatenDtos[0]);
+									zDto_geht
+											.setTaetigkeitIId(taetigkeitIId_Geht);
+									zDto_geht.setTZeit(new Timestamp(System
+											.currentTimeMillis()));
+									alZeitdaten.add(zDto_geht);
+
+								}
+
+							}
+
+							Timestamp tLetztePauseVollstaendig = alZeitdaten
+									.get(0).getTZeit();
+
+							if (alUnter.size() % 2 == 0) {
+								for (int i = 0; i < alUnter.size(); i++) {
+									if (i % 2 == 0) {
+										ZeitdatenDto dto1 = (ZeitdatenDto) alUnter
+												.get(i);
+										ZeitdatenDto dto2 = (ZeitdatenDto) alUnter
+												.get(i + 1);
+										long lDauerPause = dto2.getTZeit()
+												.getTime()
+												- dto1.getTZeit().getTime();
+										// Nur Pausen beruecksichtigen, die
+										// groesser als die Mindestzeit sind
+
+										if (lDauerPause >= (pausenZeit
+												.getTime() + 3600000)) {
+
+											// Ist die Differenz zwischend er
+											// letzten Vollstaendigen Pause und
+											// dem Pausenbginn klsiner als
+											// vorgegeben, dann Fehler
+
+											long ldiff = dto1.getTZeit()
+													.getTime()
+													- tLetztePauseVollstaendig
+															.getTime();
+
+											if (ldiff > zeitmodelltagDto
+													.getUAutopauseab()
+													.getTime() + 3600000) {
+												// FEHLER zuwenig pause
+
+												return meldungFuerFehlendeMindespauseErzeugen(
+														pausenZeit.getTime() + 3600000,
+														new Timestamp(
+																tLetztePauseVollstaendig
+																		.getTime()
+																		+ (zeitmodelltagDto
+																				.getUAutopauseab()
+																				.getTime() + 3600000)),
+														theClientDto);
+
+											} else {
+												tLetztePauseVollstaendig = dto2
+														.getTZeit();
+											}
+
+										}
+
+									}
+								}
+							}
+
+							// Nun noch Zeit wzischen der letzen Pause und Geht
+							// pruefen
+
+							long diffDerLetztenPauseUndeGeht = alZeitdaten
+									.get(alZeitdaten.size() - 1).getTZeit()
+									.getTime()
+									- tLetztePauseVollstaendig.getTime();
+
+							if (diffDerLetztenPauseUndeGeht > (zeitmodelltagDto
+									.getUAutopauseab().getTime() + 3600000)) {
+								return meldungFuerFehlendeMindespauseErzeugen(
+										pausenZeit.getTime() + 3600000,
+										new Timestamp(tLetztePauseVollstaendig
+												.getTime()
+												+ (zeitmodelltagDto
+														.getUAutopauseab()
+														.getTime() + 3600000)),
+										theClientDto);
+							}
+
+						}
+
+					} catch (EJBExceptionLP ex1) {
+						// Mindestpause eintragen nicht moeglich
+
+					}
+
+				}
+			}
+
+			if (sWarnung != null) {
+				return sWarnung;
+			}
+
+		}
+		return sWarnung;
+	}
+
+	public String erstelleAutomatischeMindestpause(java.sql.Timestamp tGeht,
 			Integer personalIId, TheClientDto theClientDto) {
 
-		// Hole id der Taetigkeit KOMMT
-		Integer taetigkeitIId_Kommt = taetigkeitFindByCNr(
-				ZeiterfassungFac.TAETIGKEIT_KOMMT, theClientDto).getIId();
-		// Hole id der Taetigkeit GEHT
-		Integer taetigkeitIId_Geht = taetigkeitFindByCNr(
-				ZeiterfassungFac.TAETIGKEIT_GEHT, theClientDto).getIId();
-		// Hole id der Taetigkeit UNTER
-		Integer taetigkeitIId_Unter = taetigkeitFindByCNr(
-				ZeiterfassungFac.TAETIGKEIT_UNTER, theClientDto).getIId();
+		ParametermandantDto parameter = null;
+		try {
+			parameter = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_AUTOMATISCHE_PAUSEN_NUR_WARNUNG);
+
+			boolean bNurWarnung = (Boolean) parameter.getCWertAsObject();
+
+			// PJ18774
+			if (bNurWarnung == true) {
+				return pruefeObWiederholendePauseVorhanden(tGeht, personalIId,
+						theClientDto);
+			}
+
+		} catch (RemoteException ex5) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex5);
+		}
 
 		Integer tagesartIId_Feiertag = tagesartFindByCNr(
 				ZeiterfassungFac.TAGESART_FEIERTAG, theClientDto).getIId();
@@ -8057,10 +10257,83 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				tagesartIId_Halbtag, false, theClientDto);
 
 		if (zeitmodelltagDto != null
-				&& zeitmodelltagDto.getUAutopauseab() != null
-				&& zeitmodelltagDto.getUMindestpause() != null) {
-			if ((zeitmodelltagDto.getUAutopauseab().getTime() != -3600000 && zeitmodelltagDto
-					.getUMindestpause().getTime() != -3600000)) {
+				&& zeitmodelltagDto.getZeitmodellIId() != null) {
+
+			ZeitmodellDto zmDto = zeitmodellFindByPrimaryKey(
+					zeitmodelltagDto.getZeitmodellIId(), theClientDto);
+
+			// PAUSE1
+
+			java.sql.Time pausenZeit = zeitmodelltagDto.getUMindestpause();
+			mindestpauseBuchen(tGeht, personalIId,
+					zeitmodelltagDto.getUAutopauseab(), pausenZeit,
+					zeitmodelltagDto.getUBeginn(),
+					Helper.short2boolean(zmDto.getBDynamisch()), theClientDto);
+
+			// PAUSE2
+			if (pausenZeit != null
+					&& zeitmodelltagDto.getUMindestpause2() != null
+					&& zeitmodelltagDto.getUAutopauseab2().getTime() != -3600000) {
+				pausenZeit = new Time(zeitmodelltagDto.getUMindestpause2()
+						.getTime());
+
+				mindestpauseBuchen(tGeht, personalIId,
+						zeitmodelltagDto.getUAutopauseab2(), pausenZeit,
+						zeitmodelltagDto.getUBeginn(),
+						Helper.short2boolean(zmDto.getBDynamisch()),
+						theClientDto);
+
+				// PAUSE3
+				if (zeitmodelltagDto.getUMindestpause3() != null
+						&& zeitmodelltagDto.getUAutopauseab3().getTime() != -3600000) {
+					pausenZeit = new Time(zeitmodelltagDto.getUMindestpause3()
+							.getTime());
+					mindestpauseBuchen(tGeht, personalIId,
+							zeitmodelltagDto.getUAutopauseab3(), pausenZeit,
+							zeitmodelltagDto.getUBeginn(),
+							Helper.short2boolean(zmDto.getBDynamisch()),
+							theClientDto);
+
+				}
+
+			}
+		}
+		return null;
+	}
+
+	private String meldungFuerFehlendeMindespauseErzeugen(long lPausenzeit,
+			Timestamp tBis, TheClientDto theClientDto) {
+
+		MessageFormat mf = new MessageFormat(getTextRespectUISpr(
+				"pers.warning.fehlende.mindestpause",
+				theClientDto.getMandant(), theClientDto.getLocUi()));
+		mf.setLocale(theClientDto.getLocUi());
+		Object pattern[] = {
+
+				Helper.formatZahl(lPausenzeit / (1000 * 60), 0,
+						theClientDto.getLocUi()),
+
+				Helper.formatTime(tBis, theClientDto.getLocUi()) };
+		return mf.format(pattern);
+
+	}
+
+	private void mindestpauseBuchen(java.sql.Timestamp tGeht,
+			Integer personalIId, java.sql.Time uAutopauseAb,
+			java.sql.Time uMindestpause, java.sql.Time uBeginn,
+			boolean bDynamisch, TheClientDto theClientDto) {
+		// Hole id der Taetigkeit KOMMT
+		Integer taetigkeitIId_Kommt = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_KOMMT, theClientDto).getIId();
+		// Hole id der Taetigkeit GEHT
+		Integer taetigkeitIId_Geht = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_GEHT, theClientDto).getIId();
+		// Hole id der Taetigkeit UNTER
+		Integer taetigkeitIId_Unter = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_UNTER, theClientDto).getIId();
+
+		if (uAutopauseAb != null && uMindestpause != null) {
+			if ((uAutopauseAb.getTime() != -3600000 && uMindestpause.getTime() != -3600000)) {
 				try {
 
 					java.sql.Timestamp letztesKommt = null;
@@ -8117,8 +10390,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							.getCWertAsObject());
 
 					if (bAutopausenAbErlaubtemKommt) {
-						if (zeitmodelltagDto.getUBeginn() != null
-								&& zeitmodelltagDto.getUBeginn().getTime() != -3600000) {
+						if (uBeginn != null && uBeginn.getTime() != -3600000) {
 
 							// Das ist so eigentlich falsch. Die Zeitzone
 							// (TimeZone) muss zum
@@ -8138,12 +10410,11 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							// Sommerzeit/Normalzeitverschiebung erfolgen
 							// Ich verstehe nicht, was die ganzen +/-
 							// 3.600.000ms zu sagen haben?
-							if (l < (zeitmodelltagDto.getUBeginn().getTime() - c
+							if (l < (uBeginn.getTime() - c
 									.get(Calendar.DST_OFFSET))) {
 								letztesKommt = new Timestamp(Helper
 										.cutTimestamp(letztesKommt).getTime()
-										+ (zeitmodelltagDto.getUBeginn()
-												.getTime() + 3600000));
+										+ (uBeginn.getTime() + 3600000));
 							}
 
 						}
@@ -8160,106 +10431,26 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					// if (! cl.isEmpty()) {
 					ZeitdatenDto[] zeitdatenDtos = assembleZeitdatenDtosOhneBelegzeiten(cl);
 
-					ZeitmodellDto zmDto = zeitmodellFindByPrimaryKey(
-							zeitmodelltagDto.getZeitmodellIId(), theClientDto);
-
-					if (Helper.short2boolean(zmDto.getBDynamisch()) == true) {
+					if (bDynamisch == true) {
 						// ////////////
 
 						// PJ 16676
 						java.sql.Timestamp tAb = null;
 						long lPausenzeit = 0;
 
-						boolean bMindestpauseGefunden = false;
-
-						// Zuerst Pause 3 suchen und nachsehen ob diese platz
-						// hat
-						if (zeitmodelltagDto.getUAutopauseab3() != null
-								&& zeitmodelltagDto.getUMindestpause3() != null
-								&& zeitmodelltagDto.getUAutopauseab3()
-										.getTime() != -3600000
-								&& zeitmodelltagDto.getUMindestpause3()
-										.getTime() != -3600000) {
+						if (uAutopauseAb != null && uMindestpause != null
+								&& uAutopauseAb.getTime() != -3600000
+								&& uMindestpause.getTime() != -3600000) {
 							long zeit = letztesKommt.getTime()
-									+ zeitmodelltagDto.getUAutopauseab3()
-											.getTime()
-									+ 3600000
-									+ (zeitmodelltagDto.getUMindestpause2()
-											.getTime() + 3600000);
-
+									+ uAutopauseAb.getTime() + 3600000;
 							if (zeit >= tGeht.getTime()) {
-								// Wenn die Zeit zwischen Kommt und Geht kleiner
-								// als die Zeit der automatischen Mindestpause
-								// ist,
-								// dann
-								// ist nichts zu tun
-							} else {
-								tAb = new java.sql.Timestamp(zeit
-										- (zeitmodelltagDto.getUMindestpause2()
-												.getTime() + 3600000));
-								lPausenzeit = zeitmodelltagDto
-										.getUMindestpause3().getTime() + 3600000;
-								bMindestpauseGefunden = true;
-							}
-
-						}
-
-						if (bMindestpauseGefunden == false) {
-							// Dann Pause 2 suchen und nachsehen ob diese platz
-							// hat
-							if (zeitmodelltagDto.getUAutopauseab2() != null
-									&& zeitmodelltagDto.getUMindestpause2() != null
-									&& zeitmodelltagDto.getUAutopauseab2()
-											.getTime() != -3600000
-									&& zeitmodelltagDto.getUMindestpause2()
-											.getTime() != -3600000) {
-								long zeit = letztesKommt.getTime()
-										+ zeitmodelltagDto.getUAutopauseab2()
-												.getTime()
-										+ 3600000
-										+ (zeitmodelltagDto.getUMindestpause()
-												.getTime() + 3600000);
-
-								if (zeit >= tGeht.getTime()) {
-									// Wenn die Zeit zwischen Kommt und Geht
-									// kleiner
-									// als die Zeit der automatischen
-									// Mindestpause ist,
-									// dann
-									// ist nichts zu tun
-								} else {
-									tAb = new java.sql.Timestamp(zeit
-											- (zeitmodelltagDto
-													.getUMindestpause()
-													.getTime() + 3600000));
-									lPausenzeit = zeitmodelltagDto
-											.getUMindestpause2().getTime() + 3600000;
-									bMindestpauseGefunden = true;
-								}
-
-							}
-						}
-
-						if (bMindestpauseGefunden == false) {
-							if (zeitmodelltagDto.getUAutopauseab() != null
-									&& zeitmodelltagDto.getUMindestpause() != null
-									&& zeitmodelltagDto.getUAutopauseab()
-											.getTime() != -3600000
-									&& zeitmodelltagDto.getUMindestpause()
-											.getTime() != -3600000) {
-								long zeit = letztesKommt.getTime()
-										+ zeitmodelltagDto.getUAutopauseab()
-												.getTime() + 3600000;
-								if (zeit >= tGeht.getTime()) {
-									return;
-								} else {
-									tAb = new java.sql.Timestamp(zeit);
-									lPausenzeit = zeitmodelltagDto
-											.getUMindestpause().getTime() + 3600000;
-								}
-							} else {
 								return;
+							} else {
+								tAb = new java.sql.Timestamp(zeit);
+								lPausenzeit = uMindestpause.getTime() + 3600000;
 							}
+						} else {
+							return;
 						}
 
 						// Hole Zeitdaten von Kommt bis Kommt + autopauseab
@@ -8297,6 +10488,21 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 						long lRestPause = 0;
 						// Wenn Pausenanzahl gerade
+
+						// SP3037 Wenn am heutigen Tag ungerade Pausen, dann
+						// wird noch nicht fertig gebucht sein
+						if (alUnter.size() % 2 != 0 && alUnter.size() > 0) {
+
+							if (Helper.cutTimestamp(tGeht).getTime() == Helper
+									.cutTimestamp(
+											new Timestamp(System
+													.currentTimeMillis()))
+									.getTime()) {
+								alUnter.remove(alUnter.size() - 1);
+							}
+
+						}
+
 						if (alUnter.size() % 2 == 0) {
 							for (int i = 0; i < alUnter.size(); i++) {
 								if (i % 2 == 0) {
@@ -8316,6 +10522,14 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							return;
 						}
 
+						// SP3171 Es muessen alle vorherigen Pausen
+						// beruecksichtigt werden
+						// Einkommentieren, wenn geklaert
+						/*
+						 * tAb = new Timestamp(tAb.getTime() + lRestPause); if
+						 * (tAb.after(tGeht)) { return; }
+						 */
+
 						belegezeitenvorAutomatischeMindestpauseVerschieben(tAb,
 								new java.sql.Timestamp(tAb.getTime()
 										+ lNochZuVerbuchen),
@@ -8324,7 +10538,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						zeitdatenDtoPause.setTZeit(new java.sql.Timestamp(tAb
 								.getTime()));
 						createZeitdaten(zeitdatenDtoPause, false, false, false,
-								theClientDto);
+								false, theClientDto);
 
 						java.sql.Timestamp tBis = new java.sql.Timestamp(
 								tAb.getTime() + lNochZuVerbuchen);
@@ -8338,7 +10552,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						}
 
 						createZeitdaten(zeitdatenDtoPause, false, false, false,
-								theClientDto);
+								false, theClientDto);
 						// erledigt
 						return;
 
@@ -8348,93 +10562,28 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						java.sql.Timestamp tBis = null;
 						long lPausenzeit = 0;
 
-						boolean bMidestpauseGefunden = false;
-						// Zuerst Midestpause 3 versuchen, wenn definiert
-						if (zeitmodelltagDto.getUAutopauseab3() != null
-								&& zeitmodelltagDto.getUMindestpause3() != null
-								&& zeitmodelltagDto.getUAutopauseab3()
-										.getTime() != -3600000
-								&& zeitmodelltagDto.getUMindestpause3()
-										.getTime() != -3600000) {
+						if (uAutopauseAb != null && uMindestpause != null
+								&& uAutopauseAb.getTime() != -3600000
+								&& uMindestpause.getTime() != -3600000) {
 
 							long zeit = letztesKommt.getTime()
-									+ zeitmodelltagDto.getUAutopauseab3()
-											.getTime() + 3600000;
+									+ uAutopauseAb.getTime() + 3600000;
 
 							if (zeit >= tGeht.getTime()) {
-								// Wenn die Zeit zwischen Kommt und Geht kleiner
-								// als die Zeit der automatischen Mindestpause
+								// Wenn die Zeit zwischen Kommt und Geht
+								// kleiner
+								// als die Zeit der automatischen
+								// Mindestpause
 								// ist,
 								// dann
 								// ist nichts zu tun
+								return;
 							} else {
 								tBis = new java.sql.Timestamp(zeit);
-								lPausenzeit = zeitmodelltagDto
-										.getUMindestpause3().getTime() + 3600000;
-								bMidestpauseGefunden = true;
-							}
-
-						}
-						// Zuerst Midestpause 2 versuchen, wenn definiert
-						if (bMidestpauseGefunden == false) {
-							if (zeitmodelltagDto.getUAutopauseab2() != null
-									&& zeitmodelltagDto.getUMindestpause2() != null
-									&& zeitmodelltagDto.getUAutopauseab2()
-											.getTime() != -3600000
-									&& zeitmodelltagDto.getUMindestpause2()
-											.getTime() != -3600000) {
-
-								long zeit = letztesKommt.getTime()
-										+ zeitmodelltagDto.getUAutopauseab2()
-												.getTime() + 3600000;
-
-								if (zeit >= tGeht.getTime()) {
-									// Wenn die Zeit zwischen Kommt und Geht
-									// kleiner
-									// als die Zeit der automatischen
-									// Mindestpause
-									// ist,
-									// dann
-									// ist nichts zu tun
-								} else {
-									tBis = new java.sql.Timestamp(zeit);
-									lPausenzeit = zeitmodelltagDto
-											.getUMindestpause2().getTime() + 3600000;
-									bMidestpauseGefunden = true;
-								}
+								lPausenzeit = uMindestpause.getTime() + 3600000;
 
 							}
-						}
-						// Dann Mindestpause 1 versuchen, wenn definiert
-						if (bMidestpauseGefunden == false) {
-							if (zeitmodelltagDto.getUAutopauseab() != null
-									&& zeitmodelltagDto.getUMindestpause() != null
-									&& zeitmodelltagDto.getUAutopauseab()
-											.getTime() != -3600000
-									&& zeitmodelltagDto.getUMindestpause()
-											.getTime() != -3600000) {
 
-								long zeit = letztesKommt.getTime()
-										+ zeitmodelltagDto.getUAutopauseab()
-												.getTime() + 3600000;
-
-								if (zeit >= tGeht.getTime()) {
-									// Wenn die Zeit zwischen Kommt und Geht
-									// kleiner
-									// als die Zeit der automatischen
-									// Mindestpause
-									// ist,
-									// dann
-									// ist nichts zu tun
-									return;
-								} else {
-									tBis = new java.sql.Timestamp(zeit);
-									lPausenzeit = zeitmodelltagDto
-											.getUMindestpause().getTime() + 3600000;
-									bMidestpauseGefunden = true;
-								}
-
-							}
 						}
 
 						// Hole Zeitdaten von Kommt bis Kommt + autopauseab
@@ -8469,12 +10618,13 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							zeitdatenDtoPause.setTZeit(new java.sql.Timestamp(
 									tBis.getTime() - lPausenzeit));
 							createZeitdaten(zeitdatenDtoPause, false, false,
-									false, theClientDto);
+									false, false, theClientDto);
 							zeitdatenDtoPause.setTZeit(tBis);
 							createZeitdaten(zeitdatenDtoPause, false, false,
-									false, theClientDto);
+									false, false, theClientDto);
 							// erledigt
 							return;
+
 						}
 
 						// Wenn 2 Buchungen und nur KOMMT + GEHT, dann nichts
@@ -8504,6 +10654,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						// Wenn mehr als eine Buchung, jedoch keine UNTER
 						// Buchung, dann Pause Buchen
 						if (alUnter.size() == 0) {
+
 							zeitdatenDtoPause.setTZeit(new java.sql.Timestamp(
 									tBis.getTime() - lPausenzeit));
 							bucheAutomatischeMindestpause(personalIId,
@@ -8548,12 +10699,13 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 											.getTime()
 											- (lPausenzeit - lRestPause)));
 							createZeitdaten(zeitdatenDtoPause, false, false,
-									false, theClientDto);
+									false, false, theClientDto);
 							zeitdatenDtoPause.setTZeit(tBis);
 							createZeitdaten(zeitdatenDtoPause, false, false,
-									false, theClientDto);
+									false, false, theClientDto);
 							// erledigt
 							return;
+
 						}
 
 						// Wenn Pausenanzahl gerade
@@ -8580,16 +10732,6 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 							if (tBis.getTime()
 									- dtoErstePauseEnde.getTZeit().getTime() > lNochZuVerbuchen) {
-								/*
-								 * zeitdatenDtoPause.setTZeit(new
-								 * java.sql.Timestamp(tBis.getTime() -
-								 * lNochZuVerbuchen));
-								 * createZeitdaten(zeitdatenDtoPause, false,
-								 * false, cNrUserI);
-								 * zeitdatenDtoPause.setTZeit(tBis);
-								 * createZeitdaten(zeitdatenDtoPause, false,
-								 * false, cNrUserI);
-								 */
 
 								belegezeitenvorAutomatischeMindestpauseVerschieben(
 										new java.sql.Timestamp(tBis.getTime()
@@ -8605,6 +10747,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 								// Komplette Pause verbucht ->Passt
 								return;
+
 							} else {
 								// todo Naechten Freiraum suchen
 							}
@@ -8623,7 +10766,6 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				}
 
 			}
-
 		}
 
 	}
@@ -8774,16 +10916,16 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					zeitdatenDtoVorherEnde.setTZeit(new Timestamp(tPauseVon
 							.getTime() - 100));
 					createZeitdaten(zeitdatenDtoVorherEnde, false, false,
-							false, theClientDto);
+							false, false, theClientDto);
 				}
 
 			}
 			// PauseBeginn buchen
-			createZeitdaten(zeitdatenDtoUnterVon, false, false, false,
+			createZeitdaten(zeitdatenDtoUnterVon, false, false, false, false,
 					theClientDto);
 
 			// PauseEnde buchen
-			createZeitdaten(zeitdatenDtoUnterBis, false, false, false,
+			createZeitdaten(zeitdatenDtoUnterBis, false, false, false, false,
 					theClientDto);
 
 			if (taetigkeitFindByPrimaryKey(iIdTaetigkeit, theClientDto)
@@ -8798,16 +10940,16 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					zeitdatenDtoNachherBeginn.setTZeit(new Timestamp(tPauseBis
 							.getTime() + 100));
 					createZeitdaten(zeitdatenDtoNachherBeginn, false, false,
-							false, theClientDto);
+							false, false, theClientDto);
 				}
 			}
 
 		} else {
 			// PauseBeginn buchen
-			createZeitdaten(zeitdatenDtoUnterVon, false, false, false,
+			createZeitdaten(zeitdatenDtoUnterVon, false, false, false, false,
 					theClientDto);
 			// PauseEnde buchen
-			createZeitdaten(zeitdatenDtoUnterBis, false, false, false,
+			createZeitdaten(zeitdatenDtoUnterBis, false, false, false, false,
 					theClientDto);
 		}
 		session.close();
@@ -8832,6 +10974,10 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
+
+		// SP3289
+		bringeFehlerWennZeitabschlussvorhanden(zeitdatenDto.getPersonalIId(),
+				zeitdatenDto.getTZeit(), theClientDto);
 
 		HvDtoLogger<ZeitdatenDto> zeitdatenLogger = new HvDtoLogger<ZeitdatenDto>(
 				em, zeitdatenDto.getPersonalIId(), theClientDto);
@@ -8887,6 +11033,15 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
 		}
+
+		// PJ18356
+		if (zeitdatenDto.getZeitdatenIId_BisZeit() != null) {
+			Zeitdaten zdBis = em.find(Zeitdaten.class,
+					zeitdatenDto.getZeitdatenIId_BisZeit());
+			em.remove(zdBis);
+			em.flush();
+		}
+
 	}
 
 	public void updateZeitdaten(ZeitdatenDto zeitdatenDto,
@@ -8909,6 +11064,79 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							"zeitdatenDto.getTaetigkeitIId() == null && zeitdatenDto.getArtikelIId() == null"));
 		}
 
+		boolean bVonBisErfassung = false;
+
+		try {
+			ParametermandantDto parameterVonBis = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_VON_BIS_ERFASSUNG);
+
+			bVonBisErfassung = ((Boolean) parameterVonBis.getCWertAsObject());
+
+			Integer tetigkeitIId_Kommt = taetigkeitFindByCNr(
+					ZeiterfassungFac.TAETIGKEIT_KOMMT, theClientDto).getIId();
+			Integer tetigkeitIId_Geht = taetigkeitFindByCNr(
+					ZeiterfassungFac.TAETIGKEIT_GEHT, theClientDto).getIId();
+
+			if (zeitdatenDto.getTaetigkeitIId() != null
+					&& (zeitdatenDto.getTaetigkeitIId().equals(
+							tetigkeitIId_Kommt) || zeitdatenDto
+							.getTaetigkeitIId().equals(tetigkeitIId_Geht))) {
+				zeitdatenDto.settZeit_Bis(null);
+				zeitdatenDto.setZeitdatenIId_BisZeit(null);
+			}
+
+			// Wenn von-bis erfassung, dann darf zwischen von-bis keine
+			// Zeitbuchung
+			// vorhanden sein
+
+			if (bVonBisErfassung && zeitdatenDto.gettZeit_Bis() != null
+					&& zeitdatenDto.getZeitdatenIId_BisZeit() != null) {
+				ZeitdatenDto[] dtos = getZeiterfassungFac()
+						.zeitdatenFindZeitdatenEinesTagesUndEinerPerson(
+								zeitdatenDto.getPersonalIId(),
+								zeitdatenDto.getTZeit(),
+								new Timestamp(zeitdatenDto.gettZeit_Bis()
+										.getTime()));
+				if (dtos.length > 0) {
+
+					for (int i = 0; i < dtos.length; i++) {
+						ZeitdatenDto zd = dtos[i];
+
+						if (zd.getIId().equals(zeitdatenDto.getIId())
+								|| zd.getIId().equals(
+										zeitdatenDto.getZeitdatenIId_BisZeit())) {
+
+						} else {
+							throw new EJBExceptionLP(
+									EJBExceptionLP.FEHLER_BUCHUNG_ZWISCHEN_VON_BIS,
+									new Exception(
+											"EJBExceptionLP.FEHLER_BUCHUNG_ZWISCHEN_VON_BIS"));
+						}
+
+					}
+
+				}
+			}
+
+			if (bVonBisErfassung == true && zeitdatenDto.gettZeit_Bis() == null) {
+				boolean b = binIchZwischenEinerVonBisBuchung(
+						zeitdatenDto.getPersonalIId(), zeitdatenDto.getTZeit(),
+						theClientDto);
+				if (b == true) {
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_BUCHUNG_EINFUEGEN_ZWISCHEN_VON_BIS_NICHT_ERLAUBT,
+							new Exception(
+									"EJBExceptionLP.FEHLER_BUCHUNG_EINFUEGEN_ZWISCHEN_VON_BIS_NICHT_ERLAUBT"));
+				}
+
+			}
+
+		} catch (RemoteException ex5) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex5);
+		}
+
 		if (zeitdatenDto.getBAutomatikbuchung() == null) {
 			zeitdatenDto.setBAutomatikbuchung(Helper.boolean2Short(false));
 		}
@@ -8919,6 +11147,10 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			zeitdatenDto.setIBelegartid(null);
 			zeitdatenDto.setIBelegartpositionid(null);
 		}
+
+		// SP3289
+		bringeFehlerWennZeitabschlussvorhanden(zeitdatenDto.getPersonalIId(),
+				zeitdatenDto.getTZeit(), theClientDto);
 
 		vergleicheZeitdatenDtoVorherNachherUndLoggeAenderungen(zeitdatenDto,
 				theClientDto);
@@ -9003,6 +11235,16 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				throwEJBExceptionLPRespectOld(ex2);
 			}
 		}
+
+		// PJ18356
+
+		if (zeitdatenDto.getZeitdatenIId_BisZeit() != null
+				&& zeitdatenDto.gettZeit_Bis() != null) {
+			Zeitdaten zdBis = em.find(Zeitdaten.class,
+					zeitdatenDto.getZeitdatenIId_BisZeit());
+			zdBis.setTZeit(zeitdatenDto.gettZeit_Bis());
+		}
+
 	}
 
 	public ZeitdatenDto zeitdatenFindByPrimaryKey(Integer iId,
@@ -9018,8 +11260,32 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 
 		}
+		ZeitdatenDto zDto = assembleZeitdatenDto(zeitdaten);
 
-		return assembleZeitdatenDto(zeitdaten);
+		ParametermandantDto parameter = null;
+		try {
+			parameter = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_VON_BIS_ERFASSUNG);
+		} catch (RemoteException ex5) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex5);
+		}
+
+		boolean bVonBisErfassung = ((Boolean) parameter.getCWertAsObject());
+		if (bVonBisErfassung == true) {
+
+			ZeitdatenDto zDtoEnde = getZeiterfassungFac()
+					.getZugehoerigeEndeBuchung(zDto, theClientDto);
+			if (zDtoEnde != null) {
+				zDto.setZeitdatenIId_BisZeit(zDtoEnde.getIId());
+				zDto.settZeit_Bis(zDtoEnde.getTZeit());
+			}
+
+		}
+
+		return zDto;
+
 	}
 
 	public ZeitdatenDto zeitdatenFindByPrimaryKeyOhneExc(Integer id) {
@@ -9183,6 +11449,39 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 					}
 				}
+			}
+		}
+		ZeitdatenDto[] returnArray = new ZeitdatenDto[list.size()];
+		return (ZeitdatenDto[]) list.toArray(returnArray);
+	}
+
+	private ZeitdatenDto[] assembleZeitdatenDtosOhneEnde(
+			Collection<?> zeitdatens) {
+		List<ZeitdatenDto> list = new ArrayList<ZeitdatenDto>();
+
+		Integer taetigkeitIId_Ende = null;
+
+		try {
+			Query query = em.createNamedQuery("TaetigkeitfindByCNr");
+			query.setParameter(1, ZeiterfassungFac.TAETIGKEIT_ENDE);
+			Taetigkeit taetigkeit = (Taetigkeit) query.getSingleResult();
+			taetigkeitIId_Ende = taetigkeit.getIId();
+
+		} catch (NoResultException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, ex);
+		}
+
+		if (zeitdatens != null) {
+			Iterator<?> iterator = zeitdatens.iterator();
+			while (iterator.hasNext()) {
+				Zeitdaten zeitdaten = (Zeitdaten) iterator.next();
+
+				if (!taetigkeitIId_Ende.equals(zeitdaten.getTaetigkeitIId())) {
+
+					list.add(assembleZeitdatenDto(zeitdaten));
+
+				}
+
 			}
 		}
 		ZeitdatenDto[] returnArray = new ZeitdatenDto[list.size()];
@@ -9567,7 +11866,43 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				sonderzeitenDto.setPersonalIId(personalIId);
 				sonderzeitenDto.setTaetigkeitIId(szDto.getTaetigkeitIId());
 				sonderzeitenDto.setTDatum(szDto.gettDatum());
-				createSonderzeiten(sonderzeitenDto, theClientDto);
+				try {
+					createSonderzeiten(sonderzeitenDto, theClientDto);
+				} catch (EJBExceptionLP e) {
+					if (e.getCode() == EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE) {
+						ArrayList alDaten = new ArrayList();
+						try {
+							PersonalDto pDto = getPersonalFac()
+									.personalFindByPrimaryKey(
+											sonderzeitenDto.getPersonalIId(),
+											theClientDto);
+
+							TaetigkeitDto tDto = getZeiterfassungFac()
+									.taetigkeitFindByPrimaryKey(
+											sonderzeitenDto.getTaetigkeitIId(),
+											theClientDto);
+
+							alDaten.add("Pers.Nr.:"
+									+ pDto.getCPersonalnr()
+									+ ", Datum: "
+									+ Helper.formatDatum(
+											sonderzeitenDto.getTDatum(),
+											theClientDto.getLocUi()) + " ("
+									+ tDto.getCNr() + ")");
+						} catch (RemoteException e1) {
+							throwEJBExceptionLPRespectOld(e1);
+						}
+
+						throw new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_SONDERZEITENIMPORT_DOPPELTER_EINTRAG,
+								alDaten,
+								new Exception(
+										"FEHLER_SONDERZEITENIMPORT_DOPPELTER_EINTRAG"));
+
+					} else {
+						throw e;
+					}
+				}
 			}
 
 		}
@@ -9651,6 +11986,23 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		}
 	}
 
+	public void wandleUrlaubsantragInUrlaubUm(Integer[] sonderzeitenIIds,
+			TheClientDto theClientDto) {
+		Integer urlaubsantragIId = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_URLAUBSANTRAG, theClientDto)
+				.getIId();
+		Integer urlaubIId = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_URLAUB, theClientDto).getIId();
+		for (int i = 0; i < sonderzeitenIIds.length; i++) {
+			Sonderzeiten sonderzeiten = em.find(Sonderzeiten.class,
+					sonderzeitenIIds[i]);
+			if (sonderzeiten.getTaetigkeitIId().equals(urlaubsantragIId)) {
+				sonderzeiten.setTaetigkeitIId(urlaubIId);
+				em.flush();
+			}
+		}
+	}
+
 	public Integer createZeitverteilung(ZeitverteilungDto zeitverteilungDto,
 			TheClientDto theClientDto) {
 		if (zeitverteilungDto == null) {
@@ -9718,6 +12070,158 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		return zeitverteilungDto.getIId();
 	}
 
+	public void pflegeUmstellungAufVonBisErfassung(TheClientDto theClientDto) {
+
+		HashMap<Integer, TreeMap<java.util.Date, TreeMap<java.sql.Timestamp, FLRZeitdaten>>> hmPersonal = new HashMap<Integer, TreeMap<java.util.Date, TreeMap<java.sql.Timestamp, FLRZeitdaten>>>();
+
+		String sQuery = "SELECT z FROM FLRZeitdaten z WHERE z.c_belegartnr IS NOT NULL AND z.i_belegartid IS NOT NULL ORDER BY z.personal_i_id, z.t_zeit";
+
+		SessionFactory factory = FLRSessionFactory.getFactory();
+		Session session = factory.openSession();
+
+		org.hibernate.Query inventurliste = session.createQuery(sQuery);
+
+		List<?> resultList = inventurliste.list();
+
+		Iterator<?> resultListIterator = resultList.iterator();
+
+		while (resultListIterator.hasNext()) {
+			FLRZeitdaten zeitdaten = (FLRZeitdaten) resultListIterator.next();
+
+			TreeMap<java.util.Date, TreeMap<java.sql.Timestamp, FLRZeitdaten>> tmDaten = null;
+
+			if (hmPersonal.containsKey(zeitdaten.getPersonal_i_id())) {
+				tmDaten = hmPersonal.get(zeitdaten.getPersonal_i_id());
+			} else {
+				tmDaten = new TreeMap<java.util.Date, TreeMap<java.sql.Timestamp, FLRZeitdaten>>();
+			}
+
+			java.util.Date dTag = Helper.cutDate(zeitdaten.getT_zeit());
+
+			TreeMap<java.sql.Timestamp, FLRZeitdaten> tmTage = null;
+			if (tmDaten.containsKey(dTag)) {
+				tmTage = tmDaten.get(dTag);
+			} else {
+				tmTage = new TreeMap<java.sql.Timestamp, FLRZeitdaten>();
+			}
+
+			tmTage.put(new java.sql.Timestamp(zeitdaten.getT_zeit().getTime()),
+					zeitdaten);
+
+			tmDaten.put(dTag, tmTage);
+			hmPersonal.put(zeitdaten.getPersonal_i_id(), tmDaten);
+
+		}
+
+		// Daten sind nun nach Personal und Tagen getrennt
+
+		// Auftraege muessen durch ENDE als bis abgeschlossen werden
+
+		Integer taetigkeitIId_Ende = taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_ENDE, theClientDto).getIId();
+
+		Iterator<Integer> itPersonen = hmPersonal.keySet().iterator();
+		while (itPersonen.hasNext()) {
+			Integer personalIId = itPersonen.next();
+
+			TreeMap<java.util.Date, TreeMap<java.sql.Timestamp, FLRZeitdaten>> tmDaten = hmPersonal
+					.get(personalIId);
+
+			Iterator<java.util.Date> itDatum = tmDaten.keySet().iterator();
+
+			while (itDatum.hasNext()) {
+				java.util.Date datum = itDatum.next();
+
+				TreeMap<java.sql.Timestamp, FLRZeitdaten> tmTagesdaten = tmDaten
+						.get(datum);
+
+				Iterator<java.sql.Timestamp> itTagesdaten = tmTagesdaten
+						.keySet().iterator();
+
+				while (itTagesdaten.hasNext()) {
+
+					Timestamp t = itTagesdaten.next();
+
+					FLRZeitdaten zeiteintrag = tmTagesdaten.get(t);
+
+					// Nun die naechste Zeitbuchung suchen
+
+					// Wenn dies kein ende ist, dann nachtragen
+
+					Timestamp tMorgen = Helper.cutTimestamp(new Timestamp(t
+							.getTime() + 24 * 3600000));
+
+					String sQuery2 = "SELECT z FROM FLRZeitdaten z WHERE z.personal_i_id="
+							+ personalIId
+							+ " AND z.t_zeit>'"
+							+ Helper.formatTimestampWithSlashes(t)
+							+ "' AND z.t_zeit <'"
+							+ Helper.formatTimestampWithSlashes(tMorgen)
+							+ "' ORDER BY z.t_zeit ASC";
+
+					SessionFactory factory2 = FLRSessionFactory.getFactory();
+					Session session2 = factory2.openSession();
+
+					org.hibernate.Query naechsteZeitbuchung = session2
+							.createQuery(sQuery2);
+					naechsteZeitbuchung.setMaxResults(1);
+
+					List<?> resultList2 = naechsteZeitbuchung.list();
+
+					Iterator<?> resultListIterator2 = resultList2.iterator();
+
+					// wenn die naechste Buchung kein Ende ist, bzw keine
+					// Buchung vorhanden ist, dann kurz davor ein Ende
+					// nachtragen
+
+					java.sql.Timestamp tEnde = null;
+
+					if (resultListIterator2.hasNext()) {
+						FLRZeitdaten zeitdaten = (FLRZeitdaten) resultListIterator2
+								.next();
+
+						if (zeitdaten.getTaetigkeit_i_id() != null
+								&& zeitdaten.getTaetigkeit_i_id().equals(
+										taetigkeitIId_Ende)) {
+							// Naechste Taetigkeit ist ein ENDE
+						} else {
+							// Ende 10 ms vorher nachtragen
+							tEnde = new java.sql.Timestamp(zeitdaten
+									.getT_zeit().getTime() - 10);
+						}
+
+					} else {
+						// Nachtragen
+						// ende am ende des Tages
+						tEnde = new java.sql.Timestamp(tMorgen.getTime() - 10);
+					}
+
+					if (tEnde != null) {
+						PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+						Integer pk = pkGen
+								.getNextPrimaryKey(PKConst.PK_ZEITDATEN);
+
+						Zeitdaten zEnde = new Zeitdaten(pk, personalIId, tEnde,
+								Helper.boolean2Short(false),
+								theClientDto.getIDPersonal(),
+								theClientDto.getIDPersonal(),
+								Helper.boolean2Short(false));
+						zEnde.setTaetigkeitIId(taetigkeitIId_Ende);
+						em.persist(zEnde);
+						em.flush();
+
+					}
+
+					session2.close();
+
+				}
+
+			}
+
+		}
+
+	}
+
 	public void removeTaetigkeit(TaetigkeitDto taetigkeitDto)
 			throws EJBExceptionLP {
 		myLogger.entry();
@@ -9742,6 +12246,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						.equals(ZeiterfassungFac.TAETIGKEIT_KOMMT)
 				|| taetigkeit.getCNr()
 						.equals(ZeiterfassungFac.TAETIGKEIT_KRANK)
+				|| taetigkeit.getCNr().equals(
+						ZeiterfassungFac.TAETIGKEIT_URLAUBSANTRAG)
 				|| taetigkeit.getCNr().equals(
 						ZeiterfassungFac.TAETIGKEIT_KINDKRANK)
 				|| taetigkeit.getCNr().equals(
@@ -10266,11 +12772,9 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	/**
 	 * holt die Zeitmodell-Sollzeit zu einem best. Datum und einer bestimmten
 	 * Person
-	 * 
+	 *
 	 * @deprecated use getZeitmodelltagZuDatum()...
-	 * @param personalIId
-	 *            Die sprachabh&auml;ngige Bezeichnung der Partnerart (zB Firma
-	 *            oder Company)
+	 * @param personalDto das Personal
 	 * @param d_datum
 	 *            Sprachkurzzeichen (zB DE oder EN)
 	 * @param tagesartIId_Feiertag
@@ -10284,7 +12788,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	 * @return Die Partnerart
 	 * @throws EJBExceptionLP
 	 */
-	protected java.sql.Time getSollzeitZuDatum(Integer personalIId,
+	protected java.sql.Time getSollzeitZuDatum(PersonalDto personalDto,
 			java.sql.Timestamp d_datum, Integer tagesartIId_Feiertag,
 			Integer tagesartIId_Halbtag, TheClientDto theClientDto,
 			boolean bSollzeit) throws EJBExceptionLP {
@@ -10294,13 +12798,11 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		PersonalzeitmodellDto personalzeitmodellDto = null;
 		try {
 			personalzeitmodellDto = getPersonalFac()
-					.personalzeitmodellFindZeitmodellZuDatum(personalIId,
-							d_datum, theClientDto);
+					.personalzeitmodellFindZeitmodellZuDatum(
+							personalDto.getIId(), d_datum, theClientDto);
 		} catch (RemoteException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
-		PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKeySmall(
-				personalIId);
 
 		Calendar c = Calendar.getInstance();
 		c.setTime(d_datum);
@@ -10433,16 +12935,29 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		d_datum = Helper.cutTimestamp(d_datum);
 		ZeitmodelltagDto zeitmodelltagDto = new ZeitmodelltagDto();
 
-		PersonalzeitmodellDto personalzeitmodellDto = null;
-		try {
-			personalzeitmodellDto = getPersonalFac()
-					.personalzeitmodellFindZeitmodellZuDatum(personalIId,
-							d_datum, theClientDto);
-		} catch (RemoteException ex) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+		String sQuery = "select pzm.flrzeitmodell.i_id FROM FLRPersonalzeitmodell pzm WHERE pzm.personal_i_id="
+				+ personalIId
+				+ " AND pzm.t_gueltigab<='"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(d_datum
+						.getTime())) + "' ORDER BY pzm.t_gueltigab DESC";
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		org.hibernate.Query gueltigesZm = session.createQuery(sQuery);
+		gueltigesZm.setMaxResults(1);
+
+		List<?> resultList = gueltigesZm.list();
+
+		Iterator<?> resultListIterator = resultList.iterator();
+
+		Integer zeitmodellIId = null;
+
+		if (resultListIterator.hasNext()) {
+			zeitmodellIId = (Integer) resultListIterator.next();
+
 		}
-		PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(
-				personalIId, theClientDto);
+
+		Personal personal = em.find(Personal.class, personalIId);
 
 		Calendar c = Calendar.getInstance();
 		c.setTime(d_datum);
@@ -10462,7 +12977,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				// Betriebskalender
 				if (dto.getReligionIId() == null
 						|| dto.getReligionIId().equals(
-								personalDto.getReligionIId())) {
+								personal.getReligionIId())) {
 					if (dto.getTagesartIId().equals(tagesartIId_Feiertag)
 							|| dto.getTagesartIId().equals(tagesartIId_Halbtag)) {
 
@@ -10480,11 +12995,11 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				}
 			}
 
-			if (tagesartIId != null && personalzeitmodellDto != null) {
+			if (tagesartIId != null && zeitmodellIId != null) {
 
 				Query query2 = em
 						.createNamedQuery("ZeitmodelltagfindSollzeitZuTagesart");
-				query2.setParameter(1, personalzeitmodellDto.getZeitmodellIId());
+				query2.setParameter(1, zeitmodellIId);
 				query2.setParameter(2, tagesartIId);
 				zeitmodelltagDto = assembleZeitmodelltagDto((Zeitmodelltag) query2
 						.getSingleResult());
@@ -10560,7 +13075,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	/**
 	 * holt die Zeitmodell-Sollzeit zu einem best. Datum und einer bestimmten
 	 * Person
-	 * 
+	 *
 	 * @param personalIId
 	 *            Die sprachabh&auml;ngige Bezeichnung der Partnerart (zB Firma
 	 *            oder Company)
@@ -10629,7 +13144,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	/**
 	 * Ermittelt ob dieser Tag ein Feiertag oder ein Sonntag ist
-	 * 
+	 *
 	 * @param d_datum
 	 *            Datum
 	 * @param partner_i_id
@@ -10699,8 +13214,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			Integer tagesartIId_Halbtag, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		d_datum = Helper.cutTimestamp(d_datum);
-		PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKeySmall(
-				personalIId);
+		Personal personal = em.find(Personal.class, personalIId);
 
 		Calendar c = Calendar.getInstance();
 		c.setTime(d_datum);
@@ -10720,7 +13234,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				// Betriebskalender
 				if (dto.getReligionIId() == null
 						|| dto.getReligionIId().equals(
-								personalDto.getReligionIId())) {
+								personal.getReligionIId())) {
 					if (dto.getTagesartIId().equals(tagesartIId_Feiertag)
 							|| dto.getTagesartIId().equals(tagesartIId_Halbtag)) {
 						tagesartIId = dto.getTagesartIId();
@@ -10740,7 +13254,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	 * Pr&uuml;ft, ob die Zeitbuchungen zur aktuellen Zeit gebucht worden sind
 	 * und setzt bManipuliert auf true, wenn die Buchungszeit um mehr als 2 Min
 	 * von der aktuellen Zeit abweicht
-	 * 
+	 *
 	 * @param i_id
 	 *            ID der Zeitbewegung
 	 * @return boolean ob die Buchung manipuliert ist oder nicht
@@ -10775,7 +13289,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		return bManipuliert;
 	}
 
-	private BigDecimal getAlteUrlaubStunden(Integer personalIId,
+	private BigDecimal getAlteUrlaubStunden(PersonalDto personalDto,
 			java.sql.Timestamp dEintrittsdatum,
 			java.sql.Timestamp dAktuellerUrlaubsbeginn,
 			Integer tagesartIId_Feiertag, Integer tagesartIId_Halbtag,
@@ -10797,7 +13311,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		// try {
 		Query query2 = em
 				.createNamedQuery("SonderzeitenfindTageweiseUndHalbtageweiseTaetigkeitenAlt");
-		query2.setParameter(1, personalIId);
+		query2.setParameter(1, personalDto.getIId());
 		query2.setParameter(2, iIdUrlaub);
 		query2.setParameter(3, dEintrittsdatum);
 		query2.setParameter(4, dAktuellerUrlaubsbeginn);
@@ -10807,7 +13321,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 		for (int i = 0; i < altTageDtos.length; i++) {
 
-			Double d = Helper.time2Double(getSollzeitZuDatum(personalIId,
+			Double d = Helper.time2Double(getSollzeitZuDatum(personalDto,
 					altTageDtos[i].getTDatum(), tagesartIId_Feiertag,
 					tagesartIId_Halbtag, theClientDto, true));
 			if (d != null) {
@@ -10821,7 +13335,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		// try {
 		query2 = em
 				.createNamedQuery("SonderzeitenfindStundenweiseTaetigkeitenAlt");
-		query2.setParameter(1, personalIId);
+		query2.setParameter(1, personalDto.getIId());
 		query2.setParameter(2, iIdUrlaub);
 		query2.setParameter(3, dEintrittsdatum);
 		query2.setParameter(4, dAktuellerUrlaubsbeginn);
@@ -10842,7 +13356,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		return new BigDecimal(dStundenAlt);
 	}
 
-	private BigDecimal getGeplanteUrlaubStunden(Integer personalIId,
+	private BigDecimal getGeplanteUrlaubStunden(PersonalDto personalDto,
 			java.sql.Timestamp dAbrechnungzeitpunkt,
 			Integer tagesartIId_Feiertag, Integer tagesartIId_Halbtag,
 			TheClientDto theClientDto) {
@@ -10869,7 +13383,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		// try {
 		Query query2 = em
 				.createNamedQuery("SonderzeitenfindTageweiseUndHalbtageweiseTaetigkeitenGeplant");
-		query2.setParameter(1, personalIId);
+		query2.setParameter(1, personalDto.getIId());
 		query2.setParameter(2, iIdUrlaub);
 		query2.setParameter(3, dAbrechnungzeitpunkt);
 
@@ -10878,7 +13392,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 		for (int i = 0; i < altTageDtos.length; i++) {
 
-			Double d = Helper.time2Double(getSollzeitZuDatum(personalIId,
+			Double d = Helper.time2Double(getSollzeitZuDatum(personalDto,
 					altTageDtos[i].getTDatum(), tagesartIId_Feiertag,
 					tagesartIId_Halbtag, theClientDto, true));
 			if (d != null) {
@@ -10899,7 +13413,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		try {
 			query2 = em
 					.createNamedQuery("SonderzeitenfindStundenweiseTaetigkeitenGeplant");
-			query2.setParameter(1, personalIId);
+			query2.setParameter(1, personalDto.getIId());
 			query2.setParameter(2, iIdUrlaub);
 			query2.setParameter(3, dAbrechnungzeitpunkt);
 
@@ -11313,7 +13827,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	private Double getAliquoterUrlaubsanspruchTageweise(
 			java.sql.Timestamp tStichtag, Double urlaubstageDesJahres,
-			Date dEintrittsdatum) {
+			Date dEintrittsdatum, TheClientDto theClientDto) {
 		if (tStichtag == null || urlaubstageDesJahres == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
@@ -11326,6 +13840,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		Calendar cEintritt = Calendar.getInstance();
 		cEintritt.setTime(dEintrittsdatum);
 
+		BigDecimal bdUrlaub = BigDecimal.ZERO;
+
 		if (c.get(Calendar.YEAR) != cEintritt.get(Calendar.YEAR)) {
 			double iTagDesJahres = c.get(Calendar.DAY_OF_YEAR);
 			double anzahlTageDesJahres = c
@@ -11333,10 +13849,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 			double urlaub = (iTagDesJahres / anzahlTageDesJahres)
 					* urlaubstageDesJahres.doubleValue();
-
-			urlaub = Math.round(((int) (urlaub * 100))) / (double) 100;
-
-			return new Double(urlaub);
+			bdUrlaub = new BigDecimal(urlaub);
 
 		} else {
 
@@ -11365,16 +13878,108 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				urlaub = (iAktuelleTagDesJahres * urlaubsansprunhProTag)
 						- ((iAbTagUrlaubsansprung - 1) * urlaubsansprunhProTag);
 			}
-			urlaub = Math.round(urlaub * 100) / (double) 100;
-			return new Double(urlaub);
+			bdUrlaub = new BigDecimal(urlaub);
 
 		}
 
+		bdUrlaub = rundeUrlaubstageAnhandParameter(bdUrlaub, theClientDto);
+
+		return bdUrlaub.doubleValue();
+	}
+
+	private BigDecimal rundeUrlaubstageAnhandParameter(
+			BigDecimal bdUrlaubstage, TheClientDto theClientDto) {
+
+		if (bdUrlaubstage == null) {
+			return null;
+		}
+
+		try {
+			ParametermandantDto parameter = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_URAUBSTAGE_RUNDUNG);
+
+			int i = (Integer) parameter.getCWertAsObject();
+
+			if (i == 0) {
+				bdUrlaubstage = bdUrlaubstage.divide(BigDecimal.ONE, 2,
+						BigDecimal.ROUND_HALF_UP);
+			} else if (i == 1) {
+				bdUrlaubstage = bdUrlaubstage.divide(BigDecimal.ONE, 0,
+						BigDecimal.ROUND_HALF_UP);
+			} else if (i == 2) {
+				bdUrlaubstage = bdUrlaubstage.divide(BigDecimal.ONE, 0,
+						BigDecimal.ROUND_DOWN);
+			} else if (i == 3) {
+				bdUrlaubstage = bdUrlaubstage.divide(BigDecimal.ONE, 0,
+						BigDecimal.ROUND_UP);
+			}
+
+		} catch (RemoteException ex5) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex5);
+		}
+		return bdUrlaubstage;
+	}
+
+	public BigDecimal berechneDiaetenAusScript(Integer diaetenIId,
+			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
+			TheClientDto theClientDto, String personalart) {
+
+		/////////////////////////////////////////////////////
+
+		// Daten fuer JRuby Script
+
+		ReisekostenScript script = new ReisekostenScript(getSystemFac(), theClientDto);
+
+		DiaetentagessatzDto[] diaetentagessatzDtos = getDiaetenTagesSatzDtos(diaetenIId, tVon);
+
+		String scriptName = null;
+		if (diaetentagessatzDtos.length != 0) {
+			scriptName = diaetentagessatzDtos[0].getCFilenameScript();
+		}
+
+		if(scriptName != null) {
+
+			Integer landId = diaetenFindByPrimaryKey(diaetenIId).getLandIId();
+			String lkz = getSystemFac().landFindByPrimaryKey(landId).getCLkz();
+
+			BigDecimal diaetenGesamt = BigDecimal.ZERO.setScale(2);
+
+			int bginnYear = getYear(tVon);
+			int endYear = getYear(tBis);
+
+			ReisekostenDiaetenScript reisekostenDiaetenScript = new ReisekostenDiaetenScript(
+					tVon,
+					tBis,
+					lkz,
+					personalart,
+					bginnYear,
+					endYear
+					) ;
+
+			BigDecimal bdDiaeten = script.getValue(reisekostenDiaetenScript, scriptName);
+			return diaetenGesamt.add(bdDiaeten);
+		} else {
+			return berechneDiaeten(diaetenIId, tVon, tBis, theClientDto);
+		}
+
+		/////////////////////////////////////////////////////
+
+	}
+
+	private int getYear(Timestamp ts) {
+		long time = ts.getTime();
+		Calendar cal = Calendar.getInstance();
+		cal.setTimeInMillis(time);
+		int year = cal.get(Calendar.YEAR);
+		return year;
 	}
 
 	public BigDecimal berechneDiaeten(Integer diaetenIId,
 			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
-			TheClientDto theClientDto) {
+			TheClientDto theClientDto
+			) {
 
 		// BigDecimal diaetenGesamt = new BigDecimal(0);
 		// diaetenGesamt.setScale(2);
@@ -11437,13 +14042,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					throwEJBExceptionLPRespectOld(ex);
 				}
 
-				Query query2 = em
-						.createNamedQuery("DiaetentagessatzfindGueltigenTagessatzZuDatum");
-				query2.setParameter(1, diaetenIId);
-				query2.setParameter(2, tVon);
-
-				DiaetentagessatzDto[] dtos = assembleDiaetentagessatzDtos(query2
-						.getResultList());
+				DiaetentagessatzDto[] dtos = getDiaetenTagesSatzDtos(diaetenIId, tVon);
 
 				if (dtos.length > 0) {
 					DiaetentagessatzDto dto = dtos[0];
@@ -11493,6 +14092,142 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		}
 
 		return diaetenGesamt;
+	}
+
+//	public BigDecimal berechneDiaeten(Integer diaetenIId,
+//			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
+//			TheClientDto theClientDto) {
+//
+//		// BigDecimal diaetenGesamt = new BigDecimal(0);
+//		// diaetenGesamt.setScale(2);
+//		BigDecimal diaetenGesamt = BigDecimal.ZERO.setScale(2);
+//		boolean bInland = true;
+//
+//		if (tVon.before(tBis)) {
+//			Calendar cVon = Calendar.getInstance();
+//			cVon.setTimeInMillis(tVon.getTime());
+//
+//			Calendar cBis = Calendar.getInstance();
+//			cBis.setTimeInMillis(tBis.getTime());
+//
+//			while (cBis.after(cVon)) {
+//				java.sql.Time tDauer = null;
+//				if (cVon.get(Calendar.DAY_OF_YEAR) == cBis
+//						.get(Calendar.DAY_OF_YEAR)) {
+//
+//					tDauer = new java.sql.Time(cBis.getTimeInMillis()
+//							- cVon.getTimeInMillis());
+//
+//				} else {
+//					Calendar cTemp = Calendar.getInstance();
+//					cTemp.setTimeInMillis(cVon.getTimeInMillis());
+//					cTemp.set(Calendar.HOUR_OF_DAY, 23);
+//					cTemp.set(Calendar.MINUTE, 59);
+//					cTemp.set(Calendar.MILLISECOND, 999);
+//					cTemp.set(Calendar.SECOND, 59);
+//
+//					tDauer = new java.sql.Time(cTemp.getTimeInMillis()
+//							- cVon.getTimeInMillis());
+//
+//				}
+//
+//				tDauer.setTime(tDauer.getTime() - 3600000);
+//				Double dDauer = Helper.time2Double(tDauer);
+//
+//				// BigDecimal diaeten = new BigDecimal(0);
+//				// diaeten.setScale(2);
+//				BigDecimal diaeten = BigDecimal.ZERO.setScale(2);
+//				// try {
+//				Diaeten temp = em.find(Diaeten.class, diaetenIId);
+//				if (temp == null) {
+//					throw new EJBExceptionLP(
+//							EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+//				}
+//				Integer landIId = temp.getLandIId();
+//
+//				try {
+//					PartnerDto mandant = getMandantFac()
+//							.mandantFindByPrimaryKey(theClientDto.getMandant(),
+//									theClientDto).getPartnerDto();
+//					if (mandant.getLandplzortDto() != null) {
+//						if (!landIId.equals(mandant.getLandplzortDto()
+//								.getIlandID())) {
+//							bInland = false;
+//						}
+//					}
+//				} catch (RemoteException ex) {
+//					throwEJBExceptionLPRespectOld(ex);
+//				}
+//
+////				Query query2 = em
+////						.createNamedQuery("DiaetentagessatzfindGueltigenTagessatzZuDatum");
+////				query2.setParameter(1, diaetenIId);
+////				query2.setParameter(2, tVon);
+////
+////				DiaetentagessatzDto[] dtos = assembleDiaetentagessatzDtos(query2
+////						.getResultList());
+//
+//				DiaetentagessatzDto[] dtos = getDiaetenTagesSatzDtos(diaetenIId, tVon);
+//
+//				if (dtos.length > 0) {
+//					DiaetentagessatzDto dto = dtos[0];
+//
+//					if (dDauer.doubleValue() > 12) {
+//						dDauer = new Double(12);
+//					}
+//					if (dDauer.doubleValue() % 1 > 0) {
+//						dDauer = new Double(dDauer.doubleValue() + 1);
+//
+//					}
+//
+//					if (Helper.short2boolean(dto.getBStundenweise()) == true) {
+//						if (dDauer.doubleValue() > dto.getIAbstunden()
+//								.doubleValue()) {
+//							diaeten = new BigDecimal(dDauer.intValue()
+//									* dto.getNStundensatz().doubleValue());
+//						}
+//					} else {
+//						if (dDauer.doubleValue() <= 3) {
+//							diaeten = new BigDecimal(0);
+//						} else {
+//							diaeten = dto.getNStundensatz().multiply(
+//									new BigDecimal(dDauer.intValue()));
+//						}
+//					}
+//
+//				}
+//
+//				// }
+//				// catch (NoResultException e) {
+//				// throw new
+//				// EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+//				// e);
+//				// }
+//
+//				diaetenGesamt = diaetenGesamt.add(diaeten);
+//
+//				cVon.set(Calendar.DAY_OF_MONTH,
+//						cVon.get(Calendar.DAY_OF_MONTH) + 1);
+//				cVon.set(Calendar.HOUR_OF_DAY, 0);
+//				cVon.set(Calendar.MINUTE, 0);
+//				cVon.set(Calendar.MILLISECOND, 0);
+//				cVon.set(Calendar.SECOND, 0);
+//			}
+//
+//		}
+//
+//		return diaetenGesamt;
+//	}
+
+	public DiaetentagessatzDto[] getDiaetenTagesSatzDtos(Integer diaetenIId, java.sql.Timestamp tVon) {
+		Query query2 = em
+				.createNamedQuery("DiaetentagessatzfindGueltigenTagessatzZuDatum");
+		query2.setParameter(1, diaetenIId);
+		query2.setParameter(2, tVon);
+
+		DiaetentagessatzDto[] dtos = assembleDiaetentagessatzDtos(query2
+				.getResultList());
+		return dtos;
 	}
 
 	private BigDecimal berechneAliquotenUrlaubsanspruchsstundenAb2009(
@@ -12029,10 +14764,10 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	/**
 	 * Berechnen des Urlaubsanspruches einer Person Eintrittsdatum bis heute
 	 * oder einem best. Datum
-	 * 
+	 *
 	 * Wenn Urlaubsabrechnung nach Gesch&auml;ftsjahr, dann muss f&uuml;r das
 	 * Eintrittsjahr der entstprechende Urlaub eingegeben werden
-	 * 
+	 *
 	 * @param personalIId
 	 *            des partners
 	 * @param dAbrechnungzeitpunkt
@@ -12219,7 +14954,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		// Urlaubsstunden GEPLANT holen
 		urlaubsabrechnungDto
 				.setNGeplanterUrlaubStunden(getGeplanteUrlaubStunden(
-						personalIId, new java.sql.Timestamp(
+						personalDto, new java.sql.Timestamp(
 								dAbrechnungzeitpunkt.getTime()),
 						tagesartIId_Feiertag, tagesartIId_Halbtag, theClientDto));
 
@@ -12331,8 +15066,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 									dAliquoterAnspruch));
 
 					urlaubsabrechnungDto
-							.setNAktuellerUrlaubsanspruchTage(Helper
-									.rundeKaufmaennisch(anspruchGesamt, 2));
+							.setNAktuellerUrlaubsanspruchTage(rundeUrlaubstageAnhandParameter(
+									anspruchGesamt, theClientDto));
 
 					urlaubsabrechnungDto
 							.setNAktuellerUrlaubsanspruchStunden(anspruchGesamtStunden);
@@ -12340,16 +15075,13 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				} else {
 
 					urlaubsabrechnungDto
-							.setNAktuellerUrlaubsanspruchTage(Helper
-									.rundeKaufmaennisch(
-											new BigDecimal(
-													urlaubsanspruchDtos[0]
-															.getFTage()
-															.doubleValue()
-															+ urlaubsanspruchDtos[0]
-																	.getFTagezusaetzlich()
-																	.doubleValue()),
-											2));
+							.setNAktuellerUrlaubsanspruchTage(rundeUrlaubstageAnhandParameter(
+									new BigDecimal(urlaubsanspruchDtos[0]
+											.getFTage().doubleValue()
+											+ urlaubsanspruchDtos[0]
+													.getFTagezusaetzlich()
+													.doubleValue()),
+									theClientDto));
 					urlaubsabrechnungDto
 							.setNAktuellerUrlaubsanspruchStunden(Helper
 									.rundeKaufmaennisch(
@@ -12412,12 +15144,15 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							iTageUrlaub++;
 
 							urlaubsabrechnungDto
-									.setNAktuellerUrlaubsanspruchTage(urlaubsabrechnungDto
-											.getNAktuellerUrlaubsanspruchTage()
-											.multiply(
-													new BigDecimal(
-															iTageUrlaub
-																	/ anzahlTageDesJahres)));
+									.setNAktuellerUrlaubsanspruchTage(rundeUrlaubstageAnhandParameter(
+											urlaubsabrechnungDto
+													.getNAktuellerUrlaubsanspruchTage()
+													.multiply(
+															new BigDecimal(
+																	iTageUrlaub
+																			/ anzahlTageDesJahres)),
+											theClientDto));
+
 							urlaubsabrechnungDto
 									.setNAktuellerUrlaubsanspruchStunden(urlaubsabrechnungDto
 											.getNAktuellerUrlaubsanspruchStunden()
@@ -12435,7 +15170,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				// Ganze Urlaubstage AKTUELL ALIQUOT holen
 				Double dAliquotTageweise = getAliquoterUrlaubsanspruchTageweise(
 						new java.sql.Timestamp(dAbrechnungzeitpunkt.getTime()),
-						urlaubsanspruchDtos[0].getFTage(), dEintrittsdatum);
+						urlaubsanspruchDtos[0].getFTage(), dEintrittsdatum,
+						theClientDto);
 				urlaubsabrechnungDto.setNAliquoterAnspruchTage(new BigDecimal(
 						dAliquotTageweise.doubleValue()
 								+ urlaubsanspruchDtos[0].getFTagezusaetzlich()
@@ -12544,16 +15280,22 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 											- urlaubsabrechnungDto
 													.getNAktuellerUrlaubVerbrauchtStunden()
 													.doubleValue());
-							urlaubsanspruchDto[0]
-									.setFResturlaubjahresendetage(urlaubsabrechnungDto
-											.getNAliquoterAnspruchTage()
+
+							Double dUrlaubIntagen = urlaubsabrechnungDto
+									.getNAliquoterAnspruchTage().doubleValue()
+									+ urlaubsabrechnungDto
+											.getNAlterUrlaubsanspruchTage()
 											.doubleValue()
-											+ urlaubsabrechnungDto
-													.getNAlterUrlaubsanspruchTage()
-													.doubleValue()
-											- urlaubsabrechnungDto
-													.getNAktuellerUrlaubVerbrauchtTage()
-													.doubleValue());
+									- urlaubsabrechnungDto
+											.getNAktuellerUrlaubVerbrauchtTage()
+											.doubleValue();
+
+							// SP1984
+
+							urlaubsanspruchDto[0]
+									.setFResturlaubjahresendetage(rundeUrlaubstageAnhandParameter(
+											new BigDecimal(dUrlaubIntagen),
+											theClientDto).doubleValue());
 							getPersonalFac().updateUrlaubsanspruch(
 									urlaubsanspruchDto[0], theClientDto);
 						}
@@ -12574,13 +15316,18 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 										- urlaubsabrechnungDto
 												.getNAktuellerUrlaubVerbrauchtStunden()
 												.doubleValue());
+
+						// SP1984
+
+						Double dUrlaubIntagen = urlaubsabrechnungDto
+								.getNAliquoterAnspruchTage().doubleValue()
+								- urlaubsabrechnungDto
+										.getNAktuellerUrlaubVerbrauchtTage()
+										.doubleValue();
 						urlaubsanspruchDto[0]
-								.setFResturlaubjahresendetage(urlaubsabrechnungDto
-										.getNAliquoterAnspruchTage()
-										.doubleValue()
-										- urlaubsabrechnungDto
-												.getNAktuellerUrlaubVerbrauchtTage()
-												.doubleValue());
+								.setFResturlaubjahresendetage(rundeUrlaubstageAnhandParameter(
+										new BigDecimal(dUrlaubIntagen),
+										theClientDto).doubleValue());
 						getPersonalFac().createUrlaubsanspruch(
 								urlaubsanspruchDto[0], theClientDto);
 					}
@@ -12716,7 +15463,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	 * Vector: Element 0: URLAUB Element 1: 5.5 (Stunden) Element 2: ARZT
 	 * Element 3: 3.5 (Stunden) ... Vector enth&auml;lt also immer eine gerade
 	 * Zahl von Elementen
-	 * 
+	 *
 	 * @param taetigkeitCNr
 	 *            Taetigkeit
 	 * @param tDatum
@@ -12798,12 +15545,15 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	/**
 	 * Erstellt eine Anwesenheitsliste zum Zeitpunkt JETZT
-	 * 
+	 *
 	 * @param theClientDto
 	 *            String
 	 * @return JasperPrint
+	 * @throws RemoteException
+	 * @throws EJBExceptionLP
 	 */
-	public JasperPrintLP printAnwesenheitsliste(TheClientDto theClientDto) {
+	public JasperPrintLP printAnwesenheitsliste(TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 		boolean bDarfAlleSehen = getTheJudgeFac().hatRecht(
 				RechteFac.RECHT_PERS_ANWESENHEITSLISTE_R, theClientDto);
 
@@ -12820,7 +15570,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	/***
 	 * Anwesenheitsliste f&uuml;r Terminal (nur Local IF)
-	 * 
+	 *
 	 * @param theClientDto
 	 * @param bDarfAlleSehen
 	 * @param bDarfAbteilungSehen
@@ -12868,6 +15618,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 			FLRPersonal personal = (FLRPersonal) resultListIterator.next();
 			ZeitdatenDto[] dtos = null;
+			ZeitdatenDto[] dtosMitBelegzeiten = null;
 			// try {
 			Query query2 = em
 					.createNamedQuery("ZeitdatenfindZeitdatenEinesTagesUndEinerPerson");
@@ -12876,6 +15627,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			query2.setParameter(3, tsJetzt);
 			dtos = assembleZeitdatenOhneArbeitsUndMaschienzeitenDtos(query2
 					.getResultList());
+			dtosMitBelegzeiten = assembleZeitdatenDtos(query2.getResultList());
 			// }
 			// catch (NoResultException ex) {
 			// dtos = new ZeitdatenDto[0];
@@ -13101,6 +15853,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 								// ANWESEND
 								dataHelp[row][REPORT_ANWESENHEITSLISTE_ANWESEND] = new Integer(
 										1);
+
 								// Auftragsnummer anzeigen, wenn gerade auf
 								// Auftrag gestempelt wird
 								// try {
@@ -13155,6 +15908,89 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 									dataHelp[row][REPORT_ANWESENHEITSLISTE_ZEIT] = new java.sql.Time(
 											dto.getTZeit().getTime())
 											.toString().substring(0, 5);
+								} else {
+
+									// PJ18768 Wenn nach der Pause auf keinen
+									// Auftrag gestempelt wurde, dann den letzen
+									// offenen suchen
+									for (int k = dtosMitBelegzeiten.length - 1; k > 0; --k) {
+
+										// Wenn zuletzt ENDE, dann kein Auftrag
+										// angestempelt
+										if (dtosMitBelegzeiten[k]
+												.getTaetigkeitIId() != null) {
+
+											TaetigkeitDto taetigkeit = taetigkeitFindByPrimaryKey(
+													dtosMitBelegzeiten[k]
+															.getTaetigkeitIId(),
+													theClientDto);
+											if (taetigkeit
+													.getCNr()
+													.equals(ZeiterfassungFac.TAETIGKEIT_ENDE)) {
+												break;
+											}
+
+										}
+
+										if (dtosMitBelegzeiten[k]
+												.getCBelegartnr() != null
+												&& dtosMitBelegzeiten[k]
+														.getIBelegartid() != null) {
+											ZeitdatenDto dto = dtosMitBelegzeiten[k];
+
+											String belegartUndNummer = "";
+
+											if (dto.getCBelegartnr().equals(
+													LocaleFac.BELEGART_AUFTRAG)) {
+												try {
+													AuftragDto auftragDto = getAuftragFac()
+															.auftragFindByPrimaryKey(
+																	dto.getIBelegartid());
+													belegartUndNummer = "AB-"
+															+ auftragDto
+																	.getCNr();
+												} catch (Throwable ex5) {
+													belegartUndNummer = "AUFT-NOT-FOUND";
+												}
+											} else if (dto
+													.getCBelegartnr()
+													.equals(LocaleFac.BELEGART_LOS)) {
+												try {
+													LosDto losDto = getFertigungFac()
+															.losFindByPrimaryKey(
+																	dto.getIBelegartid());
+													belegartUndNummer = "LO-"
+															+ losDto.getCNr();
+												} catch (RemoteException ex5) {
+													belegartUndNummer = "LOS-NOT-FOUND";
+												}
+											} else if (dto
+													.getCBelegartnr()
+													.equals(LocaleFac.BELEGART_PROJEKT)) {
+												try {
+													ProjektDto projektDto = getProjektFac()
+															.projektFindByPrimaryKey(
+																	dto.getIBelegartid());
+													belegartUndNummer = "PJ-"
+															+ projektDto
+																	.getCNr();
+												} catch (RemoteException ex5) {
+													belegartUndNummer = "PJ-NOT-FOUND";
+												}
+											}
+
+											String sVorhanden = (String) dataHelp[row][REPORT_ANWESENHEITSLISTE_TAETIGKEIT];
+
+											sVorhanden += " ("
+													+ belegartUndNummer + ")";
+											dataHelp[row][REPORT_ANWESENHEITSLISTE_TAETIGKEIT] = sVorhanden;
+
+											break;
+
+										}
+
+									}
+
 								}
 								// }
 								// catch (NoResultException ex4) {
@@ -13241,6 +16077,9 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		double dDauer = berechneDauerPaarweiserSondertaetigkeitenEinerPersonUndEinesZeitraumes(
 				personalIId, tVon, tBis, taetigkeitIId);
 
+		PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(
+				personalIId, theClientDto);
+
 		// try {
 		Query query = em
 				.createNamedQuery("SonderzeitenfindByPersonalIIdTVonTBisTaetigkeitIId");
@@ -13255,7 +16094,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			if (Helper.short2boolean(sonderzeitenDtos[k].getBTag()) == true) {
 
 				Double dDauerTagesweise = Helper
-						.time2Double(getSollzeitZuDatum(personalIId,
+						.time2Double(getSollzeitZuDatum(personalDto,
 								sonderzeitenDtos[k].getTDatum(),
 								tagesartIId_Feiertag, tagesartIId_Halbtag,
 								theClientDto, true));
@@ -13264,7 +16103,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				}
 			} else if (Helper.short2boolean(sonderzeitenDtos[k].getBHalbtag()) == true) {
 				Double dDauerHalbtagesweise = Helper
-						.time2Double(getSollzeitZuDatum(personalIId,
+						.time2Double(getSollzeitZuDatum(personalDto,
 								sonderzeitenDtos[k].getTDatum(),
 								tagesartIId_Feiertag, tagesartIId_Halbtag,
 								theClientDto, true));
@@ -13353,6 +16192,35 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		return null;
 	}
 
+	public Timestamp getLetzteGebuchteZeit(Integer personalIId,
+			java.sql.Timestamp tDatum, TheClientDto theClientDto) {
+
+		String sQuery = "select zeitdaten FROM FLRZeitdaten zeitdaten WHERE zeitdaten.t_zeit<'"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tDatum
+						.getTime() + (24 * 3600000)))
+				+ "' AND zeitdaten.t_zeit>='"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tDatum
+						.getTime()))
+				+ "' AND zeitdaten.personal_i_id="
+				+ personalIId + " ORDER BY zeitdaten.t_zeit DESC";
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		org.hibernate.Query letzteBuchung = session.createQuery(sQuery);
+		letzteBuchung.setMaxResults(1);
+
+		List<?> resultList = letzteBuchung.list();
+
+		Iterator<?> resultListIterator = resultList.iterator();
+
+		if (resultListIterator.hasNext()) {
+			FLRZeitdaten l = (FLRZeitdaten) resultListIterator.next();
+			return new Timestamp(l.getT_zeit().getTime());
+		}
+
+		return null;
+	}
+
 	public Timestamp getLetztesGehtEinesTages(Integer personalIId,
 			java.sql.Timestamp tDatum, TheClientDto theClientDto) {
 
@@ -13393,7 +16261,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	public JasperPrintLP printSondertaetigkeitsliste(Integer personalIId,
 			Integer taetigkeitIId, java.sql.Timestamp tVon,
 			java.sql.Timestamp tBis, Integer iOption, Boolean bPlusVersteckte,
-			TheClientDto theClientDto) {
+			boolean bNurAnwesende, TheClientDto theClientDto) {
 		if (tVon == null || tBis == null || personalIId == iOption) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
@@ -13450,6 +16318,11 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			} else {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
 						"OPTION NICHT VERFUEGBAR"));
+			}
+			if (bNurAnwesende) {
+				personalDtos = getZeiterfassungFac()
+						.entferneNichtAnwesendePersonen(tVon, tBis,
+								personalDtos, theClientDto);
 			}
 		} catch (RemoteException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
@@ -13645,6 +16518,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		parameter.put("S_BIS", new java.sql.Date(tBis.getTime()).toString());
 		parameter.put("T_VON", tVon);
 		parameter.put("T_BIS", tBis);
+		parameter.put("P_NUR_ANWESENDE", new Boolean(bNurAnwesende));
 		parameter.put("P_PERSONEN", sParameter_Personen);
 
 		initJRDS(parameter, ZeiterfassungFac.REPORT_MODUL,
@@ -13658,7 +16532,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	public JasperPrintLP printMonatsAbrechnung(Integer personalIId,
 			Integer iJahr, Integer iMonat, boolean bisMonatsende,
 			java.sql.Date d_datum_bis, TheClientDto theClientDto,
-			Integer iOption, Integer iOptionSortierung, Boolean bPlusVersteckte) {
+			Integer iOption, Integer iOptionSortierung,
+			Boolean bPlusVersteckte, boolean bNurAnwesende) {
 		JasperPrintLP print = null;
 		try {
 
@@ -13698,6 +16573,12 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			} else {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
 						"OPTION NICHT VERFUEGBAR"));
+			}
+
+			if (bNurAnwesende) {
+				personalDtos = getZeiterfassungFac()
+						.entferneNichtAnwesendePersonen(iJahr, iMonat, iJahr,
+								iMonat, personalDtos, theClientDto);
 			}
 
 			// PJ 16763
@@ -14257,10 +17138,74 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	}
 
+	public ZeitdatenDto getZugehoerigeEndeBuchung(ZeitdatenDto zeitdatenDto,
+			TheClientDto theClientDto) {
+		// Wenn die naechste Buchung ein Ende ist, dann ist ist das die
+		// Bis-Buchung
+		ZeitdatenDto zDto = null;
+		Integer taetigkeitIId_Ende = getZeiterfassungFac().taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_ENDE, theClientDto).getIId();
+		Integer taetigkeitIId_Kommt = getZeiterfassungFac()
+				.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_KOMMT,
+						theClientDto).getIId();
+		Integer taetigkeitIId_Geht = getZeiterfassungFac().taetigkeitFindByCNr(
+				ZeiterfassungFac.TAETIGKEIT_GEHT, theClientDto).getIId();
+
+		if (zeitdatenDto.getTaetigkeitIId() != null
+				&& (zeitdatenDto.getTaetigkeitIId().equals(taetigkeitIId_Kommt) || zeitdatenDto
+						.getTaetigkeitIId().equals(taetigkeitIId_Geht))) {
+			// Bei Kommt/Geht gibts kein BIS
+			return null;
+		}
+
+		Session sessionEnde = FLRSessionFactory.getFactory().openSession();
+		org.hibernate.Query queryEnde = sessionEnde
+				.createQuery("SELECT zeitdaten FROM FLRZeitdaten zeitdaten LEFT OUTER JOIN zeitdaten.flrartikel.artikelsprset AS aspr WHERE zeitdaten.personal_i_id="
+						+ zeitdatenDto.getPersonalIId()
+						+ " AND zeitdaten.t_zeit > '"
+						+ Helper.formatTimestampWithSlashes(zeitdatenDto
+								.getTZeit())
+						+ "' ORDER BY zeitdaten.t_zeit ASC");
+		queryEnde.setMaxResults(1);
+		List<?> resultListEnde = queryEnde.list();
+		Iterator<?> resultListIteratorEnde = resultListEnde.iterator();
+		if (resultListIteratorEnde.hasNext()) {
+			FLRZeitdaten z = (FLRZeitdaten) resultListIteratorEnde.next();
+
+			if (z.getTaetigkeit_i_id() != null
+					&& z.getTaetigkeit_i_id().equals(taetigkeitIId_Ende)) {
+				zDto = zeitdatenFindByPrimaryKey(z.getI_id(), theClientDto);
+			}
+
+			if (z.getTaetigkeit_i_id() != null
+					&& z.getTaetigkeit_i_id().equals(
+							zeitdatenDto.getTaetigkeitIId())) {
+				zDto = zeitdatenFindByPrimaryKey(z.getI_id(), theClientDto);
+			}
+
+		}
+		sessionEnde.close();
+
+		return zDto;
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public MonatsabrechnungDto erstelleMonatsAbrechnung(Integer personalIId,
+			Integer iJahr, Integer iMonat, boolean bisMonatsende,
+			java.sql.Date d_datum_bis, TheClientDto theClientDto,
+			boolean bSaldozurueckschreiben, Integer iOptionSortierung)
+			throws EJBExceptionLP {
+
+		return erstelleMonatsAbrechnung(personalIId, iJahr, iMonat,
+				bisMonatsende, d_datum_bis, theClientDto,
+				bSaldozurueckschreiben, iOptionSortierung, true, false);
+
+	}
+
 	/**
 	 * Die Monatsabrechnung der Zeitdaten f&uuml;r ein bestimmtes Monat f&uuml;r
 	 * eine bestimmte Person
-	 * 
+	 *
 	 * @param personalIId
 	 *            Eindeutige ID des Partners
 	 * @param iJahr
@@ -14278,13 +17223,14 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 	 * @return JasperPrint
 	 * @throws EJBExceptionLP
 	 */
-	@SuppressWarnings({ "static-access", "unchecked" })
+
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public MonatsabrechnungDto erstelleMonatsAbrechnung(Integer personalIId,
+	private MonatsabrechnungDto erstelleMonatsAbrechnung(Integer personalIId,
 			Integer iJahr, Integer iMonat, boolean bisMonatsende,
 			java.sql.Date d_datum_bis, TheClientDto theClientDto,
-			boolean bSaldozurueckschreiben, Integer iOptionSortierung)
-			throws EJBExceptionLP {
+			boolean bSaldozurueckschreiben, Integer iOptionSortierung,
+			boolean vormonatFuerMaximaleAnwesenheitberechnen,
+			boolean bTagesUndwochenmaximumIgnorieren) throws EJBExceptionLP {
 		if (iJahr == null || iMonat == null || personalIId == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
@@ -14310,9 +17256,51 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		BigDecimal nNormalstunden = null;
 		BigDecimal nSollStundenFuerUestd50 = null;
 		BigDecimal nSollStundenFIX = null;
+		BigDecimal nMaximalesWochenIST = null;
+
+		boolean bSollstundenMitrechnen = true;
 
 		Calendar calErstesZeitmodell = Calendar.getInstance();
 		calErstesZeitmodell.set(iJahr.intValue(), iMonat.intValue(), 1);
+
+		boolean bVonBisZeiterfassungOhneKommtGeht = false;
+		boolean bKommtGeht = true;
+		boolean bVonBis = false;
+
+		boolean bGutstundenZuUest50Addieren = true;
+
+		try {
+			ParametermandantDto parameter = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_VON_BIS_ERFASSUNG);
+
+			bVonBis = (Boolean) parameter.getCWertAsObject();
+
+			parameter = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_VON_BIS_ERFASSUNG_KOMMT_GEHT_BUCHEN);
+
+			bKommtGeht = (Boolean) parameter.getCWertAsObject();
+
+			if (bVonBis == true && bKommtGeht == false) {
+				bVonBisZeiterfassungOhneKommtGeht = true;
+			}
+
+			parameter = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_GUTSTUNDEN_ZU_UESTD50_ADDIEREN);
+
+			bGutstundenZuUest50Addieren = (Boolean) parameter
+					.getCWertAsObject();
+
+		} catch (RemoteException ex5) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex5);
+		}
 
 		try {
 			PersonalzeitmodellDto personalzeitmodellDto = getPersonalFac()
@@ -14328,6 +17316,9 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				ZeitmodellDto zmDto = zeitmodellFindByPrimaryKey(
 						personalzeitmodellDto.getZeitmodellIId(), theClientDto);
 				nSollStundenFIX = zmDto.getNSollstundenfix();
+				nMaximalesWochenIST = zmDto.getNMaximalesWochenist();
+				bSollstundenMitrechnen = Helper.short2boolean(zmDto
+						.getBFeiertagssollAddieren());
 			} else {
 				nSollStundenFuerUestd50 = new BigDecimal(0);
 			}
@@ -15099,6 +18090,56 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		double dWochensummeUestd100 = 0;
 		double dWochensummeUestd50Tageweise = 0;
 		double dWochensummeIst = 0;
+		double dWochensummeIstOhneSonderzeiten = 0;
+
+		boolean bEintrittsmonatMonat = false;
+
+		// SP3265 Wenn Eintrittsmonat, dann Vormonat nicht berechnen
+		if (dEintrittsdatum != null) {
+			Calendar cVergleich = Calendar.getInstance();
+			cVergleich.setTimeInMillis(dEintrittsdatum.getTime());
+			if (cVergleich.get(Calendar.MONTH) == iMonat
+					&& cVergleich.get(Calendar.YEAR) == iJahr) {
+				bEintrittsmonatMonat = true;
+			}
+		}
+
+		if (vormonatFuerMaximaleAnwesenheitberechnen == true
+				&& nMaximalesWochenIST != null
+				&& nMaximalesWochenIST.doubleValue() > 0
+				&& bEintrittsmonatMonat == false) {
+
+			Calendar cVormonat = Calendar.getInstance();
+			cVormonat.setTimeInMillis(calErstesZeitmodell.getTimeInMillis());
+			cVormonat.add(Calendar.MONTH, -1);
+
+			MonatsabrechnungDto monatsabrechnungVormonatDto = erstelleMonatsAbrechnung(
+					personalIId, cVormonat.get(Calendar.YEAR),
+					cVormonat.get(Calendar.MONTH), true, null, theClientDto,
+					false, iOptionSortierung, false,
+					bTagesUndwochenmaximumIgnorieren);
+
+			Object[][] zeilenVormonat = monatsabrechnungVormonatDto.getData();
+
+			int iKWErster = calErstesZeitmodell.get(Calendar.WEEK_OF_YEAR);
+
+			for (int i = zeilenVormonat.length - 1; i > 0; --i) {
+				Object[] zeileVormonat = zeilenVormonat[i];
+				int iKWVormonatszeile = (Integer) zeileVormonat[REPORT_MONATSABRECHNUNG_KALENDERWOCHE];
+				if (iKWErster == iKWVormonatszeile) {
+
+					BigDecimal bdIstVormonat = (BigDecimal) zeileVormonat[REPORT_MONATSABRECHNUNG_IST];
+					if (bdIstVormonat != null) {
+						dWochensummeIstOhneSonderzeiten = dWochensummeIstOhneSonderzeiten
+								+ bdIstVormonat.doubleValue();
+					}
+
+				}
+
+			}
+
+		}
+
 		double dWochensummeSollFuerUestd = 0;
 		double dWochensummeFtgSoll = 0;
 
@@ -15417,7 +18458,13 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				sessionBereitschaft.close();
 			}
 
+			if (bVonBisZeiterfassungOhneKommtGeht == true) {
+				bloecke = new ArrayList<ArrayList<ZeitdatenDto>>();
+				bloecke.add(new ArrayList<ZeitdatenDto>());
+			}
+
 			for (int j = 0; j < bloecke.size(); j++) {
+
 				// EIN KOMMT-GEHT BLOCK
 				ZeileMonatsabrechnungDto zeile = new ZeileMonatsabrechnungDto();
 
@@ -15429,6 +18476,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				zeile.setSTag(kurzeWochentage[cal.get(Calendar.DAY_OF_WEEK)]);
 				// Jahr setzen
 				zeile.setIJahr(new Integer(cal.get(Calendar.YEAR)));
+				zeile.setIMonat(new Integer(cal.get(Calendar.MONTH)));
 				// Datum setzen
 				zeile.setITag(i);
 				zeile.setTDatum(new Timestamp(cal.getTimeInMillis()));
@@ -15438,322 +18486,41 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						tagesartIId_Feiertag, tagesartIId_Halbtag, false,
 						theClientDto);
 
-				// Rundung zugunsten des Unternehmens
 				if (zeitmodelltagDto != null) {
-
-					int iRundungBeginn = 0;
-					if (zeitmodelltagDto.getIRundungbeginn() != null) {
-						iRundungBeginn = zeitmodelltagDto.getIRundungbeginn();
-					}
-
-					int iRundungEnde = 0;
-					if (zeitmodelltagDto.getIRundungende() != null) {
-						iRundungEnde = zeitmodelltagDto.getIRundungende();
-					}
-
-					long lRundungBeginn = 60000 * iRundungBeginn;
-					long lRundungEnde = 60000 * iRundungEnde;
-
-					if (iRundungBeginn > 0 || iRundungEnde > 0) {
-
-						boolean bRundeSondertaetigkeiten = Helper
-								.short2boolean(zeitmodelltagDto
-										.getBRundesondertaetigkeiten());
-
-						ArrayList<ZeitdatenDto> einBlock = (ArrayList<ZeitdatenDto>) bloecke
-								.get(j);
-						ZeitdatenDto[] zeitdatenEinesTagesDtos = new ZeitdatenDto[einBlock
-								.size()];
-						zeitdatenEinesTagesDtos = (ZeitdatenDto[]) einBlock
-								.toArray(zeitdatenEinesTagesDtos);
-						for (int z = 0; z < zeitdatenEinesTagesDtos.length; z++) {
-							ZeitdatenDto eineZeile = zeitdatenEinesTagesDtos[z];
-							// Automatikbuchungen auslassen (z.b. das bei
-							// Mitternachtssprung nicht gerundet wird)
-							if (Helper.short2boolean(eineZeile
-									.getBAutomatikbuchung()) == false) {
-
-								if (lRundungBeginn != 0) {
-									if (z == 0) {
-										long lZuviel = eineZeile.getTZeit()
-												.getTime() % lRundungBeginn;
-										if (lZuviel != 0) {
-											lZuviel = lRundungBeginn - lZuviel;
-											eineZeile.setTZeit(new Timestamp(
-													eineZeile.getTZeit()
-															.getTime()
-															+ lZuviel));
-										}
-									}
-								}
-
-								if (z > 0
-										&& z < zeitdatenEinesTagesDtos.length - 1) {
-									if (eineZeile.getTaetigkeitIId() != null) {
-
-										if (bRundeSondertaetigkeiten == true) {
-
-											if (z % 2 == 1) {
-												if (lRundungEnde != 0) {
-													long lZuviel = eineZeile
-															.getTZeit()
-															.getTime()
-															% lRundungEnde;
-													eineZeile
-															.setTZeit(new Timestamp(
-																	eineZeile
-																			.getTZeit()
-																			.getTime()
-																			- lZuviel));
-												}
-											} else if (z % 2 == 0) {
-												if (lRundungBeginn != 0) {
-													long lZuviel = eineZeile
-															.getTZeit()
-															.getTime()
-															% lRundungBeginn;
-													if (lZuviel != 0) {
-														lZuviel = lRundungBeginn
-																- lZuviel;
-														eineZeile
-																.setTZeit(new Timestamp(
-																		eineZeile
-																				.getTZeit()
-																				.getTime()
-																				+ lZuviel));
-													}
-												}
-											}
-										}
-									}
-
-								}
-
-								if (z == zeitdatenEinesTagesDtos.length - 1) {
-									if (lRundungEnde != 0) {
-										long lZuviel = eineZeile.getTZeit()
-												.getTime() % lRundungEnde;
-										eineZeile.setTZeit(new Timestamp(
-												eineZeile.getTZeit().getTime()
-														- lZuviel));
-									}
-								}
-								einBlock.set(z, eineZeile);
-							}
-						}
-
-						bloecke.set(j, einBlock);
-					}
-				}
-
-				// Fruehestes KOMMT und spaetestes GEHT verschieben, wenn
-				// gesetzt
-				if (zeitmodelltagDto != null) {
-
-					java.sql.Time tFruehestesKommt = zeitmodelltagDto
-							.getUBeginn();
-
-					java.sql.Time tSpaetestesGeht = zeitmodelltagDto.getUEnde();
-
-					boolean bVerkehrt = false;
-
-					if (tFruehestesKommt != null && tSpaetestesGeht != null
-							&& tFruehestesKommt.after(tSpaetestesGeht)) {
-						bVerkehrt = true;
-					}
-
-					ArrayList<ZeitdatenDto> einBlock = (ArrayList<ZeitdatenDto>) bloecke
+					// Rundung zugunsten des Unternehmens
+					ArrayList<ZeitdatenDto> einBlock_ZurZeitweiligenVerwendung = (ArrayList<ZeitdatenDto>) bloecke
 							.get(j);
 
-					boolean bFrueh = true;
+					einBlock_ZurZeitweiligenVerwendung = rundungZugunstenDesUnternehmens(
+							einBlock_ZurZeitweiligenVerwendung,
+							zeitmodelltagDto);
 
-					ZeitdatenDto[] zeitdatenEinesTagesDtos = new ZeitdatenDto[einBlock
-							.size()];
-					zeitdatenEinesTagesDtos = (ZeitdatenDto[]) einBlock
-							.toArray(zeitdatenEinesTagesDtos);
+					// Fruehestes KOMMT und spaetestes GEHT verschieben, wenn
+					// gesetzt
+					if (bTagesUndwochenmaximumIgnorieren == false) {
 
-					// PJ16913
-					Timestamp tMaxGeht = null;
-					if (zeitmodelltagDto != null
-							&& zeitmodelltagDto.getUErlaubteanwesenheitszeit() != null
-							&& zeitmodelltagDto.getUErlaubteanwesenheitszeit()
-									.getTime() != -3600000) {
-						if (zeitdatenEinesTagesDtos.length > 0) {
+						Double dMaximaleTagesanwesenheitszeitAufgrundWochenMaximum = null;
+						if (nMaximalesWochenIST != null
+								&& nMaximalesWochenIST.doubleValue() > 0) {
 
-							if (tFruehestesKommt != null
-									&& tFruehestesKommt.getTime() > -3600000) {
-								Calendar tZeit = Calendar.getInstance();
-								tZeit.setTimeInMillis(zeitdatenEinesTagesDtos[0]
-										.getTZeit().getTime());
-								Calendar tKommt = Calendar.getInstance();
-								tKommt.setTimeInMillis(tFruehestesKommt
-										.getTime());
-								tZeit.set(Calendar.HOUR_OF_DAY,
-										tKommt.get(Calendar.HOUR_OF_DAY));
-								tZeit.set(Calendar.MINUTE,
-										tKommt.get(Calendar.MINUTE));
-								tZeit.set(Calendar.SECOND, 0);
-								tZeit.set(Calendar.MILLISECOND, 0);
-								java.sql.Timestamp tNeueZeitKommt = new java.sql.Timestamp(
-										tZeit.getTimeInMillis());
-								if (zeitdatenEinesTagesDtos[0].getTZeit()
-										.before(tNeueZeitKommt)) {
-									zeitdatenEinesTagesDtos[0]
-											.setTZeit(tNeueZeitKommt);
-
-								}
-							}
-
-							double dDauerPaarweiseSondertaetigkeiten = 0;
-							try {
-								dDauerPaarweiseSondertaetigkeiten = berechnePaarweiserSondertaetigkeiten(
-										zeitdatenEinesTagesDtos,
-										taetigkeitDto_Unter.getIId());
-								dDauerPaarweiseSondertaetigkeiten += berechnePaarweiserSondertaetigkeiten(
-										zeitdatenEinesTagesDtos,
-										taetigkeitDto_Arzt.getIId());
-								dDauerPaarweiseSondertaetigkeiten += berechnePaarweiserSondertaetigkeiten(
-										zeitdatenEinesTagesDtos,
-										taetigkeitDto_Behoerde.getIId());
-							} catch (Exception e) {
-								//
-							}
-
-							double dMaxAnwesenheit = Helper
-									.time2Double(zeitmodelltagDto
-											.getUErlaubteanwesenheitszeit());
-							tMaxGeht = new Timestamp(
-									(long) (zeitdatenEinesTagesDtos[0]
-											.getTZeit().getTime()
-											+ (dMaxAnwesenheit * 3600000) + (dDauerPaarweiseSondertaetigkeiten * 3600000)));
+							dMaximaleTagesanwesenheitszeitAufgrundWochenMaximum = nMaximalesWochenIST
+									.doubleValue()
+									- dWochensummeIstOhneSonderzeiten;
 						}
 
-					}
-
-					for (int z = 0; z < zeitdatenEinesTagesDtos.length; z++) {
-						ZeitdatenDto eineZeile = zeitdatenEinesTagesDtos[z];
-
-						if (!Helper.short2boolean(eineZeile
-								.getBAutomatikbuchung())) {
-
-							Calendar tZeit = Calendar.getInstance();
-							tZeit.setTimeInMillis(eineZeile.getTZeit()
-									.getTime());
-
-							if (bVerkehrt == false) {
-
-								if (tFruehestesKommt != null
-										&& tFruehestesKommt.getTime() > -3600000) {
-
-									Calendar tKommt = Calendar.getInstance();
-									tKommt.setTimeInMillis(tFruehestesKommt
-											.getTime());
-									tZeit.set(Calendar.HOUR_OF_DAY,
-											tKommt.get(Calendar.HOUR_OF_DAY));
-									tZeit.set(Calendar.MINUTE,
-											tKommt.get(Calendar.MINUTE));
-									tZeit.set(Calendar.SECOND, 0);
-									tZeit.set(Calendar.MILLISECOND, 0);
-									java.sql.Timestamp tNeueZeitKommt = new java.sql.Timestamp(
-											tZeit.getTimeInMillis());
-									if (eineZeile.getTZeit().before(
-											tNeueZeitKommt)) {
-										eineZeile.setTZeit(tNeueZeitKommt);
-										zeitdatenEinesTagesDtos[z] = eineZeile;
-										einBlock.set(z, eineZeile);
-
-									}
-								}
-
-								if (tSpaetestesGeht != null
-										&& tSpaetestesGeht.getTime() > -3600000) {
-									Calendar tGeht = Calendar.getInstance();
-									tGeht.setTimeInMillis(tSpaetestesGeht
-											.getTime());
-									tZeit.set(Calendar.HOUR_OF_DAY,
-											tGeht.get(Calendar.HOUR_OF_DAY));
-									tZeit.set(Calendar.MINUTE,
-											tGeht.get(Calendar.MINUTE));
-									tZeit.set(Calendar.SECOND, 0);
-									tZeit.set(Calendar.MILLISECOND, 0);
-									java.sql.Timestamp tNeueZeitGht = new java.sql.Timestamp(
-											tZeit.getTimeInMillis());
-
-									if (tMaxGeht != null
-											&& tNeueZeitGht.after(tMaxGeht)) {
-										tNeueZeitGht = tMaxGeht;
-									}
-
-									if (eineZeile.getTZeit()
-											.after(tNeueZeitGht)) {
-										eineZeile.setTZeit(tNeueZeitGht);
-										zeitdatenEinesTagesDtos[z] = eineZeile;
-										einBlock.set(z, eineZeile);
-
-									}
-								}
-							} else {
-
-								// Wenn der erste eintrag nach dem Spaetestem
-								// GEHT
-								// ist, dann wird alles nach Vorne verschoben
-								Calendar tGeht = Calendar.getInstance();
-								tGeht.setTimeInMillis(tSpaetestesGeht.getTime());
-								tZeit.set(Calendar.HOUR_OF_DAY,
-										tGeht.get(Calendar.HOUR_OF_DAY));
-								tZeit.set(Calendar.MINUTE,
-										tGeht.get(Calendar.MINUTE));
-								tZeit.set(Calendar.SECOND, 0);
-								tZeit.set(Calendar.MILLISECOND, 0);
-								java.sql.Timestamp tNeueZeitGht = new java.sql.Timestamp(
-										tZeit.getTimeInMillis());
-								if (z == 0
-										&& eineZeile.getTZeit().after(
-												tNeueZeitGht)) {
-									bFrueh = false;
-								}
-
-								if (bFrueh) {
-									if (tFruehestesKommt != null
-											&& tFruehestesKommt.getTime() > -3600000) {
-										if (eineZeile.getTZeit().after(
-												tNeueZeitGht)) {
-											eineZeile.setTZeit(tNeueZeitGht);
-											zeitdatenEinesTagesDtos[z] = eineZeile;
-											einBlock.set(z, eineZeile);
-										}
-
-									}
-								} else {
-									if (tFruehestesKommt != null
-											&& tFruehestesKommt.getTime() > -3600000) {
-
-										Calendar tKommt = Calendar
-												.getInstance();
-										tKommt.setTimeInMillis(tFruehestesKommt
-												.getTime());
-										tZeit.set(Calendar.HOUR_OF_DAY, tKommt
-												.get(Calendar.HOUR_OF_DAY));
-										tZeit.set(Calendar.MINUTE,
-												tKommt.get(Calendar.MINUTE));
-										tZeit.set(Calendar.SECOND, 0);
-										tZeit.set(Calendar.MILLISECOND, 0);
-										java.sql.Timestamp tNeueZeitKommt = new java.sql.Timestamp(
-												tZeit.getTimeInMillis());
-										if (eineZeile.getTZeit().before(
-												tNeueZeitKommt)) {
-											eineZeile.setTZeit(tNeueZeitKommt);
-											zeitdatenEinesTagesDtos[z] = eineZeile;
-											einBlock.set(z, eineZeile);
-
-										}
-									}
-
-								}
-							}
+						if (i == 13) {
+							int z = 0;
 						}
+
+						einBlock_ZurZeitweiligenVerwendung = fruehestesKommtUndSpaetestesGehtUndMaximaleTagesanwesenheitVerschieben(
+								taetigkeitDto_Unter, taetigkeitDto_Arzt,
+								taetigkeitDto_Behoerde,
+								einBlock_ZurZeitweiligenVerwendung,
+								zeitmodelltagDto,
+								dMaximaleTagesanwesenheitszeitAufgrundWochenMaximum);
 					}
-					bloecke.set(j, einBlock);
+
+					bloecke.set(j, einBlock_ZurZeitweiligenVerwendung);
 				}
 
 				if (zeile.getTDatum().compareTo(dEintrittsdatum) >= 0
@@ -15912,177 +18679,212 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					String sZusatzbezeichnung = "";
 					ZeitdatenDto zeitdatenDto_Vorher = null;
 
-					for (int m = 0; m < zeitdatenEinesTagesDtos.length; m++) {
+					if (bVonBisZeiterfassungOhneKommtGeht == false) {
 
-						ZeitdatenDto zeitdatenDto_Aktuell = zeitdatenEinesTagesDtos[m];
+						for (int m = 0; m < zeitdatenEinesTagesDtos.length; m++) {
 
-						// Milliskunden auf 0 setzen
-						Timestamp tsTemp = zeitdatenDto_Aktuell.getTZeit();
-						Calendar c2 = Calendar.getInstance();
-						c2.setTimeInMillis(tsTemp.getTime());
-						c2.set(Calendar.MILLISECOND, 0);
-						tsTemp = new Timestamp(c2.getTimeInMillis());
-						zeitdatenDto_Aktuell.setTZeit(tsTemp);
-						// Bei jeder Geraden Zahl mit dem Vorgaenger vergleichen
-						if (m % 2 == 0 && m != 0) {
-							if (zeitdatenDto_Aktuell.getTaetigkeitIId().equals(
-									taetigkeitIId_Kommt)
-									&& zeitdatenDto_Vorher.getTaetigkeitIId()
-											.equals(taetigkeitIId_Geht)) {
-								// Wenn KOMMT - GEHT, dann nicht dazuzaehlen
+							ZeitdatenDto zeitdatenDto_Aktuell = zeitdatenEinesTagesDtos[m];
 
-								Double dBeginn = Helper.time2Double(new Time(
-										zeitdatenDto_Vorher.getTZeit()
-												.getTime()));
-								Double dEnde = Helper.time2Double(new Time(
-										zeitdatenDto_Aktuell.getTZeit()
-												.getTime()));
-								double dSumme = dEnde.doubleValue()
-										- dBeginn.doubleValue();
-								dSummeTagKOMMTGEHT = dSummeTagKOMMTGEHT
-										+ dSumme;
-							} else if (zeitdatenDto_Aktuell.getTaetigkeitIId()
-									.equals(zeitdatenDto_Vorher
-											.getTaetigkeitIId())) {
+							// Milliskunden auf 0 setzen
+							Timestamp tsTemp = zeitdatenDto_Aktuell.getTZeit();
+							Calendar c2 = Calendar.getInstance();
+							c2.setTimeInMillis(tsTemp.getTime());
+							c2.set(Calendar.MILLISECOND, 0);
+							tsTemp = new Timestamp(c2.getTimeInMillis());
+							zeitdatenDto_Aktuell.setTZeit(tsTemp);
+							// Bei jeder Geraden Zahl mit dem Vorgaenger
+							// vergleichen
+							if (m % 2 == 0 && m != 0) {
+								if (zeitdatenDto_Aktuell.getTaetigkeitIId()
+										.equals(taetigkeitIId_Kommt)
+										&& zeitdatenDto_Vorher
+												.getTaetigkeitIId().equals(
+														taetigkeitIId_Geht)) {
+									// Wenn KOMMT - GEHT, dann nicht dazuzaehlen
 
-								Double dBeginn = Helper.time2Double(new Time(
-										zeitdatenDto_Vorher.getTZeit()
-												.getTime()));
-								Double dEnde = Helper.time2Double(new Time(
-										zeitdatenDto_Aktuell.getTZeit()
-												.getTime()));
-
-								if (dBeginn != null && dEnde != null) {
+									Double dBeginn = Helper
+											.time2Double(new Time(
+													zeitdatenDto_Vorher
+															.getTZeit()
+															.getTime()));
+									Double dEnde = Helper.time2Double(new Time(
+											zeitdatenDto_Aktuell.getTZeit()
+													.getTime()));
 									double dSumme = dEnde.doubleValue()
 											- dBeginn.doubleValue();
+									dSummeTagKOMMTGEHT = dSummeTagKOMMTGEHT
+											+ dSumme;
+								} else if (zeitdatenDto_Aktuell
+										.getTaetigkeitIId().equals(
+												zeitdatenDto_Vorher
+														.getTaetigkeitIId())) {
 
-									// Wenn Taetigkeit UNTER dann bei UNTER
-									// hinzufuegen
-									if (zeitdatenDto_Aktuell.getTaetigkeitIId()
-											.equals(taetigkeitDto_Unter
-													.getIId())) {
-										dSummeTagUNTER = dSummeTagUNTER
-												+ dSumme;
-									}
-									// Wenn Taetigkeit BEHOERDE dann bei
-									// BEHOERDE hinzufuegen
-									else if (zeitdatenDto_Aktuell
-											.getTaetigkeitIId().equals(
-													taetigkeitDto_Behoerde
-															.getIId())) {
-										dSummeTagBEHOERDE = dSummeTagBEHOERDE
-												+ dSumme;
-									}
-									// Wenn Taetigkeit URLAUB dann bei URLAUB
-									// hinzufuegen
-									else if (zeitdatenDto_Aktuell
-											.getTaetigkeitIId().equals(
-													taetigkeitDto_Urlaub
-															.getIId())) {
-										dSummeTagURLAUB_STUNDEN = dSummeTagURLAUB_STUNDEN
-												+ dSumme;
-									}
-									// Wenn Taetigkeit ARZT dann bei ARZT
-									// hinzufuegen
-									else if (zeitdatenDto_Aktuell
-											.getTaetigkeitIId()
-											.equals(taetigkeitDto_Arzt.getIId())) {
-										dSummeTagARZT = dSummeTagARZT + dSumme;
-									}
-									// Wenn Taetigkeit ZA dann bei ZA
-									// hinzufuegen
-									else if (zeitdatenDto_Aktuell
-											.getTaetigkeitIId().equals(
-													taetigkeitDto_ZA.getIId())) {
-										dSummeTagZEITAUSGLEICH = dSummeTagZEITAUSGLEICH
-												+ dSumme;
-									}
-									// Wenn Taetigkeit KRANK dann bei KRANK
-									// hinzufuegen
-									else if (zeitdatenDto_Aktuell
-											.getTaetigkeitIId().equals(
-													taetigkeitDto_Krank
-															.getIId())) {
-										dSummeTagKRANK = dSummeTagKRANK
-												+ dSumme;
-									}
-									// Wenn Taetigkeit KINDKRANK dann bei
-									// KINDKRANK
-									// hinzufuegen
-									else if (zeitdatenDto_Aktuell
-											.getTaetigkeitIId().equals(
-													taetigkeitDto_Kindkrank
-															.getIId())) {
-										dSummeTagKINDKRANK = dSummeTagKINDKRANK
-												+ dSumme;
-									}
-									// Wenn KOMMT, dann Mehrfaches KOMMT
-									else if (zeitdatenDto_Aktuell
-											.getTaetigkeitIId().equals(
-													taetigkeitIId_Kommt)) {
-										sBemerkung = "Mehrfaches KOMMT"
-												+ sBemerkung;
-									}
-									// Wenn GEHT, dann Mehrfaches GEHT
-									else if (zeitdatenDto_Aktuell
-											.getTaetigkeitIId().equals(
-													taetigkeitIId_Geht)) {
-										sBemerkung = "Mehrfaches GEHT"
-												+ sBemerkung;
-									}
+									Double dBeginn = Helper
+											.time2Double(new Time(
+													zeitdatenDto_Vorher
+															.getTZeit()
+															.getTime()));
+									Double dEnde = Helper.time2Double(new Time(
+											zeitdatenDto_Aktuell.getTZeit()
+													.getTime()));
 
-									// Ansonsten muss Taetigkeit bei sonstigen
-									// bezahlten oder nicht bezahlten
-									// Taetigkeiten dabei sein
-									else {
-										dSumme = Helper.rundeKaufmaennisch(
-												new BigDecimal(dSumme), 2)
-												.doubleValue();
-										// Bezahlte Taetigkeiten
-										for (int k = 0; k < sonstigeTaetigkeiten.length; k++) {
-											if (zeitdatenDto_Aktuell
-													.getTaetigkeitIId()
-													.equals(sonstigeTaetigkeiten[k]
-															.getIId())) {
+									if (dBeginn != null && dEnde != null) {
+										double dSumme = dEnde.doubleValue()
+												- dBeginn.doubleValue();
 
-												if (sonstigeTaetigkeiten[k]
-														.getFBezahlt() > 0) {
-
-													dSummeTagSONSTIGE_BEZAHLT_OHNE_FAKTOR += dSumme;
-													dSumme = Helper
-															.rundeKaufmaennisch(
-																	new BigDecimal(
-																			dSumme)
-																			.multiply(new BigDecimal(
-																					sonstigeTaetigkeiten[k]
-																							.getFBezahlt()
-																							.doubleValue() / 100)),
-																	2)
-															.doubleValue();
-
-													dSummeTagSONSTIGE_BEZAHLT = dSummeTagSONSTIGE_BEZAHLT
-															+ dSumme;
-												} else {
-													dSummeTagSONSTIGE_NICHTBEZAHLT = dSummeTagSONSTIGE_NICHTBEZAHLT
-															+ dSumme;
-												}
-
-												sZusatzbezeichnung = sZusatzbezeichnung
-														+ sonstigeTaetigkeiten[k]
-																.getCNr()
-														+ " "
-														+ dSumme + ",";
-											}
+										// Wenn Taetigkeit UNTER dann bei UNTER
+										// hinzufuegen
+										if (zeitdatenDto_Aktuell
+												.getTaetigkeitIId().equals(
+														taetigkeitDto_Unter
+																.getIId())) {
+											dSummeTagUNTER = dSummeTagUNTER
+													+ dSumme;
+										}
+										// Wenn Taetigkeit BEHOERDE dann bei
+										// BEHOERDE hinzufuegen
+										else if (zeitdatenDto_Aktuell
+												.getTaetigkeitIId().equals(
+														taetigkeitDto_Behoerde
+																.getIId())) {
+											dSummeTagBEHOERDE = dSummeTagBEHOERDE
+													+ dSumme;
+										}
+										// Wenn Taetigkeit URLAUB dann bei
+										// URLAUB
+										// hinzufuegen
+										else if (zeitdatenDto_Aktuell
+												.getTaetigkeitIId().equals(
+														taetigkeitDto_Urlaub
+																.getIId())) {
+											dSummeTagURLAUB_STUNDEN = dSummeTagURLAUB_STUNDEN
+													+ dSumme;
+										}
+										// Wenn Taetigkeit ARZT dann bei ARZT
+										// hinzufuegen
+										else if (zeitdatenDto_Aktuell
+												.getTaetigkeitIId().equals(
+														taetigkeitDto_Arzt
+																.getIId())) {
+											dSummeTagARZT = dSummeTagARZT
+													+ dSumme;
+										}
+										// Wenn Taetigkeit ZA dann bei ZA
+										// hinzufuegen
+										else if (zeitdatenDto_Aktuell
+												.getTaetigkeitIId().equals(
+														taetigkeitDto_ZA
+																.getIId())) {
+											dSummeTagZEITAUSGLEICH = dSummeTagZEITAUSGLEICH
+													+ dSumme;
+										}
+										// Wenn Taetigkeit KRANK dann bei KRANK
+										// hinzufuegen
+										else if (zeitdatenDto_Aktuell
+												.getTaetigkeitIId().equals(
+														taetigkeitDto_Krank
+																.getIId())) {
+											dSummeTagKRANK = dSummeTagKRANK
+													+ dSumme;
+										}
+										// Wenn Taetigkeit KINDKRANK dann bei
+										// KINDKRANK
+										// hinzufuegen
+										else if (zeitdatenDto_Aktuell
+												.getTaetigkeitIId().equals(
+														taetigkeitDto_Kindkrank
+																.getIId())) {
+											dSummeTagKINDKRANK = dSummeTagKINDKRANK
+													+ dSumme;
+										}
+										// Wenn KOMMT, dann Mehrfaches KOMMT
+										else if (zeitdatenDto_Aktuell
+												.getTaetigkeitIId().equals(
+														taetigkeitIId_Kommt)) {
+											sBemerkung = "Mehrfaches KOMMT"
+													+ sBemerkung;
+										}
+										// Wenn GEHT, dann Mehrfaches GEHT
+										else if (zeitdatenDto_Aktuell
+												.getTaetigkeitIId().equals(
+														taetigkeitIId_Geht)) {
+											sBemerkung = "Mehrfaches GEHT"
+													+ sBemerkung;
 										}
 
+										// Ansonsten muss Taetigkeit bei
+										// sonstigen
+										// bezahlten oder nicht bezahlten
+										// Taetigkeiten dabei sein
+										else {
+											dSumme = Helper.rundeKaufmaennisch(
+													new BigDecimal(dSumme), 2)
+													.doubleValue();
+											// Bezahlte Taetigkeiten
+											for (int k = 0; k < sonstigeTaetigkeiten.length; k++) {
+												if (zeitdatenDto_Aktuell
+														.getTaetigkeitIId()
+														.equals(sonstigeTaetigkeiten[k]
+																.getIId())) {
+
+													if (sonstigeTaetigkeiten[k]
+															.getFBezahlt() > 0) {
+
+														dSummeTagSONSTIGE_BEZAHLT_OHNE_FAKTOR += dSumme;
+														dSumme = Helper
+																.rundeKaufmaennisch(
+																		new BigDecimal(
+																				dSumme)
+																				.multiply(new BigDecimal(
+																						sonstigeTaetigkeiten[k]
+																								.getFBezahlt()
+																								.doubleValue() / 100)),
+																		2)
+																.doubleValue();
+
+														dSummeTagSONSTIGE_BEZAHLT = dSummeTagSONSTIGE_BEZAHLT
+																+ dSumme;
+													} else {
+														dSummeTagSONSTIGE_NICHTBEZAHLT = dSummeTagSONSTIGE_NICHTBEZAHLT
+																+ dSumme;
+													}
+
+													sZusatzbezeichnung = sZusatzbezeichnung
+															+ sonstigeTaetigkeiten[k]
+																	.getCNr()
+															+ " "
+															+ dSumme
+															+ ",";
+												}
+											}
+
+										}
 									}
+								} else {
+									sBemerkung = "Fehler in Buchungen"
+											+ sBemerkung;
 								}
-							} else {
-								sBemerkung = "Fehler in Buchungen" + sBemerkung;
 							}
+
+							zeitdatenDto_Vorher = zeitdatenDto_Aktuell;
 						}
 
-						zeitdatenDto_Vorher = zeitdatenDto_Aktuell;
+					} else {
+						// PJ18440
+
+						VonBisErfassungTagesdatenDto vbDto = berechneTagesArbeitszeitVonBisZeiterfassungOhneKommtGeht(
+								personalIId, new java.sql.Date(cal.getTime()
+										.getTime()), theClientDto);
+
+						dSummeTagUNTER = vbDto.getdUnter();
+						dSummeTagARZT = vbDto.getdArzt();
+						dSummeTagBEHOERDE = vbDto.getdBehoerde();
+						dSummeTagZEITAUSGLEICH = vbDto.getdZeitausgleich();
+						dSummeTagKRANK = vbDto.getdKrank();
+						dSummeTagKINDKRANK = vbDto.getdKindkrank();
+						dSummeTagURLAUB_STUNDEN = vbDto.getdUrlaub();
+
+						dIst = vbDto.getdIst();
 					}
 
 					// Zulagen in Bemerkung schreiben
@@ -16145,11 +18947,13 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							&& zeitmodelltagDto.getUErlaubteanwesenheitszeit() != null
 							&& zeitmodelltagDto.getUErlaubteanwesenheitszeit()
 									.getTime() != -3600000) {
-						double dMaxAnwesenheit = Helper
-								.time2Double(zeitmodelltagDto
-										.getUErlaubteanwesenheitszeit());
-						if (dIst > dMaxAnwesenheit) {
-							dIst = dMaxAnwesenheit;
+						if (bTagesUndwochenmaximumIgnorieren == false) {
+							double dMaxAnwesenheit = Helper
+									.time2Double(zeitmodelltagDto
+											.getUErlaubteanwesenheitszeit());
+							if (dIst > dMaxAnwesenheit) {
+								dIst = dMaxAnwesenheit;
+							}
 						}
 					}
 
@@ -16178,7 +18982,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 					// Nur beim ersten Block rechnen
 
-					// Berechnen der Summen: Arzt, Unterbrechung und Behoerde
+					// Berechnen der Summen: Arzt, Unterbrechung und
+					// Behoerde
 
 					double d_zeitdec = 0;
 
@@ -16189,7 +18994,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 						if (tSollzeit != null) {
 							zeile.setBdSoll(new BigDecimal(Helper.time2Double(
-									tSollzeit).doubleValue())); // Sollzeit zu
+									tSollzeit).doubleValue())); // Sollzeit
+																// zu
 							// dem Datum
 							d_zeitdec = Helper.time2Double(tSollzeit)
 									.doubleValue();
@@ -16249,7 +19055,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 										throw new NoResultException("");
 									}
 								} catch (NoResultException ex14) {
-									// keine Sollzeit fuer Tagesart definiert
+									// keine Sollzeit fuer Tagesart
+									// definiert
 									Time usoll = getSollzeitZuDatumWennFeiertag(
 											personalIId, new Timestamp(cal
 													.getTime().getTime()),
@@ -16366,8 +19173,10 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 									zeile.setBdUrlaubStunden(zeile
 											.getBdUrlaubStunden().add(
 													bdZeitDecimal));
-									// 11339: Wenn ein Halber Feiertag ist, dann
-									// wird bei den Urlaubsstunden die Sollzeit
+									// 11339: Wenn ein Halber Feiertag ist,
+									// dann
+									// wird bei den Urlaubsstunden die
+									// Sollzeit
 									// des
 									// Originaltags gutgeschrieben
 									if (bIstHalberFeiertag) {
@@ -16406,8 +19215,10 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 													new BigDecimal(2),
 													BigDecimal.ROUND_HALF_EVEN)));
 
-									// 11339: Wenn ein Halber Feiertag ist, dann
-									// wird bei den Urlaubsstunden die Haelfte
+									// 11339: Wenn ein Halber Feiertag ist,
+									// dann
+									// wird bei den Urlaubsstunden die
+									// Haelfte
 									// der Sollzeit des
 									// Originaltags gutgeschrieben
 									if (bIstHalberFeiertag) {
@@ -16441,7 +19252,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 													bdZeitDecimal));
 								}
 							}
-							// Wenn Taetigkeit KRANK dann bei KRANK hinzufuegen
+							// Wenn Taetigkeit KRANK dann bei KRANK
+							// hinzufuegen
 							else if (sonderzeitenDto.getTaetigkeitIId().equals(
 									taetigkeitDto_Krank.getIId())) {
 								zeile.setBdKrank(zeile.getBdKrank().add(
@@ -16478,7 +19290,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 										.getBezeichnung();
 
 							}
-							// Wenn Taetigkeit ARZT dann bei ARZT hinzufuegen
+							// Wenn Taetigkeit ARZT dann bei ARZT
+							// hinzufuegen
 							else if (sonderzeitenDto.getTaetigkeitIId().equals(
 									taetigkeitDto_Arzt.getIId())) {
 								zeile.setBdArzt(zeile.getBdArzt().add(
@@ -16528,7 +19341,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					if (j + 1 != bloecke.size()) {
 						if (dIst < dSollzeitGesamt) {
 							// auf 2 stellen runden
-							// myDouble = Math.round( myDouble * 100. ) / 100.;
+							// myDouble = Math.round( myDouble * 100. ) /
+							// 100.;
 
 							zeile.setBdSoll(Helper.rundeKaufmaennisch(
 									new BigDecimal(dIst), 2));
@@ -16620,6 +19434,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 								long l = zeitdatenEinesTagesDtos[0].getTZeit()
 										.getTime()
 										+ (long) (zeile.getBdSoll()
+												.doubleValue() * 3600000)
+										+ (long) (zeile.getBdUnter()
 												.doubleValue() * 3600000);
 								dBlockzeit = getBlockzeitenEinesTages(
 										personalDto,
@@ -16633,7 +19449,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 						}
 
 						// Wenn Tagesart Sonntag und Feiertag, DANN ist den
-						// ganzen Tag Blockzeit, d.h. es sind immer Steuerfreie
+						// ganzen Tag Blockzeit, d.h. es sind immer
+						// Steuerfreie
 						// Ueberstunden
 						if (tagesartIId
 								.equals(tagesartFindByCNr(
@@ -16673,7 +19490,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 								}
 							}
 
-							// Gibt es fuer diese Tagesart einen Eintrag in den
+							// Gibt es fuer diese Tagesart einen Eintrag in
+							// den
 							// Kollektivuestd 100 ?
 							if (hmKollektivUestd100.containsKey(tagesartIId)) {
 								KollektivuestdDto kollektivuestdDto = (KollektivuestdDto) hmKollektivUestd100
@@ -16684,9 +19502,12 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 								if (bUestdZaehlenErstWennSollzeitErbracht == true) {
 
+									// SP2710
 									long l = zeitdatenFuerUestdAbrechnung[0]
 											.getTZeit().getTime()
 											+ (long) (zeile.getBdSoll()
+													.doubleValue() * 3600000)
+											+ (long) (zeile.getBdUnter()
 													.doubleValue() * 3600000);
 
 									zeitdatenFuerUestdAbrechnung = ZeitdatenDto
@@ -16718,7 +19539,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 												zeitdatenFuerUestdAbrechnung,
 												cUestdAb.getTime().getTime());
 
-								// Ersten und letzten Eintrag des Tages setzen
+								// Ersten und letzten Eintrag des Tages
+								// setzen
 
 								long lDifferenz = zeitdatenFuerUestdAbrechnung[zeitdatenEinesTagesDtos.length - 1]
 										.getTZeit().getTime()
@@ -16741,7 +19563,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 									c2.set(Calendar.MILLISECOND, 0);
 									tsTemp = new Timestamp(c2.getTimeInMillis());
 									zeitdatenDto_Aktuell.setTZeit(tsTemp);
-									// Bei jeder Geraden Zahl mit dem Vorgaenger
+									// Bei jeder Geraden Zahl mit dem
+									// Vorgaenger
 									// vergleichen
 									if (m % 2 == 0 && m != 0) {
 										if (zeitdatenDto_Aktuell
@@ -16796,7 +19619,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 															.doubleValue()
 															- dBeginn
 																	.doubleValue();
-													// Wenn Taetigkeit ARZT dann
+													// Wenn Taetigkeit ARZT
+													// dann
 													// bei
 													// ARZT hinzufuegen
 													if (zeitdatenDto_Aktuell
@@ -16816,11 +19640,14 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 														dGesamt += dSumme;
 													}
 
-													// Ansonsten muss Taetigkeit
+													// Ansonsten muss
+													// Taetigkeit
 													// bei
-													// sonstigen bezahlten oder
+													// sonstigen bezahlten
+													// oder
 													// nicht
-													// bezahlten Taetigkeiten
+													// bezahlten
+													// Taetigkeiten
 													// dabei
 													// sein
 													else {
@@ -16830,7 +19657,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 																				dSumme),
 																		2)
 																.doubleValue();
-														// Bezahlte Taetigkeiten
+														// Bezahlte
+														// Taetigkeiten
 														boolean bGefunden = false;
 														for (int k = 0; k < sonstigeTaetigkeiten.length; k++) {
 															if (zeitdatenDto_Aktuell
@@ -16892,7 +19720,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 											.setTimeInMillis(kollektivuestdDto
 													.getUBis().getTime());
 
-									// Wenn Ja, dann Zeitbuchungen neu setzen
+									// Wenn Ja, dann Zeitbuchungen neu
+									// setzen
 									Calendar cUestdBis = Calendar.getInstance();
 									cUestdBis
 											.setTimeInMillis(zeitdatenEinesTagesDtos[0]
@@ -16944,7 +19773,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 													&& zeitdatenDto_Vorher
 															.getTaetigkeitIId()
 															.equals(taetigkeitIId_Geht)) {
-												// Wenn KOMMT - GEHT, dann nicht
+												// Wenn KOMMT - GEHT, dann
+												// nicht
 												// dazuzaehlen
 
 												Double dBeginn = Helper
@@ -16983,7 +19813,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 															.doubleValue()
 															- dBeginn
 																	.doubleValue();
-													// Wenn Taetigkeit ARZT dann
+													// Wenn Taetigkeit ARZT
+													// dann
 													// bei
 													// ARZT hinzufuegen
 													if (zeitdatenDto_Aktuell
@@ -17002,9 +19833,11 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 														dGesamt += dSumme;
 													}
 
-													// Ansonsten muss Taetigkeit
+													// Ansonsten muss
+													// Taetigkeit
 													// bei
-													// sonstigen bezahlten oder
+													// sonstigen bezahlten
+													// oder
 													// nicht bezahlten
 													// Taetigkeiten
 													// dabei sein
@@ -17015,7 +19848,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 																				dSumme),
 																		2)
 																.doubleValue();
-														// Bezahlte Taetigkeiten
+														// Bezahlte
+														// Taetigkeiten
 														boolean bGefunden = false;
 														for (int k = 0; k < sonstigeTaetigkeiten.length; k++) {
 															if (zeitdatenDto_Aktuell
@@ -17076,7 +19910,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							}
 
 							// 50% tageweise
-							// Gibt es fuer diese Tagesart einen Eintrag in den
+							// Gibt es fuer diese Tagesart einen Eintrag in
+							// den
 							// Kollektivuestd 50 ?
 							if (hmKollektivUestd50Tageweise
 									.containsKey(tagesartIId)) {
@@ -17098,7 +19933,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 											.getInstance();
 									cUestdTemp.setTimeInMillis(ab.getTime());
 
-									// Wenn Ja, dann Zeitbuchungen neu setzen
+									// Wenn Ja, dann Zeitbuchungen neu
+									// setzen
 									Calendar cUestdAb = Calendar.getInstance();
 									cUestdAb.setTimeInMillis(zeitdatenEinesTagesDtos[0]
 											.getTZeit().getTime());
@@ -17204,7 +20040,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 													&& zeitdatenDto_Vorher
 															.getTaetigkeitIId()
 															.equals(taetigkeitIId_Geht)) {
-												// Wenn KOMMT - GEHT, dann nicht
+												// Wenn KOMMT - GEHT, dann
+												// nicht
 												// dazuzaehlen
 
 												Double dBeginn = Helper
@@ -17250,7 +20087,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 																.doubleValue()
 																- dBeginn
 																		.doubleValue();
-														// Wenn Taetigkeit ARZT
+														// Wenn Taetigkeit
+														// ARZT
 														// dann
 														// bei
 														// ARZT hinzufuegen
@@ -17260,9 +20098,11 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 																		.getIId())) {
 															bBezahlt = true;
 														}
-														// Wenn Taetigkeit KRANK
+														// Wenn Taetigkeit
+														// KRANK
 														// dann
-														// bei KRANK hinzufuegen
+														// bei KRANK
+														// hinzufuegen
 														else if (zeitdatenDto_Aktuell
 																.getTaetigkeitIId()
 																.equals(taetigkeitDto_Krank
@@ -17273,7 +20113,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 														// Ansonsten muss
 														// Taetigkeit
 														// bei
-														// sonstigen bezahlten
+														// sonstigen
+														// bezahlten
 														// oder
 														// nicht bezahlten
 														// Taetigkeiten
@@ -17380,6 +20221,9 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 				dWochensummeIst += zeile.getBdIst().doubleValue();
 
+				// PJ18628
+				dWochensummeIstOhneSonderzeiten += zeile.getBdIst()
+						.doubleValue();
 				// Projekt 13205: BezahlteSonmdertaetigkeiten gehoeren dazu
 				dWochensummeIst += zeile.getBdSonstigeBezahlt().doubleValue();
 				if (zeile.getBdFeiertag() != null) {
@@ -17402,7 +20246,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				dWochensummeSollFuerUestd += zeile.getBdSoll()
 						.add(zeile.getBdFeiertag()).doubleValue();
 
-				// Wenn naechster Tag in anderer Woche, dann Wochesumme ausgeben
+				// Wenn naechster Tag in anderer Woche, dann Wochesumme
+				// ausgeben
 				// und bei 0 anfangen
 
 				Calendar cKwNachsterTag = Calendar.getInstance();
@@ -17411,7 +20256,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				int kwNachsterTag = cKwNachsterTag.get(Calendar.WEEK_OF_YEAR);
 
 				if (zeile.getIKw() != kwNachsterTag || i == lAnzahlTageImMonat) {
-					// Hier erfolget die eigentliche 50% Ueberstundenberechnung
+					// Hier erfolget die eigentliche 50%
+					// Ueberstundenberechnung
 
 					zeile.setBdUestd50(new BigDecimal(0));
 					zeile.setBdMehrstunden(new BigDecimal(0));
@@ -17522,7 +20368,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 									if (dto.getIKw().intValue() == zeile
 											.getIKw().intValue()) {
 
-										// Wenn B_UESTDVERTEILEN und diff <0,
+										// Wenn B_UESTDVERTEILEN und diff
+										// <0,
 										// dann gibt es keine Ueberstunden
 										// Mehrstunden bzw. ueberstunden
 										if (dWochenDiff <= 0) {
@@ -17617,8 +20464,10 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 												}
 
-												// Wenn noch verbeibende, die
-												// sind dann Wochenweise 50%ig
+												// Wenn noch verbeibende,
+												// die
+												// sind dann Wochenweise
+												// 50%ig
 
 												if (f == 3
 														&& zuVerteilendeUestd > 0) {
@@ -17638,12 +20487,14 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					}
 
 					dWochensummeIst = 0;
+					dWochensummeIstOhneSonderzeiten = 0;
 					dWochensummeSollFuerUestd = 0;
 					dWochensummeUestd50Tageweise = 0;
 					dWochensummeUestd100 = 0;
 					dWochensummeFtgSoll = 0;
 				}
 			}
+
 		}
 
 		// Faktor
@@ -17680,6 +20531,21 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							iJahr, iMonat);
 
 			for (int i = 0; i < stundeabrechnungDtos.length; i++) {
+
+				Calendar c = Calendar.getInstance();
+				c.setTime(stundeabrechnungDtos[i].getTDatum());
+
+				// PJ18647
+				for (int k = 0; k < monatsabrechnungZeilen.size(); k++) {
+					ZeileMonatsabrechnungDto z = (ZeileMonatsabrechnungDto) monatsabrechnungZeilen
+							.get(k);
+
+					if (z.getITag() == c.get(Calendar.DATE)) {
+						z.setBdQualifikationsfaktor(stundeabrechnungDtos[i]
+								.getNQualifikationsfaktor());
+					}
+
+				}
 
 				// Fuer Uebertrag in Monatsabrechnun
 
@@ -17729,6 +20595,11 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 		// In Report uebergeben
 		HashMap parameter = new HashMap();
+
+		parameter.put("P_VON_BIS_ERFASSUNG", new Boolean(bVonBis));
+		parameter
+				.put("P_VON_BIS_ERFASSUNG_KOMMT_GEHT", new Boolean(bKommtGeht));
+
 		parameter.put("P_AUSBEZAHLTMEHRSTD", Helper.rundeKaufmaennisch(
 				bdSummeStundenabrechnungUestdMehrstunden, 2));
 
@@ -17857,6 +20728,11 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		// PJ 16194
 		if (nSollStundenFIX != null) {
 			bdSummeSoll = nSollStundenFIX;
+			// 2865
+			if (bSollstundenMitrechnen == false) {
+				dSummeMonatFeiertagSoll = 0;
+			}
+
 		}
 
 		parameter.put("P_SOLLGESAMT", bdSummeSoll);
@@ -17959,9 +20835,17 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		parameter.put("P_UESTD100PFLICHTIGVORHANDEN",
 				bdVorhandeneUESTD100PFLICHTIG);
 		parameter.put("P_UESTD100FREIVORHANDEN", bdVorhandeneUESTD100FREI);
-		parameter.put("P_UESTD50PFLICHTIGVORHANDEN",
-				bdVorhandeneUESTD50PFLICHTIG
-						.add(bdSummeStundenabrechnungGutstunden));
+
+		// SP2688
+		if (bGutstundenZuUest50Addieren) {
+			parameter.put("P_UESTD50PFLICHTIGVORHANDEN",
+					bdVorhandeneUESTD50PFLICHTIG
+							.add(bdSummeStundenabrechnungGutstunden));
+		} else {
+			parameter.put("P_UESTD50PFLICHTIGVORHANDEN",
+					bdVorhandeneUESTD50PFLICHTIG);
+		}
+
 		parameter.put("P_UESTD50FREIVORHANDEN", bdVorhandeneUESTD50FREI);
 		parameter.put("P_MEHRSTUNDENVORHANDEN", bdVorhandeneMehrstunden);
 
@@ -18181,6 +21065,18 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex5);
 		}
 
+		// PJ18621
+		BigDecimal gleizeitsaldoZumAbrechnungszeitpunkt = Helper
+				.rundeKaufmaennisch(
+						gleitzeitsaldoDto_Vormonat
+								.getNSaldo()
+								.add(bdSummeIst)
+								.subtract(
+										bdSummeStundenabrechnungUestdNormalstunden),
+						4);
+		parameter.put("P_GLEITZEITSALDO_ABRECHNUNGSZEITPUNKT",
+				gleizeitsaldoZumAbrechnungszeitpunkt);
+
 		if (bSaldozurueckschreiben == true) {
 			GleitzeitsaldoDto dto = null;
 			try {
@@ -18235,12 +21131,24 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					}
 
 					// PJ15624
-					if (bdVorhandeneUESTD50PFLICHTIG.add(
-							bdSummeStundenabrechnungGutstunden).doubleValue() >= 0) {
-						dto.setNSaldouestpflichtig50(bdVorhandeneUESTD50PFLICHTIG
-								.add(bdSummeStundenabrechnungGutstunden));
+					// SP2688
+					if (bGutstundenZuUest50Addieren) {
+
+						if (bdVorhandeneUESTD50PFLICHTIG.add(
+								bdSummeStundenabrechnungGutstunden)
+								.doubleValue() >= 0) {
+							dto.setNSaldouestpflichtig50(bdVorhandeneUESTD50PFLICHTIG
+									.add(bdSummeStundenabrechnungGutstunden));
+						} else {
+							dto.setNSaldouestpflichtig50(new BigDecimal(0));
+						}
+
 					} else {
-						dto.setNSaldouestpflichtig50(new BigDecimal(0));
+						if (bdVorhandeneUESTD50PFLICHTIG.doubleValue() >= 0) {
+							dto.setNSaldouestpflichtig50(bdVorhandeneUESTD50PFLICHTIG);
+						} else {
+							dto.setNSaldouestpflichtig50(new BigDecimal(0));
+						}
 					}
 
 					// Ueberstundenpauschale und Stundenabrechnung abziehen
@@ -18304,12 +21212,23 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					dto.setNSaldouestpflichtig100(new BigDecimal(0));
 				}
 
-				if (bdVorhandeneUESTD50PFLICHTIG.add(
-						bdSummeStundenabrechnungGutstunden).doubleValue() >= 0) {
-					dto.setNSaldouestpflichtig50(bdVorhandeneUESTD50PFLICHTIG
-							.add(bdSummeStundenabrechnungGutstunden));
+				// SP2688
+				if (bGutstundenZuUest50Addieren) {
+
+					if (bdVorhandeneUESTD50PFLICHTIG.add(
+							bdSummeStundenabrechnungGutstunden).doubleValue() >= 0) {
+						dto.setNSaldouestpflichtig50(bdVorhandeneUESTD50PFLICHTIG
+								.add(bdSummeStundenabrechnungGutstunden));
+					} else {
+						dto.setNSaldouestpflichtig50(new BigDecimal(0));
+					}
+
 				} else {
-					dto.setNSaldouestpflichtig50(new BigDecimal(0));
+					if (bdVorhandeneUESTD50PFLICHTIG.doubleValue() >= 0) {
+						dto.setNSaldouestpflichtig50(bdVorhandeneUESTD50PFLICHTIG);
+					} else {
+						dto.setNSaldouestpflichtig50(new BigDecimal(0));
+					}
 				}
 
 				dto.setNSaldo(Helper
@@ -18509,22 +21428,24 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 										Helper.cutTimestamp(new Timestamp(
 												cStundenabrechnung
 														.getTimeInMillis())));
-						stundenabrechnungDto.setIId(stundenabrechnungDtoTemp
-								.getIId());
-						getPersonalFac().updateStundenabrechnung(
-								stundenabrechnungDto, theClientDto);
-					} catch (javax.ejb.EJBException ex3) {
 
-						ex3.printStackTrace();
-
-						try {
-							getPersonalFac().createStundenabrechnung(
+						if (stundenabrechnungDtoTemp != null) {
+							stundenabrechnungDto
+									.setIId(stundenabrechnungDtoTemp.getIId());
+							getPersonalFac().updateStundenabrechnung(
 									stundenabrechnungDto, theClientDto);
-						} catch (RemoteException ex7) {
-							throwEJBExceptionLPRespectOld(ex7);
-						}
+						} else {
+							try {
+								getPersonalFac().createStundenabrechnung(
+										stundenabrechnungDto, theClientDto);
+							} catch (RemoteException ex7) {
+								throwEJBExceptionLPRespectOld(ex7);
+							}
 
-					} catch (RemoteException ex3) {
+						}
+					}
+
+					catch (RemoteException ex3) {
 						throwEJBExceptionLPRespectOld(ex3);
 					}
 
@@ -18554,8 +21475,6 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 							getPersonalFac().removeStundenabrechnung(
 									stundenabrechnungDtoTemp);
 						}
-					} catch (javax.ejb.EJBException ex3) {
-
 					} catch (RemoteException ex3) {
 						throwEJBExceptionLPRespectOld(ex3);
 					}
@@ -18814,6 +21733,9 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					.getSZusatzbezeichnung();
 			data[i][REPORT_MONATSABRECHNUNG_REISE] = z.getBdReise();
 			data[i][REPORT_MONATSABRECHNUNG_JAHR] = z.getIJahr();
+			data[i][REPORT_MONATSABRECHNUNG_MONAT] = z.getIMonat();
+			data[i][REPORT_MONATSABRECHNUNG_QUALIFIKATIONSFAKTOR] = z
+					.getBdQualifikationsfaktor();
 		}
 
 		initJRDS(parameter, ZeiterfassungFac.REPORT_MODUL,
@@ -18824,6 +21746,321 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		monatsabrechnungDto.setData(data.clone());
 		monatsabrechnungDto.setParameter(parameter);
 		return monatsabrechnungDto;
+	}
+
+	private ArrayList<ZeitdatenDto> rundungZugunstenDesUnternehmens(
+			ArrayList<ZeitdatenDto> einBlock, ZeitmodelltagDto zeitmodelltagDto) {
+
+		int iRundungBeginn = 0;
+		if (zeitmodelltagDto.getIRundungbeginn() != null) {
+			iRundungBeginn = zeitmodelltagDto.getIRundungbeginn();
+		}
+
+		int iRundungEnde = 0;
+		if (zeitmodelltagDto.getIRundungende() != null) {
+			iRundungEnde = zeitmodelltagDto.getIRundungende();
+		}
+
+		long lRundungBeginn = 60000 * iRundungBeginn;
+		long lRundungEnde = 60000 * iRundungEnde;
+
+		if (iRundungBeginn > 0 || iRundungEnde > 0) {
+
+			boolean bRundeSondertaetigkeiten = Helper
+					.short2boolean(zeitmodelltagDto
+							.getBRundesondertaetigkeiten());
+
+			ZeitdatenDto[] zeitdatenEinesTagesDtos = new ZeitdatenDto[einBlock
+					.size()];
+			zeitdatenEinesTagesDtos = (ZeitdatenDto[]) einBlock
+					.toArray(zeitdatenEinesTagesDtos);
+			for (int z = 0; z < zeitdatenEinesTagesDtos.length; z++) {
+				ZeitdatenDto eineZeile = zeitdatenEinesTagesDtos[z];
+				// Automatikbuchungen auslassen (z.b. das bei
+				// Mitternachtssprung nicht gerundet wird)
+				if (Helper.short2boolean(eineZeile.getBAutomatikbuchung()) == false) {
+
+					if (lRundungBeginn != 0) {
+						if (z == 0) {
+							long lZuviel = eineZeile.getTZeit().getTime()
+									% lRundungBeginn;
+							if (lZuviel != 0) {
+								lZuviel = lRundungBeginn - lZuviel;
+								eineZeile.setTZeit(new Timestamp(eineZeile
+										.getTZeit().getTime() + lZuviel));
+							}
+						}
+					}
+
+					if (z > 0 && z < zeitdatenEinesTagesDtos.length - 1) {
+						if (eineZeile.getTaetigkeitIId() != null) {
+
+							if (bRundeSondertaetigkeiten == true) {
+
+								if (z % 2 == 1) {
+									if (lRundungEnde != 0) {
+										long lZuviel = eineZeile.getTZeit()
+												.getTime() % lRundungEnde;
+										eineZeile.setTZeit(new Timestamp(
+												eineZeile.getTZeit().getTime()
+														- lZuviel));
+									}
+								} else if (z % 2 == 0) {
+									if (lRundungBeginn != 0) {
+										long lZuviel = eineZeile.getTZeit()
+												.getTime() % lRundungBeginn;
+										if (lZuviel != 0) {
+											lZuviel = lRundungBeginn - lZuviel;
+											eineZeile.setTZeit(new Timestamp(
+													eineZeile.getTZeit()
+															.getTime()
+															+ lZuviel));
+										}
+									}
+								}
+							}
+						}
+
+					}
+
+					if (z == zeitdatenEinesTagesDtos.length - 1) {
+						if (lRundungEnde != 0) {
+							long lZuviel = eineZeile.getTZeit().getTime()
+									% lRundungEnde;
+							eineZeile.setTZeit(new Timestamp(eineZeile
+									.getTZeit().getTime() - lZuviel));
+						}
+					}
+					einBlock.set(z, eineZeile);
+				}
+			}
+
+		}
+		return einBlock;
+	}
+
+	private ArrayList<ZeitdatenDto> fruehestesKommtUndSpaetestesGehtUndMaximaleTagesanwesenheitVerschieben(
+			TaetigkeitDto taetigkeitDto_Unter,
+			TaetigkeitDto taetigkeitDto_Arzt,
+			TaetigkeitDto taetigkeitDto_Behoerde,
+			ArrayList<ZeitdatenDto> einBlock,
+			ZeitmodelltagDto zeitmodelltagDto,
+			Double dMaximaleTagesanwesenheitszeitAufgrundWochenMaximum) {
+
+		java.sql.Time tFruehestesKommt = zeitmodelltagDto.getUBeginn();
+
+		java.sql.Time tSpaetestesGeht = zeitmodelltagDto.getUEnde();
+
+		boolean bVerkehrt = false;
+
+		if (tFruehestesKommt != null && tSpaetestesGeht != null
+				&& tFruehestesKommt.after(tSpaetestesGeht)) {
+			bVerkehrt = true;
+		}
+
+		boolean bFrueh = true;
+
+		ZeitdatenDto[] zeitdatenEinesTagesDtos = new ZeitdatenDto[einBlock
+				.size()];
+		zeitdatenEinesTagesDtos = (ZeitdatenDto[]) einBlock
+				.toArray(zeitdatenEinesTagesDtos);
+
+		// PJ16913
+		Timestamp tMaxGeht = null;
+		if ((zeitmodelltagDto != null
+				&& zeitmodelltagDto.getUErlaubteanwesenheitszeit() != null && zeitmodelltagDto
+				.getUErlaubteanwesenheitszeit().getTime() != -3600000)
+				|| dMaximaleTagesanwesenheitszeitAufgrundWochenMaximum != null) {
+			if (zeitdatenEinesTagesDtos.length > 0) {
+
+				if (tFruehestesKommt != null
+						&& tFruehestesKommt.getTime() > -3600000) {
+					Calendar tZeit = Calendar.getInstance();
+					tZeit.setTimeInMillis(zeitdatenEinesTagesDtos[0].getTZeit()
+							.getTime());
+					Calendar tKommt = Calendar.getInstance();
+					tKommt.setTimeInMillis(tFruehestesKommt.getTime());
+					tZeit.set(Calendar.HOUR_OF_DAY,
+							tKommt.get(Calendar.HOUR_OF_DAY));
+					tZeit.set(Calendar.MINUTE, tKommt.get(Calendar.MINUTE));
+					tZeit.set(Calendar.SECOND, 0);
+					tZeit.set(Calendar.MILLISECOND, 0);
+					java.sql.Timestamp tNeueZeitKommt = new java.sql.Timestamp(
+							tZeit.getTimeInMillis());
+					if (zeitdatenEinesTagesDtos[0].getTZeit().before(
+							tNeueZeitKommt)) {
+						zeitdatenEinesTagesDtos[0].setTZeit(tNeueZeitKommt);
+
+					}
+				}
+
+				// PJ18724 Wenn Ein Wochenmaximum definiert kann es sein, muss
+				// dies hier beruecksichtigt werden
+				double dMaxAnwesenheit = 24;
+				if (zeitmodelltagDto.getUErlaubteanwesenheitszeit() != null
+						&& zeitmodelltagDto.getUErlaubteanwesenheitszeit()
+								.getTime() != -3600000) {
+					dMaxAnwesenheit = Helper.time2Double(zeitmodelltagDto
+							.getUErlaubteanwesenheitszeit());
+				}
+
+				if (dMaximaleTagesanwesenheitszeitAufgrundWochenMaximum != null) {
+
+					if (dMaximaleTagesanwesenheitszeitAufgrundWochenMaximum
+							.doubleValue() < dMaxAnwesenheit) {
+						dMaxAnwesenheit = dMaximaleTagesanwesenheitszeitAufgrundWochenMaximum;
+					}
+
+				}
+
+				tMaxGeht = new Timestamp((long) (zeitdatenEinesTagesDtos[0]
+						.getTZeit().getTime() + (dMaxAnwesenheit * 3600000)));
+
+				ZeitdatenDto[] zeitdatenDtoFuerVorlaeufigeMaxGehtBerechnung = ZeitdatenDto
+						.kopiereArray(zeitdatenEinesTagesDtos);
+
+				// wg. SP3135 auskommentiert
+				/*
+				 * for (int z = 0; z <
+				 * zeitdatenDtoFuerVorlaeufigeMaxGehtBerechnung.length; z++) {
+				 * ZeitdatenDto eineZeile =
+				 * zeitdatenDtoFuerVorlaeufigeMaxGehtBerechnung[z]; if
+				 * (eineZeile.getTZeit().after(tMaxGeht)) {
+				 * eineZeile.setTZeit(tMaxGeht); } }
+				 */
+
+				double dDauerPaarweiseSondertaetigkeiten = 0;
+				try {
+					dDauerPaarweiseSondertaetigkeiten = berechnePaarweiserSondertaetigkeiten(
+							zeitdatenDtoFuerVorlaeufigeMaxGehtBerechnung,
+							taetigkeitDto_Unter.getIId());
+					dDauerPaarweiseSondertaetigkeiten += berechnePaarweiserSondertaetigkeiten(
+							zeitdatenDtoFuerVorlaeufigeMaxGehtBerechnung,
+							taetigkeitDto_Arzt.getIId());
+					dDauerPaarweiseSondertaetigkeiten += berechnePaarweiserSondertaetigkeiten(
+							zeitdatenDtoFuerVorlaeufigeMaxGehtBerechnung,
+							taetigkeitDto_Behoerde.getIId());
+				} catch (Exception e) {
+					//
+				}
+
+				tMaxGeht = new Timestamp(
+						(long) (tMaxGeht.getTime() + (dDauerPaarweiseSondertaetigkeiten * 3600000)));
+			}
+
+		}
+
+		for (int z = 0; z < zeitdatenEinesTagesDtos.length; z++) {
+			ZeitdatenDto eineZeile = zeitdatenEinesTagesDtos[z];
+
+			if (!Helper.short2boolean(eineZeile.getBAutomatikbuchung())) {
+
+				Calendar tZeit = Calendar.getInstance();
+				tZeit.setTimeInMillis(eineZeile.getTZeit().getTime());
+
+				if (bVerkehrt == false) {
+
+					if (tFruehestesKommt != null
+							&& tFruehestesKommt.getTime() > -3600000) {
+
+						Calendar tKommt = Calendar.getInstance();
+						tKommt.setTimeInMillis(tFruehestesKommt.getTime());
+						tZeit.set(Calendar.HOUR_OF_DAY,
+								tKommt.get(Calendar.HOUR_OF_DAY));
+						tZeit.set(Calendar.MINUTE, tKommt.get(Calendar.MINUTE));
+						tZeit.set(Calendar.SECOND, 0);
+						tZeit.set(Calendar.MILLISECOND, 0);
+						java.sql.Timestamp tNeueZeitKommt = new java.sql.Timestamp(
+								tZeit.getTimeInMillis());
+						if (eineZeile.getTZeit().before(tNeueZeitKommt)) {
+							eineZeile.setTZeit(tNeueZeitKommt);
+							zeitdatenEinesTagesDtos[z] = eineZeile;
+							einBlock.set(z, eineZeile);
+
+						}
+					}
+
+					if (tSpaetestesGeht != null
+							&& tSpaetestesGeht.getTime() > -3600000) {
+						Calendar tGeht = Calendar.getInstance();
+						tGeht.setTimeInMillis(tSpaetestesGeht.getTime());
+						tZeit.set(Calendar.HOUR_OF_DAY,
+								tGeht.get(Calendar.HOUR_OF_DAY));
+						tZeit.set(Calendar.MINUTE, tGeht.get(Calendar.MINUTE));
+						tZeit.set(Calendar.SECOND, 0);
+						tZeit.set(Calendar.MILLISECOND, 0);
+						java.sql.Timestamp tNeueZeitGht = new java.sql.Timestamp(
+								tZeit.getTimeInMillis());
+
+						if (tMaxGeht != null && tNeueZeitGht.after(tMaxGeht)) {
+							tNeueZeitGht = tMaxGeht;
+						}
+
+						if (eineZeile.getTZeit().after(tNeueZeitGht)) {
+							eineZeile.setTZeit(tNeueZeitGht);
+							zeitdatenEinesTagesDtos[z] = eineZeile;
+							einBlock.set(z, eineZeile);
+
+						}
+					}
+				} else {
+
+					// Wenn der erste eintrag nach dem
+					// Spaetestem
+					// GEHT
+					// ist, dann wird alles nach Vorne
+					// verschoben
+					Calendar tGeht = Calendar.getInstance();
+					tGeht.setTimeInMillis(tSpaetestesGeht.getTime());
+					tZeit.set(Calendar.HOUR_OF_DAY,
+							tGeht.get(Calendar.HOUR_OF_DAY));
+					tZeit.set(Calendar.MINUTE, tGeht.get(Calendar.MINUTE));
+					tZeit.set(Calendar.SECOND, 0);
+					tZeit.set(Calendar.MILLISECOND, 0);
+					java.sql.Timestamp tNeueZeitGht = new java.sql.Timestamp(
+							tZeit.getTimeInMillis());
+					if (z == 0 && eineZeile.getTZeit().after(tNeueZeitGht)) {
+						bFrueh = false;
+					}
+
+					if (bFrueh) {
+						if (tFruehestesKommt != null
+								&& tFruehestesKommt.getTime() > -3600000) {
+							if (eineZeile.getTZeit().after(tNeueZeitGht)) {
+								eineZeile.setTZeit(tNeueZeitGht);
+								zeitdatenEinesTagesDtos[z] = eineZeile;
+								einBlock.set(z, eineZeile);
+							}
+
+						}
+					} else {
+						if (tFruehestesKommt != null
+								&& tFruehestesKommt.getTime() > -3600000) {
+
+							Calendar tKommt = Calendar.getInstance();
+							tKommt.setTimeInMillis(tFruehestesKommt.getTime());
+							tZeit.set(Calendar.HOUR_OF_DAY,
+									tKommt.get(Calendar.HOUR_OF_DAY));
+							tZeit.set(Calendar.MINUTE,
+									tKommt.get(Calendar.MINUTE));
+							tZeit.set(Calendar.SECOND, 0);
+							tZeit.set(Calendar.MILLISECOND, 0);
+							java.sql.Timestamp tNeueZeitKommt = new java.sql.Timestamp(
+									tZeit.getTimeInMillis());
+							if (eineZeile.getTZeit().before(tNeueZeitKommt)) {
+								eineZeile.setTZeit(tNeueZeitKommt);
+								zeitdatenEinesTagesDtos[z] = eineZeile;
+								einBlock.set(z, eineZeile);
+
+							}
+						}
+
+					}
+				}
+			}
+		}
+
+		return einBlock;
 	}
 
 	private GleitzeitsaldoDto getGleitzeitsaldoVormonat(Integer personalIId,
@@ -18881,12 +22118,86 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		return gleitzeitsaldoDto_Vormonat;
 	}
 
+	public PersonalDto[] entferneNichtAnwesendePersonen(Integer iJahrVon,
+			Integer iMonatVon, Integer iJahrBis, Integer iMonatBis,
+			PersonalDto[] personalDtos, TheClientDto theClientDto) {
+
+		Timestamp tVon = null;
+		Timestamp tBis = null;
+
+		if (iJahrVon != null && iMonatVon != null) {
+			Calendar c = Calendar.getInstance();
+			c.set(Calendar.YEAR, iJahrVon);
+			c.set(Calendar.MONTH, iMonatVon);
+			c.set(Calendar.DAY_OF_MONTH, 1);
+			tVon = new Timestamp(c.getTimeInMillis());
+		}
+		if (iJahrBis != null && iMonatBis != null) {
+			Calendar c = Calendar.getInstance();
+			c.set(Calendar.YEAR, iJahrBis);
+			c.set(Calendar.MONTH, iMonatBis);
+			c.set(Calendar.DAY_OF_MONTH,
+					c.getActualMaximum(Calendar.DAY_OF_MONTH));
+			tBis = new Timestamp(c.getTimeInMillis());
+		}
+
+		return entferneNichtAnwesendePersonen(tVon, tBis, personalDtos,
+				theClientDto);
+	}
+
+	public PersonalDto[] entferneNichtAnwesendePersonen(
+			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
+			PersonalDto[] personalDtos, TheClientDto theClientDto) {
+		ArrayList<PersonalDto> anwesendePersonen = new ArrayList<PersonalDto>();
+
+		DatumsfilterVonBis df = new DatumsfilterVonBis(tVon, tBis);
+
+		for (int i = 0; i < personalDtos.length; i++) {
+
+			String sQuery = "select zeitdaten FROM FLRZeitdaten zeitdaten WHERE zeitdaten.personal_i_id="
+					+ personalDtos[i].getIId();
+
+			if (tVon != null) {
+				sQuery += " AND zeitdaten.t_zeit>='"
+						+ Helper.formatTimestampWithSlashes(df
+								.getTimestampVon()) + "'";
+			}
+
+			if (df.getTimestampBis() != null) {
+				sQuery += " AND zeitdaten.t_zeit<'"
+						+ Helper.formatTimestampWithSlashes(df
+								.getTimestampBis()) + "'";
+			}
+
+			SessionFactory factory = FLRSessionFactory.getFactory();
+			Session session = factory.openSession();
+
+			org.hibernate.Query inventurliste = session.createQuery(sQuery);
+			inventurliste.setMaxResults(1);
+
+			List<?> resultList = inventurliste.list();
+
+			if (resultList.size() > 0) {
+				// anwesend
+				anwesendePersonen.add(personalDtos[i]);
+
+			} else {
+				// abwesend
+			}
+			session.close();
+
+		}
+		return (PersonalDto[]) anwesendePersonen
+				.toArray(new PersonalDto[anwesendePersonen.size()]);
+	}
+
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printZeitsaldo(Integer personalIId, Integer iJahrVon,
 			Integer iMonatVon, Integer iJahrBis, Integer iMonatBis,
 			boolean bisMonatsende, java.sql.Date d_datum_bis,
 			TheClientDto theClientDto, Integer iOption,
-			Integer iOptionSortierung, Boolean bPlusVersteckte) {
+			Integer iOptionSortierung, Boolean bPlusVersteckte,
+			boolean bNurAnwesende) {
 
 		try {
 
@@ -18926,6 +22237,12 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			} else {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
 						"OPTION NICHT VERFUEGBAR"));
+			}
+
+			if (bNurAnwesende) {
+				personalDtos = entferneNichtAnwesendePersonen(iJahrVon,
+						iMonatVon, iJahrBis, iMonatBis, personalDtos,
+						theClientDto);
 			}
 
 			// PJ 17420
@@ -19373,6 +22690,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					getParameterSortierungZeitauswertungen(iOptionSortierung,
 							theClientDto));
 
+			parameter.put("P_NUR_ANWESENDE", new Boolean(bNurAnwesende));
+
 			data = new Object[alDaten.size()][32];
 			data = (Object[][]) alDaten.toArray(data);
 
@@ -19599,6 +22918,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("sonderzeitenDto == null"));
 		}
+
 		if (sonderzeitenDto.getBTag() == null
 				|| sonderzeitenDto.getTDatum() == null
 				|| sonderzeitenDto.getPersonalIId() == null
@@ -19617,18 +22937,28 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		// @todo getSingleResult oder getResultList ?
 		try {
 			Sonderzeiten dopelt = (Sonderzeiten) query.getSingleResult();
+
+			PersonalDto pDto = getPersonalFac().personalFindByPrimaryKey(
+					sonderzeitenDto.getPersonalIId(), theClientDto);
+
 			System.out.println("PERS_SONDERZEITEN.UK: pers:"
 					+ sonderzeitenDto.getPersonalIId() + " datum: "
 					+ sonderzeitenDto.getTDatum().toString() + " taetigkeit: "
 					+ sonderzeitenDto.getTaetigkeitIId());
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-					new Exception("PERS_SONDERZEITEN.UK"));
+					new Exception("PERS_SONDERZEITEN.UK PersonalNr.:"
+							+ pDto.getCPersonalnr() + " " + pDto.formatAnrede()
+							+ " datum: "
+							+ sonderzeitenDto.getTDatum().toString()
+							+ " taetigkeit: "
+							+ sonderzeitenDto.getTaetigkeitIId()));
 		} catch (NoResultException e1) {
 			// nix
 		}
-		// catch (NoResultException ex) {
-		// nothing here
-		// }
+		// SP3289
+		bringeFehlerWennZeitabschlussvorhanden(
+				sonderzeitenDto.getPersonalIId(), sonderzeitenDto.getTDatum(),
+				theClientDto);
 
 		// generieren von primary key
 		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
@@ -19724,7 +23054,10 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-
+		// SP3289
+		bringeFehlerWennZeitabschlussvorhanden(
+				sonderzeitenDto.getPersonalIId(), sonderzeitenDto.getTDatum(),
+				theClientDto);
 		try {
 			Query query = em
 					.createNamedQuery("SonderzeitenfindByPersonalIIdTDatumTaetigkeitIId");
@@ -20013,7 +23346,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	/**
 	 * Methode fuer JRDataSource
-	 * 
+	 *
 	 * @return boolean
 	 * @throws JRException
 	 */
@@ -20096,6 +23429,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				value = data[index][REPORT_MONATSABRECHNUNG_JAHR];
 			} else if ("Mehrstunden".equals(fieldName)) {
 				value = data[index][REPORT_MONATSABRECHNUNG_MEHRZEIT];
+			} else if ("Qualifikationsfaktor".equals(fieldName)) {
+				value = data[index][REPORT_MONATSABRECHNUNG_QUALIFIKATIONSFAKTOR];
 			}
 		} else if (sAktuellerReport
 				.equals(ZeiterfassungFac.REPORT_WOCHENABRECHNUNG)
@@ -20139,6 +23474,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				value = data[index][REPORT_MONATSABRECHNUNG_UESTD50];
 			} else if ("Mehrzeit".equals(fieldName)) {
 				value = data[index][REPORT_MONATSABRECHNUNG_MEHRZEIT];
+			} else if ("SubreportZeitdatenjournal".equals(fieldName)) {
+				value = data[index][REPORT_MONATSABRECHNUNG_PLATZHALTER_FUER_SUREPORTZEIDATENJOURNAL];
 			}
 
 		} else if (sAktuellerReport
@@ -20205,8 +23542,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			}
 		} else if (sAktuellerReport
 				.equals(ZeiterfassungFac.REPORT_PRODUKTIVITAETSSTATISTIK)) {
-			if ("Personalnummer".equals(fieldName)) {
-				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PERSON];
+			if ("PersonalID".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PERSONAL_ID];
 			} else if ("Auftrag".equals(fieldName)) {
 				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_AUFTRAG];
 			} else if ("Projekt".equals(fieldName)) {
@@ -20259,6 +23596,32 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_LOS_AGNUMMER];
 			} else if ("LosUagnummer".equals(fieldName)) {
 				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_LOS_UAGNUMMER];
+			} else if ("Projekt_Projektklammer".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKT_PROJEKTKLAMMER];
+			} else if ("Projektkategorie_Projektklammer".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PROJEKTKATEGORIE_PROJEKTKLAMMER];
+			} else if ("Telefonzeit".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_TELEFONZEIT];
+			} else if ("PersonName".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_NAME];
+			} else if ("PersonIstGesamt".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_IST_GESAMT];
+			} else if ("PersonIntern".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_INTERN];
+			} else if ("PersonExtern".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_EXTERN];
+			} else if ("PersonProzentintern".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_PROZENTINTERN];
+			} else if ("PersonProzentextern".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_PROZENTEXTERN];
+			} else if ("PersonLeistungswert".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_LEISTUNGSWERT];
+			} else if ("PersonSubreportSondertaetigkeiten".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_SUBREPORT_SONDERTAETIGKEITEN];
+			} else if ("PersonKostenstelle".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_KOSTENSTELLE];
+			} else if ("PersonAbteilung".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETISSTATISTIK_PERSON_ABTEILUNG];
 			}
 
 		} else if (sAktuellerReport
@@ -20360,6 +23723,42 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			} else if ("MonatJahr".equals(fieldName)) {
 				value = data[index][REPORT_ZEITSALDO_MONAT];
 			}
+		} else if (sAktuellerReport
+				.equals(ZeiterfassungFac.REPORT_WOCHENABSCHLUSS)) {
+			if ("Datum".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_DATUM];
+			} else if ("Geht".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_GEHT];
+			} else if ("Kommt".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_KOMMT];
+			} else if ("SubreportBelegzeiten".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_SUBREPORT_BELEGZEITEN];
+			} else if ("Soll".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_SOLL];
+			} else if ("Ist".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_IST];
+			} else if ("Feiertag".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_FEIERTAG];
+			} else if ("Arzt".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_ARZT];
+			} else if ("Krank".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_KRANK];
+			} else if ("KindKrank".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_KINDKRANK];
+			} else if ("Behoerde".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_BEHOERDE];
+			} else if ("Urlaub".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_URLAUB];
+			} else if ("SonstigeBezahlt".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_SONSTIGE_BEZAHLT];
+			} else if ("SonstigeUnbezahlt".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_SONSTIGE_UNBEZAHLT];
+			} else if ("Fehler".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_FEHLER];
+			} else if ("Wochentag".equals(fieldName)) {
+				value = data[index][REPORT_WOCHENABSCHLUSS_WOCHENTAG];
+			}
+
 		}
 		return value;
 	}
@@ -20372,7 +23771,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		}
 		if (maschineDto.getCInventarnummer() == null
 				|| maschineDto.getBAutoendebeigeht() == null
-				|| maschineDto.getFVerfuegbarkeitinprozent() == null
+
 				|| maschineDto.getMaschinengruppeIId() == null
 				|| maschineDto.getBVersteckt() == null) {
 			throw new EJBExceptionLP(
@@ -20415,7 +23814,6 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			Maschine maschine = new Maschine(maschineDto.getIId(),
 					maschineDto.getMandantCNr(),
 					maschineDto.getCInventarnummer(),
-					maschineDto.getFVerfuegbarkeitinprozent(),
 					maschineDto.getBAutoendebeigeht(),
 					maschineDto.getMaschinengruppeIId(),
 					maschineDto.getBVersteckt());
@@ -20468,7 +23866,6 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		if (maschineDto.getIId() == null
 				|| maschineDto.getCInventarnummer() == null
 				|| maschineDto.getBAutoendebeigeht() == null
-				|| maschineDto.getFVerfuegbarkeitinprozent() == null
 				|| maschineDto.getMaschinengruppeIId() == null
 				|| maschineDto.getBVersteckt() == null) {
 			throw new EJBExceptionLP(
@@ -20633,8 +24030,6 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		maschine.setCInventarnummer(maschineDto.getCInventarnummer());
 		maschine.setCIdentifikationsnr(maschineDto.getCIdentifikationsnr());
 		maschine.setCBez(maschineDto.getCBez());
-		maschine.setFVerfuegbarkeitinprozent(maschineDto
-				.getFVerfuegbarkeitinprozent());
 		maschine.setBAutoendebeigeht(maschineDto.getBAutoendebeigeht());
 		maschine.setTKaufdatum(maschineDto.getTKaufdatum());
 		maschine.setMaschinengruppeIId(maschineDto.getMaschinengruppeIId());
@@ -20925,18 +24320,6 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	public Integer createMaschinenkosten(MaschinenkostenDto maschinenkostenDto)
 			throws EJBExceptionLP {
-		if (maschinenkostenDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("maschinenkostenDto == null"));
-		}
-		if (maschinenkostenDto.getMaschineIId() == null
-				|| maschinenkostenDto.getNStundensatz() == null
-				|| maschinenkostenDto.getTGueltigab() == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_IN_DTO_IS_NULL,
-					new Exception(
-							"maschinenkostenDto.getMaschineIId() == null || maschinenkostenDto.getNStundensatz() == null || maschinenkostenDto.getTGueltigab() == null"));
-		}
 
 		try {
 			Query query = em
@@ -20960,7 +24343,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 					maschinenkostenDto.getIId(),
 					maschinenkostenDto.getMaschineIId(),
 					maschinenkostenDto.getTGueltigab(),
-					maschinenkostenDto.getNStundensatz());
+					maschinenkostenDto.getNStundensatz(),
+					maschinenkostenDto.getNVkstundensatz());
 			em.persist(maschinenkosten);
 			em.flush();
 			setMaschinenkostenFromMaschinenkostenDto(maschinenkosten,
@@ -21126,6 +24510,30 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		// }
 	}
 
+	public BigDecimal getMaschinenKostenVKZumZeitpunkt(Integer maschineIId,
+			java.sql.Timestamp tDatum) {
+		// try {
+		Query query = em
+				.createNamedQuery("MaschinenkostenfindLetzeKostenByMaschineIIdTGueltigab");
+		query.setParameter(1, maschineIId);
+		query.setParameter(2, tDatum);
+		Collection<?> cl = query.getResultList();
+		// if (cl.isEmpty()) {
+		// return new BigDecimal(0);
+		// } else {
+		MaschinenkostenDto[] maschienkostenDtos = assembleMaschinenkostenDtos(cl);
+
+		if (maschienkostenDtos != null && maschienkostenDtos.length > 0) {
+			return maschienkostenDtos[0].getNVkstundensatz();
+		} else {
+			return new BigDecimal(0);
+		}
+		// }
+		// catch (NoResultException ex) {
+		// return new BigDecimal(0);
+		// }
+	}
+
 	public MaschinenkostenDto maschinenkostenFindByMaschineIIdTGueltigab(
 			Integer maschineIId, Timestamp tGueltigab) throws EJBExceptionLP {
 		try {
@@ -21146,6 +24554,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		maschinenkosten.setMaschineIId(maschinenkostenDto.getMaschineIId());
 		maschinenkosten.setTGueltigab(maschinenkostenDto.getTGueltigab());
 		maschinenkosten.setNStundensatz(maschinenkostenDto.getNStundensatz());
+		maschinenkosten.setNVkstundensatz(maschinenkostenDto
+				.getNVkstundensatz());
 		em.merge(maschinenkosten);
 		em.flush();
 	}
@@ -21835,6 +25245,12 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		} catch (NoResultException ex) {
 
 		}
+
+		// SP3289
+		bringeFehlerWennZeitabschlussvorhanden(
+				telefonzeitenDto.getPersonalIId(), telefonzeitenDto.getTVon(),
+				theClientDto);
+
 		try {
 			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_TELEFONZEITEN);
@@ -21859,7 +25275,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			zeitdatenDto.setTZeit(telefonzeitenDto.getTVon());
 
 			try {
-				createZeitdaten(zeitdatenDto, false, false, false, theClientDto);
+				createZeitdaten(zeitdatenDto, false, false, false, false,
+						theClientDto);
 			} catch (EJBExceptionLP e) {
 				if (e.getCode() == EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE) {
 					throw new EJBExceptionLP(
@@ -21872,7 +25289,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			if (telefonzeitenDto.getTBis() != null) {
 				zeitdatenDto.setTZeit(telefonzeitenDto.getTBis());
 				try {
-					createZeitdaten(zeitdatenDto, false, false, false,
+					createZeitdaten(zeitdatenDto, false, false, false, false,
 							theClientDto);
 				} catch (EJBExceptionLP e) {
 					if (e.getCode() == EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE) {
@@ -22004,7 +25421,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			em.flush();
 		} catch (NoResultException ex1) {
 			// Dann hat es wer veraendert - neu anlegen
-			createZeitdaten(zeitdatenDto, false, false, false, theClientDto);
+			createZeitdaten(zeitdatenDto, false, false, false, false,
+					theClientDto);
 		} catch (EntityExistsException ex) {
 			EJBExceptionLP e = new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_ZEITBUCHUNGEN_VORHANDEN,
@@ -22026,7 +25444,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			em.flush();
 		} catch (NoResultException ex1) {
 			// Dann hat es wer veraendert - neu anlegen
-			createZeitdaten(zeitdatenDto, false, false, false, theClientDto);
+			createZeitdaten(zeitdatenDto, false, false, false, false,
+					theClientDto);
 		} catch (EntityExistsException ex) {
 			EJBExceptionLP e = new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_ZEITBUCHUNGEN_VORHANDEN,
@@ -22567,6 +25986,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 		diaetentagessatz.setNStundensatz(diaetentagessatzDto.getNStundensatz());
 		diaetentagessatz.setNTagessatz(diaetentagessatzDto.getNTagessatz());
 		diaetentagessatz.setNMindestsatz(diaetentagessatzDto.getNMindestsatz());
+		diaetentagessatz.setCFilenameScript(diaetentagessatzDto
+				.getCFilenameScript());
 		em.merge(diaetentagessatz);
 		em.flush();
 	}
@@ -22644,7 +26065,8 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 								if (pgDto.getFBiskilometer() != null) {
 
-									if (iKm <= pgDto.getFBiskilometer()) {
+									if (iKm <= pgDto.getFBiskilometer()
+											|| pgDto.getFBiskilometer() == 0) {
 										kmKosten = kmKosten.add(kmGeld1
 												.multiply(new BigDecimal(iKm
 														.doubleValue())));
@@ -23088,7 +26510,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 
 	/**
 	 * Hole alle Sondertaetigkeiten nach Spr.
-	 * 
+	 *
 	 * @param cNrSpracheI
 	 *            String
 	 * @throws EJBExceptionLP
@@ -23148,7 +26570,7 @@ public class ZeiterfassungFacBean extends LPReport implements JRDataSource,
 			if (taetigkeitspr != null && taetigkeitspr.getCBez() != null) {
 				value = taetigkeitspr.getCBez();
 			}
-			tmArten.put(taetigkeit.getIId(), value);
+			tmArten.put(taetigkeit.getIId(), value.trim());
 		}
 		return tmArten;
 	}

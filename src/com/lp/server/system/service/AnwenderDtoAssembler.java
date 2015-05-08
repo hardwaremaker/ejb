@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,13 +32,7 @@
  ******************************************************************************/
 package com.lp.server.system.service;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-
 import com.lp.server.system.ejb.Anwender;
-import com.lp.util.EJBExceptionLP;
 
 public class AnwenderDtoAssembler {
 	public static AnwenderDto createDto(Anwender anwender) {
@@ -60,6 +54,7 @@ public class AnwenderDtoAssembler {
 			anwenderDto.setCVersionDB(anwender.getCVersiondb());
 			anwenderDto.setTAendern(anwender.getTAendern());
 			anwenderDto.setTAblauf(anwender.getTAblauf());
+			anwenderDto.setTSubscription(anwender.getTSubscription());
 			anwenderDto.setOCode(anwender.getOCode());
 			anwenderDto.setOHash(anwender.getOHash());
 		}

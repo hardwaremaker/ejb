@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -80,6 +80,18 @@ public class Land implements Serializable {
 	@Column(name = "B_SEPA")
 	private Short bSepa;
 	
+	@Column(name = "B_PLZNACHORT")
+	private Short bPlznachort;
+	
+	
+	public Short getBPlznachort() {
+		return bPlznachort;
+	}
+
+	public void setBPlznachort(Short bPlznachort) {
+		this.bPlznachort = bPlznachort;
+	}
+
 	@Column(name = "F_GMTVERSATZ")
 	private Double fGmtversatz;
 	
@@ -119,12 +131,13 @@ public class Land implements Serializable {
 		super();
 	}
 
-	public Land(Integer iid, String lkz, String name, Integer laengeuidnummer, Short bSepa) {
+	public Land(Integer iid, String lkz, String name, Integer laengeuidnummer, Short bSepa, Short bPlznachort) {
 		setIId(iid);
 		setCLkz(lkz);
 		setCName(name);
 		setILaengeuidnummer(laengeuidnummer);
 		setBSepa(bSepa);
+		setBPlznachort(bPlznachort);
 	}
 
 	public Integer getIId() {

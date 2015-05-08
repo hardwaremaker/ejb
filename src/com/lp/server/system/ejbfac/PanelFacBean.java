@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -270,8 +270,7 @@ public class PanelFacBean extends LPReport implements PanelFac, JRDataSource {
 	}
 
 	public PanelbeschreibungDto[] panelbeschreibungFindByPanelCNrMandantCNr(
-			String panelCNr, String mandantCNr, Integer artgruIId)
-			throws EJBExceptionLP {
+			String panelCNr, String mandantCNr, Integer artgruIId) {
 		// try {
 		Query query = em
 				.createNamedQuery("PanelbeschreibungfindByPanelCNrMandantCNr");
@@ -308,6 +307,7 @@ public class PanelFacBean extends LPReport implements PanelFac, JRDataSource {
 				.size()];
 		return (PanelbeschreibungDto[]) list.toArray(returnArray);
 	}
+
 	public PanelbeschreibungDto[] panelbeschreibungFindByPanelCNrMandantCNrPartnerklasseIId(
 			String panelCNr, String mandantCNr, Integer partnerklasseIId) {
 		// try {
@@ -330,7 +330,8 @@ public class PanelFacBean extends LPReport implements PanelFac, JRDataSource {
 
 				if (partnerklasseIId != null
 						&& panelbeschreibung.getPartnerklasseIId() != null
-						&& !partnerklasseIId.equals(panelbeschreibung.getPartnerklasseIId())) {
+						&& !partnerklasseIId.equals(panelbeschreibung
+								.getPartnerklasseIId())) {
 					continue;
 				}
 
@@ -365,14 +366,20 @@ public class PanelFacBean extends LPReport implements PanelFac, JRDataSource {
 	public JasperPrintLP printPanel(String panelCNr, String report,
 			String cKey, TheClientDto theClientDto) {
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
+		
+		parameter.put("P_KEY", cKey);
+		parameter.put("P_PANEL_C_NR", panelCNr);
+		
 		index = -1;
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		String[] typen = new String[3];
+		String[] typen = new String[5];
 		typen[0] = PanelFac.TYP_WRAPPERCHECKBOX;
 		typen[1] = PanelFac.TYP_WRAPPEREDITOR;
 		typen[2] = PanelFac.TYP_WRAPPERTEXTFIELD;
+		typen[3] = PanelFac.TYP_WRAPPERCOMBOBOX;
+		typen[4] = PanelFac.TYP_WRAPPERTEXTAREA;
 
 		org.hibernate.Criteria crit = session
 				.createCriteria(FLRPanelbeschreibung.class);
@@ -392,23 +399,26 @@ public class PanelFacBean extends LPReport implements PanelFac, JRDataSource {
 					.next();
 			felder[row] = flrPanelbeschreibung.getC_name();
 
-			// try {
-			Query query = em
-					.createNamedQuery("PaneldatenfindByPanelCNrPanelbeschreibungIIdCKey");
-			query.setParameter(1, panelCNr);
-			query.setParameter(2, flrPanelbeschreibung.getI_id());
-			query.setParameter(3, cKey);
-			Paneldaten paneldaten = (Paneldaten) query.getSingleResult();
-			if (paneldaten == null) {
-				data[0][row] = null;
-			} else {
-				data[0][row] = new String(paneldaten.getOInhalt());
-			}
+			try {
+				Query query = em
+						.createNamedQuery("PaneldatenfindByPanelCNrPanelbeschreibungIIdCKey");
+				query.setParameter(1, panelCNr);
+				query.setParameter(2, flrPanelbeschreibung.getI_id());
+				query.setParameter(3, cKey);
+				Paneldaten paneldaten = (Paneldaten) query.getSingleResult();
+				if (paneldaten == null) {
+					data[0][row] = flrPanelbeschreibung.getC_default();
+				} else {
+					if (paneldaten.getOInhalt() != null) {
+						data[0][row] = new String(paneldaten.getOInhalt());
+					} else if (paneldaten.getXInhalt() != null) {
+						data[0][row] = new String(paneldaten.getXInhalt());
+					}
+				}
 
-			// }
-			// catch (FinderException ex) {
-			// data[0][row] = null;
-			// }
+			} catch (NoResultException ex) {
+				data[0][row] = flrPanelbeschreibung.getC_default();
+			}
 			row++;
 		}
 		session.close();
@@ -448,7 +458,9 @@ public class PanelFacBean extends LPReport implements PanelFac, JRDataSource {
 		panelbeschreibung.setMandantCNr(panelbeschreibungDto.getMandantCNr());
 		panelbeschreibung.setArtgruIId(panelbeschreibungDto.getArtgruIId());
 		panelbeschreibung.setCDruckname(panelbeschreibungDto.getCDruckname());
-		panelbeschreibung.setPartnerklasseIId(panelbeschreibungDto.getPartnerklasseIId());
+		panelbeschreibung.setPartnerklasseIId(panelbeschreibungDto
+				.getPartnerklasseIId());
+		panelbeschreibung.setCDefault(panelbeschreibungDto.getCDefault());
 		em.merge(panelbeschreibung);
 		em.flush();
 	}
@@ -474,8 +486,7 @@ public class PanelFacBean extends LPReport implements PanelFac, JRDataSource {
 		return (PanelbeschreibungDto[]) list.toArray(returnArray);
 	}
 
-	public void createPaneldaten(PaneldatenDto[] paneldatenDto)
-			throws EJBExceptionLP {
+	public void createPaneldaten(PaneldatenDto[] paneldatenDto) {
 		if (paneldatenDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("paneldatenDto == null"));

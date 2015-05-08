@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -73,6 +73,7 @@ public interface PartnerFac {
 	public static final String FLR_PARTNER_PARTNER_PASELEKTION_SET = "partner_paselektion_set";
 
 	public static final String PARTNERQP1_ERWEITERTE_SUCHE = "ERWEITERTE_SUCHE";
+	public static final String PARTNERQP1_TELEFONNUMMERN_SUCHE = "TELEFONNUMMERN_SUCHE";
 
 	public static final String FLR_PARTNER_KOMMUNIKATION_FLRPARTNER = "flrpartner";
 	public static final String FLR_PARTNER_KOMMUNIKATION_PARTNER_I_ID = "partner_i_id";
@@ -384,7 +385,7 @@ public interface PartnerFac {
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void importierePartner(PartnerImportDto[] daten,
-			TheClientDto theClientDto, boolean bErzeugeKunde)
+			TheClientDto theClientDto, boolean bErzeugeKunde, boolean bErzeugeLieferant)
 			throws RemoteException;
 
 	public String pruefeCSVImport(PartnerImportDto[] daten,
@@ -534,4 +535,38 @@ public interface PartnerFac {
 	 * @throws RemoteException
 	 */
 	boolean hatPartnerVersandweg(PartnerDto partnerDto) throws RemoteException ;	
+	
+	/**
+	 * Alle Partner die case-insensitive die gesuchte E-Mail Adresse haben
+	 * @param email
+	 * @return PartnerDtos deren EMail der gesuchten entspricht, oder null
+	 * @throws EJBExceptionLP
+	 */
+	public PartnerDto[] partnerFindByEmail(String email) throws EJBExceptionLP ;
+	
+	public void kontoFuerPartnerImportAnlegen(String sKontonummer,
+			String kontotypCNr, Integer kundeIId, Integer lieferantIId,
+			TheClientDto theClientDto);
+
+	/**
+	 * Die PartnerId f&uuml;r einen bekannten Ansprechpartner ermitteln</br>
+	 * 
+	 * @param ansprechpartnerId
+	 * @return null oder die partnerId
+	 */
+	Integer partnerIdFindByAnsprechpartnerId(Integer ansprechpartnerId) ;
+	
+	/**
+	 * Den Partner f&uuuml;r einen bekannten Ansprechpartner ermitteln</br>
+	 * <p>Es handelt sich um das PartnerDto dem dieser Ansprechpartner zugeordnet ist.
+	 * Nicht um das PartnerDto des Ansprechpartners selbst</p> 
+	 * 
+	 * @param ansprechpartnerId
+	 * @param theClientDto
+	 * @return das dazugehoerige PartnerDto des Partners
+	 * @throws EJBExceptionLP wenn zur ansprechpartnerId kein PartnerDto ermittelt 
+	 * werden kann
+	 */
+	PartnerDto partnerFindByAnsprechpartnerId(Integer ansprechpartnerId, 
+			TheClientDto theClientDto) throws EJBExceptionLP ;	
 }

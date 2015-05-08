@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -84,14 +84,9 @@ public class GeschaeftsjahrMandantQuery {
 	public static GeschaeftsjahrMandant singleByYearMandant(EntityManager em, Integer year, String mandant) {
 		HvTypedQuery<GeschaeftsjahrMandant> query = byJahrMandant(em, year, mandant) ;
 		
-		try {
-			GeschaeftsjahrMandant gj = query.getSingleResult() ;
-			return gj ;
-		} catch(NoResultException e) {
-		} catch(NonUniqueResultException e) {			
-		}
-		
-		return null ;
+		List<GeschaeftsjahrMandant> gj = query.getResultList() ;
+		if(gj == null) return null;
+		return gj.size() == 1 ? gj.get(0) : null;
 	}
 	
 	public static List<GeschaeftsjahrMandant> listByYear(EntityManager em, Integer year) {

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -44,11 +44,13 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.system.fastlanereader.generated.FLRTheJudge;
 import com.lp.server.system.service.LockMeDto;
+import com.lp.server.system.service.TheClientDto;
 import com.lp.server.system.service.TheJudgeFac;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -126,7 +128,8 @@ public class TheJudgeHandler extends UseCaseHandler {
 				// ausgeblendet.
 				rows[row][col++] = theJudge.getId_comp().getC_wer();
 				rows[row][col++] = theJudge.getPersonal_i_id_locker();
-				rows[row][col++] = theJudge.getC_usernr().trim();
+				TheClientDto theClientDto = getTheClientFac().theClientFindByPrimaryKeyOhneExc(theJudge.getC_usernr());
+				rows[row][col++] = theClientDto == null ? theJudge.getC_usernr() : theClientDto.getBenutzername().trim();
 				rows[row][col++] = theJudge.getId_comp().getC_was();
 				rows[row][col++] = new java.sql.Timestamp(theJudge.getT_wann()
 						.getTime());
@@ -295,11 +298,20 @@ public class TheJudgeHandler extends UseCaseHandler {
 							locUI),
 					getTextRespectUISpr("judge.was", mandantCNr, locUI),
 					getTextRespectUISpr("judge.wann", mandantCNr, locUI), },
-					new String[] { "i_id", TheJudgeFac.FLRSPALTE_ID_COMP_C_WER,
-							TheJudgeFac.FLRSPALTE_PERSONAL_I_ID_LOCKER,
-							TheJudgeFac.FLRSPALTE_C_USERNR,
-							TheJudgeFac.FLRSPALTE_ID_COMP_C_WAS,
-							TheJudgeFac.FLRSPALTE_T_WANN }));
+
+			new int[] {
+					-1, // diese Spalte wird ausgeblendet
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
+			new String[] { "i_id", TheJudgeFac.FLRSPALTE_ID_COMP_C_WER,
+					TheJudgeFac.FLRSPALTE_PERSONAL_I_ID_LOCKER,
+					TheJudgeFac.FLRSPALTE_C_USERNR,
+					TheJudgeFac.FLRSPALTE_ID_COMP_C_WAS,
+					TheJudgeFac.FLRSPALTE_T_WANN }));
 		}
 		return super.getTableInfo();
 	}
@@ -333,7 +345,6 @@ public class TheJudgeHandler extends UseCaseHandler {
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-				boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {

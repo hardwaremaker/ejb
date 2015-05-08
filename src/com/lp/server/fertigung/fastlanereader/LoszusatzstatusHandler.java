@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.fertigung.fastlanereader;
 
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -48,6 +49,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -102,8 +104,10 @@ public class LoszusatzstatusHandler extends UseCaseHandler {
 				FLRLoszusatzstatus zusatzstatus = (FLRLoszusatzstatus) resultListIterator
 						.next();
 				rows[row][col++] = zusatzstatus.getI_id();
-				rows[row++][col++] = zusatzstatus.getFlrzusatzstatus()
+				rows[row][col++] = zusatzstatus.getFlrzusatzstatus()
 						.getC_bez();
+				rows[row++][col++] = zusatzstatus.getT_aendern();
+
 
 				col = 0;
 			}
@@ -307,14 +311,19 @@ public class LoszusatzstatusHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class },
+					String.class, Date.class }, new String[] { "i_id",
+					getTextRespectUISpr("lp.zusatzstatus", mandantCNr, locUI),
+					getTextRespectUISpr("lp.datum", mandantCNr, locUI) },
+
+			new int[] {
+					-1, // diese Spalte wird ausgeblendet
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
 					new String[] {
 							"i_id",
-							getTextRespectUISpr("lp.zusatzstatus", mandantCNr,
-									locUI) }, new String[] {
-							"i_id",
 							FertigungFac.FLR_LOSZUSATZSTATUS_FLRZUSATZSTATUS
-									+ ".c_bez" }));
+									+ ".c_bez", "t_aendern" }));
 		}
 		return super.getTableInfo();
 	}

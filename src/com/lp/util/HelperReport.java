@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,6 +32,11 @@
  ******************************************************************************/
 package com.lp.util;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
+import java.awt.image.BufferedImage;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.ResultSet;
@@ -52,22 +57,29 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.TreeMap;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
 
 import com.lp.server.angebot.service.AngebotDto;
 import com.lp.server.angebot.service.AngebotFac;
+import com.lp.server.artikel.service.ArtikelDto;
+import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.artikel.service.ArtikelReportFac;
+import com.lp.server.artikel.service.LagerFac;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragFac;
 import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.finanz.service.FinanzFac;
+import com.lp.server.finanz.service.FinanzServiceFac;
 import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.projekt.service.ProjektDto;
 import com.lp.server.projekt.service.ProjektFac;
 import com.lp.server.system.service.LandDto;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.MediaFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
@@ -80,7 +92,8 @@ import com.lp.server.util.logger.LpLogger;
  * <b>frame</b><br/>
  * HelperReport Funktionen und Konstanten, die client- und serverseitig
  * verwendbar sind. <br/>
- * Wenn hier etwas ge&auml;ndert wird, hat das Auswirkungen auf bestimmte Reports.
+ * Wenn hier etwas ge&auml;ndert wird, hat das Auswirkungen auf bestimmte
+ * Reports.
  * </p>
  * <p>
  * Copyright Logistik Pur Software GmbH (c) 2004
@@ -261,8 +274,9 @@ public class HelperReport {
 				 * javax.sql.DriverManager.getConnection(url, "hvguest",
 				 * "h4gzfdavfs"); }
 				 */
-				if (!pds.isInitalized())
-					pds.initalize(url);
+				pds.setUrl(url);
+				// if (!pds.isInitalized())
+				// pds.initalize(url);
 				sqlcon = pds.getConnection();
 				statement = sqlcon.createStatement();
 				statement.execute(anSQLString);
@@ -424,9 +438,11 @@ public class HelperReport {
 	}
 
 	/**
-	 * Ermittelt den angegebenen Subreportnamen und liefert die Daten zur&uuml;ck
+	 * Ermittelt den angegebenen Subreportnamen und liefert die Daten
+	 * zur&uuml;ck
 	 * 
-	 * @param sString der Name des Subreports
+	 * @param sString
+	 *            der Name des Subreports
 	 * @return Subreport
 	 */
 	public static LPDatenSubreport getSubreportAusStringMitKommaGetrennt(
@@ -438,6 +454,35 @@ public class HelperReport {
 			dataSubKD[i][0] = teile[i];
 		}
 		return new LPDatenSubreport(dataSubKD, fieldnames);
+	}
+
+	public static LPDatenSubreport getSubreportEnthaltenesLosIstMaterial(
+			String artikelnummer, String chargennummer,
+			TheClientDto theClientDto) throws Throwable {
+		LagerFac lagerFac = (LagerFac) new InitialContext()
+				.lookup("lpserver/LagerFacBean/remote");
+		return lagerFac.getSubreportEnthaltenesLosIstMaterial(artikelnummer,
+				chargennummer, theClientDto);
+	}
+
+	public static LPDatenSubreport getSubreportAllergene(String artikelnummer,
+			TheClientDto theClientDto) throws Throwable {
+		ArtikelFac artikelFac = (ArtikelFac) new InitialContext()
+				.lookup("lpserver/ArtikelFacBean/remote");
+
+		ArtikelDto aDto = artikelFac.artikelFindByCNrMandantCNrOhneExc(
+				artikelnummer, theClientDto.getMandant());
+
+		if (aDto != null) {
+			ArtikelReportFac artikelReportFac = (ArtikelReportFac) new InitialContext()
+					.lookup("lpserver/ArtikelReportFacBean/remote");
+
+			return artikelReportFac.getSubreportAllergene(aDto.getIId(),
+					theClientDto);
+		} else {
+			return null;
+		}
+
 	}
 
 	public static LPDatenSubreport getSubreportAusPDFFile(String pdfFile,
@@ -494,6 +539,11 @@ public class HelperReport {
 		return getCalendarWeekOfDate(dateParsed);
 	}
 
+	public static BigDecimal rundeKaufmaennisch(BigDecimal bigDecimal,
+			int stellen) {
+		return Helper.rundeKaufmaennisch(bigDecimal, stellen);
+	}
+
 	public static Boolean pruefeEndsumme(BigDecimal bdReportValue,
 			BigDecimal bdHvValue, Double dAbweichung) {
 		bdReportValue = bdReportValue.setScale(2, BigDecimal.ROUND_HALF_EVEN);
@@ -508,6 +558,24 @@ public class HelperReport {
 		 * ex.setAlInfoForTheClient(al); throw ex; } }
 		 */
 		return new Boolean(true);
+	}
+
+	// SP2199
+	public static String berechneKWJahr(java.util.Date d) {
+		String s = null;
+		if (d != null) {
+			Calendar c = Calendar.getInstance();
+			c.setTimeInMillis(d.getTime());
+			c.get(Calendar.WEEK_OF_YEAR);
+			s = c.get(Calendar.WEEK_OF_YEAR) + "/"
+					+ Helper.berechneJahrDerKW(c);
+			;
+		}
+		return s;
+	}
+
+	public static String entferneStyleInformation(String sI) {
+		return Helper.strippHTML(sI);
 	}
 
 	public static Boolean pruefeEndsumme(BigDecimal bdReportNettoValue,
@@ -565,19 +633,17 @@ public class HelperReport {
 			// Suche die belegId
 
 			Integer belegIId = null;
-			
-			belegartCNr=belegartCNr.trim();
-			
+
+			belegartCNr = belegartCNr.trim();
 
 			if (belegartCNr.equals(LocaleFac.BELEGART_ANGEBOT.trim())) {
 				AngebotFac angebotFac = (AngebotFac) new InitialContext()
 						.lookup("lpserver/AngebotFacBean/remote");
-				
-				
-				if(belegnummer !=null && belegnummer.startsWith("AG")){
-					belegnummer=belegnummer.substring(2);
+
+				if (belegnummer != null && belegnummer.startsWith("AG")) {
+					belegnummer = belegnummer.substring(2);
 				}
-				
+
 				AngebotDto agDto = angebotFac.angebotFindByCNrMandantCNrOhneEx(
 						belegnummer, theClientDto.getMandant());
 				if (agDto != null) {
@@ -595,8 +661,8 @@ public class HelperReport {
 			} else if (belegartCNr.equals(LocaleFac.BELEGART_LOS.trim())) {
 				FertigungFac fertigungFac = (FertigungFac) new InitialContext()
 						.lookup("lpserver/FertigungFacBean/remote");
-				if(belegnummer !=null && belegnummer.startsWith("LO")){
-					belegnummer=belegnummer.substring(2);
+				if (belegnummer != null && belegnummer.startsWith("LO")) {
+					belegnummer = belegnummer.substring(2);
 				}
 				LosDto losDto = fertigungFac.losFindByCNrMandantCNrOhneExc(
 						belegnummer, theClientDto.getMandant());
@@ -606,8 +672,8 @@ public class HelperReport {
 			} else if (belegartCNr.equals(LocaleFac.BELEGART_PROJEKT.trim())) {
 				ProjektFac projektFac = (ProjektFac) new InitialContext()
 						.lookup("lpserver/ProjektFacBean/remote");
-				if(belegnummer !=null && belegnummer.startsWith("PJ")){
-					belegnummer=belegnummer.substring(2);
+				if (belegnummer != null && belegnummer.startsWith("PJ")) {
+					belegnummer = belegnummer.substring(2);
 				}
 				ProjektDto pjDto = projektFac
 						.projektFindByMandantCNrCNrOhneExc(
@@ -627,6 +693,26 @@ public class HelperReport {
 		} catch (Throwable t) {
 			return new Double(-1);
 
+		}
+	}
+
+	public static String getMediastandardTextHtml(String cNr,
+			String mandantCNr, Locale locale) {
+		if (cNr != null && mandantCNr != null && locale != null) {
+
+			try {
+				MediaFac mediaFac = (MediaFac) new InitialContext()
+						.lookup("lpserver/MediaFacBean/remote");
+				return mediaFac.mediastandardTextHtmlFindByCNrMandantCNrLocale(
+						cNr, mandantCNr, locale);
+
+			} catch (Throwable t) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER,
+						new Exception(t));
+			}
+
+		} else {
+			return null;
 		}
 	}
 
@@ -659,6 +745,19 @@ public class HelperReport {
 		} else {
 			return FinanzFac.LAENDERART_INLAND;
 		}
+	}
+
+	public static BigDecimal getLiquiditaetsKontostand(
+			Integer geschaeftsjahrIId, TheClientDto theClientDto) {
+		try {
+			FinanzServiceFac finanzServiceFac = (FinanzServiceFac) new InitialContext()
+					.lookup("lpserver/FinanzServiceFacBean/remote");
+			return finanzServiceFac.getLiquiditaetsKontostand(
+					geschaeftsjahrIId, theClientDto);
+		} catch (Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
+		}
+
 	}
 
 	public static Object[] haengeArrayAn(Object[] array1, Object[] array2) {
@@ -707,6 +806,19 @@ public class HelperReport {
 	@SuppressWarnings("unchecked")
 	public static List sortList(List list) {
 
+		// SP3293 Exception wenn NULL Wert im Sortierfeld enthalten
+		for (int i = 0; i < list.size(); i++) {
+			Object[] o = (Object[]) list.get(i);
+			if (o.length > 0) {
+				if (o[0] == null) {
+					EJBExceptionLP ex = new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_SORTIER_LISTE_ENTHAELT_NULL,
+							"Liste NULL in Element " + i);
+					throw ex;
+				}
+			}
+		}
+
 		Collections.sort(list, new Comparator() {
 			public int compare(Object o1, Object o2) {
 				Object[] oo1 = (Object[]) o1;
@@ -716,6 +828,20 @@ public class HelperReport {
 		});
 
 		return list;
+	}
+
+	@SuppressWarnings("unchecked")
+	public static List sortListNoNull(List list) {
+
+		// PJ18934 Null-Elemente entfernen und sortieren
+		List listnew = new ArrayList();
+		for (int i = 0; i < list.size(); i++) {
+			Object[] o = (Object[]) list.get(i);
+			if (o.length > 0)
+				if (o[0] != null)
+					listnew.add(list.get(i));
+		}
+		return sortList(listnew);
 	}
 
 	/**
@@ -784,9 +910,64 @@ public class HelperReport {
 		return value;
 	}
 
+	public static BufferedImage bildUm90GradDrehenWennNoetig(
+			BufferedImage inputImage) {
+
+		int width = inputImage.getWidth();
+		int height = inputImage.getHeight();
+
+		if (width > height) {
+
+			BufferedImage returnImage = new BufferedImage(height, width,
+					BufferedImage.TYPE_INT_RGB);
+
+			for (int x = 0; x < width; x++) {
+				for (int y = 0; y < height; y++) {
+					returnImage.setRGB(y, width - x - 1,
+							inputImage.getRGB(x, y));
+					// Again check the Picture for better understanding
+				}
+			}
+			return returnImage;
+		} else {
+			return inputImage;
+		}
+
+	}
+
+	public static BufferedImage bildDrehen(BufferedImage inputImage, int angle) {
+
+		double sin = Math.abs(Math.sin(Math.toRadians(angle))), cos = Math
+
+		.abs(Math.cos(Math.toRadians(angle)));
+
+		int w = inputImage.getWidth(null), h = inputImage.getHeight(null);
+
+		int neww = (int) Math.floor(w * cos + h * sin), newh = (int) Math
+
+		.floor(h * cos + w * sin);
+
+		BufferedImage bimg = new BufferedImage(neww, newh,
+
+		BufferedImage.TYPE_INT_ARGB);
+
+		Graphics2D g = bimg.createGraphics();
+
+		g.translate((neww - w) / 2, (newh - h) / 2);
+
+		g.rotate(Math.toRadians(angle), w / 2, h / 2);
+
+		g.drawRenderedImage(inputImage, null);
+
+		g.dispose();
+
+		return bimg;
+
+	}
+
 	/**
-	 * Wandelt einen String in einen BigInteger um unter Ber&uuml;cksichtigung des
-	 * Radix
+	 * Wandelt einen String in einen BigInteger um unter Ber&uuml;cksichtigung
+	 * des Radix
 	 * 
 	 * @param bigInteger
 	 * @return null oder den BigInteger aus dem String
@@ -809,8 +990,8 @@ public class HelperReport {
 	 * Wandelt einen String in einen Integer um
 	 * 
 	 * @param integer
-	 * @return null wenn der STring ein ung&uuml;ltiges Format hat, ansonsten den
-	 *         Integer
+	 * @return null wenn der STring ein ung&uuml;ltiges Format hat, ansonsten
+	 *         den Integer
 	 */
 	public static Integer toInteger(String integer) {
 		if (null == integer)
@@ -826,4 +1007,86 @@ public class HelperReport {
 		return value;
 	}
 
+	public static String seriennummerErzeugen(String vorlage, int exemplar) {
+		String snr = null;
+
+		if (vorlage != null) {
+			int iStartZahl = -1;
+			int iEndeZahl = -1;
+			boolean bEndeFound = false;
+			int i = vorlage.length() - 1;
+			while (i >= 0) {
+
+				char c = vorlage.charAt(i);
+				// wenn 0-9
+				if (c > 47 && c < 58) {
+					iEndeZahl = i;
+					iStartZahl = iEndeZahl;
+
+					for (int j = i; j >= 0; j--) {
+						char d = vorlage.charAt(j);
+						if (d > 47 && d < 58) {
+							iStartZahl = j;
+							if (j == 0) {
+								bEndeFound = true;
+							}
+						} else {
+							bEndeFound = true;
+							break;
+						}
+					}
+				}
+				i--;
+				if (bEndeFound) {
+					break;
+				}
+			}
+
+			if (iStartZahl >= 0 && iEndeZahl >= 0) {
+				String zahlenteil = vorlage
+						.substring(iStartZahl, iEndeZahl + 1);
+
+				long zahl = new Long(zahlenteil);
+				zahl = zahl + exemplar;
+				String zahlenteilNeu = new String(zahl + "");
+
+				int iNeueLaenge = zahlenteilNeu.length();
+				if (iNeueLaenge < zahlenteil.length()) {
+					iNeueLaenge = zahlenteil.length();
+				}
+				zahlenteilNeu = Helper.fitString2LengthAlignRight(zahl + "",
+						iNeueLaenge, '0');
+				// Neue Artikelnummer zusammenbauen
+
+				return vorlage.substring(0, iStartZahl) + zahlenteilNeu
+						+ vorlage.substring(iEndeZahl + 1);
+
+			}
+		}
+
+		return snr;
+	}
+
+	public static Object putInMap(TreeMap map, String key, Object value) {
+		synchronized (map) {
+			if (map == null || key == null)
+				return value;
+
+			if (value == null)
+				value = new Integer(0);
+
+			if (value instanceof Integer) {
+				Integer mapValue = (Integer) map.get(key);
+				if (mapValue != null) {
+					if (((Integer) value).compareTo(mapValue) > 0) {
+						map.put(key, value);
+					}
+				} else {
+					map.put(key, value);
+				}
+			}
+
+			return value;
+		}
+	}
 }

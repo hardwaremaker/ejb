@@ -1,36 +1,24 @@
 <?xml version="1.0"?>
-<!--
-  HELIUM V, Open Source ERP software for sustained success
-  at small and medium-sized enterprises.
-  Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
-  
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Affero General Public License as published 
-  by the Free Software Foundation, either version 3 of theLicense, or 
-  (at your option) any later version.
-  
-  According to sec. 7 of the GNU Affero General Public License, version 3, 
-  the terms of the AGPL are supplemented with the following terms:
-  
-  "HELIUM V" and "HELIUM 5" are registered trademarks of 
-  HELIUM V IT-Solutions GmbH. The licensing of the program under the 
-  AGPL does not imply a trademark license. Therefore any rights, title and
-  interest in our trademarks remain entirely with us. If you want to propagate
-  modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
-  you may only do so if you have a written permission by HELIUM V IT-Solutions 
-  GmbH (to acquire a permission please contact HELIUM V IT-Solutions
-  at trademark@heliumv.com).
-  
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Affero General Public License for more details.
-  
-  You should have received a copy of the GNU Affero General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  
-  Contact: developers@heliumv.com
--->
+<!-- HELIUM V, Open Source ERP software for sustained success at small and 
+	medium-sized enterprises. Copyright (C) 2004 - 2014 HELIUM V IT-Solutions 
+	GmbH This program is free software: you can redistribute it and/or modify 
+	it under the terms of the GNU Affero General Public License as published 
+	by the Free Software Foundation, either version 3 of theLicense, or (at your 
+	option) any later version. According to sec. 7 of the GNU Affero General 
+	Public License, version 3, the terms of the AGPL are supplemented with the 
+	following terms: "HELIUM V" and "HELIUM 5" are registered trademarks of HELIUM 
+	V IT-Solutions GmbH. The licensing of the program under the AGPL does not 
+	imply a trademark license. Therefore any rights, title and interest in our 
+	trademarks remain entirely with us. If you want to propagate modified versions 
+	of the Program under the name "HELIUM V" or "HELIUM 5", you may only do so 
+	if you have a written permission by HELIUM V IT-Solutions GmbH (to acquire 
+	a permission please contact HELIUM V IT-Solutions at trademark@heliumv.com). 
+	This program is distributed in the hope that it will be useful, but WITHOUT 
+	ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+	FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+	details. You should have received a copy of the GNU Affero General Public 
+	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
+	Contact: developers@heliumv.com -->
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 <hibernate-mapping package="com.lp.server.angebotstkl.fastlanereader.generated">
 	<class name="FLRAgstkl" table="AS_AGSTKL">
@@ -43,9 +31,17 @@
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 		<property name="waehrung_c_nr" column="WAEHRUNG_C_NR" type="java.lang.String" />
 		<property name="t_belegdatum" column="T_BELEGDATUM" type="java.util.Date" />
+		<property name="projekt_i_id" column="PROJEKT_I_ID" type="java.lang.Integer" />
 		<many-to-one name="flrkunde"
 			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
 			column="KUNDE_I_ID" />
+
+		<set name="angebotspositionen" inverse="true">
+			<key column="AGSTKL_I_ID" />
+			<one-to-many
+				class="com.lp.server.angebot.fastlanereader.generated.FLRAngebotposition" />
+		</set>
+
 	</class>
 	<class name="FLRAgstklposition" table="AS_AGSTKLPOSITION">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
@@ -70,7 +66,7 @@
 			column="AGSTKL_I_ID" unique="true" insert="false" update="false" />
 		<many-to-one name="flrartikel"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
-			column="ARTIKEL_I_ID" unique="true" insert="false" update="false"/>
+			column="ARTIKEL_I_ID" unique="true" insert="false" update="false" />
 		<many-to-one name="flrartikelliste"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
 			column="ARTIKEL_I_ID" unique="true" insert="false" update="false" />
@@ -133,5 +129,53 @@
 
 
 	</class>
+
+	<class name="FLRAgstklarbeitsplan" table="AS_AGSTKLARBEITSPLAN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_arbeitsgang" column="I_ARBEITSGANG" type="java.lang.Integer" />
+		<property name="i_unterarbeitsgang" column="I_UNTERARBEITSGANG"
+			type="java.lang.Integer" />
+		<property name="i_aufspannung" column="I_AUFSPANNUNG" type="java.lang.Integer" />
+		<property name="l_stueckzeit" column="L_STUECKZEIT" type="java.lang.Long" />
+		<property name="l_ruestzeit" column="L_RUESTZEIT" type="java.lang.Long" />
+		<property name="c_kommentar" column="C_KOMMENTAR" type="java.lang.String" />
+		<property name="b_nurmaschinenzeit" column="B_NURMASCHINENZEIT"
+			type="java.lang.Short" />
+		<property name="maschine_i_id" column="MASCHINE_I_ID" type="java.lang.Integer"
+			insert="false" update="false" />
+		<property name="agstkl_i_id" column="AGSTKL_I_ID" type="java.lang.Integer"
+			insert="false" update="false" />
+		<many-to-one name="flragstkl"
+			class="com.lp.server.angebotstkl.fastlanereader.generated.FLRAgstkl"
+			column="AGSTKL_I_ID" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" />
+		<many-to-one name="flrmaschine"
+			class="com.lp.server.personal.fastlanereader.generated.FLRMaschine"
+			column="MASCHINE_I_ID" />
+	</class>
+
+	<class name="FLRAgstklmengenstaffel" table="AS_AGSTKLMENGENSTAFFEL">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="n_materialeinsatz_lief1" column="N_MATERIALEINSATZ_LIEF1"
+			type="java.math.BigDecimal" />
+		<property name="n_azeinsatz_lief1" column="N_AZEINSATZ_LIEF1"
+			type="java.math.BigDecimal" />
+		<property name="n_vkpreis" column="N_VKPREIS" type="java.math.BigDecimal" />
+		<property name="n_vkpreis_gewaehlt" column="N_VKPREIS_GEWAEHLT"
+			type="java.math.BigDecimal" />
+		<property name="agstkl_i_id" column="AGSTKL_I_ID" type="java.lang.Integer"
+			insert="false" update="false" />
+		<many-to-one name="flragstkl"
+			class="com.lp.server.angebotstkl.fastlanereader.generated.FLRAgstkl"
+			column="AGSTKL_I_ID" />
+	</class>
+
 
 </hibernate-mapping>

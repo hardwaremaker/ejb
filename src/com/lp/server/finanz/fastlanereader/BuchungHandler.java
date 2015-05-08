@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -198,24 +198,9 @@ public class BuchungHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 
-					if (filterKriterien[i].kritName.equals("c_belegnummer")) {
+					if (filterKriterien[i].kritName.equals(FinanzFac.FLR_BUCHUNG_C_BELEGNUMMER)) {
 
-						// MANDANTENKENNUNG WIRD DERZEIT NICHT UNTERSTUETZT
-						try {
-							String sValue = filterKriterien[i].value;
-							sValue = sValue.replaceAll("%", "");
-
-							sValue = Helper.fitString2LengthAlignRight(sValue,
-									stellenBelegnummer, '0');
-
-							sValue = "'%" + trennzeichen + sValue + "'";
-							where.append(" buchung.c_belegnummer");
-							where.append(" " + filterKriterien[i].operator);
-							where.append(" " + sValue);
-						} catch (Exception ex) {
-							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
-									ex);
-						}
+						where.append(buildWhereClauseRTrim("buchung.", filterKriterien[i]));
 					} else {
 
 						

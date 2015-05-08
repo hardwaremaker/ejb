@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.artikel.ejbfac;
 
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.text.DateFormatSymbols;
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
@@ -62,6 +64,7 @@ import org.hibernate.criterion.Restrictions;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.SessionFactoryImplementor;
 
+import com.lp.server.angebot.service.AngebotReportFac;
 import com.lp.server.artikel.ejb.Artgru;
 import com.lp.server.artikel.ejb.Artikellagerplaetze;
 import com.lp.server.artikel.ejb.Lager;
@@ -81,10 +84,12 @@ import com.lp.server.artikel.service.KundeUmsatzstatistikDto;
 import com.lp.server.artikel.service.LagerDto;
 import com.lp.server.artikel.service.LagerFac;
 import com.lp.server.artikel.service.LagerReportFac;
+import com.lp.server.artikel.service.LagerabgangursprungDto;
 import com.lp.server.artikel.service.LagerbewegungDto;
 import com.lp.server.artikel.service.LagerplatzDto;
 import com.lp.server.artikel.service.ReportArtikelgruppeDto;
 import com.lp.server.artikel.service.SeriennrChargennrAufLagerDto;
+import com.lp.server.artikel.service.VerkaufspreisDto;
 import com.lp.server.artikel.service.VkPreisfindungEinzelverkaufspreisDto;
 import com.lp.server.artikel.service.VkpfartikelpreislisteDto;
 import com.lp.server.artikel.service.VkpreisfindungDto;
@@ -94,6 +99,9 @@ import com.lp.server.bestellung.service.BestellungFac;
 import com.lp.server.bestellung.service.WareneingangFac;
 import com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungReport;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
+import com.lp.server.fertigung.service.LosDto;
+import com.lp.server.fertigung.service.LosistmaterialDto;
+import com.lp.server.fertigung.service.LossollmaterialDto;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition;
 import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.lieferschein.service.LieferscheinFac;
@@ -101,6 +109,7 @@ import com.lp.server.lieferschein.service.LieferscheinpositionFac;
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 import com.lp.server.partner.fastlanereader.generated.FLRLieferant;
 import com.lp.server.partner.service.KundeDto;
+import com.lp.server.partner.service.KundesokoDto;
 import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnung;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition;
@@ -114,10 +123,13 @@ import com.lp.server.system.jcr.service.docnode.DocNodeFolder;
 import com.lp.server.system.jcr.service.docnode.DocNodeLiteral;
 import com.lp.server.system.jcr.service.docnode.HeliumDocPath;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.DatumsfilterVonBis;
+import com.lp.server.util.HelperServer;
 import com.lp.server.util.LPReport;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.report.JasperPrintLP;
@@ -153,6 +165,7 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 	private static int REPORT_WARENBEWEGUNGSJOURNAL_WE_REFERENZ = 17;
 	private static int REPORT_WARENBEWEGUNGSJOURNAL_ZUGANG_WER_HAT_GEBUCHT = 18;
 	private static int REPORT_WARENBEWEGUNGSJOURNAL_ABGANG_WER_HAT_GEBUCHT = 19;
+	private static int REPORT_WARENBEWEGUNGSJOURNAL_VERSION = 20;
 
 	private static int REPORT_KUNDEUMSATZSTATISTIK_KUNDENGRUPPIERUNG = 0;
 	private static int REPORT_KUNDEUMSATZSTATISTIK_KUNDE = 1;
@@ -182,6 +195,8 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 	private static int REPORT_KUNDEUMSATZSTATISTIK_LKZ = 25;
 	private static int REPORT_KUNDEUMSATZSTATISTIK_PLZ = 26;
 	private static int REPORT_KUNDEUMSATZSTATISTIK_KUNDENNUMMER = 27;
+	private static int REPORT_KUNDEUMSATZSTATISTIK_KREDITLIMIT = 28;
+	private static int REPORT_KUNDEUMSATZSTATISTIK_ANZAHL_SPALTEN = 29;
 
 	private static int REPORT_LIEFERANTUMSATZSTATISTIK_LIEFERANTGRUPPIERUNG = 0;
 	private static int REPORT_LIEFERANTUMSATZSTATISTIK_LIEFERANT = 1;
@@ -266,6 +281,11 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 	private static int REPORT_UMBUCHUNGSBELEG_MENGE = 5;
 	private static int REPORT_UMBUCHUNGSBELEG_SERIENNR = 6;
 	private static int REPORT_UMBUCHUNGSBELEG_EINHEIT = 7;
+	private static int REPORT_UMBUCHUNGSBELEG_KURZBEZEICHNUNG = 8;
+	private static int REPORT_UMBUCHUNGSBELEG_ZUSATZBEZEICHNUNG = 9;
+	private static int REPORT_UMBUCHUNGSBELEG_ZUSATZBEZEICHNUNG2 = 10;
+	private static int REPORT_UMBUCHUNGSBELEG_LAGERORT = 11;
+	private static int REPORT_UMBUCHUNGSBELEG_ANZAHL_SPALTEN = 12;
 
 	private static int REPORT_LAGERBUCHUNGSBELEG_ARTIKELNUMMER = 0;
 	private static int REPORT_LAGERBUCHUNGSBELEG_BEZEICHNUNG = 1;
@@ -274,6 +294,11 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 	private static int REPORT_LAGERBUCHUNGSBELEG_MENGE = 4;
 	private static int REPORT_LAGERBUCHUNGSBELEG_SERIENNR = 5;
 	private static int REPORT_LAGERBUCHUNGSBELEG_EINHEIT = 6;
+	private static int REPORT_LAGERBUCHUNGSBELEG_KURZBEZEICHNUNG = 7;
+	private static int REPORT_LAGERBUCHUNGSBELEG_ZUSATZBEZEICHNUNG = 8;
+	private static int REPORT_LAGERBUCHUNGSBELEG_ZUSATZBEZEICHNUNG2 = 9;
+	private static int REPORT_LAGERBUCHUNGSBELEG_LAGERORT = 10;
+	private static int REPORT_LAGERBUCHUNGSBELEG_ANZAHL_SPALTEN = 11;
 
 	private static int REPORT_MINDESTHALTBARKEIT_ARTIKELNUMMER = 0;
 	private static int REPORT_MINDESTHALTBARKEIT_BEZEICHNUNG = 1;
@@ -362,6 +387,26 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 	public static int REPORT_ZAEHLLISTE_VERPACKUNGSART = 15;
 	public static int REPORT_ZAEHLLISTE_LAGERSTAND = 16;
 	public static int REPORT_ZAEHLLISTE_FELDANZAHL = 17;
+
+	private static int REPORT_INDIREKTE_WE_STATISTIK_ARTIKELNUMMER = 0;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_BEZEICHNUNG = 1;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_ZUSATZBEZEICHNUNG = 2;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_LIEFERBELEG = 3;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_VKPREIS_LIEFERBELEG = 4;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_KUNDE = 5;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_WARENEINGANGSBELEG = 6;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_LIEFERANT = 7;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_VERBRAUCHSBELEG = 8;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_EBENE = 9;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_LIEFERDATUM = 10;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_MENGE = 11;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_EINSTANDSPREIS = 12;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_GESTEHUNGSPREIS = 13;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_VKPREIS = 14;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_KUNDENARTIKELNUMMER = 15;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_VERBRAUCHSDATUM = 16;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_WARENEINGANGSDATUM = 17;
+	private static int REPORT_INDIREKTE_WE_STATISTIK_ANZAHL_SPALTEN = 18;
 
 	public JasperPrintLP printLieferantumsatzstatistik(Timestamp tVon,
 			Timestamp tBis, boolean bWareneingangspositionen,
@@ -1134,6 +1179,7 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 			kdums.setILieferart(kundeDto.getLieferartIId());
 			kdums.setISpediteur(kundeDto.getSpediteurIId());
 			kdums.setIKundennummer(kundeDto.getIKundennummer());
+			kdums.setBdKreditlimit(kundeDto.getNKreditlimit());
 
 			if (kundeDto.getPartnerDto().getLandplzortDto() != null) {
 				kdums.setSLkz(kundeDto.getPartnerDto().getLandplzortDto()
@@ -1436,33 +1482,39 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 							List<?> resultList = query.list();
 							Iterator<?> resultListIteratorFTGruppe = resultList
 									.iterator();
+
+							String fertigungsgruppe_c_bez = null;
+
 							if (resultListIteratorFTGruppe.hasNext()) {
 								FLRFertigungsgruppe gru = (FLRFertigungsgruppe) resultListIteratorFTGruppe
 										.next();
-
-								if (gru != null) {
-									// Bei richtiger Gruppe einfuegen
-									for (int j = 0; j < gruppierung.size(); j++) {
-										if (gruppierung.get(j).equals(
-												gru.getC_bez())) {
-											kdums.getSubSummeUmsatz()[j + 1] = kdums
-													.getSubSummeUmsatz()[j + 1]
-													.add(umsatz);
-											kdums.getSubSummeDeckungsbeitrag()[j + 1] = kdums
-													.getSubSummeDeckungsbeitrag()[j + 1]
-													.add(deckungsbeitrag);
-											bSpalteAndrucken[j] = true;
-										}
-									}
-								} else {
-									kdums.getSubSummeUmsatz()[0] = kdums
-											.getSubSummeUmsatz()[0].add(umsatz);
-									kdums.getSubSummeDeckungsbeitrag()[0] = kdums
-											.getSubSummeDeckungsbeitrag()[0]
-											.add(deckungsbeitrag);
-								}
-								sessionFTGruppe.close();
+								fertigungsgruppe_c_bez = gru.getC_bez();
 							}
+
+							if (fertigungsgruppe_c_bez != null) {
+								// Bei richtiger Gruppe einfuegen
+								for (int j = 0; j < gruppierung.size(); j++) {
+									if (gruppierung.get(j).equals(
+											fertigungsgruppe_c_bez)) {
+										kdums.getSubSummeUmsatz()[j + 1] = kdums
+												.getSubSummeUmsatz()[j + 1]
+												.add(umsatz);
+										kdums.getSubSummeDeckungsbeitrag()[j + 1] = kdums
+												.getSubSummeDeckungsbeitrag()[j + 1]
+												.add(deckungsbeitrag);
+										bSpalteAndrucken[j] = true;
+									}
+								}
+							} else {
+								kdums.getSubSummeUmsatz()[0] = kdums
+										.getSubSummeUmsatz()[0].add(umsatz);
+								kdums.getSubSummeDeckungsbeitrag()[0] = kdums
+										.getSubSummeDeckungsbeitrag()[0]
+										.add(deckungsbeitrag);
+							}
+
+							sessionFTGruppe.close();
+
 						} else if (iOptionGruppierung.intValue() == LagerReportFac.REPORT_KUNDEUMSATZSTATISTIK_OPTION_GRUPPIERUNG_JAHR) {
 
 							Calendar cZeile = Calendar.getInstance();
@@ -1723,34 +1775,38 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 								Iterator<?> resultListIteratorFTGruppe = resultList
 										.iterator();
 
+								String fertigungsgruppe_c_bez = null;
+
 								if (resultListIteratorFTGruppe.hasNext()) {
 									FLRFertigungsgruppe gru = (FLRFertigungsgruppe) resultListIteratorFTGruppe
 											.next();
-
-									if (gru != null) {
-										// Bei richtiger Gruppe einfuegen
-										for (int j = 0; j < gruppierung.size(); j++) {
-											if (gruppierung.get(j).equals(
-													gru.getC_bez())) {
-												kdums.getSubSummeUmsatz()[j + 1] = kdums
-														.getSubSummeUmsatz()[j + 1]
-														.add(umsatzLs);
-												kdums.getSubSummeDeckungsbeitrag()[j + 1] = kdums
-														.getSubSummeDeckungsbeitrag()[j + 1]
-														.add(deckungsbeitrag);
-												bSpalteAndrucken[j] = true;
-											}
-										}
-									} else {
-										kdums.getSubSummeUmsatz()[0] = kdums
-												.getSubSummeUmsatz()[0]
-												.add(umsatzLs);
-										kdums.getSubSummeDeckungsbeitrag()[0] = kdums
-												.getSubSummeDeckungsbeitrag()[0]
-												.add(deckungsbeitrag);
-									}
-									sessionFTGruppe.close();
+									fertigungsgruppe_c_bez = gru.getC_bez();
 								}
+
+								if (fertigungsgruppe_c_bez != null) {
+									// Bei richtiger Gruppe einfuegen
+									for (int j = 0; j < gruppierung.size(); j++) {
+										if (gruppierung.get(j).equals(
+												fertigungsgruppe_c_bez)) {
+											kdums.getSubSummeUmsatz()[j + 1] = kdums
+													.getSubSummeUmsatz()[j + 1]
+													.add(umsatzLs);
+											kdums.getSubSummeDeckungsbeitrag()[j + 1] = kdums
+													.getSubSummeDeckungsbeitrag()[j + 1]
+													.add(deckungsbeitrag);
+											bSpalteAndrucken[j] = true;
+										}
+									}
+								} else {
+									kdums.getSubSummeUmsatz()[0] = kdums
+											.getSubSummeUmsatz()[0]
+											.add(umsatzLs);
+									kdums.getSubSummeDeckungsbeitrag()[0] = kdums
+											.getSubSummeDeckungsbeitrag()[0]
+											.add(deckungsbeitrag);
+								}
+								sessionFTGruppe.close();
+
 							} else if (iOptionGruppierung.intValue() == LagerReportFac.REPORT_KUNDEUMSATZSTATISTIK_OPTION_GRUPPIERUNG_JAHR) {
 
 								Calendar cZeile = Calendar.getInstance();
@@ -2065,13 +2121,15 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 			} else {
 				sAktuellerReport = LagerReportFac.REPORT_KUNDEDBSTATISTIK;
 			}
-			data = new Object[gesamtListe.size()][28];
+			data = new Object[gesamtListe.size()][REPORT_KUNDEUMSATZSTATISTIK_ANZAHL_SPALTEN];
 			for (int j = 0; j < gesamtListe.size(); j++) {
 				KundeUmsatzstatistikDto dto = (KundeUmsatzstatistikDto) gesamtListe
 						.get(j);
 				data[j][REPORT_KUNDEUMSATZSTATISTIK_KUNDENGRUPPIERUNG] = dto
 						.getSKundengruppierung();
 				data[j][REPORT_KUNDEUMSATZSTATISTIK_KUNDE] = dto.getSKunde();
+				data[j][REPORT_KUNDEUMSATZSTATISTIK_KREDITLIMIT] = dto
+						.getBdKreditlimit();
 				data[j][REPORT_KUNDEUMSATZSTATISTIK_UMSATZ] = dto.getBdUmsatz();
 				data[j][REPORT_KUNDEUMSATZSTATISTIK_PLZ] = dto.getSPlz();
 				data[j][REPORT_KUNDEUMSATZSTATISTIK_LKZ] = dto.getSLkz();
@@ -2294,7 +2352,8 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 				// PJ16955 Der Gestehungswert bei Gutschriften wurde bisher
 				// nicht mitgerechnet (immer 0)
 				// Mit dieser Erweiterung wird der Gutschrifts-Gestwert, der bei
-				// der Zubuchung aus der Rechnung ermittelt wird, beruecksichtigt
+				// der Zubuchung aus der Rechnung ermittelt wird,
+				// beruecksichtigt
 				gestpreis = getLagerFac()
 						.getGemittelterEinstandspreisEinerZugangsposition(
 								LocaleFac.BELEGART_GUTSCHRIFT,
@@ -2517,32 +2576,29 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 		parameter.put("P_MITNICHTLAGERBEWIRTSCHAFTETENARTIKELN", new Boolean(
 				bMitNichtLagerbewirtschaftetenArtikeln));
 
-		Calendar c = Calendar.getInstance();
-		c.setTimeInMillis(dBis.getTime());
-		c.set(Calendar.HOUR_OF_DAY, 23);
-		c.set(Calendar.MINUTE, 59);
-		c.set(Calendar.SECOND, 59);
-		c.set(Calendar.MILLISECOND, 999);
-
-		dBis.setTime(c.getTimeInMillis());
-
 		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String mandantCNr = theClientDto.getMandant();
+
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+				MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)) {
+			mandantCNr = getSystemFac().getHauptmandant();
+		}
 
 		String queryString = "SELECT l FROM FLRLagerbewegung as l LEFT OUTER JOIN l.flrartikel.flrartikelgruppe AS gruppe LEFT OUTER JOIN l.flrartikel.flrartikelklasse AS klasse "
 				+ " WHERE l.flrartikel.mandant_c_nr='"
-				+ theClientDto.getMandant()
+				+ mandantCNr
 				+ "' AND l.b_historie=0 AND l.flrartikel.artikelart_c_nr NOT IN ('"
 				+ ArtikelFac.ARTIKELART_HANDARTIKEL + "') ";
 
 		queryString += " AND l.t_belegdatum >='"
-				+ Helper.formatTimestampWithSlashes(dVon)
-				+ "'";
+				+ Helper.formatTimestampWithSlashes(dVon) + "'";
 		parameter.put("P_VON", dVon);
 
-		queryString += " AND l.t_belegdatum <='"
-				+ Helper.formatTimestampWithSlashes(dBis)
-				+ "'";
-		parameter.put("P_BIS", dBis);
+		queryString += " AND l.t_belegdatum <'"
+				+ Helper.formatTimestampWithSlashes(Helper
+						.cutTimestamp(new Timestamp(
+								dBis.getTime() + 24 * 3600000))) + "'";
 
 		if (artikelgruppeIId != null) {
 			queryString += " AND l.flrartikel.flrartikelgruppe.i_id="
@@ -2692,14 +2748,14 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 							zeile[REPORT_WARENENTNAHMESTATISTIK_LAGERSTAND_BEGINN] = new BigDecimal(
 									0);
 						}
-						
-						BigDecimal lsEnde = getLagerFac()
-						.getLagerstandZumZeitpunkt(
-								lagerbewegung.getArtikel_i_id(),
-								lagerbewegung.getLager_i_id(), dBis,
 
-								theClientDto);
-						
+						BigDecimal lsEnde = getLagerFac()
+								.getLagerstandZumZeitpunkt(
+										lagerbewegung.getArtikel_i_id(),
+										lagerbewegung.getLager_i_id(), dBis,
+
+										theClientDto);
+
 						zeile[REPORT_WARENENTNAHMESTATISTIK_LAGERSTAND_ENDE] = lsEnde;
 
 						zeile[REPORT_WARENENTNAHMESTATISTIK_ANZAHL_BESTELLUNGEN] = getWareneingangFac()
@@ -2727,35 +2783,43 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 
 						}
 
-						zeile[REPORT_WARENENTNAHMESTATISTIK_LAGERWERT_ENDE] = getLagerFac()
+						BigDecimal bdGestpreisEnde = getLagerFac()
 								.getGestehungspreisZumZeitpunkt(
 										lagerbewegung.getArtikel_i_id(),
 										lagerbewegung.getLager_i_id(), dBis,
 
-										theClientDto).multiply(lsEnde);
+										theClientDto);
+
+						if (bdGestpreisEnde == null) {
+							bdGestpreisEnde = new BigDecimal(0);
+						}
+
+						zeile[REPORT_WARENENTNAHMESTATISTIK_LAGERWERT_ENDE] = bdGestpreisEnde
+								.multiply(lsEnde);
 
 						zeile[REPORT_WARENENTNAHMESTATISTIK_MENGE_ZUGANG] = new BigDecimal(
 								0);
 						zeile[REPORT_WARENENTNAHMESTATISTIK_MENGE_ABGANG] = new BigDecimal(
 								0);
 
-						zeile[REPORT_WARENENTNAHMESTATISTIK_WERT_ABGAENGE] =new BigDecimal(
+						zeile[REPORT_WARENENTNAHMESTATISTIK_WERT_ABGAENGE] = new BigDecimal(
 								0);
-						zeile[REPORT_WARENENTNAHMESTATISTIK_WERT_ZUGAENGE] =new BigDecimal(
+						zeile[REPORT_WARENENTNAHMESTATISTIK_WERT_ZUGAENGE] = new BigDecimal(
 								0);
-						
-						
+
 						BigDecimal nMenge = lagerbewegung.getN_menge();
 
 						if (Helper.short2boolean(lagerbewegung.getB_abgang())) {
 							zeile[REPORT_WARENENTNAHMESTATISTIK_MENGE_ABGANG] = nMenge;
 
-							zeile[REPORT_WARENENTNAHMESTATISTIK_WERT_ABGAENGE] = nMenge.multiply(lagerbewegung
+							zeile[REPORT_WARENENTNAHMESTATISTIK_WERT_ABGAENGE] = nMenge
+									.multiply(lagerbewegung
 											.getN_gestehungspreis());
 
 						} else {
 							zeile[REPORT_WARENENTNAHMESTATISTIK_MENGE_ZUGANG] = nMenge;
-							zeile[REPORT_WARENENTNAHMESTATISTIK_WERT_ZUGAENGE] = nMenge.multiply(lagerbewegung
+							zeile[REPORT_WARENENTNAHMESTATISTIK_WERT_ZUGAENGE] = nMenge
+									.multiply(lagerbewegung
 											.getN_einstandspreis());
 						}
 
@@ -2802,7 +2866,7 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 					} else {
 						zeile[REPORT_WARENENTNAHMESTATISTIK_MENGE_ZUGANG] = ((BigDecimal) zeile[REPORT_WARENENTNAHMESTATISTIK_MENGE_ZUGANG])
 								.add(nMenge);
-						zeile[REPORT_WARENENTNAHMESTATISTIK_WERT_ZUGAENGE] =  ((BigDecimal) zeile[REPORT_WARENENTNAHMESTATISTIK_WERT_ZUGAENGE])
+						zeile[REPORT_WARENENTNAHMESTATISTIK_WERT_ZUGAENGE] = ((BigDecimal) zeile[REPORT_WARENENTNAHMESTATISTIK_WERT_ZUGAENGE])
 								.add(nMenge.multiply(lagerbewegung
 										.getN_einstandspreis()));
 					}
@@ -2966,10 +3030,13 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 			parameter.put("P_VON", dVon);
 		}
 		if (dBis != null) {
-			queryString += " AND l.t_belegdatum <='"
-					+ Helper.formatDateWithSlashes(new java.sql.Date(dBis
-							.getTime())) + "'";
+
 			parameter.put("P_BIS", dBis);
+
+			queryString += " AND l.t_belegdatum <'"
+					+ Helper.formatDateWithSlashes(new java.sql.Date(dBis
+							.getTime() + 24 * 3600000)) + "'";
+
 		}
 
 		queryString += " ORDER BY ";
@@ -3530,12 +3597,25 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 		sAktuellerReport = LagerReportFac.REPORT_ARTIKLEGRUPPEN;
 		Session session = FLRSessionFactory.getFactory().openSession();
 
+		String mandantCNr = theClientDto.getMandant();
+
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+				MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)) {
+			mandantCNr = getSystemFac().getHauptmandant();
+		}
+
 		String queryString = "SELECT l FROM FLRLagerbewegung as l WHERE l.flrartikel.mandant_c_nr='"
-				+ theClientDto.getMandant()
+				+ mandantCNr
 				+ "' AND l.b_abgang=1 AND l.b_historie=0 AND l.n_menge>0 AND l.flrartikel.artikelart_c_nr NOT IN ('"
 				+ ArtikelFac.ARTIKELART_HANDARTIKEL
 				+ "') AND l.c_belegartnr NOT IN ('"
 				+ LocaleFac.BELEGART_INVENTUR + "') ";
+
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+				MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)) {
+			queryString += " AND l.flrlager.mandant_c_nr='"
+					+ theClientDto.getMandant() + "'";
+		}
 
 		if (bMitVersteckten == false) {
 			queryString += " AND l.flrartikel.b_versteckt = 0 ";
@@ -3583,7 +3663,6 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 		BigDecimal gestwertUnbekannt = new BigDecimal(0);
 		BigDecimal vkWertUnbekannt = new BigDecimal(0);
 		BigDecimal mengeUnbekannt = new BigDecimal(0);
-		
 
 		// --------------
 		while (resultListIterator.hasNext()) {
@@ -3816,6 +3895,441 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 
 		}
 
+	}
+
+	private TreeMap<String, ArrayList> holeZugangsbeleg(String lieferbeleg,
+			String verbrauchsbeleg, String kunde, Integer kundeIId,
+			FLRLagerbewegung l, TreeMap<String, ArrayList> tmDaten, int iEbene,
+			String kopfsortierung, BigDecimal bdFaktorFuerNaechstEbene,
+			TheClientDto theClientDto) {
+
+		Object[] oZeileVorlage = new Object[REPORT_INDIREKTE_WE_STATISTIK_ANZAHL_SPALTEN];
+		oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_LIEFERBELEG] = lieferbeleg;
+		oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_KUNDE] = kunde;
+		oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_VERBRAUCHSBELEG] = verbrauchsbeleg;
+		oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_VERBRAUCHSDATUM] = l
+				.getT_buchungszeit();
+		oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_ARTIKELNUMMER] = l
+				.getFlrartikel().getC_nr();
+
+		//
+		ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
+				l.getFlrartikel().getI_id(), theClientDto);
+		if (aDto.getArtikelsprDto() != null) {
+			oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_BEZEICHNUNG] = aDto
+					.getArtikelsprDto().getCBez();
+			oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_ZUSATZBEZEICHNUNG] = aDto
+					.getArtikelsprDto().getCZbez();
+		}
+
+		oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_EBENE] = new Integer(iEbene);
+
+		if (bdFaktorFuerNaechstEbene != null) {
+			oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_MENGE] = l.getN_menge()
+					.divide(bdFaktorFuerNaechstEbene, 6,
+							BigDecimal.ROUND_HALF_EVEN);
+		} else {
+			oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_MENGE] = l.getN_menge();
+		}
+
+		oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_VKPREIS_LIEFERBELEG] = l
+				.getN_verkaufspreis();
+		oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_LIEFERDATUM] = l
+				.getT_belegdatum();
+		oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_GESTEHUNGSPREIS] = l
+				.getN_gestehungspreis();
+
+		// VK-Preisfindung
+
+		try {
+			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKeySmall(
+					kundeIId);
+
+			if (kundeDto.getMwstsatzbezIId() != null) {
+				VkpreisfindungDto vkpreisDto = getVkPreisfindungFac()
+						.verkaufspreisfindung(
+								l.getFlrartikel().getI_id(),
+								kundeIId,
+								l.getN_menge(),
+								new Date(l.getT_belegdatum().getTime()),
+								kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
+								getMandantFac()
+										.mwstsatzFindByMwstsatzbezIIdAktuellster(
+												kundeDto.getMwstsatzbezIId(),
+												theClientDto).getIId(),
+								theClientDto.getSMandantenwaehrung(),
+								theClientDto);
+
+				VerkaufspreisDto kundenVKPreisDto = Helper
+						.getVkpreisBerechnet(vkpreisDto);
+
+				if (kundenVKPreisDto != null
+						&& kundenVKPreisDto.nettopreis != null) {
+
+					oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_VKPREIS] = kundenVKPreisDto.nettopreis;
+
+				}
+			}
+
+			// KundeArtikelnr gueltig zu Belegdatum
+			KundesokoDto kundeSokoDto_gueltig = this.getKundesokoFac()
+					.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
+							kundeDto.getIId(), l.getFlrartikel().getI_id(),
+							new java.sql.Date(l.getT_belegdatum().getTime()));
+			if (kundeSokoDto_gueltig != null) {
+				oZeileVorlage[REPORT_INDIREKTE_WE_STATISTIK_KUNDENARTIKELNUMMER] = kundeSokoDto_gueltig
+						.getCKundeartikelnummer();
+			}
+
+		} catch (RemoteException e1) {
+			throwEJBExceptionLPRespectOld(e1);
+		}
+
+		String sortierung = Helper.fitString2Length(kunde, 80, ' ')
+				+ kopfsortierung;
+
+		ArrayList alDaten = null;
+
+		if (tmDaten.containsKey(sortierung)) {
+			alDaten = tmDaten.get(sortierung);
+		} else {
+			alDaten = new ArrayList();
+		}
+		alDaten.add(oZeileVorlage);
+		tmDaten.put(sortierung, alDaten);
+		iEbene++;
+
+		try {
+			LagerabgangursprungDto[] urspruenge = getLagerFac()
+					.lagerabgangursprungFindByLagerbewegungIIdBuchung(
+							l.getI_id_buchung());
+
+			boolean bZeileBereitsVerwendet = false;
+
+			for (int i = 0; i < urspruenge.length; i++) {
+				urspruenge[i].getILagerbewegungidursprung();
+
+				Object[] oZeile = oZeileVorlage.clone();
+
+				oZeile[REPORT_INDIREKTE_WE_STATISTIK_EBENE] = new Integer(
+						iEbene);
+				Session s2 = FLRSessionFactory.getFactory().openSession();
+				String queryString2 = " SELECT l FROM FLRLagerbewegung l WHERE l.i_id_buchung="
+						+ urspruenge[i].getILagerbewegungidursprung()
+						+ " AND l.b_historie=0 AND l.n_menge>0";
+				Query query2 = s2.createQuery(queryString2);
+				List<?> resultList2 = query2.list();
+				Iterator<?> resultListIterator2 = resultList2.iterator();
+				while (resultListIterator2.hasNext()) {
+					FLRLagerbewegung lUrsprung = (FLRLagerbewegung) resultListIterator2
+							.next();
+
+					if (lUrsprung.getC_belegartnr().equals(
+							LocaleFac.BELEGART_LOSABLIEFERUNG)) {
+
+						LosDto losDto = getFertigungFac()
+								.losFindByPrimaryKeyOhneExc(
+										lUrsprung.getI_belegartid());
+						if (losDto != null) {
+
+							bdFaktorFuerNaechstEbene = losDto.getNLosgroesse()
+									.divide(l.getN_menge(), 6,
+											BigDecimal.ROUND_HALF_EVEN);
+
+							LossollmaterialDto[] sollDtos = getFertigungFac()
+									.lossollmaterialFindByLosIIdOrderByISort(
+											losDto.getIId());
+							for (int j = 0; j < sollDtos.length; j++) {
+
+								LosistmaterialDto[] istDtos = getFertigungFac()
+										.losistmaterialFindByLossollmaterialIId(
+												sollDtos[j].getIId());
+								for (int k = 0; k < istDtos.length; k++) {
+
+									Session s = FLRSessionFactory.getFactory()
+											.openSession();
+									String queryString = " SELECT l FROM FLRLagerbewegung l WHERE l.c_belegartnr='"
+											+ LocaleFac.BELEGART_LOS
+											+ "' AND l.i_belegartpositionid="
+											+ istDtos[k].getIId()
+											+ " AND l.n_menge>0";
+									Query query = s.createQuery(queryString);
+									List<?> resultList = query.list();
+									Iterator<?> resultListIterator = resultList
+											.iterator();
+									while (resultListIterator.hasNext()) {
+										FLRLagerbewegung lIstmaterial = (FLRLagerbewegung) resultListIterator
+												.next();
+
+										holeZugangsbeleg(lieferbeleg, "LO"
+												+ losDto.getCNr(), kunde,
+												kundeIId, lIstmaterial,
+												tmDaten, iEbene,
+												kopfsortierung,
+												bdFaktorFuerNaechstEbene,
+												theClientDto);
+
+									}
+									s.close();
+
+								}
+							}
+
+						}
+
+					} else {
+
+						ArrayList alDatenVorhanden = null;
+
+						if (tmDaten.containsKey(sortierung)) {
+							alDatenVorhanden = tmDaten.get(sortierung);
+						} else {
+							alDatenVorhanden = new ArrayList();
+						}
+
+						// Zu vorherigen Zeile hinzufuegen
+
+						Object[] oZeileVorher = null;
+						if (bZeileBereitsVerwendet == false) {
+							oZeileVorher = (Object[]) alDatenVorhanden
+									.get(alDatenVorhanden.size() - 1);
+						} else {
+							oZeileVorher = oZeileVorlage.clone();
+
+						}
+
+						BelegInfos biDto = getLagerFac()
+								.getBelegInfos(lUrsprung.getC_belegartnr(),
+										lUrsprung.getI_belegartid(), null,
+										theClientDto);
+
+						if (bdFaktorFuerNaechstEbene != null) {
+							oZeileVorher[REPORT_INDIREKTE_WE_STATISTIK_MENGE] = urspruenge[i]
+									.getNVerbrauchtemenge().divide(
+											bdFaktorFuerNaechstEbene, 4,
+											BigDecimal.ROUND_HALF_EVEN);
+						} else {
+							oZeileVorher[REPORT_INDIREKTE_WE_STATISTIK_MENGE] = urspruenge[i]
+									.getNVerbrauchtemenge();
+						}
+
+						oZeileVorher[REPORT_INDIREKTE_WE_STATISTIK_WARENEINGANGSBELEG] = lUrsprung
+								.getC_belegartnr().trim()
+								+ " "
+								+ biDto.getBelegnummer();
+						oZeileVorher[REPORT_INDIREKTE_WE_STATISTIK_EINSTANDSPREIS] = lUrsprung
+								.getN_einstandspreis();
+
+						oZeileVorher[REPORT_INDIREKTE_WE_STATISTIK_WARENEINGANGSDATUM] = lUrsprung
+								.getT_belegdatum();
+
+						oZeileVorher[REPORT_INDIREKTE_WE_STATISTIK_LIEFERANT] = biDto
+								.getKundeLieferant();
+
+						if (bZeileBereitsVerwendet == false) {
+							alDatenVorhanden.set(alDatenVorhanden.size() - 1,
+									oZeileVorher);
+						} else {
+							alDatenVorhanden.add(oZeileVorher);
+						}
+
+						tmDaten.put(sortierung, alDatenVorhanden);
+						bZeileBereitsVerwendet = true;
+
+					}
+
+				}
+
+			}
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		return tmDaten;
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printIndirekterWareneinsatz(
+			DatumsfilterVonBis datumsfilter, Integer kundeIId, int iSortierung,
+			TheClientDto theClientDto) {
+		sAktuellerReport = LagerReportFac.REPORT_INDIREKTE_WARENEINSATZ_STATISTIK;
+
+		HashMap<String, Object> parameter = new HashMap<String, Object>();
+		parameter.put("P_VON", datumsfilter.getTimestampVon());
+		parameter.put("P_BIS", datumsfilter.getTimestampBisUnveraendert());
+		if (iSortierung == REPORT_INDIREKTE_WARENEINSATZ_SORTIERUNG_KUNDE_ARTIKEL) {
+			parameter.put("P_SORTIERUNG", "Kunde + Artikelnummer");
+		} else if (iSortierung == REPORT_INDIREKTE_WARENEINSATZ_SORTIERUNG_KUNDE_BELEG) {
+			parameter.put("P_SORTIERUNG", "Kunde + Belegnummer");
+		}
+
+		if (kundeIId != null) {
+			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId,
+					theClientDto);
+			parameter.put("P_KUNDE", kundeDto.getPartnerDto().formatAnrede());
+		}
+
+		Session sessionLS = FLRSessionFactory.getFactory().openSession();
+
+		String queryStringLS = " SELECT l  FROM FLRLieferscheinposition l WHERE l.flrlieferschein.d_belegdatum>='"
+				+ Helper.formatTimestampWithSlashes(datumsfilter
+						.getTimestampVon())
+				+ "' AND l.flrlieferschein.d_belegdatum <'"
+				+ Helper.formatTimestampWithSlashes(datumsfilter
+						.getTimestampBis())
+				+ "' AND  l.n_menge <> 0 AND l.flrlieferschein.lieferscheinstatus_status_c_nr <>'"
+				+ LocaleFac.STATUS_STORNIERT
+				+ "' AND l.flrartikel.artikelart_c_nr='"
+				+ ArtikelFac.ARTIKELART_ARTIKEL + "' ";
+
+		if (kundeIId != null) {
+			queryStringLS += " AND l.flrlieferschein.flrkunde.i_id=" + kundeIId;
+
+		}
+
+		Query queryLS = sessionLS.createQuery(queryStringLS);
+		List<?> resultListLS = queryLS.list();
+
+		Iterator<?> resultListIteratorLS = resultListLS.iterator();
+		TreeMap<String, ArrayList> tmDaten = new TreeMap<String, ArrayList>();
+		while (resultListIteratorLS.hasNext()) {
+			FLRLieferscheinposition flrLieferscheinposition = (FLRLieferscheinposition) resultListIteratorLS
+					.next();
+
+			Session s2 = FLRSessionFactory.getFactory().openSession();
+			String queryString2 = " SELECT l FROM FLRLagerbewegung l WHERE l.c_belegartnr='"
+					+ LocaleFac.BELEGART_LIEFERSCHEIN
+					+ "' AND l.i_belegartpositionid="
+					+ flrLieferscheinposition.getI_id() + " AND l.n_menge>0";
+			Query query2 = s2.createQuery(queryString2);
+			List<?> resultList2 = query2.list();
+			Iterator<?> resultListIterator2 = resultList2.iterator();
+			while (resultListIterator2.hasNext()) {
+				FLRLagerbewegung l = (FLRLagerbewegung) resultListIterator2
+						.next();
+
+				String lsNr = "LS"
+						+ flrLieferscheinposition.getFlrlieferschein()
+								.getC_nr();
+
+				String kopfsortierung = "";
+				if (iSortierung == REPORT_INDIREKTE_WARENEINSATZ_SORTIERUNG_KUNDE_ARTIKEL) {
+					kopfsortierung = l.getFlrartikel().getC_nr();
+				} else {
+					kopfsortierung = lsNr;
+				}
+
+				holeZugangsbeleg(
+						lsNr,
+						null,
+						HelperServer
+								.formatNameAusFLRPartner(flrLieferscheinposition
+										.getFlrlieferschein().getFlrkunde()
+										.getFlrpartner()),
+						flrLieferscheinposition.getFlrlieferschein()
+								.getFlrkunde().getI_id(), l, tmDaten, 1,
+						kopfsortierung, null, theClientDto);
+
+			}
+			s2.close();
+		}
+		sessionLS.close();
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String queryString = " SELECT l  FROM FLRRechnungPosition l WHERE l.flrrechnung.d_belegdatum>='"
+				+ Helper.formatTimestampWithSlashes(datumsfilter
+						.getTimestampVon())
+				+ "' AND l.flrrechnung.d_belegdatum <'"
+				+ Helper.formatTimestampWithSlashes(datumsfilter
+						.getTimestampBis())
+				+ "' AND  l.n_menge <> 0 AND l.flrrechnung.status_c_nr <>'"
+				+ LocaleFac.STATUS_STORNIERT
+				+ "' AND l.flrartikel.artikelart_c_nr='"
+				+ ArtikelFac.ARTIKELART_ARTIKEL + "' ";
+
+		if (kundeIId != null) {
+			queryString += " AND l.flrrechnung.flrkunde.i_id=" + kundeIId;
+
+		}
+
+		Query query = session.createQuery(queryString);
+		List<?> resultList = query.list();
+
+		Iterator<?> resultListIterator = resultList.iterator();
+
+		while (resultListIterator.hasNext()) {
+			FLRRechnungPosition flrRechnungposition = (FLRRechnungPosition) resultListIterator
+					.next();
+
+			String belegartCNr = LocaleFac.BELEGART_RECHNUNG;
+			String kuerzel = "RE";
+
+			if (flrRechnungposition.getFlrrechnung().getFlrrechnungart()
+					.getRechnungtyp_c_nr()
+					.equals(RechnungFac.RECHNUNGTYP_GUTSCHRIFT)) {
+				belegartCNr = LocaleFac.BELEGART_GUTSCHRIFT;
+				kuerzel = "GS";
+			}
+
+			Session s2 = FLRSessionFactory.getFactory().openSession();
+			String queryString2 = " SELECT l FROM FLRLagerbewegung l WHERE l.c_belegartnr='"
+					+ belegartCNr
+					+ "' AND l.i_belegartpositionid="
+					+ flrRechnungposition.getI_id() + " AND l.n_menge>0";
+			Query query2 = s2.createQuery(queryString2);
+			List<?> resultList2 = query2.list();
+			Iterator<?> resultListIterator2 = resultList2.iterator();
+			while (resultListIterator2.hasNext()) {
+				FLRLagerbewegung l = (FLRLagerbewegung) resultListIterator2
+						.next();
+
+				String reNr = kuerzel
+						+ flrRechnungposition.getFlrrechnung().getC_nr();
+
+				String kopfsortierung = "";
+				if (iSortierung == REPORT_INDIREKTE_WARENEINSATZ_SORTIERUNG_KUNDE_ARTIKEL) {
+					kopfsortierung = l.getFlrartikel().getC_nr();
+				} else {
+					kopfsortierung = reNr;
+				}
+
+				holeZugangsbeleg(reNr, null,
+						HelperServer
+								.formatNameAusFLRPartner(flrRechnungposition
+										.getFlrrechnung().getFlrkunde()
+										.getFlrpartner()), flrRechnungposition
+								.getFlrrechnung().getFlrkunde().getI_id(), l,
+						tmDaten, 1, kopfsortierung, null, theClientDto);
+
+			}
+			s2.close();
+		}
+		session.close();
+
+		// Sortieren
+		ArrayList alDaten = new ArrayList();
+
+		Iterator it = tmDaten.keySet().iterator();
+		while (it.hasNext()) {
+			String sort = (String) it.next();
+			ArrayList al = tmDaten.get(sort);
+
+			for (int i = 0; i < al.size(); i++) {
+				alDaten.add(al.get(i));
+			}
+
+		}
+
+		Object[][] returnArray = new Object[alDaten.size()][REPORT_INDIREKTE_WE_STATISTIK_ANZAHL_SPALTEN];
+		data = (Object[][]) alDaten.toArray(returnArray);
+
+		initJRDS(parameter, LagerReportFac.REPORT_MODUL,
+				LagerReportFac.REPORT_INDIREKTE_WARENEINSATZ_STATISTIK,
+				theClientDto.getMandant(), theClientDto.getLocUi(),
+				theClientDto);
+
+		return getReportPrint();
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
@@ -4135,7 +4649,7 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 				// Wenn Gestehungspreis mit angegeben
 				if (abGestpreis != null) {
 					if (artikel[4] == null
-							|| abGestpreis.doubleValue() > ((BigDecimal) artikel[3])
+							|| abGestpreis.doubleValue() > ((BigDecimal) artikel[4])
 									.doubleValue()) {
 						continue;
 					}
@@ -4415,7 +4929,18 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 			}
 
 		} else {
-			queryString = "SELECT artikelliste.i_id, artikelliste.c_nr, aspr.c_bez,(SELECT sum(artikellager.n_lagerstand) FROM FLRArtikellager AS artikellager WHERE artikellager.compId.artikel_i_id=artikelliste.i_id  AND artikellager.flrlager.lagerart_c_nr NOT IN('"
+
+			String filterWennZentralerArtikelstamm = "";
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+					theClientDto)) {
+				filterWennZentralerArtikelstamm = " AND artikellager.flrlager.mandant_c_nr='"
+						+ theClientDto.getMandant() + "'";
+			}
+
+			queryString = "SELECT artikelliste.i_id, artikelliste.c_nr, aspr.c_bez,(SELECT sum(artikellager.n_lagerstand) FROM FLRArtikellager AS artikellager WHERE artikellager.compId.artikel_i_id=artikelliste.i_id "
+					+ filterWennZentralerArtikelstamm
+					+ "  AND artikellager.flrlager.lagerart_c_nr NOT IN('"
 					+ LagerFac.LAGERART_WERTGUTSCHRIFT
 					+ "')) ,(SELECT sum(artikellager.n_gestehungspreis*artikellager.n_lagerstand) FROM FLRArtikellager AS artikellager WHERE artikellager.compId.artikel_i_id=artikelliste.i_id  AND artikellager.flrlager.lagerart_c_nr NOT IN('"
 					+ LagerFac.LAGERART_WERTGUTSCHRIFT
@@ -4431,16 +4956,23 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 
 		}
 
+		String mandantCNr = theClientDto.getMandant();
+
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+				MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)) {
+			mandantCNr = getSystemFac().getHauptmandant();
+		}
+
 		if (bMitAZArtikel.booleanValue() == true) {
 
 			queryString = queryString + " WHERE artikelliste.mandant_c_nr='"
-					+ theClientDto.getMandant()
+					+ mandantCNr
 					+ "' AND artikelliste.artikelart_c_nr not in('"
 					+ ArtikelFac.ARTIKELART_HANDARTIKEL + "') ";
 
 		} else {
 			queryString = queryString + " WHERE artikelliste.mandant_c_nr='"
-					+ theClientDto.getMandant()
+					+ mandantCNr
 					+ "' AND artikelliste.artikelart_c_nr not in('"
 					+ ArtikelFac.ARTIKELART_HANDARTIKEL + "','"
 					+ ArtikelFac.ARTIKELART_ARBEITSZEIT + "') ";
@@ -4542,14 +5074,13 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 
 		List<?> resultList = query.list();
 
-		
 		HashMap<Integer, BigDecimal> hmLagerstaendeZumZeitpunkt = null;
 		if (tStichtag != null) {
-			hmLagerstaendeZumZeitpunkt=getLagerFac()
-				.getLagerstandAllerArtikelZumZeitpunkt(lagerIId, tStichtag,
-						theClientDto);
+			hmLagerstaendeZumZeitpunkt = getLagerFac()
+					.getLagerstandAllerArtikelZumZeitpunkt(lagerIId, tStichtag,
+							theClientDto);
 		}
-		
+
 		Iterator<?> resultListIterator = resultList.iterator();
 		int row = 0;
 		Object[][] dataHelp = new Object[resultList.size()][REPORT_LAGERSTANDLISTE_ANZAHL_SPALTEN];
@@ -4562,8 +5093,7 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 				lagerstand = new BigDecimal(99999999);
 			} else {
 				if (tStichtag != null) {
-					lagerstand = hmLagerstaendeZumZeitpunkt
-							.get((Integer) o[0]);
+					lagerstand = hmLagerstaendeZumZeitpunkt.get((Integer) o[0]);
 
 					if (lagerstand == null) {
 						lagerstand = BigDecimal.ZERO;
@@ -4671,8 +5201,14 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 							for (int i = 0; i < dtos.length; i++) {
 								if (Helper
 										.short2boolean(dtos[i].getBSeriennr()) == true) {
-									s = s + dtos[i].getCSeriennrChargennr()
-											+ ", ";
+									s = s + dtos[i].getCSeriennrChargennr();
+
+									if (dtos[i].getCVersion() != null
+											&& dtos[i].getCVersion().length() > 0) {
+										s += ":" + dtos[i].getCVersion();
+									}
+
+									s += ", ";
 								} else {
 									s = s
 											+ dtos[i].getCSeriennrChargennr()
@@ -4682,6 +5218,7 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 													theClientDto.getLocUi())
 											+ " " + (String) o[8] + "\n";
 								}
+
 							}
 							dataHelp[row][REPORT_LAGERSTANDLISTE_SNRCHNRAUFLAGER] = s;
 						} catch (RemoteException ex) {
@@ -4710,7 +5247,12 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 								// den aktuellen verwenden
 								if (preis == null) {
 									preis = (BigDecimal) o[4];
-									lagerstandFuerPreis = (BigDecimal) o[3];
+
+									if (o[3] != null) {
+										lagerstandFuerPreis = (BigDecimal) o[3];
+									} else {
+										lagerstandFuerPreis = BigDecimal.ZERO;
+									}
 								} else {
 									// Mit lagerstand multiplizieren, da der
 									// Gestpreis zum Zeitpunkt nur fuer einen
@@ -5050,7 +5592,7 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 			Integer lagerbewegungIIdBuchungAbbuchung, TheClientDto theClientDto) {
 		index = -1;
 		sAktuellerReport = LagerReportFac.REPORT_UMBUCHUNGSBELEG;
-		data = new Object[1][8];
+		data = new Object[1][REPORT_UMBUCHUNGSBELEG_ANZAHL_SPALTEN];
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
 		try {
 
@@ -5070,8 +5612,21 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 					zubuchung.getArtikelIId(), theClientDto);
 
 			data[0][REPORT_UMBUCHUNGSBELEG_ARTIKELNUMMER] = artikelDto.getCNr();
-			data[0][REPORT_UMBUCHUNGSBELEG_BEZEICHNUNG] = artikelDto
-					.formatBezeichnung();
+
+			if (artikelDto.getArtikelsprDto() != null) {
+				data[0][REPORT_UMBUCHUNGSBELEG_BEZEICHNUNG] = artikelDto
+						.getArtikelsprDto().getCBez();
+				data[0][REPORT_UMBUCHUNGSBELEG_KURZBEZEICHNUNG] = artikelDto
+						.getArtikelsprDto().getCKbez();
+				data[0][REPORT_UMBUCHUNGSBELEG_ZUSATZBEZEICHNUNG] = artikelDto
+						.getArtikelsprDto().getCZbez();
+				data[0][REPORT_UMBUCHUNGSBELEG_ZUSATZBEZEICHNUNG2] = artikelDto
+						.getArtikelsprDto().getCZbez2();
+			}
+
+			data[0][REPORT_UMBUCHUNGSBELEG_LAGERORT] = getLagerFac()
+					.getLagerplaezteEinesArtikels(artikelDto.getIId(), null);
+
 			data[0][REPORT_UMBUCHUNGSBELEG_SERIENNR] = zubuchung
 					.getCSeriennrchargennr();
 			data[0][REPORT_UMBUCHUNGSBELEG_MENGE] = zubuchung.getNMenge();
@@ -5083,6 +5638,7 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 					.getCNr();
 			data[0][REPORT_UMBUCHUNGSBELEG_EINHEIT] = artikelDto
 					.getEinheitCNr().trim();
+
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
@@ -5100,7 +5656,7 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 			TheClientDto theClientDto) {
 		index = -1;
 		sAktuellerReport = LagerReportFac.REPORT_LAGERBUCHUNGSBELEG;
-		data = new Object[1][7];
+		data = new Object[1][REPORT_UMBUCHUNGSBELEG_ANZAHL_SPALTEN];
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
 		try {
 
@@ -5115,8 +5671,20 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 
 			data[0][REPORT_LAGERBUCHUNGSBELEG_ARTIKELNUMMER] = artikelDto
 					.getCNr();
-			data[0][REPORT_LAGERBUCHUNGSBELEG_BEZEICHNUNG] = artikelDto
-					.formatBezeichnung();
+
+			if (artikelDto.getArtikelsprDto() != null) {
+				data[0][REPORT_LAGERBUCHUNGSBELEG_BEZEICHNUNG] = artikelDto
+						.getArtikelsprDto().getCBez();
+				data[0][REPORT_LAGERBUCHUNGSBELEG_KURZBEZEICHNUNG] = artikelDto
+						.getArtikelsprDto().getCKbez();
+				data[0][REPORT_LAGERBUCHUNGSBELEG_ZUSATZBEZEICHNUNG] = artikelDto
+						.getArtikelsprDto().getCZbez();
+				data[0][REPORT_LAGERBUCHUNGSBELEG_ZUSATZBEZEICHNUNG2] = artikelDto
+						.getArtikelsprDto().getCZbez2();
+			}
+
+			data[0][REPORT_LAGERBUCHUNGSBELEG_LAGERORT] = getLagerFac()
+					.getLagerplaezteEinesArtikels(artikelDto.getIId(), null);
 			data[0][REPORT_LAGERBUCHUNGSBELEG_SERIENNR] = buchung
 					.getCSeriennrchargennr();
 
@@ -5131,7 +5699,8 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 					.getTBuchungszeit();
 			data[0][REPORT_LAGERBUCHUNGSBELEG_LAGER] = lagerDto.getCNr();
 			data[0][REPORT_LAGERBUCHUNGSBELEG_EINHEIT] = artikelDto
-					.getEinheitCNr().trim();
+
+			.getEinheitCNr().trim();
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
@@ -5154,8 +5723,8 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 			TheClientDto theClientDto) {
 
 		/**
-		 * Ladenh&uuml;ter sind die Teile, die l&auml;nger als xx-Tage zwischen VON und
-		 * BIS auf Lager liegen.
+		 * Ladenh&uuml;ter sind die Teile, die l&auml;nger als xx-Tage zwischen
+		 * VON und BIS auf Lager liegen.
 		 */
 
 		if (dVon == null || dBis == null || iSortierung == null) {
@@ -5516,7 +6085,7 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printWarenbewegungsjournal(Integer artikelIId,
 			Integer lagerIId, Timestamp dVon, Timestamp dBis,
-			TheClientDto theClientDto) {
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 
 		if (artikelIId == null) {
 			throw new EJBExceptionLP(
@@ -5580,7 +6149,7 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 			FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator
 					.next();
 			if (lagerbewegung.getN_menge().doubleValue() != 0) {
-				Object[] dataHelp = new Object[20];
+				Object[] dataHelp = new Object[21];
 
 				try {
 					BelegInfos infosZugang = getLagerFac().getBelegInfos(
@@ -5600,6 +6169,8 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 
 					dataHelp[REPORT_WARENBEWEGUNGSJOURNAL_SNR] = lagerbewegung
 							.getC_seriennrchargennr();
+					dataHelp[REPORT_WARENBEWEGUNGSJOURNAL_VERSION] = lagerbewegung
+							.getC_version();
 
 					dataHelp[REPORT_WARENBEWEGUNGSJOURNAL_ZUBUCHUNGSZEITPUNKT] = lagerbewegung
 							.getT_buchungszeit();
@@ -5722,7 +6293,7 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 								dataHelp[REPORT_WARENBEWEGUNGSJOURNAL_ABGANGFIRMAKOMMENTAR] = "KEINE INFORMATIONEN";
 								al.add(dataHelp);
 							}
-							dataHelp = new Object[20];
+							dataHelp = new Object[21];
 							sessionAbgang.close();
 						}
 					}
@@ -5912,6 +6483,46 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 			}
 
 		} else if (sAktuellerReport
+				.equals(LagerReportFac.REPORT_INDIREKTE_WARENEINSATZ_STATISTIK)) {
+			if ("Artikelnummer".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_ARTIKELNUMMER];
+			} else if ("Bezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_BEZEICHNUNG];
+			} else if ("Zusatzbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_ZUSATZBEZEICHNUNG];
+			} else if ("Ebene".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_EBENE];
+			} else if ("Lieferbeleg".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_LIEFERBELEG];
+			} else if ("Verbrauchsbeleg".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_VERBRAUCHSBELEG];
+			} else if ("Wareneingangsbeleg".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_WARENEINGANGSBELEG];
+			} else if ("Kunde".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_KUNDE];
+			} else if ("VKPreisLieferbeleg".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_VKPREIS_LIEFERBELEG];
+			} else if ("Lieferant".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_LIEFERANT];
+			} else if ("Lieferdatum".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_LIEFERDATUM];
+			} else if ("Menge".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_MENGE];
+			} else if ("Einstandspreis".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_EINSTANDSPREIS];
+			} else if ("Gestehungspreis".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_GESTEHUNGSPREIS];
+			} else if ("VKPreis".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_VKPREIS];
+			} else if ("Kundenartikelnummer".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_KUNDENARTIKELNUMMER];
+			} else if ("Verbrauchsdatum".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_VERBRAUCHSDATUM];
+			} else if ("Wareneingangsdatum".equals(fieldName)) {
+				value = data[index][REPORT_INDIREKTE_WE_STATISTIK_WARENEINGANGSDATUM];
+			}
+
+		} else if (sAktuellerReport
 				.equals(LagerReportFac.REPORT_WARENBEWEGUNGSJOURNAL)) {
 			if ("Abbuchungszeit".equals(fieldName)) {
 				value = data[index][REPORT_WARENBEWEGUNGSJOURNAL_ABBUCHUNGSZEITPUNKT];
@@ -5953,6 +6564,8 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 				value = data[index][REPORT_WARENBEWEGUNGSJOURNAL_ABGANG_WER_HAT_GEBUCHT];
 			} else if ("F_ZUGANG_WER_HAT_GEBUCHT".equals(fieldName)) {
 				value = data[index][REPORT_WARENBEWEGUNGSJOURNAL_ZUGANG_WER_HAT_GEBUCHT];
+			} else if ("Version".equals(fieldName)) {
+				value = data[index][REPORT_WARENBEWEGUNGSJOURNAL_VERSION];
 			}
 
 		} else if (sAktuellerReport
@@ -6077,6 +6690,8 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 				value = data[index][REPORT_KUNDEUMSATZSTATISTIK_PLZ];
 			} else if ("Kundennummer".equals(fieldName)) {
 				value = data[index][REPORT_KUNDEUMSATZSTATISTIK_KUNDENNUMMER];
+			} else if ("Kreditlimit".equals(fieldName)) {
+				value = data[index][REPORT_KUNDEUMSATZSTATISTIK_KREDITLIMIT];
 			}
 		} else if (sAktuellerReport
 				.equals(LagerReportFac.REPORT_LIEFERANTUMSATZSTATISTIK)) {
@@ -6265,6 +6880,14 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 				value = data[index][REPORT_UMBUCHUNGSBELEG_EINHEIT];
 			} else if ("Serienchargennr".equals(fieldName)) {
 				value = data[index][REPORT_UMBUCHUNGSBELEG_SERIENNR];
+			} else if ("Kurzbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_UMBUCHUNGSBELEG_KURZBEZEICHNUNG];
+			} else if ("Zusatzbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_UMBUCHUNGSBELEG_ZUSATZBEZEICHNUNG];
+			} else if ("Zusatzbezeichnung2".equals(fieldName)) {
+				value = data[index][REPORT_UMBUCHUNGSBELEG_ZUSATZBEZEICHNUNG2];
+			} else if ("Lagerort".equals(fieldName)) {
+				value = data[index][REPORT_UMBUCHUNGSBELEG_LAGERORT];
 			}
 
 		} else if (sAktuellerReport
@@ -6283,7 +6906,16 @@ public class LagerReportFacBean extends LPReport implements LagerReportFac,
 				value = data[index][REPORT_LAGERBUCHUNGSBELEG_EINHEIT];
 			} else if ("Serienchargennr".equals(fieldName)) {
 				value = data[index][REPORT_LAGERBUCHUNGSBELEG_SERIENNR];
+			} else if ("Kurzbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_LAGERBUCHUNGSBELEG_KURZBEZEICHNUNG];
+			} else if ("Zusatzbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_LAGERBUCHUNGSBELEG_ZUSATZBEZEICHNUNG];
+			} else if ("Zusatzbezeichnung2".equals(fieldName)) {
+				value = data[index][REPORT_LAGERBUCHUNGSBELEG_ZUSATZBEZEICHNUNG2];
+			} else if ("Lagerort".equals(fieldName)) {
+				value = data[index][REPORT_LAGERBUCHUNGSBELEG_LAGERORT];
 			}
+
 		} else if (sAktuellerReport
 				.equals(LagerReportFac.REPORT_GESTPREISUEBERMINVK)) {
 			if ("Artikelnummer".equals(fieldName)) {

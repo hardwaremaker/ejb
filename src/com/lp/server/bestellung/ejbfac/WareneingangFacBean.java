@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -73,7 +73,7 @@ public class WareneingangFacBean extends Facade implements WareneingangFac {
 				.createDto(wareneingangsposition);
 
 		pos.setSeriennrChargennrMitMenge(getLagerFac()
-				.getAllSeriennrchargennrEinerBelegartposition(
+				.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 						LocaleFac.BELEGART_BESTELLUNG, pos.getIId()));
 		LagerbewegungDto lagerbewegungDto = null;
 		if (pos.getSeriennrChargennrMitMenge() != null
@@ -302,7 +302,8 @@ public class WareneingangFacBean extends Facade implements WareneingangFac {
 						.getRichtigenBestellStatus(besDto.getIId(), false,
 								theClientDto);
 				besDto.setStatusCNr(sKorrekterStatus);
-				getBestellungFac().updateBestellung(besDto, theClientDto, false);
+				getBestellungFac()
+						.updateBestellung(besDto, theClientDto, false);
 
 			}
 
@@ -358,7 +359,7 @@ public class WareneingangFacBean extends Facade implements WareneingangFac {
 			if (bPreiseAllerWareneingaengeNeuBerechnen == true) {
 
 				aktualisiereEinstandspreise(
-						weposDtoI.getBestellpositionIId(),
+						weDto.getBestellungIId(),
 						verteileFixkostenaufWareneingangspositionen(
 								weposDtoI.getBestellpositionIId(), theClientDto),
 						theClientDto);
@@ -697,14 +698,18 @@ public class WareneingangFacBean extends Facade implements WareneingangFac {
 		// speichern.
 		setWareneingangFromWareneingangDto(wareneingang, wareneingangDtoI);
 		// Einstandspreise aufrollen.
-		for (int i = 0; i < wePosDtos.length; i++) {
 
-			aktualisiereEinstandspreise(
-					wePosDtos[i].getBestellpositionIId(),
-					verteileFixkostenaufWareneingangspositionen(
-							wePosDtos[i].getBestellpositionIId(), theClientDto),
-					theClientDto);
+		Set<Integer> betroffeneWEs = new HashSet<Integer>();
+
+		for (int i = 0; i < wePosDtos.length; i++) {
+			Set<Integer> setEinerWepos = verteileFixkostenaufWareneingangspositionen(
+					wePosDtos[i].getBestellpositionIId(), theClientDto);
+			betroffeneWEs.addAll(setEinerWepos);
 		}
+
+		aktualisiereEinstandspreise(wareneingang.getBestellungIId(),
+				betroffeneWEs, theClientDto);
+
 	}
 
 	/**
@@ -865,7 +870,7 @@ public class WareneingangFacBean extends Facade implements WareneingangFac {
 					.next();
 
 			if (wep.getN_gelieferterpreis() != null) {
-				BestellpositionDto besPosDto=null;
+				BestellpositionDto besPosDto = null;
 				try {
 					besPosDto = getBestellpositionFac()
 							.bestellpositionFindByPrimaryKey(
@@ -898,15 +903,15 @@ public class WareneingangFacBean extends Facade implements WareneingangFac {
 						.preispflege(
 								besPosDto,
 								BestellpositionFac.PREISPFLEGEARTIKELLIEFERANT_EINZELPREIS_RUECKPFLEGEN,
-								null, theClientDto);
+								null,false, theClientDto);
 
 			}
 		}
 
 	}
 
-	public BigDecimal getBerechnetenEinstandspreisEinerWareneingangsposition(
-			Integer weposIId, TheClientDto theClientDto) {
+	public EinstandspreiseEinesWareneingangsDto getBerechnetenEinstandspreisEinerWareneingangsposition(
+			Integer wareneingangIId, TheClientDto theClientDto) {
 
 		// WENN HIER ETWAS GEAENDERT WIRD, MUSS AUCH IN
 		// aktualisiereEinstandspreise() geaendert werden
@@ -916,19 +921,15 @@ public class WareneingangFacBean extends Facade implements WareneingangFac {
 		// Dabei wird auch ermittelt, welche Wareneingaenge betroffen sind.
 		// ---------------------------------------------------------------------
 
-		BigDecimal bdEinstandspreisBerechnet = BigDecimal.ZERO;
+		EinstandspreiseEinesWareneingangsDto preiseDtos = new EinstandspreiseEinesWareneingangsDto();
 
-		WareneingangspositionDto eineWEposDto = wareneingangspositionFindByPrimaryKey(weposIId);
-
-		WareneingangDto wareneingangDtoI = wareneingangFindByPrimaryKey(eineWEposDto
-				.getWareneingangIId());
+		WareneingangDto wareneingangDtoI = wareneingangFindByPrimaryKey(wareneingangIId);
 		// ------------------------------------------------------------------
 		// -
 		// nun die Einstandspreise der Wareneingaenge aufrollen.
 		// ------------------------------------------------------------------
 		// -
-		WareneingangspositionDto[] aWEPOSDto = wareneingangspositionFindByWareneingangIId(wareneingangDtoI
-				.getIId());
+		WareneingangspositionDto[] aWEPOSDto = wareneingangspositionFindByWareneingangIId(wareneingangIId);
 		// Preise in Arrays zwischenspeichern, da spaeter eine
 		// nach Preis und Menge gewichtete Verteilung der Transportkosten
 		// erfolgt.
@@ -981,19 +982,21 @@ public class WareneingangFacBean extends Facade implements WareneingangFac {
 			// --------------------------------------------------------------
 			// ---
 
-			if (wareneingangDtoI.getDGemeinkostenfaktor() != null) {
+			//wg. SP2783 auskommentiert 
+			/*if (wareneingangDtoI.getDGemeinkostenfaktor() != null) {
 				BigDecimal fGKFaktor = new BigDecimal(wareneingangDtoI
 						.getDGemeinkostenfaktor().floatValue());
 				BigDecimal bdGK = Helper.getProzentWert(bdEinstandspreis,
 						fGKFaktor, 10);
 				bdEinstandspreis = bdEinstandspreis.add(bdGK);
-			}
-			if (aWEPOSDto[i].getIId().equals(weposIId)) {
-				return bdEinstandspreis;
-			}
+			}*/
+
+			preiseDtos.getHmEinstandpreiseAllerPositionen().put(
+					aWEPOSDto[i].getIId(), bdEinstandspreis);
+
 		}
 
-		return bdEinstandspreisBerechnet;
+		return preiseDtos;
 	}
 
 	/**
@@ -1910,14 +1913,14 @@ public class WareneingangFacBean extends Facade implements WareneingangFac {
 				if (besPosDto.getArtikelIId() != null) {
 					alArtikelIId.add(besPosDto.getArtikelIId());
 				}
-				if (besPosDto.getPositioniIdArtikelset() == null) {
+				//if (besPosDto.getPositioniIdArtikelset() == null) {
 					Wareneingangsposition wareneingangsposition = em.find(
 							Wareneingangsposition.class, wepoDto[i].getIId());
 					wareneingangsposition.setBPreiseerfasst(Helper
 							.boolean2Short(true));
 					em.merge(wareneingangsposition);
 					em.flush();
-				}
+				//}
 				getBestellpositionFac()
 						.versucheBestellpositionAufErledigtZuSetzen(
 								wepoDto[i].getBestellpositionIId(),

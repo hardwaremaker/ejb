@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -462,11 +462,26 @@ public class AnfrageReportFacBean extends LPReport implements AnfrageReportFac,
 			String cAdresseFuerAusdruck = null;
 			HashMap<String, Object> parameter = new HashMap<String, Object>();
 
+			parameter.put(
+					"P_SUBREPORT_LIEFERGRUPPENTEXTE",
+					getSubreportLiefergruppenTexte(aAnfragepositionDto,
+							theClientDto));
+
 			if (anfrageDto.getArtCNr().equals(
 					AnfrageServiceFac.ANFRAGEART_LIEFERANT)) {
 				lieferantDto = getLieferantFac().lieferantFindByPrimaryKey(
 						anfrageDto.getLieferantIIdAnfrageadresse(),
 						theClientDto);
+
+				if (lieferantDto.getKontoIIdKreditorenkonto() != null) {
+					parameter.put(
+							"P_KREDITORENKONTO",
+							getFinanzFac().kontoFindByPrimaryKey(
+									lieferantDto.getKontoIIdKreditorenkonto())
+									.getCNr());
+				}
+				parameter.put("P_KUNDENNUMMER", lieferantDto.getCKundennr());
+
 				partnerIId = lieferantDto.getPartnerIId();
 				localeCNrDruck = Helper.string2Locale(lieferantDto
 						.getPartnerDto().getLocaleCNrKommunikation());
@@ -535,6 +550,9 @@ public class AnfrageReportFacBean extends LPReport implements AnfrageReportFac,
 					data[i][AnfrageReportFac.REPORT_ANFRAGE_IDENT_TEXTEINGABE] = druckDto
 							.getSIdentTexteingabe();
 
+					data[i][AnfrageReportFac.REPORT_ANFRAGE_FREIERTEXT] = aAnfragepositionDto[i]
+							.getXTextinhalt();
+
 					if (artikelDto.getArtgruIId() != null) {
 
 						ArtgruDto artgruDto = getArtikelFac()
@@ -577,7 +595,7 @@ public class AnfrageReportFacBean extends LPReport implements AnfrageReportFac,
 							MaterialDto materialDto = getMaterialFac()
 									.materialFindByPrimaryKey(
 											artikelDto.getMaterialIId(),
-											theClientDto);
+											localeCNrDruck, theClientDto);
 							if (materialDto.getMaterialsprDto() != null) {
 								/**
 								 * @todo MR->MR richtige Mehrsprachigkeit:
@@ -617,12 +635,19 @@ public class AnfrageReportFacBean extends LPReport implements AnfrageReportFac,
 						}
 
 						// Lieferantendaten: Artikelnummer, Bezeichnung
+						
 						ArtikellieferantDto artikellieferantDto = getArtikelFac()
-								.artikellieferantFindByArtikellIIdLieferantIIdOhneExc(
+								.getArtikelEinkaufspreis(
 										artikelDto.getIId(),
 										anfrageDto
-												.getLieferantIIdAnfrageadresse(),
+										.getLieferantIIdAnfrageadresse(),
+										aAnfragepositionDto[i].getNMenge(),
+
+										anfrageDto.getWaehrungCNr(),
+										new java.sql.Date(anfrageDto
+												.getTBelegdatum().getTime()),
 										theClientDto);
+						
 
 						if (artikellieferantDto != null) {
 
@@ -802,6 +827,17 @@ public class AnfrageReportFacBean extends LPReport implements AnfrageReportFac,
 
 			parameter.put("P_ANLIEFERTERMIN", anfrageDto.getTAnliefertermin());
 
+			// PJ18870
+			if (lieferantDto != null && lieferantDto.getPartnerDto() != null) {
+				parameter
+						.put("P_SUBREPORT_PARTNERKOMMENTAR",
+								getPartnerServicesFac()
+										.getSubreportAllerMitzudruckendenPartnerkommentare(
+												lieferantDto.getPartnerDto()
+														.getIId(), false,
+												LocaleFac.BELEGART_ANFRAGE,
+												theClientDto));
+			}
 			// CK: PJ 13849
 			parameter.put(
 					"P_BEARBEITER",
@@ -993,6 +1029,26 @@ public class AnfrageReportFacBean extends LPReport implements AnfrageReportFac,
 					buff.append("\n").append(sUnterschriftstext);
 					buffVertreter.append("\n").append(sUnterschriftstext);
 				}
+
+				// Vertreter Kontaktdaten
+				String sVertreterEmail = oPersonalBenutzer.getCEmail();
+
+				String sVertreterFaxDirekt = oPersonalBenutzer.getCDirektfax();
+
+				String sVertreterFax = oPersonalBenutzer.getCFax();
+
+				String sVertreterTelefon = oPersonalBenutzer.getCTelefon();
+				parameter.put(LPReport.P_VERTRETEREMAIL,
+						sVertreterEmail != null ? sVertreterEmail : "");
+				if (sVertreterFaxDirekt != null && sVertreterFaxDirekt != "") {
+					parameter.put(LPReport.P_VERTRETERFAX, sVertreterFaxDirekt);
+				} else {
+					parameter.put(LPReport.P_VERTRETERFAX,
+							sVertreterFax != null ? sVertreterFax : "");
+				}
+				parameter.put(LPReport.P_VERTRETEERTELEFON,
+						sVertreterTelefon != null ? sVertreterTelefon : "");
+
 			}
 			parameter.put(P_VERTRETER,
 					Helper.formatStyledTextForJasper(buffVertreter.toString()));

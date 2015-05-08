@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -56,6 +56,7 @@ import com.lp.server.system.fastlanereader.generated.FLRArbeitsplatzparameter;
 import com.lp.server.system.fastlanereader.generated.FLRParametermandant;
 import com.lp.server.system.service.AnwenderDto;
 import com.lp.server.system.service.ArbeitsplatzparameterDto;
+import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
@@ -80,16 +81,18 @@ public class BenutzerServicesFacBean extends Facade implements
 	private HashMap<String, HashMap<String, HashMap<String, String>>> hmLPText = null;
 	private HashMap<String, ArrayList<ParametermandantDto>> hmParametermandant = null;
 
-	public void setHashMapUseCaseHandler(HashMap<String, HashMap<Integer, HashMap<String, UseCaseHandler>>> hm) {
-		useCaseHandlers=hm;
+	public void setHashMapUseCaseHandler(
+			HashMap<String, HashMap<Integer, HashMap<String, UseCaseHandler>>> hm) {
+		useCaseHandlers = hm;
 	}
-	public HashMap<String, HashMap<Integer, HashMap<String, UseCaseHandler>>> getHashMapUseCaseHandler(){
-		
+
+	public HashMap<String, HashMap<Integer, HashMap<String, UseCaseHandler>>> getHashMapUseCaseHandler() {
+
 		if (this.useCaseHandlers == null) {
 			this.useCaseHandlers = new HashMap<String, HashMap<Integer, HashMap<String, UseCaseHandler>>>();
 		}
 		iCleanupZaehler++;
-		
+
 		// durchsuchen und diese loeschen
 		if (iCleanupZaehler > 1000 && useCaseHandlers != null) {
 
@@ -135,16 +138,24 @@ public class BenutzerServicesFacBean extends Facade implements
 
 			iCleanupZaehler = 0;
 		}
-		
+
 		return useCaseHandlers;
 	}
-	
-	
+
 	private int iCleanupZaehler = 0;
-	
+
 	private HashMap<String, HashMap<Integer, HashMap<String, UseCaseHandler>>> useCaseHandlers;
-	
+
 	public void reloadRolleRechte() {
+		boolean subscriptionAbgelaufen = false;
+		try {
+			AnwenderDto anwenderDto = getSystemFac().anwenderFindByPrimaryKey(
+					SystemFac.PK_HAUPTMANDANT_IN_LP_ANWENDER);
+			subscriptionAbgelaufen = anwenderDto.getTSubscription() == null ? false
+					: anwenderDto.getTSubscription().before(getTimestamp());
+		} catch (RemoteException e) {
+		} catch (EJBExceptionLP e) {
+		}
 
 		hmRolleRechte = new HashMap<Integer, HashMap<String, String>>();
 		Session session = FLRSessionFactory.getFactory().openSession();
@@ -161,6 +172,10 @@ public class BenutzerServicesFacBean extends Facade implements
 
 			Integer systemrolleIId = rollerecht.getFlrsystemrolle().getI_id();
 			String rechtCNr = rollerecht.getFlrrecht().getC_nr().trim();
+
+			if (subscriptionAbgelaufen && rechtCNr.endsWith("CUD"))
+				rechtCNr = rechtCNr.substring(0, rechtCNr.lastIndexOf("CUD"))
+						+ "R";
 
 			HashMap<String, String> hmSystemrolle = null;
 
@@ -282,8 +297,28 @@ public class BenutzerServicesFacBean extends Facade implements
 			pmDto.setCWert(parametermandant.getC_wert());
 			pmDto.setMandantCMandant(parametermandant.getId_comp()
 					.getMandant_c_nr());
-			pmDto.setCBemerkungsmall(parametermandant.getC_bemerkungsmall()) ;
-			pmDto.setCBemerkunglarge(parametermandant.getC_bemerkunglarge()) ;
+			pmDto.setCBemerkungsmall(parametermandant.getC_bemerkungsmall());
+			pmDto.setCBemerkunglarge(parametermandant.getC_bemerkunglarge());
+
+			if (pmDto.getCNr().equals(ParameterFac.MATERIALGEMEINKOSTENFAKTOR)
+					|| pmDto.getCNr().equals(
+							ParameterFac.PARAMETER_GEMEINKOSTENFAKTOR)
+					|| pmDto.getCNr().equals(
+							ParameterFac.FERTIGUNGSGEMEINKOSTENFAKTOR)
+					|| pmDto.getCNr().equals(
+							ParameterFac.ENTWICKLUNGSGEMEINKOSTENFAKTOR)
+					|| pmDto.getCNr().equals(
+							ParameterFac.VERWALTUNGSGEMEINKOSTENFAKTOR)
+					|| pmDto.getCNr().equals(
+							ParameterFac.VERTRIEBSGEMEINKOSTENFAKTOR)) {
+
+				pmDto.setTmWerteGueltigab(getParameterFac()
+						.parametermandantgueltigabGetWerteZumZeitpunkt(
+								parametermandant.getId_comp().getMandant_c_nr(),
+								parametermandant.getId_comp().getC_nr(),
+								parametermandant.getId_comp().getC_kategorie()));
+			}
+
 			parameter.add(pmDto);
 
 			hmParametermandant.put(mandantCNr, parameter);
@@ -297,7 +332,7 @@ public class BenutzerServicesFacBean extends Facade implements
 		hmLPText = new HashMap<String, HashMap<String, HashMap<String, String>>>();
 
 		Query query = em.createNamedQuery("TextfindAll");
-		Collection<Text> c = query.getResultList();
+		Collection<?> c = query.getResultList();
 
 		Iterator<?> resultListIterator = c.iterator();
 
@@ -384,6 +419,31 @@ public class BenutzerServicesFacBean extends Facade implements
 
 	public ParametermandantDto getMandantparameter(String mandant_c_nr,
 			String cKategorieI, String mandantparameter_c_nr) {
+		return getMandantparameter(mandant_c_nr, cKategorieI,
+				mandantparameter_c_nr, null);
+	}
+
+	private ParametermandantDto setzeWertZumZeitpunkt(
+			ParametermandantDto parametermandantDto,
+			java.sql.Timestamp tZeitpunkt) {
+
+		if (tZeitpunkt != null) {
+
+			ParametermandantDto pmDtoClone = ParametermandantDto
+					.clone(parametermandantDto);
+
+			pmDtoClone.setCWert(pmDtoClone.getCWertZumZeitpunkt(tZeitpunkt));
+			return pmDtoClone;
+
+		} else {
+			return parametermandantDto;
+		}
+
+	}
+
+	public ParametermandantDto getMandantparameter(String mandant_c_nr,
+			String cKategorieI, String mandantparameter_c_nr,
+			java.sql.Timestamp tZeitpunkt) {
 
 		if (hmParametermandant == null) {
 			reloadParametermandant();
@@ -399,7 +459,7 @@ public class BenutzerServicesFacBean extends Facade implements
 				if (alParameter.get(i).getCNr().equals(mandantparameter_c_nr)
 						&& alParameter.get(i).getCKategorie()
 								.equals(cKategorieI)) {
-					return alParameter.get(i);
+					return setzeWertZumZeitpunkt(alParameter.get(i), tZeitpunkt);
 				}
 
 			}

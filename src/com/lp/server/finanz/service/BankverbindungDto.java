@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -53,6 +53,7 @@ public class BankverbindungDto implements Serializable, IModificationData {
 	private Integer personalIIdAnlegen;
 	private Timestamp tAendern;
 	private Integer personalIIdAendern;
+	private boolean bInLiquiditaetsVorschau;
 
 	public Integer getIId() {
 		return iId;
@@ -141,75 +142,112 @@ public class BankverbindungDto implements Serializable, IModificationData {
 	public void setPersonalIIdAendern(Integer personalIIdAendern) {
 		this.personalIIdAendern = personalIIdAendern;
 	}
-
-	public boolean equals(Object obj) {
-		if (this == obj) {
-			return true;
-		}
-		if (!(obj instanceof BankverbindungDto)) {
-			return false;
-		}
-		BankverbindungDto that = (BankverbindungDto) obj;
-		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId))) {
-			return false;
-		}
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr))) {
-			return false;
-		}
-		if (!(that.bankIId == null ? this.bankIId == null : that.bankIId
-				.equals(this.bankIId))) {
-			return false;
-		}
-		if (!(that.cKontonummer == null ? this.cKontonummer == null
-				: that.cKontonummer.equals(this.cKontonummer))) {
-			return false;
-		}
-		if (!(that.kontoIId == null ? this.kontoIId == null : that.kontoIId
-				.equals(this.kontoIId))) {
-			return false;
-		}
-		if (!(that.cBez == null ? this.cBez == null : that.cBez
-				.equals(this.cBez))) {
-			return false;
-		}
-		if (!(that.cIban == null ? this.cIban == null : that.cIban
-				.equals(this.cIban))) {
-			return false;
-		}
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen))) {
-			return false;
-		}
-		if (!(that.personalIIdAnlegen == null ? this.personalIIdAnlegen == null
-				: that.personalIIdAnlegen.equals(this.personalIIdAnlegen))) {
-			return false;
-		}
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern))) {
-			return false;
-		}
-		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
-				: that.personalIIdAendern.equals(this.personalIIdAendern))) {
-			return false;
-		}
-		return true;
+	
+	public boolean isbInLiquiditaetsVorschau() {
+		return bInLiquiditaetsVorschau;
 	}
 
+	public void setbInLiquiditaetsVorschau(boolean bInLiquiditaetsVorschau) {
+		this.bInLiquiditaetsVorschau = bInLiquiditaetsVorschau;
+	}
+
+	@Override
 	public int hashCode() {
-		int result = 17;
-		result = 37 * result + this.iId.hashCode();
-		result = 37 * result + this.mandantCNr.hashCode();
-		result = 37 * result + this.bankIId.hashCode();
-		result = 37 * result + this.cKontonummer.hashCode();
-		result = 37 * result + this.kontoIId.hashCode();
-		result = 37 * result + this.cBez.hashCode();
-		result = 37 * result + this.cIban.hashCode();
-		result = 37 * result + this.tAnlegen.hashCode();
-		result = 37 * result + this.personalIIdAnlegen.hashCode();
-		result = 37 * result + this.tAendern.hashCode();
-		result = 37 * result + this.personalIIdAendern.hashCode();
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + (bInLiquiditaetsVorschau ? 1231 : 1237);
+		result = prime * result + ((bankIId == null) ? 0 : bankIId.hashCode());
+		result = prime * result + ((cBez == null) ? 0 : cBez.hashCode());
+		result = prime * result + ((cIban == null) ? 0 : cIban.hashCode());
+		result = prime * result
+				+ ((cKontonummer == null) ? 0 : cKontonummer.hashCode());
+		result = prime * result + ((iId == null) ? 0 : iId.hashCode());
+		result = prime * result
+				+ ((kontoIId == null) ? 0 : kontoIId.hashCode());
+		result = prime * result
+				+ ((mandantCNr == null) ? 0 : mandantCNr.hashCode());
+		result = prime
+				* result
+				+ ((personalIIdAendern == null) ? 0 : personalIIdAendern
+						.hashCode());
+		result = prime
+				* result
+				+ ((personalIIdAnlegen == null) ? 0 : personalIIdAnlegen
+						.hashCode());
+		result = prime * result
+				+ ((tAendern == null) ? 0 : tAendern.hashCode());
+		result = prime * result
+				+ ((tAnlegen == null) ? 0 : tAnlegen.hashCode());
 		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		BankverbindungDto other = (BankverbindungDto) obj;
+		if (bInLiquiditaetsVorschau != other.bInLiquiditaetsVorschau)
+			return false;
+		if (bankIId == null) {
+			if (other.bankIId != null)
+				return false;
+		} else if (!bankIId.equals(other.bankIId))
+			return false;
+		if (cBez == null) {
+			if (other.cBez != null)
+				return false;
+		} else if (!cBez.equals(other.cBez))
+			return false;
+		if (cIban == null) {
+			if (other.cIban != null)
+				return false;
+		} else if (!cIban.equals(other.cIban))
+			return false;
+		if (cKontonummer == null) {
+			if (other.cKontonummer != null)
+				return false;
+		} else if (!cKontonummer.equals(other.cKontonummer))
+			return false;
+		if (iId == null) {
+			if (other.iId != null)
+				return false;
+		} else if (!iId.equals(other.iId))
+			return false;
+		if (kontoIId == null) {
+			if (other.kontoIId != null)
+				return false;
+		} else if (!kontoIId.equals(other.kontoIId))
+			return false;
+		if (mandantCNr == null) {
+			if (other.mandantCNr != null)
+				return false;
+		} else if (!mandantCNr.equals(other.mandantCNr))
+			return false;
+		if (personalIIdAendern == null) {
+			if (other.personalIIdAendern != null)
+				return false;
+		} else if (!personalIIdAendern.equals(other.personalIIdAendern))
+			return false;
+		if (personalIIdAnlegen == null) {
+			if (other.personalIIdAnlegen != null)
+				return false;
+		} else if (!personalIIdAnlegen.equals(other.personalIIdAnlegen))
+			return false;
+		if (tAendern == null) {
+			if (other.tAendern != null)
+				return false;
+		} else if (!tAendern.equals(other.tAendern))
+			return false;
+		if (tAnlegen == null) {
+			if (other.tAnlegen != null)
+				return false;
+		} else if (!tAnlegen.equals(other.tAnlegen))
+			return false;
+		return true;
 	}
 
 	public String toString() {
@@ -227,4 +265,5 @@ public class BankverbindungDto implements Serializable, IModificationData {
 		returnString += ", " + personalIIdAendern;
 		return returnString;
 	}
+
 }

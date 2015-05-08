@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -82,7 +82,7 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 		pruefePflichtfelderBelegposition(anfragepositionDtoI, theClientDto);
 		try {
 			getAnfrageFac().pruefeUndSetzeAnfragestatusBeiAenderung(
-					anfragepositionDtoI.getBelegIId(), theClientDto);
+					anfragepositionDtoI.getBelegIId(), true, theClientDto);
 
 			// eventuell einen Handartikel anlegen
 			if (anfragepositionDtoI.getPositionsartCNr().equalsIgnoreCase(
@@ -118,8 +118,8 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 
 			Anfrageposition anfrageposition = new Anfrageposition(
 					iIdAnfrageposition, anfragepositionDtoI.getBelegIId(),
-					anfragepositionDtoI.getISort(), anfragepositionDtoI
-							.getPositionsartCNr());
+					anfragepositionDtoI.getISort(),
+					anfragepositionDtoI.getPositionsartCNr());
 			em.persist(anfrageposition);
 			em.flush();
 
@@ -174,7 +174,7 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 
 		try {
 			getAnfrageFac().pruefeUndSetzeAnfragestatusBeiAenderung(
-					anfragepositionDtoI.getBelegIId(), theClientDto);
+					anfragepositionDtoI.getBelegIId(), true, theClientDto);
 
 			// zuerst die zugehoerige Anfragepositionlieferdaten loeschen
 			AnfragepositionlieferdatenDto anfragepositionlieferdatenDto = anfragepositionlieferdatenFindByAnfragepositionIIdOhneExc(anfragepositionDtoI
@@ -203,8 +203,9 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 			}
 
 			// die Sortierung muss angepasst werden
-			sortierungAnpassenBeiLoeschenEinerPosition(anfragepositionDtoI
-					.getBelegIId(), anfragepositionDtoI.getISort().intValue());
+			sortierungAnpassenBeiLoeschenEinerPosition(
+					anfragepositionDtoI.getBelegIId(), anfragepositionDtoI
+							.getISort().intValue());
 
 			// den Nettogesamtwert der Anfrage neu berechnen
 			Integer anfrageIId = getAnfrageFac().anfrageFindByPrimaryKey(
@@ -277,7 +278,7 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 		try {
 			pruefePflichtfelderBelegposition(anfragepositionDtoI, theClientDto);
 			getAnfrageFac().pruefeUndSetzeAnfragestatusBeiAenderung(
-					anfragepositionDtoI.getBelegIId(), theClientDto);
+					anfragepositionDtoI.getBelegIId(), true, theClientDto);
 
 			Anfrageposition anfrageposition = em.find(Anfrageposition.class,
 					anfragepositionDtoI.getIId());
@@ -328,7 +329,7 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 		// checkAnfragepositionIId(iIdAnfragepositionI);
 
 		AnfragepositionDto anfragepositionDto = anfragepositionFindByPrimaryKeyOhneExc(iIdAnfragepositionI);
-		
+
 		if (anfragepositionDto == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
@@ -425,7 +426,7 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 *             Ausnahme
-	 * @throws RemoteException 
+	 * @throws RemoteException
 	 */
 	public void vertauscheAnfragepositionen(Integer iIdPosition1I,
 			Integer iIdPosition2I, TheClientDto theClientDto)
@@ -453,7 +454,8 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 
 		if (anfrageDto.getStatusCNr().equals(
 				AnfrageServiceFac.ANFRAGESTATUS_ANGELEGT)) {
-			getAnfrageFac().pruefeUndSetzeAnfragestatusBeiAenderung(anfrageDto.getIId(), theClientDto);
+			getAnfrageFac().pruefeUndSetzeAnfragestatusBeiAenderung(
+					anfrageDto.getIId(), true, theClientDto);
 
 			Integer iSort1 = oPosition1.getISort();
 			Integer iSort2 = oPosition2.getISort();
@@ -525,8 +527,8 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 		anfrageposition.setMediastandardIId(anfragepositionDto
 				.getMediastandardIId());
 
-		anfrageposition.setNMenge(Helper.rundeKaufmaennisch(anfragepositionDto
-				.getNMenge(), 4));
+		anfrageposition.setNMenge(Helper.rundeKaufmaennisch(
+				anfragepositionDto.getNMenge(), 4));
 
 		anfrageposition.setEinheitCNr(anfragepositionDto.getEinheitCNr());
 
@@ -613,8 +615,7 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
-		myLogger
-				.exit("AnfragelieferdatenIId: " + iIdAnfragepositionlieferdaten);
+		myLogger.exit("AnfragelieferdatenIId: " + iIdAnfragepositionlieferdaten);
 
 		return iIdAnfragepositionlieferdaten;
 	}
@@ -702,7 +703,6 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 
 		// try {
 		// Loeschen der Auftragpositionlieferdaten aendert nicht den Status
-		
 
 		Anfragepositionlieferdaten toRemove = em.find(
 				Anfragepositionlieferdaten.class,
@@ -715,9 +715,10 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 									+ anfragepositionlieferdatenDtoI.getIId()
 									+ " gibt"));
 		}
-		
-//		Anfrageposition pos = em.find(Anfrageposition.class, toRemove.getAnfragepositionIId());
-//		pos
+
+		// Anfrageposition pos = em.find(Anfrageposition.class,
+		// toRemove.getAnfragepositionIId());
+		// pos
 		try {
 			em.remove(toRemove);
 			em.flush();
@@ -794,8 +795,7 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 							AnfrageServiceFac.ANFRAGEPOSITIONART_IDENT)
 							|| anfragepositionNext
 									.getAnfragepositionartCNr()
-									.equals(
-											AnfrageServiceFac.ANFRAGEPOSITIONART_HANDEINGABE)) {
+									.equals(AnfrageServiceFac.ANFRAGEPOSITIONART_HANDEINGABE)) {
 						AnfragepositionlieferdatenDto anfragepositionlieferdatenNext = anfragepositionlieferdatenFindByAnfragepositionIIdOhneExc(anfragepositionNext
 								.getIId());
 
@@ -874,8 +874,8 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 			setAnfragepositionlieferdatenFromAnfragepositionlieferdatenDto(
 					anfragepositionlieferdaten, anfragepositionlieferdatenDtoI);
 
-			befuelleZusaetzlichesPreisfeld(anfragepositionlieferdatenDtoI
-					.getIId(), theClientDto);
+			befuelleZusaetzlichesPreisfeld(
+					anfragepositionlieferdatenDtoI.getIId(), theClientDto);
 
 			// --Auskommentiert von CK lt. IMS 2191
 			/*
@@ -964,8 +964,8 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 						anfrageDto.getIId(), theClientDto);
 			}
 
-			befuelleZusaetzlichesPreisfeld(anfragepositionlieferdatenDtoI
-					.getIId(), theClientDto);
+			befuelleZusaetzlichesPreisfeld(
+					anfragepositionlieferdatenDtoI.getIId(), theClientDto);
 
 			getAnfrageFac().setzeNettogesamtwert(
 					anfrageDto.getIId(),
@@ -1238,8 +1238,7 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 			while (iterator.hasNext()) {
 				Anfragepositionlieferdaten anfragepositionlieferdaten = (Anfragepositionlieferdaten) iterator
 						.next();
-				list
-						.add(assembleAnfragepositionlieferdatenDto(anfragepositionlieferdaten));
+				list.add(assembleAnfragepositionlieferdatenDto(anfragepositionlieferdaten));
 			}
 		}
 		AnfragepositionlieferdatenDto[] returnArray = new AnfragepositionlieferdatenDto[list
@@ -1282,8 +1281,8 @@ public class AnfragepositionFacBean extends Beleg implements AnfragepositionFac 
 		AnfragepositionDto anfragePosDto = (AnfragepositionDto) belegPosDtoI;
 		Node nodePriceOF = docI.createElement(SystemFac.SCHEMA_OF_PRICE);
 
-		nodePriceOF = super.getPriceAsNode(docI, belegPosDtoI, theClientDto
-				.getIDUser());
+		nodePriceOF = super.getPriceAsNode(docI, belegPosDtoI,
+				theClientDto.getIDUser());
 
 		// Price: BasePrice
 		addOFElement(nodePriceOF, docI, anfragePosDto.getNRichtpreis(),

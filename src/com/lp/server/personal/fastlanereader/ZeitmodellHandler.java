@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -33,7 +33,6 @@
 package com.lp.server.personal.fastlanereader;
 
 import java.awt.Color;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -81,6 +80,7 @@ public class ZeitmodellHandler extends UseCaseHandler {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	private static final String FLR_ZEITMODELL_C_NR = "zeitmodell.c_nr";
 
 	/**
 	 * the size of the data page returned in QueryResult.
@@ -200,13 +200,14 @@ public class ZeitmodellHandler extends UseCaseHandler {
 	 * @return the HQL where clause.
 	 */
 	private String buildWhereClause() {
+		
 		StringBuffer where = new StringBuffer("");
 
-		if (this.getQuery() != null && this.getQuery().getFilterBlock() != null
-				&& this.getQuery().getFilterBlock().filterKrit != null) {
+		if (getQuery() != null && getQuery().getFilterBlock() != null
+				&& getQuery().getFilterBlock().filterKrit != null) {
 
-			FilterBlock filterBlock = this.getQuery().getFilterBlock();
-			FilterKriterium[] filterKriterien = this.getQuery()
+			FilterBlock filterBlock = getQuery().getFilterBlock();
+			FilterKriterium[] filterKriterien = getQuery()
 					.getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
 			boolean filterAdded = false;
@@ -240,6 +241,57 @@ public class ZeitmodellHandler extends UseCaseHandler {
 		return where.toString();
 	}
 
+//	/**
+//	 * builds the HQL (Hibernate Query Language) order by clause using the sort
+//	 * criterias contained in the current query.
+//	 * 
+//	 * @return the HQL order by clause.
+//	 */
+//	private String buildOrderByClause() {
+//		StringBuffer orderBy = new StringBuffer("");
+//		if (this.getQuery() != null) {
+//			SortierKriterium[] kriterien = this.getQuery().getSortKrit();
+//			boolean sortAdded = false;
+//			if (kriterien != null && kriterien.length > 0) {
+//				for (int i = 0; i < kriterien.length; i++) {
+//					if (kriterien[i].isKrit) {
+//						if (sortAdded) {
+//							orderBy.append(", ");
+//						}
+//						sortAdded = true;
+//						orderBy.append("zeitmodell." + kriterien[i].kritName);
+//						orderBy.append(" ");
+//						orderBy.append(kriterien[i].value);
+//					}
+//				}
+//			} else {
+//				// no sort criteria found, add default sort
+//				if (sortAdded) {
+//					orderBy.append(", ");
+//				}
+//				orderBy.append("zeitmodell.c_nr ASC ");
+//
+//				sortAdded = true;
+//			}
+//			if (orderBy.indexOf("zeitmodell.c_nr") < 0) {
+//				// unique sort required because otherwise rowNumber of
+//				// selectedId
+//				// within sort() method may be different from the position of
+//				// selectedId
+//				// as returned in the page of getPageAt().
+//				if (sortAdded) {
+//					orderBy.append(", ");
+//				}
+//				orderBy.append(" zeitmodell.c_nr ");
+//				sortAdded = true;
+//			}
+//			if (sortAdded) {
+//				orderBy.insert(0, " ORDER BY ");
+//			}
+//		}
+//		return orderBy.toString();
+//	}
+	
 	/**
 	 * builds the HQL (Hibernate Query Language) order by clause using the sort
 	 * criterias contained in the current query.
@@ -247,32 +299,31 @@ public class ZeitmodellHandler extends UseCaseHandler {
 	 * @return the HQL order by clause.
 	 */
 	private String buildOrderByClause() {
+
 		StringBuffer orderBy = new StringBuffer("");
-		if (this.getQuery() != null) {
-			SortierKriterium[] kriterien = this.getQuery().getSortKrit();
+
+		if (getQuery() != null) {
+			SortierKriterium[] sortKrit = getQuery().getSortKrit();
+
 			boolean sortAdded = false;
-			if (kriterien != null && kriterien.length > 0) {
-				for (int i = 0; i < kriterien.length; i++) {
-					if (kriterien[i].isKrit) {
+
+			if (sortKrit != null && sortKrit.length > 0) {
+
+				for (SortierKriterium s : sortKrit) {
+
+					if (s.isKrit) {
 						if (sortAdded) {
 							orderBy.append(", ");
 						}
 						sortAdded = true;
-						orderBy.append("zeitmodell." + kriterien[i].kritName);
+						orderBy.append(s.kritName);
 						orderBy.append(" ");
-						orderBy.append(kriterien[i].value);
+						orderBy.append(s.value);
 					}
 				}
-			} else {
-				// no sort criteria found, add default sort
-				if (sortAdded) {
-					orderBy.append(", ");
-				}
-				orderBy.append("zeitmodell.c_nr ASC ");
-
-				sortAdded = true;
 			}
-			if (orderBy.indexOf("zeitmodell.c_nr") < 0) {
+			// no sort criteria found, add default sort
+			if (orderBy.indexOf(FLR_ZEITMODELL_C_NR) < 0) {
 				// unique sort required because otherwise rowNumber of
 				// selectedId
 				// within sort() method may be different from the position of
@@ -281,7 +332,7 @@ public class ZeitmodellHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" zeitmodell.c_nr ");
+				orderBy.append(" " + FLR_ZEITMODELL_C_NR + " ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -297,7 +348,7 @@ public class ZeitmodellHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return " FROM FLRZeitmodell AS zeitmodell"
+		return "FROM FLRZeitmodell AS zeitmodell"
 				+ " LEFT JOIN zeitmodell.zeitmodellsprset AS zeitmodellsprset";
 	}
 
@@ -371,7 +422,7 @@ public class ZeitmodellHandler extends UseCaseHandler {
 			,
 					new String[] {
 							"i_id",
-							"c_nr",
+							FLR_ZEITMODELL_C_NR,
 							ZeiterfassungFac.FLR_ZEITMODELL_ZEITMODELLSPRSET
 									+ ".c_bez" }));
 

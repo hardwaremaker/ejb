@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -156,7 +156,7 @@ public interface EingangsrechnungFac {
 	public final static String FLR_ZV_B_BEZAHLEN = "b_bezahlen";
 	public final static String FLR_ZV_T_FAELLIG = "t_faellig";
 	public final static String FLR_ZV_N_ANGEWANDTERSKONTOSATZ = "n_angewandterskontosatz";
-	public final static String FLR_ZV_N_OFFEN = "n_offen";
+	public final static String FLR_ZV_N_ZAHLBETRAG = "n_zahlbetrag";
 	public final static String FLR_ZV_FLREINGANGSRECHNUNG = "flreingangsrechnungreport";
 
 	public EingangsrechnungDto createEingangsrechnung(
@@ -248,24 +248,28 @@ public interface EingangsrechnungFac {
 	public Date getDefaultFreigabeDatum() throws RemoteException;
 
 	public BigDecimal berechneSummeOffenBruttoInMandantenwaehrung(
-			TheClientDto theClientDto, String sKriteriumDatum,
-			String sKriteriumJahr, GregorianCalendar gcVon,
+			TheClientDto theClientDto, String sKriteriumDatum, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, boolean bZusatzkosten);
-
-	public BigDecimal berechneSummeUmsatzBrutto(TheClientDto theClientDto,
-			String sKriteriumDatum, String sKriteriumJahr,
-			String sKriteriumWaehrung, GregorianCalendar gcVon,
-			GregorianCalendar gcBis, boolean bZusatzkosten) throws EJBExceptionLP, RemoteException;
 
 	public BigDecimal berechneSummeOffenNettoInMandantenwaehrung(
-			TheClientDto theClientDto, String sKriteriumDatum,
-			String sKriteriumJahr, GregorianCalendar gcVon,
+			TheClientDto theClientDto, String sKriteriumDatum, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, boolean bZusatzkosten);
+	
+	public BigDecimal berechneSummeUmsatzBrutto(TheClientDto theClientDto,
+			String sKriteriumDatum,	String sKriteriumWaehrung, GregorianCalendar gcVon,
+			GregorianCalendar gcBis, boolean bZusatzkosten) throws EJBExceptionLP, RemoteException;
 
 	public BigDecimal berechneSummeUmsatzNetto(TheClientDto theClientDto,
-			String sKriteriumDatum, String sKriteriumJahr,
-			String sKriteriumWaehrung, GregorianCalendar gcVon,
+			String sKriteriumDatum,	String sKriteriumWaehrung, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, boolean bZusatzkosten) throws EJBExceptionLP, RemoteException;
+
+	public BigDecimal berechneSummeAnzahlungenNichtVerrechnetNetto(TheClientDto theClientDto,
+			String sKriteriumDatum, GregorianCalendar gcVon,
+			GregorianCalendar gcBis) throws EJBExceptionLP, RemoteException;
+	
+	public BigDecimal berechneSummeAnzahlungenNichtVerrechnetBrutto(TheClientDto theClientDto,
+			String sKriteriumDatum, GregorianCalendar gcVon,
+			GregorianCalendar gcBis) throws EJBExceptionLP, RemoteException;
 
 	public void updateEingangsrechnungMahndaten(
 			Integer eingangsrechnungrechnungIId, Integer mahnstufeIId,
@@ -401,11 +405,15 @@ public interface EingangsrechnungFac {
 	public void toggleZollimportpapiereErhalten(Integer eingangsrechnungIId, String cZollimportpapier, Integer eingangsrechnungIId_Zollimport, 
 			TheClientDto theClientDto);
 
-	public BigDecimal getAnzahlungenZuSchlussrechnungUstFw(Integer erIId);
+	public BigDecimal getAnzahlungenGestelltZuSchlussrechnungUstFw(Integer erIId);
 
-	public BigDecimal getAnzahlungenZuSchlussrechnungFw(Integer erIId);
+	public BigDecimal getAnzahlungenGestelltZuSchlussrechnungFw(Integer erIId);
 	
-	public BigDecimal getAnzahlungenZuSchlussrechnung(Integer erIId);
+	public BigDecimal getAnzahlungenGestelltZuSchlussrechnung(Integer erIId);
+
+	public BigDecimal getAnzahlungenBezahltZuSchlussrechnungFw(Integer erIId);
+	
+	public BigDecimal getAnzahlungenBezahltZuSchlussrechnungUstFw(Integer erIId);
 	
 
 }

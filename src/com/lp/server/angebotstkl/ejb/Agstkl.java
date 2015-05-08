@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -92,6 +92,29 @@ public class Agstkl implements Serializable {
 	@Column(name = "PERSONAL_I_ID_ANLEGEN")
 	private Integer personalIIdAnlegen;
 
+	@Column(name = "PROJEKT_I_ID")
+	private Integer projektIId;
+	
+	public Integer getProjektIId() {
+		return projektIId;
+	}
+
+	public void setProjektIId(Integer projektIId) {
+		this.projektIId = projektIId;
+	}
+	
+	@Column(name = "I_EKPREISBASIS")
+	private Integer iEkpreisbasis;
+	
+	
+	public Integer getIEkpreisbasis() {
+		return iEkpreisbasis;
+	}
+
+	public void setIEkpreisbasis(Integer iEkpreisbasis) {
+		this.iEkpreisbasis = iEkpreisbasis;
+	}
+
 	private static final long serialVersionUID = 1L;
 
 	public Agstkl() {
@@ -102,7 +125,7 @@ public class Agstkl implements Serializable {
 			java.lang.String belegartCNr, Integer kundeIId,
 			Timestamp belegdatum, java.lang.String waehrungCNr,
 			Double wechselkursmandantwaehrungzuagstklwaehrung,
-			Integer personalIIdAnlegen, Integer personalIIdAendern) {
+			Integer personalIIdAnlegen, Integer personalIIdAendern, Integer iEkpreisbasis) {
 		setIId(id);
 		setMandantCNr(mandantCNr);
 		setCNr(nr);
@@ -116,6 +139,7 @@ public class Agstkl implements Serializable {
 		setTAnlegen(t);
 		setTAendern(t);
 		setTBelegdatum(belegdatum);
+		setIEkpreisbasis(iEkpreisbasis);
 	}
 
 	public Integer getIId() {

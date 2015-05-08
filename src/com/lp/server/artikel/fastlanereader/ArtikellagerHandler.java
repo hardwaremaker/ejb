@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,6 +35,7 @@ package com.lp.server.artikel.fastlanereader;
 import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -52,6 +53,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -108,7 +110,7 @@ public class ArtikellagerHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
+			String queryString = getFromClause() + this.buildWhereClause()
 					+ this.buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
@@ -179,7 +181,7 @@ public class ArtikellagerHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select count(*) " + this.getFromClause()
+			String queryString = "select count(*) " + getFromClause()
 					+ this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
@@ -356,30 +358,41 @@ public class ArtikellagerHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-			setTableInfo(new TableInfo(new Class[] { Object.class,
-					String.class, BigDecimal.class, BigDecimal4.class, // Gestehungspreis
-					// immer
-					// 4
-					// stellig
-					// ,
-					// unabhaengig
-					// von
-					// UI
-					// Preisnachkommastellen
-					BigDecimal.class, }, new String[] {
-					"PK",
-					getTextRespectUISpr("lp.lager", theClientDto.getMandant(),
-							theClientDto.getLocUi()),
-					getTextRespectUISpr("lp.lagerstand",
-							theClientDto.getMandant(), theClientDto.getLocUi()),
-					getTextRespectUISpr("lp.gestehungspreis", theClientDto
-							.getMandant(), theClientDto.getLocUi()),
-					getTextRespectUISpr("lp.lagerwert", theClientDto.getMandant(),
-							theClientDto.getLocUi()) }, new String[] { "compId",
-					Facade.NICHT_SORTIERBAR,
-					LagerFac.FLR_ARTIKELLAGER_N_LAGERSTAND,
-					LagerFac.FLR_ARTIKELLAGER_N_GESTEHUNGSPREIS,
-					Facade.NICHT_SORTIERBAR }));
+			String mandantCNr = theClientDto.getMandant();
+			Locale locUI = theClientDto.getLocUi();
+			setTableInfo(new TableInfo(
+					new Class[] {
+							Object.class,
+							String.class,
+							BigDecimal.class,
+							BigDecimal4.class, // Gestehungspreis immer 4 stellig, unabhaengig von UI Preisnachkommastellen
+							BigDecimal.class
+					},
+					
+					new String[] {
+							"PK",
+							getTextRespectUISpr("lp.lager", mandantCNr, locUI),
+							getTextRespectUISpr("lp.lagerstand", mandantCNr, locUI),
+							getTextRespectUISpr("lp.gestehungspreis", mandantCNr, locUI),
+							getTextRespectUISpr("lp.lagerwert", mandantCNr,	locUI)
+					},
+					
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST
+					},
+					
+					new String[] {
+							"compId",
+							Facade.NICHT_SORTIERBAR,
+							LagerFac.FLR_ARTIKELLAGER_N_LAGERSTAND,
+							LagerFac.FLR_ARTIKELLAGER_N_GESTEHUNGSPREIS,
+							Facade.NICHT_SORTIERBAR
+					})
+			);
 		}
 		return super.getTableInfo();
 	}
@@ -389,3 +402,18 @@ public class ArtikellagerHandler extends UseCaseHandler {
 				+ LagerFac.FLR_ARTIKELLAGER_LAGER_I_ID + "=" + lagerIId;
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

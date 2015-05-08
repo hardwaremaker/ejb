@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -52,25 +52,37 @@ import org.w3c.dom.Node;
 
 import com.lp.server.angebotstkl.ejb.Agstklposition;
 import com.lp.server.angebotstkl.service.AgstklDto;
+import com.lp.server.angebotstkl.service.AgstklImportSpezifikation;
 import com.lp.server.angebotstkl.service.AgstklpositionDto;
 import com.lp.server.angebotstkl.service.AgstklpositionDtoAssembler;
 import com.lp.server.angebotstkl.service.AngebotstklServiceFac;
 import com.lp.server.angebotstkl.service.AngebotstklpositionFac;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.artikel.service.ArtikellieferantDto;
 import com.lp.server.artikel.service.ArtikelsprDto;
+import com.lp.server.artikel.service.VerkaufspreisDto;
+import com.lp.server.artikel.service.VkpreisfindungDto;
+import com.lp.server.partner.service.KundeDto;
+import com.lp.server.stueckliste.service.IStklImportResult;
 import com.lp.server.system.pkgenerator.PKConst;
+import com.lp.server.system.service.IImportHead;
+import com.lp.server.system.service.IImportPositionen;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Beleg;
 import com.lp.server.util.IOpenFactory;
+import com.lp.server.util.Validator;
 import com.lp.service.BelegpositionDto;
+import com.lp.service.StklImportSpezifikation;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
 @Stateless
 public class AngebotstklpositionFacBean extends Beleg implements
-		AngebotstklpositionFac, IOpenFactory {
+		AngebotstklpositionFac, AngebotstklpositionLocalFac, IOpenFactory, IImportPositionen, IImportHead {
 
 	@PersistenceContext
 	private EntityManager em;
@@ -187,28 +199,91 @@ public class AngebotstklpositionFacBean extends Beleg implements
 		// }
 	}
 
-	public void preiseGemaessKalkulationsart2Updaten(Integer agstklIId,
+	public void preiseGemaessKalkulationsartUpdaten(Integer agstklIId,
 			TheClientDto theClientDto) {
 
 		AgstklDto agstklDto = null;
+		int iKalkulationsart = -1;
 		try {
 			agstklDto = getAngebotstklFac().agstklFindByPrimaryKey(agstklIId);
+
+			ParametermandantDto parameterMand = getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ANGEBOTSSTUECKLISTE,
+							ParameterFac.PARAMETER_KALKULATIONSART);
+			iKalkulationsart = (Integer) parameterMand.getCWertAsObject();
+
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
 		}
+
+		KundeDto kdDto = getKundeFac().kundeFindByPrimaryKey(
+				agstklDto.getKundeIId(), theClientDto);
 
 		AgstklpositionDto[] dtos = agstklpositionFindByAgstklIId(agstklIId,
 				theClientDto);
 		for (int i = 0; i < dtos.length; i++) {
 			AgstklpositionDto dto = dtos[i];
 
-			dto = getAngebotstklFac()
-					.befuellePositionMitPreisenKalkulationsart2(theClientDto,
-							agstklDto.getWaehrungCNr(), dto.getArtikelIId(),
-							dto.getNMenge(), dto);
+			// EK-Preisbezug
+			if (iKalkulationsart == 2 || iKalkulationsart == 3) {
+
+				dto = befuellePositionMitPreisenKalkulationsart2(
+								theClientDto, agstklDto.getWaehrungCNr(),
+								dto.getArtikelIId(), dto.getNMenge(), dto);
+			} else {
+
+				if (dto.getArtikelIId() != null && dto.getNMenge() != null) {
+					VkpreisfindungDto vkpreisfindungDto = getVkPreisfindungFac()
+							.verkaufspreisfindung(
+									dto.getArtikelIId(),
+									agstklDto.getKundeIId(),
+									dto.getNMenge(),
+									new java.sql.Date(agstklDto
+											.getTBelegdatum().getTime()),
+									kdDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
+									kdDto.getMwstsatzbezIId(),
+									agstklDto.getWaehrungCNr(), theClientDto);
+
+					VerkaufspreisDto verkaufspreisDtoInZielwaehrung = Helper
+							.getVkpreisBerechnet(vkpreisfindungDto);
+
+					if (verkaufspreisDtoInZielwaehrung != null) {
+						dto.setNAufschlag(BigDecimal.ZERO);
+						dto.setFAufschlag(0D);
+						dto.setFZusatzrabattsatz(0D);
+
+						dto.setNNettoeinzelpreis(verkaufspreisDtoInZielwaehrung.einzelpreis);
+						dto.setFRabattsatz(verkaufspreisDtoInZielwaehrung.rabattsatz);
+						dto.setNNettogesamtpreis(verkaufspreisDtoInZielwaehrung.nettopreis);
+						dto.setNNettogesamtmitaufschlag(verkaufspreisDtoInZielwaehrung.nettopreis);
+
+					}
+
+				}
+			}
 			updateAgstklposition(dto, theClientDto);
 
 		}
+	}
+
+	
+	@Override
+	/**
+	 * Mehrere Angebotspositionen anlegen.
+	 * 
+	 * @param agstklpositionDtos, die neuen Positionen
+	 * @param theClientDto, der aktuelle Benutzer
+	 * @return iId, der zuletzt angelegten neuen Position
+	 */
+	public Integer createAngebotpositions(
+			AgstklpositionDto[] agstklpositionDtos, TheClientDto theClientDto) {
+		Integer iId = null;
+		for (int i = 0; i < agstklpositionDtos.length; i++) {
+			iId = createAgstklposition(agstklpositionDtos[i],
+					theClientDto);
+		}
+		return iId;
 	}
 
 	/**
@@ -252,14 +327,14 @@ public class AngebotstklpositionFacBean extends Beleg implements
 						+ iIdArtikel);
 			}
 
-			
-			if(agstklpositionDtoI.getBAufschlaggesamtFixiert()==null){
-				agstklpositionDtoI.setBAufschlaggesamtFixiert(Helper.boolean2Short(false));
+			if (agstklpositionDtoI.getBAufschlaggesamtFixiert() == null) {
+				agstklpositionDtoI.setBAufschlaggesamtFixiert(Helper
+						.boolean2Short(false));
 			}
-			if(agstklpositionDtoI.getNGestehungspreis()==null){
+			if (agstklpositionDtoI.getNGestehungspreis() == null) {
 				agstklpositionDtoI.setNGestehungspreis(new BigDecimal(0));
 			}
-			
+
 			// generieren von primary key
 			agstklpositionIId = getPKGeneratorObj().getNextPrimaryKey(
 					PKConst.PK_AGSTKLPOSITION);
@@ -767,4 +842,185 @@ public class AngebotstklpositionFacBean extends Beleg implements
 		return nodeFeaturesI;
 	}
 
+	@Override
+	public BelegpositionDto getNewPositionDto() {
+		return new AgstklpositionDto();
+	}
+
+	@Override
+	/**
+	 * Erstellt ein Angebotst&uuml;cklistenpositionsDto und setzt die
+	 * erforderlichen Parameter.
+	 * 
+	 * @param spez, Spezifikation des Stklimports
+	 * @param result, einzelnes Result des Stklimports
+	 * @param theClientDto, der aktuelle Benutzer
+	 * 
+	 * @return das vorbef&uuml;llte PositionsDto
+	 */
+	public BelegpositionDto preparePositionDtoAusImportResult(
+			BelegpositionDto posDto, StklImportSpezifikation spez,
+			IStklImportResult result, TheClientDto theClientDto) {
+		
+		((AgstklpositionDto)posDto).setBDrucken(Helper.getShortFalse());
+		posDto.setBArtikelbezeichnunguebersteuert(Helper.getShortFalse());
+		AgstklDto agstklDto;
+		try {
+			agstklDto = getAngebotstklFac().agstklFindByPrimaryKey(posDto.getBelegIId());
+			posDto = befuelleMitPreisenNachKalkulationsart((AgstklpositionDto)posDto, agstklDto.getWaehrungCNr(), theClientDto);
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+		
+		return posDto;
+	}
+
+	@Override
+	public void createPositions(List<BelegpositionDto> posDtos, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
+		createAngebotpositions(posDtos.toArray(new AgstklpositionDto[posDtos.size()]), theClientDto);
+	}
+
+	@Override
+	public Integer getKundeIIdDerStueckliste(StklImportSpezifikation spez,
+			TheClientDto theClientDto) throws RemoteException {
+		AgstklDto agstklDto = getAngebotstklFac().agstklFindByPrimaryKey(spez.getStklIId());
+		
+		return agstklDto == null ? null : agstklDto.getKundeIId();
+	}
+
+	@Override
+	public IImportPositionen asPositionImporter() {
+		return this;
+	}
+
+	@Override
+	public IImportHead asHeadImporter() {
+		return this ;
+	}
+
+	public AgstklpositionDto befuelleMitPreisenNachKalkulationsart(AgstklpositionDto agstklpositionDto,
+			String waehrungCnr, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		Boolean isHandeingabe = LocaleFac.POSITIONSART_HANDEINGABE.equals(agstklpositionDto.getPositionsartCNr());
+		Boolean hasArtikelNr = agstklpositionDto.getArtikelIId() == null ? false : true;
+		Validator.notNull(!isHandeingabe && !hasArtikelNr, "Artikel ist keine Handeingabe und die IId ist null");
+
+		BigDecimal gestpreis;
+		
+		if(isHandeingabe && !hasArtikelNr) {
+			gestpreis = new BigDecimal(0);
+		} else {
+			gestpreis = getLagerFac()
+					.getGemittelterGestehungspreisEinesLagers(
+							agstklpositionDto.getArtikelIId(),
+							getLagerFac().getHauptlagerDesMandanten(
+									theClientDto).getIId(), theClientDto);
+		}
+		agstklpositionDto.setNGestehungspreis(gestpreis);
+		agstklpositionDto.setBNettopreisuebersteuert(Helper.getShortFalse());
+		agstklpositionDto.setFRabattsatz(0D);
+		agstklpositionDto.setNNettoeinzelpreis(gestpreis);
+		agstklpositionDto.setNNettogesamtpreis(gestpreis);
+		agstklpositionDto.setBRabattsatzuebersteuert(Helper.getShortFalse());
+		agstklpositionDto.setBNettopreisuebersteuert(Helper.getShortTrue());
+
+		ParametermandantDto parameterMand = getParameterFac()
+				.getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ANGEBOTSSTUECKLISTE,
+						ParameterFac.PARAMETER_KALKULATIONSART);
+		int iKalkulationsart = (Integer) parameterMand
+				.getCWertAsObject();
+		// EK-Preisbezug
+		if (iKalkulationsart == 2 || iKalkulationsart == 3) {
+
+			if(hasArtikelNr) {
+				befuellePositionMitPreisenKalkulationsart2(theClientDto,
+						waehrungCnr,
+						agstklpositionDto.getArtikelIId(), agstklpositionDto.getNMenge(),
+						agstklpositionDto);
+			}
+
+			if (iKalkulationsart == 3) {
+				// SP2064
+
+				parameterMand = getParameterFac().getMandantparameter(
+						theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ANGEBOTSSTUECKLISTE,
+						ParameterFac.PARAMETER_DEFAULT_AUFSCHLAG);
+				Double aufschlag = (Double) parameterMand
+						.getCWertAsObject();
+				agstklpositionDto.setFAufschlag(aufschlag);
+
+				agstklpositionDto.setBAufschlaggesamtFixiert(Helper.getShortFalse());
+
+				BigDecimal bdAufschlag = Helper.getProzentWert(
+						agstklpositionDto.getNNettogesamtpreis(),
+						new BigDecimal(aufschlag), 4);
+
+				agstklpositionDto.setNAufschlag(bdAufschlag);
+
+				agstklpositionDto
+						.setNNettogesamtmitaufschlag(agstklpositionDto
+								.getNNettogesamtpreis()
+								.add(bdAufschlag));
+
+			}
+		} 
+
+		return agstklpositionDto;
+	}
+
+	@Override
+	public AgstklpositionDto befuellePositionMitPreisenKalkulationsart2(
+			TheClientDto theClientDto, String waehrungCNr, Integer artikelIId,
+			BigDecimal nMenge, AgstklpositionDto agstklpositionDtoI) {
+		int iNachkommastellen = 2;
+		ArtikellieferantDto artliefDto = null;
+		try {
+			iNachkommastellen = getMandantFac().getNachkommastellenPreisEK(
+					theClientDto.getMandant());
+
+			artliefDto = getArtikelFac().getArtikelEinkaufspreis(artikelIId,
+					nMenge, waehrungCNr, theClientDto);
+		} catch (EJBExceptionLP e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+		if (artliefDto != null && artliefDto.getNEinzelpreis() != null) {
+
+			agstklpositionDtoI.setFRabattsatz(artliefDto.getFRabatt());
+			agstklpositionDtoI.setNNettoeinzelpreis(artliefDto
+					.getNEinzelpreis());
+			agstklpositionDtoI.setNNettogesamtpreis(artliefDto
+					.getNEinzelpreis().subtract(
+							Helper.getProzentWert(artliefDto.getNEinzelpreis(),
+									new BigDecimal(artliefDto.getFRabatt()),
+									iNachkommastellen)));
+
+			if (Helper.short2boolean(artliefDto.getBRabattbehalten())) {
+				agstklpositionDtoI.setBRabattsatzuebersteuert(Helper
+						.boolean2Short(true));
+				agstklpositionDtoI.setBNettopreisuebersteuert(Helper
+						.boolean2Short(false));
+			} else {
+				agstklpositionDtoI.setBNettopreisuebersteuert(Helper
+						.boolean2Short(true));
+				agstklpositionDtoI.setBRabattsatzuebersteuert(Helper
+						.boolean2Short(false));
+			}
+
+		} else {
+			agstklpositionDtoI.setFRabattsatz(0D);
+			agstklpositionDtoI.setNNettoeinzelpreis(new BigDecimal(0));
+			agstklpositionDtoI.setNNettogesamtpreis(new BigDecimal(0));
+			agstklpositionDtoI.setBRabattsatzuebersteuert(Helper
+					.boolean2Short(false));
+			agstklpositionDtoI.setBNettopreisuebersteuert(Helper
+					.boolean2Short(true));
+		}
+		return agstklpositionDtoI;
+	}
+	
 }

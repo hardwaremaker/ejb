@@ -1,33 +1,33 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.util;
@@ -45,20 +45,20 @@ import com.lp.server.util.logger.LPLogService;
  * exccatch: Diese Klasse kuemmert sich um Exceptions die an den Client (auch
  * anderes Servermodul) durchgereicht werden.
  * </p>
- * 
+ *
  * <p>
  * Copyright Logistik Pur Software GmbH (c) 2004-2007
  * </p>
- * 
+ *
  * <p>
  * Erstellung: Josef Ornetsmueller; dd.mm.05
  * </p>
- * 
+ *
  * <p>
- * 
+ *
  * @author $Author: adi $
  *         </p>
- * 
+ *
  * @version not attributable Date $Date: 2013/01/25 17:38:57 $
  */
 // Durch diese Annotation wird die EJBExeptionLP 'ungewrapped' and den Aufrufer
@@ -70,7 +70,7 @@ import com.lp.server.util.logger.LPLogService;
 public class EJBExceptionLP extends RuntimeException {
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 
@@ -196,17 +196,44 @@ public class EJBExceptionLP extends RuntimeException {
 	public final static int FEHLER_INVALID_REPORT_URL = 113;
 
 
-	public final static int FEHLER_KEYSTORE             = 109 ;
-	public final static int FEHLER_KEYSTORE_MANAGMENT   = 110 ;
-	public final static int FEHLER_KEYSTORE_RECOVER     = 111 ;
-	public final static int FEHLER_KEYSTORE_ALGORITHMEN = 112 ;
-	public final static int FEHLER_KEYSTORE_CERTIFICATE = 113 ;
+	public final static int FEHLER_KEYSTORE             = 114 ;
+	public final static int FEHLER_KEYSTORE_MANAGMENT   = 115 ;
+	public final static int FEHLER_KEYSTORE_RECOVER     = 116 ;
+	public final static int FEHLER_KEYSTORE_ALGORITHMEN = 117 ;
+	public final static int FEHLER_KEYSTORE_CERTIFICATE = 118 ;
 
-	public final static int FEHLER_HTTP_POST_IO         = 114 ;
+	public final static int FEHLER_HTTP_POST_IO         = 119 ;
 
-	public final static int FEHLER_DOKUMENTENABLAGE_OFFLINE = 115 ;
-	public final static int FEHLER_BEIM_AKTIVIEREN_BELEG_WURDE_GEAENDERT = 116 ;
-	
+	public final static int FEHLER_DOKUMENTENABLAGE_OFFLINE = 120 ;
+	public final static int FEHLER_BEIM_AKTIVIEREN_BELEG_WURDE_GEAENDERT = 121 ;
+
+	/**
+	 * Eine Script-Datei wurde im Server-Verzeichnis nicht gefunden</br>
+	 */
+	//TODO: Vorerst hier in diesem Bereich. Sollten noch mehrere Script-Fehler dazukommen, dann eigenen Bereich machen
+	public final static int FEHLER_SCRIPT_NICHT_GEFUNDEN = 122 ;
+	public final static int FEHLER_SCRIPT_NICHT_AUSFUEHRBAR = 130 ;
+
+	/**
+	 * Die Zwischensummenposition ist unvollst&auml;ndig
+	 */
+	public final static int FEHLER_POSITION_ZWISCHENSUMME_UNVOLLSTAENDIG = 123 ;
+	public final static int FEHLER_FLRDRUCK_SPALTE_NICHT_VORHANDEN = 124 ;
+	public final static int FEHLER_PJ18612_BENUTZER_MUSS_AN_MANDANT_002_ANGEMELDET_SEIN = 125;
+
+	/**
+	 * Die zu ver&auml;ndernden Daten wurden zwischenzeitlich modifiziert
+	 */
+	public final static int FEHLER_DATEN_MODIFIZIERT_UPDATE = 126 ;
+	public final static int FEHLER_DATEN_MODIFIZIERT_REMOVE = 127 ;
+
+	/**
+	 * Der Root-Node existiert nicht, bzw. es kann nicht auf ihn zugegriffen werden
+	 */
+	public final static int FEHLER_JCR_ROOT_EXISTIERT_NICHT = 128 ;
+
+	public final static int FEHLER_SORTIER_LISTE_ENTHAELT_NULL = 129;
+
 	// 501 bis 999 Client Fehler
 	// ****************************************************
 	public final static int FEHLER_DLG_DONE_DO_NOTHING = 501;
@@ -222,6 +249,7 @@ public class EJBExceptionLP extends RuntimeException {
 	static public final int FEHLER_MENGENAENDERUNG_UNTER_ABGERUFENE_MENGE_NICHT_ERLAUBT = 1003;
 	static public final int FEHLER_ABRUFAUFTRAG_KANN_NICHT_MEHR_VERAENDERT_WERDEN = 1004;
 	static public final int FEHLER_RAHMENAUFTRAG_IST_IM_STATUS_ANGELEGT = 1005;
+	static public final int FEHLER_ALLE_LOSE_BERUECKSICHTIGEN_UND_SAMMELLIEFERSCHIEN_MEHRERE_AUFTRAEGE = 1006;
 
 	// 2000-2499: Artikel + Stueckliste
 	// ***********************************************************
@@ -299,6 +327,13 @@ public class EJBExceptionLP extends RuntimeException {
 	static public final int FEHLER_IMPORT_DIMENSIONEN_UND_STKLPOS_EINHEIT_FALSCH = 2071;
 	static public final int FEHLER_IMPORT_STUECKLISTENIMPORT_ALLGEMEIN = 2072;
 	static public final int FEHLER_EINZELPREIS_NUR_LOESCHBAR_WENN_KEINE_STAFFELN = 2073;
+	static public final int FEHLER_EINHEIT_C_NR_VPE_IN_ARTIKELLIEFERANT_VORHANDEN = 2074;
+	static public final int FEHLER_SERIENNUMMER_ENTHAELT_NICHT_NUMERISCHE_ZEICHEN = 2075;
+	public final static int FEHLER_CHARGENNUMMERNGENERATOR_UNGUELTIGE_ZEICHEN = 2076;
+	public final static int FEHLER_CHARGENNUMMER_NICHT_NUMERISCH = 2077;
+
+	public final static int FEHLER_KEINE_STUECKLISTEN_FUER_PARTNERID = 2078 ;
+	public final static int FEHLER_KUNDENSTUECKLISTEMANDANT_NICHT_EINDEUTIG = 2079 ;
 
 	// 2500-2999: Personal+Zeiterfassung+Zutritt
 	// ********************************************
@@ -328,6 +363,10 @@ public class EJBExceptionLP extends RuntimeException {
 	public final static int FEHLER_IN_REISEZEITEN = 2523;
 	public final static int FEHLER_ZEITBUCHUNGEN_VORHANDEN = 2524;
 	static public final int FEHLER_PERSONAL_ZEICHEN_IN_PERSONALNUMMER_NICHT_ERLAUBT = 2525;
+	public final static int FEHLER_BUCHUNG_ZWISCHEN_VON_BIS = 2526;
+	public final static int FEHLER_BUCHUNG_EINFUEGEN_ZWISCHEN_VON_BIS_NICHT_ERLAUBT = 2527;
+	public final static int FEHLER_SONDERZEITENIMPORT_DOPPELTER_EINTRAG = 2528;
+	public final static int FEHLER_ZEITEN_BEREITS_ABGESCHLOSSEN = 2529;
 
 	// 3000-3999: Rechnung:
 	// *******************************************************
@@ -372,7 +411,18 @@ public class EJBExceptionLP extends RuntimeException {
 	public static final int FEHLER_STORNIEREN_ZAHLUNGEN_VORHANDEN = 3036;
 	public static final int FEHLER_LIEFERSCHEINE_MIT_VERSCHIEDENEN_PROJEKTEN = 3037;
 	public static final int FEHLER_LIEFERSCHEIN_MUSS_GELIEFERT_SEIN = 3038;
+	public static final int FEHLER_LIEFERSCHEIN_BEREITS_IN_PROFORMARECHNUNG = 3039;
+	public static final int FEHLER_RECHNUNG_GS_AUF_ANZAHLUNG_NICHT_MOEGLICH = 3040;
+	public static final int FEHLER_STORNIEREN_ANZAHLUNG_SCHLUSSRECHNUNG_VORHANDEN = 3041;
+
+
+	// Zahlungsart <> Gutschrift, aber Gutschrift-Daten vorhanden
+	public static final int FEHLER_GUTSCHRIFTZAHLUNG_OHNE_GUTSCHRIFTART = 3042 ;
 	
+	// Definition: Bei ReverseCharge muessen alle Positionen den gleichen Mwstsatz haben
+	public static final int FEHLER_RECHNUNG_UNTERSCHIEDLICHE_MWSTSAETZE_BEI_RC = 3043 ;
+	
+
 	// 4000-4999: Finanz:
 	// *********************************************************
 	public static final int FEHLER_FINANZ_BUCHUNG_NICHT_ERLAUBT_BUCHUNGSREGEL = 4000;
@@ -386,6 +436,8 @@ public class EJBExceptionLP extends RuntimeException {
 	public static final int FEHLER_FINANZ_BILANZGRUPPENDEFINITON_POS_NEG = 4012;
 	public static final int FEHLER_FINANZ_BUCHUNG_AUF_MITLAUFENDES_KONTO_NICHT_ERLAUBT = 4013;
 	public static final int FEHLER_FINANZ_KONTOLAENDERART_ZEIGT_AUF_SICH_SELBST = 4014;
+	public static final int FEHLER_FINANZ_KEINE_KONTONUMMER_FUER_BEREICH_VERFUEGBAR = 4015;
+	public static final int FEHLER_FINANZ_KONTONUMMER_AUSSERHALB_DEFINITION = 4016;
 
 	// Fehler, die das Verbuchen von Belegen betreffen
 	public static final int FEHLER_FINANZ_BELEG_BEREITS_VERBUCHT = 4100;
@@ -413,6 +465,10 @@ public class EJBExceptionLP extends RuntimeException {
 	public static final int FEHLER_FINANZ_KEINE_STEUERKATEGORIE_REVERSE_DEFINIERT = 4122;
 	public static final int FEHLER_FINANZ_UNGUELTIGER_BETRAG_ZAHLUNG_VORAUSZAHLUNG = 4123;
 	public static final int FEHLER_FINANZ_KONTO_IN_ANDERER_MWST_VERWENDET = 4124;
+	public static final int FEHLER_FINANZ_UNGUELTIGE_STEUERBUCHUNG = 4125;
+	public static final int FEHLER_FINANZ_KEIN_LAND_IM_KUNDEN = 4126;
+	public static final int FEHLER_FINANZ_GESCHAEFTSJAHR_EXISTIERT_NICHT = 4127;
+	public static final int FEHLER_FINANZ_DATUM_NICHT_LETZTER_TAG_DES_MONATS = 4128;
 
 	// import ab 4600
 	public static final int FEHLER_FINANZ_IMPORT_ANZAHL_FELDER = 4600;
@@ -517,11 +573,18 @@ public class EJBExceptionLP extends RuntimeException {
 	public final static int FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_UNTERSCHIEDLICHE_ABW_UST = 6017;
 	public final static int FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_UNTERSCHIEDLICHE_UID = 6018;
 	public final static int FEHLER_PARTNER_ZUSAMMENFUEHREN_NICHT_MOEGLICH_BANKVERBINDUNG_IN_FIBU_VORHANDEN = 6019;
-	
+
+	public final static int FEHLER_PARTNERART_DARF_NICHT_GELOESCHT_GEAENDERT_WERDEN = 6020;
+
+
 	/**
 	 * @deprecated use {@link #FEHLER_FALSCHER_MANDANT}
 	 */
 	public final static int FEHLER_KUNDE_IID_IN_MANDANT_NICHT_VORHANDEN = 6020;
+
+	public final static int FEHLER_ANSPRECHPARTNER_EMAIL_NICHT_DEFINIERT = 6021;
+	public final static int FEHLER_ANSPRECHPARTNER_EMAIL_NICHT_EINDEUTIG = 6022;
+
 
 	// 7000-7999: Lieferschein
 	// ****************************************************
@@ -534,7 +597,13 @@ public class EJBExceptionLP extends RuntimeException {
 	public final static int FEHLER_LIEFERSCHEIN_VERSANDWEG_NICHT_UNTERSTUETZT = 7006 ;
 	public final static int FEHLER_LIEFERSCHEIN_VERSANDWEG_IM_PARTNER_NICHT_DEFINIERT = 7007 ;
 	public final static int FEHLER_LIEFERSCHEIN_VERSANDWEG_PARTNER_KUNDENNUMMER_FEHLT = 7008 ;
-	
+	public final static int FEHLER_LIEFERSCHEIN_ANDERN_MANDANT_NACHFUELLEN_MANDANT_KEIN_KUNDE = 7009 ;
+	public final static int FEHLER_LIEFERSCHEIN_ENTHAELT_VERKETTETE_LIEFERSCHEINE = 7010 ;
+	public final static int FEHLER_LIEFERSCHEIN_IST_VERKETTET = 7011 ;
+	public final static int FEHLER_LIEFERSCHEIN_IST_BEREITS_VERKETTET = 7012 ;
+	public final static int FEHLER_LIEFERSCHEIN_HAT_KEINEN_AUFTRAGSBEZUG = 7013 ;
+
+
 	// 8000-8999: Drucken
 	// *********************************************************
 	static public final int FEHLER_DRUCKEN_REPORT_NICHT_GEFUNDEN = 8000;
@@ -567,6 +636,7 @@ public class EJBExceptionLP extends RuntimeException {
 	public static final int FEHLER_BESTELLUNG_WEPOS_PREIS_NOCH_NICHT_ERFASST = 10010;
 	public static final int FEHLER_BESTELLUNG_NUR_KOPFARTIKEL_ZUBUCHBAR = 10011;
 	public static final int FEHLER_KEIN_DOKUMENT_BEI_DOKUMENTENPFLICHTIGEM_ARTIKEL_IM_LOS_HINTERLEGT = 100011;
+	public static final int FEHLER_LIEFERADRESSE_NUR_AENDERBAR_WENN_KEINE_PREISE_ERFASST = 10012;
 
 	// Angebot 11000-11999
 	public final static int FEHLER_ANGEBOT_NETTOWERTKANNNICHTBERECHNETWERDEN = 11000;
@@ -596,6 +666,10 @@ public class EJBExceptionLP extends RuntimeException {
 	public final static int FEHLER_FERTIGUNG_LOSNUMMER_NACH_BEREICH_UEBERLAUF = 12021;
 	public final static int FEHLER_FERTIGUNG_AUF_DEM_LOS_IST_MATERIAL_AUSGEGEBEN = 12022;
 	public final static int FEHLER_FERTIGUNG_FERTIGUNGSGRUPPE_SOFORTVERBRAUCH_NICHT_VORHANDEN = 12023;
+	public final static int FEHLER_FERTIGUNG_MATERIAL_VOLLSTAENDIG = 12024;
+	public final static int FEHLER_FERTIGUNG_HILFSSTUECKLISTE_DARF_KEINE_SOLLPOSITION_SEIN = 12025;
+
+
 
 	// Fertigung 13000-13999
 	public final static int FEHLER_BES_SUBSCRIPTION_FEHLGESCHLAGEN = 13000;
@@ -606,6 +680,18 @@ public class EJBExceptionLP extends RuntimeException {
 	// Projekt 15000-15999
 	public final static int FEHLER_PROJEKT_DARF_NICHT_STORNIERT_WERDEN_ZEITEN_VORHANDEN = 15000;
 	public final static int FEHLER_ZEITBUCHUNG_STORNIERTES_PROJEKT_NICHT_MOEGLICH = 15001;
+	public final static int FEHLER_ZEITBUCHUNG_INTERN_ERLEDIGTES_PROJEKT_NICHT_MOEGLICH = 15002;
+	public final static int FEHLER_ZEITBUCHUNG_ANGELEGTES_LOS_NICHT_MOEGLICH = 15003;
+	public final static int FEHLER_ZEITBUCHUNG_ERLEDIGTES_LOS_NICHT_MOEGLICH = 15004;
+	public final static int FEHLER_ZEITBUCHUNG_ERLEDIGTER_AUFTRAG_NICHT_MOEGLICH = 15005;
+	public final static int FEHLER_ZEITBUCHUNG_STORNIERTER_AUFTRAG_NICHT_MOEGLICH = 15006;
+	public final static int FEHLER_ZEITBUCHUNG_AUF_FERTIGEN_ARBEITSGANG_NICHT_MOEGLICH = 15007;
+	public final static int FEHLER_ZEITBUCHUNG_GESTOPPTES_LOS_NICHT_MOEGLICH = 15008;
+	public final static int FEHLER_ZEITBUCHUNG_STORNIERTES_LOS_NICHT_MOEGLICH = 15009;
+	public final static int FEHLER_ZEITBUCHUNG_ERLEDIGTES_PROJEKT_NICHT_MOEGLICH = 15010;
+
+	public final static int FEHLER_ZEITBUCHUNG_STORNIERTES_ANGEBOT_NICHT_MOEGLICH = 15011;
+	public final static int FEHLER_ZEITBUCHUNG_ERLEDIGTES_ANGEBOT_NICHT_MOEGLICH = 15012;
 
 	// public final static int
 	// FEHLER_FERTIGUNG_KAPAZITAETSVORSCHAU_KEINE_ARTIKELGRUPPEN = 12012;
@@ -614,6 +700,10 @@ public class EJBExceptionLP extends RuntimeException {
 
 	private int code = NO_VALUE;
 	private ArrayList<Object> alInfoForTheClient = null;
+
+	public EJBExceptionLP() {
+		this(FEHLER, new Exception("undefined")) ;
+	}
 
 	public EJBExceptionLP(RemoteException eI) {
 		super(eI);
@@ -627,7 +717,7 @@ public class EJBExceptionLP extends RuntimeException {
 
 	/**
 	 * EJBExceptionLP
-	 * 
+	 *
 	 * @param codeI
 	 *            fuer den programmierer.
 	 * @param alInfoForTheClientI

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -83,6 +83,13 @@ public class KundeUmsatzstatistikDto implements Serializable {
 	public void setBdDeckungsbeitrag(BigDecimal bdDeckungsbeitrag) {
 		this.bdDeckungsbeitrag = bdDeckungsbeitrag;
 	}
+	
+	public void setBdKreditlimit(BigDecimal bdKreditlimit) {
+		this.bdKreditlimit = bdKreditlimit;
+	}
+	public BigDecimal getBdKreditlimit() {
+		return bdKreditlimit;
+	}
 
 	public void setSubSummeDeckungsbeitrag(BigDecimal[] subSummeDeckungsbeitrag) {
 		this.subSummeDeckungsbeitrag = subSummeDeckungsbeitrag;
@@ -97,6 +104,7 @@ public class KundeUmsatzstatistikDto implements Serializable {
 	private BigDecimal[] subSummeUmsatz = null;
 	private String abcKlassifizierung;
 	private BigDecimal bdDeckungsbeitrag = new BigDecimal(0);
+	private BigDecimal bdKreditlimit = null;
 
 	private Integer iKundennummer=0;
 	private String sLkz="";

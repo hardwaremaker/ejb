@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -81,7 +81,7 @@ public interface AuftragServiceFac {
 	public static final String AUFTRAGPOSITIONART_STUECKLISTENPOSITION = LocaleFac.POSITIONSART_STUECKLISTENPOSITION;
 	public static final String AUFTRAGPOSITIONART_POSITION = LocaleFac.POSITIONSART_POSITION;
 	public static final String AUFTRAGPOSITIONART_ENDSUMME = LocaleFac.POSITIONSART_ENDSUMME;
-	public static final String AUFTRAGPOSITIONART_INTELLIGENTE_ZWISCHENSUMME = LocaleFac.POSITIONSART_INTELLIGENTE_ZWISCHENSUMME ;
+	public static final String AUFTRAGPOSITIONART_INTELLIGENTE_ZWISCHENSUMME = LocaleFac.POSITIONSART_INTELLIGENTE_ZWISCHENSUMME;
 
 	// Auftragpositionstatus
 	public static final String AUFTRAGPOSITIONSTATUS_OFFEN = LocaleFac.STATUS_OFFEN;
@@ -101,8 +101,6 @@ public interface AuftragServiceFac {
 	public static final String AUFTRAGWIEDERHOLUNGSINTERVALL_4JAHR = "4j\u00E4hrlich";
 	public static final String AUFTRAGWIEDERHOLUNGSINTERVALL_5JAHR = "5j\u00E4hrlich";
 
-	
-	
 	// FLR Spaltennamen aus Hibernate Mapping
 	public static final String FLR_AUFTRAGTEXT_I_ID = "i_id";
 	public static final String FLR_AUFTRAGTEXT_MANDANT_C_NR = "mandant_c_nr";
@@ -115,6 +113,18 @@ public interface AuftragServiceFac {
 
 	public static final String FLR_AUFTRAGPOSITIONART_POSITIONSART_C_NR = "positionsart_c_nr";
 	public static final String FLR_AUFTRAGPOSITIONART_AUFTRAGPOSITIONSART_POSITIONSART_SET = "auftragpositionsart_positionsart_set";
+
+	public static final String FLR_ZEITPLAN_I_TERMIN_VOR_LIEFERTERMIN = "i_termin_vor_liefertermin";
+	public static final String FLR_ZEITPLAN_N_MATERIAL = "n_material";
+	public static final String FLR_ZEITPLAN_N_DAUER = "n_dauer";
+	public static final String FLR_ZEITPLAN_C_KOMMENTAR = "c_kommentar";
+
+	public static final String FLR_ZAHLUNGSPLAN_I_TAGE_VOR_LIEFERTERMIN = "i_tage_vor_liefertermin";
+	public static final String FLR_ZAHLUNGSPLAN_N_BETRAG = "n_betrag";
+
+	public static final String FLR_ZAHLUNGSPLAN_C_KOMMENTAR = "c_kommentar";
+	public static final String FLR_ZAHLUNGSPLAN_T_ERLEDIGT = "t_erledigt";
+	public static final String FLR_ZAHLUNGSPLAN_FLRMEILENSTEIN = "flrmeilenstein";
 
 	// Fix verdrahtet Auftragtexte
 	public static final String AUFTRAG_DEFAULT_KOPFTEXT = "Wir danken f\u00FCr Ihre Bestellung und best\u00E4tigen diese wie folgt:";
@@ -323,5 +333,49 @@ public interface AuftragServiceFac {
 	public void removeAuftragbegruendung(Integer iId);
 
 	public AuftragbegruendungDto auftragbegruendungFindByPrimaryKey(Integer iId);
+
+	public void updateMeilenstein(MeilensteinDto meilensteinDto,
+			TheClientDto theClientDto);
+
+	public Integer createMeilenstein(MeilensteinDto meilensteinDto,
+			TheClientDto theClientDto);
+
+	public MeilensteinDto meilensteinFindByPrimaryKey(Integer iId,
+			TheClientDto theClientDto);
+
+	public void removeMeilenstein(MeilensteinDto meilensteinDto);
+
+	public ZeitplanDto zeitplanFindByPrimaryKey(Integer iId);
+
+	public void updateZeitplan(ZeitplanDto dto);
+
+	public Integer createZeitplan(ZeitplanDto zeitplanDto);
+
+	public void removeZeitplan(ZeitplanDto zeitplanDto);
+
+	public Integer createZahlungsplan(ZahlungsplanDto zahlungsplanDto);
+
+	public ZahlungsplanDto zahlungsplanFindByPrimaryKey(Integer iId);
+
+	public void removeZahlungsplan(ZahlungsplanDto zahlungsplanDto);
+
+	public void updateZahlungsplan(ZahlungsplanDto dto);
+
+	public Integer createZahlungsplanmeilenstein(
+			ZahlungsplanmeilensteinDto zahlungsplanmeilensteinDto,
+			TheClientDto theClientDto);
+
+	public void removeZahlungsplanmeilenstein(
+			ZahlungsplanmeilensteinDto zahlungsplanmeilensteinDto);
+
+	public ZahlungsplanmeilensteinDto zahlungsplanmeilensteinFindByPrimaryKey(
+			Integer iId);
+
+	public void updateZahlungsplanmeilenstein(
+			ZahlungsplanmeilensteinDto zahlungsplanmeilensteinDto,
+			TheClientDto theClientDto);
+
+	public void toggleZahlungplanmeilensteinErledigt(
+			Integer zahlungsplanmeilensteinIId, TheClientDto theClientDto);
 
 }

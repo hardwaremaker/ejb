@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -47,6 +47,34 @@ public class InventurstandDto implements Serializable {
 	private BigDecimal nInventurmenge;
 	private BigDecimal nInventurpreis;
 	private BigDecimal nAbgewerteterpreis;
+	private BigDecimal nBasispreis;
+	private Double fAbwertung;
+
+	private String cKommentar;
+
+	public String getCKommentar() {
+		return cKommentar;
+	}
+
+	public void setCKommentar(String cKommentar) {
+		this.cKommentar = cKommentar;
+	}
+
+	public BigDecimal getNBasispreis() {
+		return nBasispreis;
+	}
+
+	public void setNBasispreis(BigDecimal nBasispreis) {
+		this.nBasispreis = nBasispreis;
+	}
+
+	public Double getFAbwertung() {
+		return fAbwertung;
+	}
+
+	public void setFAbwertung(Double fAbwertung) {
+		this.fAbwertung = fAbwertung;
+	}
 
 	public Integer getIId() {
 		return iId;

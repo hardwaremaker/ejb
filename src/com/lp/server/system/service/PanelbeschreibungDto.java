@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -63,7 +63,16 @@ public class PanelbeschreibungDto implements Serializable {
 	private Integer artgruIId;
 	private String cDruckname;
 
-	
+	private String cDefault;
+
+	public String getCDefault() {
+		return cDefault;
+	}
+
+	public void setCDefault(String cDefault) {
+		this.cDefault = cDefault;
+	}
+
 	private Integer partnerklasseIId;
 
 	public Integer getPartnerklasseIId() {
@@ -73,7 +82,7 @@ public class PanelbeschreibungDto implements Serializable {
 	public void setPartnerklasseIId(Integer partnerklasseIId) {
 		this.partnerklasseIId = partnerklasseIId;
 	}
-	
+
 	public Integer getArtgruIId() {
 		return artgruIId;
 	}
@@ -249,7 +258,7 @@ public class PanelbeschreibungDto implements Serializable {
 	public void setMandantCNr(String mandantCNr) {
 		this.mandantCNr = mandantCNr;
 	}
-	
+
 	public String getCDruckname() {
 		return cDruckname;
 	}
@@ -324,8 +333,8 @@ public class PanelbeschreibungDto implements Serializable {
 		if (!(that.fWeighty == null ? this.fWeighty == null : that.fWeighty
 				.equals(this.fWeighty)))
 			return false;
-		if (!(that.cDruckname == null ? this.cDruckname == null : that.cDruckname
-				.equals(this.cDruckname)))
+		if (!(that.cDruckname == null ? this.cDruckname == null
+				: that.cDruckname.equals(this.cDruckname)))
 			return false;
 		return true;
 	}

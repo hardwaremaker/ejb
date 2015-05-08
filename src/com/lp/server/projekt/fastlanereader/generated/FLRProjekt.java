@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,17 +19,17 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.projekt.fastlanereader.generated;
 
 import com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner;
@@ -126,10 +126,19 @@ public class FLRProjekt implements Serializable {
     private Integer i_sort;
 
     /** nullable persistent field */
+    private String c_buildnumber;
+
+    /** nullable persistent field */
+    private String c_deploynumber;
+
+    /** nullable persistent field */
     private BigDecimal n_umsatzgeplant;
 
     /** nullable persistent field */
     private Integer i_wahrscheinlichkeit;
+
+    /** nullable persistent field */
+    private com.lp.server.projekt.fastlanereader.generated.FLRProjektstatus flrprojektstatus;
 
     /** nullable persistent field */
     private FLRPersonal flrpersonalZugewiesener;
@@ -150,7 +159,7 @@ public class FLRProjekt implements Serializable {
     private com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche flrprojekttextsuche;
 
     /** full constructor */
-    public FLRProjekt(String c_nr, String kategorie_c_nr, String c_titel, String c_dateiname, Integer personal_i_id_erzeuger, Integer personal_i_id_zugewiesener, Integer personal_i_id_internerledigt, Integer personal_i_id_erlediger, Integer partner_i_id, Integer bereich_i_id, String typ_c_nr, Integer i_prio, String status_c_nr, String mandant_c_nr, Date t_zielwunschdatum, String x_freetext, Integer ansprechpartner_i_id, Short b_verrechenbar, Short b_freigegeben, Date t_internerledigt, Date t_anlegen, Date t_aendern, Double d_dauer, Date t_zeit, Date t_erledigungsdatum, Integer i_sort, BigDecimal n_umsatzgeplant, Integer i_wahrscheinlichkeit, FLRPersonal flrpersonalZugewiesener, FLRPersonal flrpersonalErzeuger, FLRPersonal flrpersonalErlediger, FLRAnsprechpartner flransprechpartner, FLRPartner flrpartner, com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche flrprojekttextsuche) {
+    public FLRProjekt(String c_nr, String kategorie_c_nr, String c_titel, String c_dateiname, Integer personal_i_id_erzeuger, Integer personal_i_id_zugewiesener, Integer personal_i_id_internerledigt, Integer personal_i_id_erlediger, Integer partner_i_id, Integer bereich_i_id, String typ_c_nr, Integer i_prio, String status_c_nr, String mandant_c_nr, Date t_zielwunschdatum, String x_freetext, Integer ansprechpartner_i_id, Short b_verrechenbar, Short b_freigegeben, Date t_internerledigt, Date t_anlegen, Date t_aendern, Double d_dauer, Date t_zeit, Date t_erledigungsdatum, Integer i_sort, String c_buildnumber, String c_deploynumber, BigDecimal n_umsatzgeplant, Integer i_wahrscheinlichkeit, com.lp.server.projekt.fastlanereader.generated.FLRProjektstatus flrprojektstatus, FLRPersonal flrpersonalZugewiesener, FLRPersonal flrpersonalErzeuger, FLRPersonal flrpersonalErlediger, FLRAnsprechpartner flransprechpartner, FLRPartner flrpartner, com.lp.server.projekt.fastlanereader.generated.FLRProjekttextsuche flrprojekttextsuche) {
         this.c_nr = c_nr;
         this.kategorie_c_nr = kategorie_c_nr;
         this.c_titel = c_titel;
@@ -177,8 +186,11 @@ public class FLRProjekt implements Serializable {
         this.t_zeit = t_zeit;
         this.t_erledigungsdatum = t_erledigungsdatum;
         this.i_sort = i_sort;
+        this.c_buildnumber = c_buildnumber;
+        this.c_deploynumber = c_deploynumber;
         this.n_umsatzgeplant = n_umsatzgeplant;
         this.i_wahrscheinlichkeit = i_wahrscheinlichkeit;
+        this.flrprojektstatus = flrprojektstatus;
         this.flrpersonalZugewiesener = flrpersonalZugewiesener;
         this.flrpersonalErzeuger = flrpersonalErzeuger;
         this.flrpersonalErlediger = flrpersonalErlediger;
@@ -407,6 +419,22 @@ public class FLRProjekt implements Serializable {
         this.i_sort = i_sort;
     }
 
+    public String getC_buildnumber() {
+        return this.c_buildnumber;
+    }
+
+    public void setC_buildnumber(String c_buildnumber) {
+        this.c_buildnumber = c_buildnumber;
+    }
+
+    public String getC_deploynumber() {
+        return this.c_deploynumber;
+    }
+
+    public void setC_deploynumber(String c_deploynumber) {
+        this.c_deploynumber = c_deploynumber;
+    }
+
     public BigDecimal getN_umsatzgeplant() {
         return this.n_umsatzgeplant;
     }
@@ -421,6 +449,14 @@ public class FLRProjekt implements Serializable {
 
     public void setI_wahrscheinlichkeit(Integer i_wahrscheinlichkeit) {
         this.i_wahrscheinlichkeit = i_wahrscheinlichkeit;
+    }
+
+    public com.lp.server.projekt.fastlanereader.generated.FLRProjektstatus getFlrprojektstatus() {
+        return this.flrprojektstatus;
+    }
+
+    public void setFlrprojektstatus(com.lp.server.projekt.fastlanereader.generated.FLRProjektstatus flrprojektstatus) {
+        this.flrprojektstatus = flrprojektstatus;
     }
 
     public FLRPersonal getFlrpersonalZugewiesener() {

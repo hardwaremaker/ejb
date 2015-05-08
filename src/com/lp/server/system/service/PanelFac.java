@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -49,6 +49,7 @@ public interface PanelFac {
 	public static final String TYP_WRAPPERPRINTBUTTON = "WrapperPrintButton  ";
 	public static final String TYP_WRAPPEREXECBUTTON = "WrapperExecButton   ";
 	public static final String TYP_WRAPPERCOMBOBOX =   "WrapperComboBox     ";
+	public static final String TYP_WRAPPERTEXTAREA =   "WrapperTextArea     ";
 
 	public static final String FILL_HORIZONTAL = "HORIZONTAL";
 	public static final String FILL_VERTICAL = "VERTICAL";
@@ -85,6 +86,7 @@ public interface PanelFac {
 	public static final String PANEL_KUNDENEIGENSCHAFTEN = "KUNDENEIGENSCHAFTEN      ";
 	public static final String PANEL_LOSEIGENSCHAFTEN =     "LOSEIGENSCHAFTEN         ";
 	public static final String PANEL_PROJEKTEIGENSCHAFTEN = "PROJEKTEIGENSCHAFTEN     ";
+	public static final String PANEL_CHARGENEIGENSCHAFTEN = "CHARGENEIGENSCHAFTEN     ";
 
 	public static final String REPORT_MODUL = "panel";
 
@@ -110,14 +112,12 @@ public interface PanelFac {
 			throws RemoteException, EJBExceptionLP;
 
 	public PanelbeschreibungDto[] panelbeschreibungFindByPanelCNrMandantCNr(
-			String panelCNr, String mandantCNr, Integer artgruIId) throws RemoteException,
-			EJBExceptionLP;
+			String panelCNr, String mandantCNr, Integer artgruIId);
 
 	public JasperPrintLP printPanel(String panelCNr, String report,
 			String cKey, TheClientDto theClientDto) throws RemoteException;
 
-	public void createPaneldaten(PaneldatenDto[] paneldatenDto)
-			throws RemoteException, EJBExceptionLP;
+	public void createPaneldaten(PaneldatenDto[] paneldatenDto);
 
 	public void removePaneldaten(Integer iId) throws RemoteException,
 			EJBExceptionLP;

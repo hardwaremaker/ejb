@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -36,8 +36,6 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.Arrays;
-
-import javax.persistence.Column;
 
 public class ProjektDto implements Serializable {
 	/**
@@ -75,6 +73,8 @@ public class ProjektDto implements Serializable {
 	private Integer iWahrscheinlichkeit;
 	private BigDecimal nUmsatzgeplant;
 	private Integer bereichIId;
+	private String deployNumber;
+	private String buildNumber;
 
 	public Integer getBereichIId() {
 		return bereichIId;
@@ -478,6 +478,15 @@ public class ProjektDto implements Serializable {
 				.equals(this.iSort))) {
 			return false;
 		}
+
+		if (!(that.deployNumber == null ? this.deployNumber == null : that.deployNumber
+				.equals(this.deployNumber))) {
+			return false;
+		}
+		if (!(that.buildNumber == null ? this.buildNumber == null : that.buildNumber
+				.equals(this.buildNumber))) {
+			return false;
+		}
 		return true;
 	}
 
@@ -511,6 +520,8 @@ public class ProjektDto implements Serializable {
 		result = 37 * result + this.tErledigt.hashCode();
 		result = 37 * result + this.personalIIdErlediger.hashCode();
 		result = 37 * result + this.iSort.hashCode();
+		result = 37 * result + deployNumber.hashCode();
+		result = 37 * result + buildNumber.hashCode();
 		return result;
 	}
 
@@ -545,6 +556,22 @@ public class ProjektDto implements Serializable {
 		returnString += ", " + personalIIdErlediger;
 		returnString += ", " + iSort;
 		return returnString;
+	}
+
+	public String getDeployNumber() {
+		return deployNumber;
+	}
+
+	public void setDeployNumber(String deployNumber) {
+		this.deployNumber = deployNumber;
+	}
+
+	public String getBuildNumber() {
+		return buildNumber;
+	}
+
+	public void setBuildNumber(String buildNumber) {
+		this.buildNumber = buildNumber;
 	}
 
 }

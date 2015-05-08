@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -68,13 +68,11 @@ import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.fertigung.service.LosablieferungDto;
 import com.lp.server.fertigung.service.LosgutschlechtDto;
 import com.lp.server.fertigung.service.LossollarbeitsplanDto;
-import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.personal.fastlanereader.generated.FLRReise;
 import com.lp.server.personal.fastlanereader.generated.FLRTaetigkeit;
 import com.lp.server.personal.fastlanereader.generated.FLRZeitdaten;
 import com.lp.server.personal.service.DiaetenDto;
-import com.lp.server.personal.service.GleitzeitsaldoDto;
 import com.lp.server.personal.service.MaschineDto;
 import com.lp.server.personal.service.MaschinenzeitdatenDto;
 import com.lp.server.personal.service.PersonalDto;
@@ -129,6 +127,7 @@ import com.lp.webapp.frame.TheApp;
 public class CommandZE extends Command {
 
 	private static final String sUser = "lpwebappzemecs";
+	private static final String hashedPassword = Helper.getMD5Hash(sUser + "lpwebappzemecs").toString();
 
 	private String mutex = "";
 
@@ -204,26 +203,18 @@ public class CommandZE extends Command {
 
 		TheClientDto theclientDto = null;
 		synchronized (mutex) {
+			mandant = mandant == null ? null :
+				(mandant.isEmpty() ? null : mandant);
+			
 			theclientDto = getLogonFac().logon(
-					Helper.getFullUsername(sUser),
-					Helper.getMD5Hash((sUser + new String("lpwebappzemecs"))
-							.toCharArray()), localeLogon, null, null,
+					Helper.getFullUsername(sUser), hashedPassword.toCharArray(),
+					localeLogon, mandant,
 					new Timestamp(System.currentTimeMillis()));
 
-			if (mandant != null && mandant.length() > 0) {
-
-				theclientDto = getLogonFac()
-						.logon(Helper.getFullUsername(sUser),
-								Helper.getMD5Hash((sUser + "lpwebappzemecs")
-										.toCharArray()), localeLogon, mandant,
-								theclientDto,
-								new Timestamp(System.currentTimeMillis()));
-			} else {
+			if (mandant == null) {
 				BenutzerDto benutzerDto = getBenutzerFac()
 						.benutzerFindByCBenutzerkennung(
-								"lpwebappzemecs",
-								new String(Helper.getMD5Hash("lpwebappzemecs"
-										+ "lpwebappzemecs")));
+								sUser, hashedPassword);
 				mandant = benutzerDto.getMandantCNrDefault();
 			}
 		}
@@ -363,14 +354,14 @@ public class CommandZE extends Command {
 										auftragDto.getIId());
 
 						if (auftragDto
-								.getAuftragstatusCNr()
+								.getStatusCNr()
 								.equals(com.lp.server.auftrag.service.AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT)) {
 							setSJSPNext("bdestation.jsp");
 							getTheClient(request, response).setSMsg(
 									"Auf Auftrag "
 											+ option.substring(2)
 											+ " mit Status "
-											+ auftragDto.getAuftragstatusCNr()
+											+ auftragDto.getStatusCNr()
 													.trim()
 											+ " darf nicht gebucht werden! ");
 							return getSJSPNext();
@@ -409,7 +400,7 @@ public class CommandZE extends Command {
 
 										getZeiterfassungsFac().createZeitdaten(
 												zeitdatenDto, true, true,
-												false, theclientDto);
+												false, false, theclientDto);
 										return getSJSPNext();
 
 									} else {
@@ -524,7 +515,7 @@ public class CommandZE extends Command {
 
 									getZeiterfassungsFac().createZeitdaten(
 											zeitdatenDto, true, true, true,
-											theclientDto);
+											true, theclientDto);
 									return getSJSPNext();
 								} else {
 									setSJSPNext("bdestation3.jsp");
@@ -758,7 +749,7 @@ public class CommandZE extends Command {
 							try {
 								getZeiterfassungsFac().createZeitdaten(
 										zeitdatenDto, true, true, true,
-										theclientDto);
+										false, theclientDto);
 								getTheClient(request, response).setSMsg(
 										getMeldungGebuchtFuerBDE(
 												getTheClient(request, response)
@@ -864,7 +855,7 @@ public class CommandZE extends Command {
 									.getIId());
 							getZeiterfassungsFac().createZeitdaten(
 									zeitdatenDto, true, true, true,
-									theclientDto);
+									false, theclientDto);
 							getTheClient(request, response).setSMsg(
 									getMeldungGebuchtFuerBDE(hmParameter,
 											option.substring(1), theclientDto));
@@ -1154,7 +1145,7 @@ public class CommandZE extends Command {
 						try {
 							getZeiterfassungsFac().createZeitdaten(
 									zeitdatenDto, true, true, true,
-									theclientDto);
+									false, theclientDto);
 							getTheClient(request, response).setSMsg(
 									getMeldungGebuchtFuerBDE(
 											getTheClient(request, response)
@@ -1261,15 +1252,15 @@ public class CommandZE extends Command {
 						theclientDto);
 				// und buche ENDE
 				getZeiterfassungsFac().createZeitdaten(zeitdatenDtoEnde, false,
-						false, false, theclientDto);
+						false, false, false, theclientDto);
 
 			} else {
 				// was nun?
 				// Beginn und ende Buchen
 				getZeiterfassungsFac().createZeitdaten(zeitdatenDto, false,
-						false, false, theclientDto);
+						false, false, false, theclientDto);
 				getZeiterfassungsFac().createZeitdaten(zeitdatenDtoEnde, false,
-						false, false, theclientDto);
+						false, false, false, theclientDto);
 
 			}
 
@@ -1440,7 +1431,7 @@ public class CommandZE extends Command {
 
 				try {
 					getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true,
-							true, false, theclientDto);
+							true, false, false, theclientDto);
 					getTheClient(request, response).setSMsg(
 							getMeldungGebuchtFuerBDE(
 									getTheClient(request, response).getData(),
@@ -1481,7 +1472,7 @@ public class CommandZE extends Command {
 					AuftragDto auftragDto = getAuftragFac()
 							.auftragFindByMandantCNrCNr(mandant,
 									beleg.substring(2), theclientDto);
-					status = auftragDto.getAuftragstatusCNr();
+					status = auftragDto.getStatusCNr();
 
 				} else if (beleg.substring(0, 2).equals("$L")) {
 					LosDto losDto = getFertigungFac().losFindByCNrMandantCNr(
@@ -1568,7 +1559,7 @@ public class CommandZE extends Command {
 					AuftragDto auftragDto = getAuftragFac()
 							.auftragFindByMandantCNrCNr(mandant,
 									beleg.substring(2), theclientDto);
-					status = auftragDto.getAuftragstatusCNr();
+					status = auftragDto.getStatusCNr();
 
 				} else if (beleg.substring(0, 2).equals("$L")) {
 					LosDto losDto = getFertigungFac().losFindByCNrMandantCNr(
@@ -2072,7 +2063,7 @@ public class CommandZE extends Command {
 							zeitdatenDto.setTaetigkeitIId(taetigkeitIId_Ende);
 							getZeiterfassungsFac().createZeitdaten(
 									zeitdatenDto, true, true, false,
-									theclientDto);
+									false, theclientDto);
 
 							return getSJSPNext();
 						}
@@ -2129,7 +2120,7 @@ public class CommandZE extends Command {
 							zeitdatenDto.setTaetigkeitIId(taetigkeitIId_Ende);
 							getZeiterfassungsFac().createZeitdaten(
 									zeitdatenDto, true, true, false,
-									theclientDto);
+									false, theclientDto);
 							return getSJSPNext();
 						}
 
@@ -2210,7 +2201,7 @@ public class CommandZE extends Command {
 								zeitdatenDto.setIBelegartpositionid(null);
 								Integer zeitdatenIId = getZeiterfassungsFac()
 										.createZeitdaten(zeitdatenDto, false,
-												false, false, theclientDto);
+												false, false, false, theclientDto);
 
 								// PJ17797
 								if (nMenge.doubleValue() > 0) {
@@ -2356,7 +2347,7 @@ public class CommandZE extends Command {
 
 								getZeiterfassungsFac().createZeitdaten(
 										zeitdatenDto, true, true, false,
-										theclientDto);
+										false, theclientDto);
 								zeitdatenDto = zeitdatenDtoEnde;
 							}
 							session.close();
@@ -2509,7 +2500,7 @@ public class CommandZE extends Command {
 			}
 
 			getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true,
-					false, theclientDto);
+					false, false, theclientDto);
 
 			response.setStatus(HttpServletResponse.SC_OK);
 			response.flushBuffer();
@@ -2541,7 +2532,7 @@ public class CommandZE extends Command {
 				theclientDto = getLogonFac().logon(
 						Helper.getFullUsername(username),
 						Helper.getMD5Hash((username + password).toCharArray()),
-						localeLogon, null, null,
+						localeLogon, null,
 						new Timestamp(System.currentTimeMillis()));
 			} catch (EJBExceptionLP ex12) {
 
@@ -3213,7 +3204,7 @@ public class CommandZE extends Command {
 								+ artikelDto.formatArtikelbezeichnung();
 
 						getZeiterfassungsFac().createZeitdaten(zeitdatenDto,
-								true, true, false, theclientDto);
+								true, true, false, false, theclientDto);
 						meldung += " um "
 								+ Helper.formatTime(tZeit, localeLogon)
 								+ " gebucht.";
@@ -3262,7 +3253,7 @@ public class CommandZE extends Command {
 							dtoKommt.setTZeit(new Timestamp(zeitdatenDto
 									.getTZeit().getTime()));
 							getZeiterfassungsFac().createZeitdaten(dtoKommt,
-									false, false, false, theclientDto);
+									false, false, false, false, theclientDto);
 							// Taetigkeit GEHT Buchen
 							ZeitdatenDto dtoUnter = new ZeitdatenDto();
 							dtoUnter.setTaetigkeitIId(taetigkeitIId_Unter);
@@ -3273,7 +3264,7 @@ public class CommandZE extends Command {
 							dtoUnter.setTZeit(new Timestamp(zeitdatenDto
 									.getTZeit().getTime() + 96));
 							getZeiterfassungsFac().createZeitdaten(dtoUnter,
-									false, false, false, theclientDto);
+									false, false, false, false, theclientDto);
 						} else if (letzeBuchungen.length == 1) {
 							Integer letztetaetigkeit = letzeBuchungen[0]
 									.getTaetigkeitIId();
@@ -3289,7 +3280,7 @@ public class CommandZE extends Command {
 										.getTZeit().getTime()));
 								getZeiterfassungsFac().createZeitdaten(
 										dtoUnter, false, false, false,
-										theclientDto);
+										false, theclientDto);
 
 							}
 						} else if (letzeBuchungen.length > 1) {
@@ -3306,7 +3297,7 @@ public class CommandZE extends Command {
 										.getTZeit().getTime()));
 								getZeiterfassungsFac().createZeitdaten(
 										dtoUnter, false, false, false,
-										theclientDto);
+										false, theclientDto);
 
 							} else {
 
@@ -3341,7 +3332,7 @@ public class CommandZE extends Command {
 														.getTime()));
 										getZeiterfassungsFac().createZeitdaten(
 												dtoUnter, false, false, false,
-												theclientDto);
+												false, theclientDto);
 
 										/**
 										 * @todo 100ms vorher Projekt-ENDE
@@ -3359,7 +3350,7 @@ public class CommandZE extends Command {
 											zeitdatenDto.getTZeit().getTime()));
 									getZeiterfassungsFac().createZeitdaten(
 											dtoKommt, false, false, false,
-											theclientDto);
+											false, theclientDto);
 									// Taetigkeit UNTER Buchen
 									ZeitdatenDto dtoUnter = new ZeitdatenDto();
 									dtoUnter.setTaetigkeitIId(taetigkeitIId_Unter);
@@ -3371,7 +3362,7 @@ public class CommandZE extends Command {
 											zeitdatenDto.getTZeit().getTime() + 96));
 									getZeiterfassungsFac().createZeitdaten(
 											dtoUnter, false, false, false,
-											theclientDto);
+											false, theclientDto);
 
 								}
 							}
@@ -3414,7 +3405,7 @@ public class CommandZE extends Command {
 															.getTime() - 96));
 									getZeiterfassungsFac().createZeitdaten(
 											dtoSonderEnde, false, false, false,
-											theclientDto);
+											false, theclientDto);
 									// Taetigkeit GEHT Buchen
 									ZeitdatenDto dtoUnter = new ZeitdatenDto();
 									dtoUnter.setTaetigkeitIId(taetigkeitIId_Geht);
@@ -3426,7 +3417,7 @@ public class CommandZE extends Command {
 											zeitdatenDto.getTZeit().getTime()));
 									getZeiterfassungsFac().createZeitdaten(
 											dtoUnter, false, false, false,
-											theclientDto);
+											false, theclientDto);
 
 								} else {
 									// Taetigkeit GEHT Buchen
@@ -3440,7 +3431,7 @@ public class CommandZE extends Command {
 											zeitdatenDto.getTZeit().getTime()));
 									getZeiterfassungsFac().createZeitdaten(
 											dtoUnter, false, false, false,
-											theclientDto);
+											false, theclientDto);
 
 								}
 							}
@@ -3467,7 +3458,7 @@ public class CommandZE extends Command {
 						meldung += dto.getBezeichnung();
 
 						getZeiterfassungsFac().createZeitdaten(zeitdatenDto,
-								true, true, false, theclientDto);
+								true, true, false, false, theclientDto);
 						meldung += " um "
 								+ Helper.formatTime(tZeit, localeLogon)
 								+ " gebucht.";
@@ -3901,7 +3892,7 @@ public class CommandZE extends Command {
 			getTheClient(request, response).setSMsg(new String(sb));
 
 		}
-
+//		getLogonFac().logout(theclientDto);
 		return getSJSPNext();
 	}
 

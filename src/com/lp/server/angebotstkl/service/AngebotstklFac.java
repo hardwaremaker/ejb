@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -38,10 +38,13 @@ import java.util.Map;
 
 import javax.ejb.Remote;
 
+import com.lp.server.system.service.IImportHead;
+import com.lp.server.system.service.IImportPositionen;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.report.JasperPrintLP;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.LPDatenSubreport;
 
 @Remote
 public interface AngebotstklFac {
@@ -58,6 +61,7 @@ public interface AngebotstklFac {
 
 	public final static String REPORT_ANGEBOTSTUECKLISTE = "as_angebotstkl.jasper";
 	public final static String REPORT_EINKAUFSANGEBOT = "as_einkaufsangebot.jasper";
+	public final static String REPORT_ANGEBOTSTUECKLISTEMENGENSTAFFEL = "as_angebotstklmengenstaffel.jasper";
 
 	public static final String FLR_AGSTKL_BELEGART_C_NR = "belegart_c_nr";
 	public static final String FLR_AGSTKL_WAEHRUNG_C_NR = "waehrung_c_nr";
@@ -85,24 +89,49 @@ public interface AngebotstklFac {
 	public static final String FLR_EINKAUFSANGEBOTPOSITION_EINHEIT_C_NR = "einheit_c_nr";
 	public static final String FLR_EINKAUFSANGEBOTPOSITION_B_DRUCKEN = "b_drucken";
 
+	public static final String FLR_AGSTKLARBEITSPLAN_L_RUESTZEIT = "l_ruestzeit";
+	public static final String FLR_AGSTKLARBEITSPLAN_L_STUECKZEIT = "l_stueckzeit";
+	public static final String FLR_AGSTKLARBEITSPLAN_I_ARBEITSGANG = "i_arbeitsgang";
+	public static final String FLR_AGSTKLARBEITSPLAN_I_UNTERARBEITSGANG = "i_unterarbeitsgang";
+	public static final String FLR_AGSTKLARBEITSPLAN_AGSTKL_I_ID = "agstkl_i_id";
+	public static final String FLR_AGSTKLARBEITSPLAN_MASCHINE_I_ID = "maschine_i_id";
+	public static final String FLR_AGSTKLARBEITSPLAN_FLRSTUECKLISTE = "flrstueckliste";
+	public static final String FLR_AGSTKLARBEITSPLAN_FLRARTIKEL = "flrartikel";
+	public static final String FLR_AGSTKLARBEITSPLAN_FLRMASCHINE = "flrmaschine";
+
+	public static final Integer EK_PREISBASIS_LIEF1PREIS = 0;
+	public static final Integer EK_PREISBASIS_NETTOPREIS = 1;
+
 	public static final int MAX_AGSTKL_C_NR = 15;
 	public static final int MAX_AGSTKL_C_BEZ = 40;
 
 	public static final int MAX_AGSTKLPOSITION_C_BEZ = 40;
+	
+	static class FieldLength {
+		public static final int EINKAUFSANGEBOTPOSITION_CBEMERKUNG = 300;
+	}
+
+	public static int VKPREIS_LT_AGTSKLPOSITIONSPREIS = 0;
+	public static int VKPREIS_LT_KUNDENPREISFINDUNG = 1;
 
 	public Map<String, String> getAllAgstklpositionsart()
 			throws EJBExceptionLP, RemoteException;
 
 	/**
 	 * TODO: MB->CK bitte in reportFac verschieben.
+	 * 
 	 * @param iIdAngebotstkl
 	 *            Integer
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param theClientDto
+	 *            der aktuelle Benutzer
 	 * @return JasperPrintLP
 	 * @throws EJBExceptionLP
 	 * @throws RemoteException
 	 */
 	public JasperPrintLP printAngebotstkl(Integer iIdAngebotstkl,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public JasperPrintLP printAngebotstklmenenstaffel(Integer iIdAngebotstkl,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printEinkaufsangebot(Integer einkaufsangebotIId,
@@ -129,12 +158,16 @@ public interface AngebotstklFac {
 	public AgstklDto[] agstklFindByKundeIIdMandantCNrOhneExc(Integer iIdKunde,
 			String cNrMandant) throws RemoteException;
 
-	public Integer createAufschlag(AufschlagDto aufschlagDto,TheClientDto theClientDto);
+	public Integer createAufschlag(AufschlagDto aufschlagDto,
+			TheClientDto theClientDto);
+
 	public void removeAufschlag(Integer aufschlagIId);
+
 	public void updateAufschlag(AufschlagDto aufschlagDto,
 			TheClientDto theClientDto);
+
 	public AufschlagDto aufschlagFindByPrimaryKey(Integer iId);
-	
+
 	public void createAgstklpositionsart(
 			AgstklpositionsartDto agstklpositionsartDto) throws EJBExceptionLP,
 			RemoteException;
@@ -153,7 +186,7 @@ public interface AngebotstklFac {
 	public Integer createEinkaufsangebotpositions(
 			EinkaufsangebotpositionDto[] einkaufsangebotpositionDtos,
 			TheClientDto theClientDto) throws RemoteException;
-
+	
 	public AgstklpositionsartDto agstklpositionsartFindByPrimaryKey(
 			String positionsartCNr) throws EJBExceptionLP, RemoteException;
 
@@ -162,8 +195,8 @@ public interface AngebotstklFac {
 			throws EJBExceptionLP, RemoteException;
 
 	public BigDecimal berechneKalkulatorischenAgstklwert(Integer iIdAgstklI,
-			String cNrWaehrungI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+			BigDecimal nMengenstaffel, String cNrWaehrungI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public Integer createEinkaufsangebot(EinkaufsangebotDto einkaufsangebotDto,
 			TheClientDto theClientDto) throws RemoteException;
@@ -181,8 +214,15 @@ public interface AngebotstklFac {
 			EinkaufsangebotpositionDto einkaufsangebotpositionDto,
 			TheClientDto theClientDto) throws RemoteException;
 
-	public void  kopierePositionenAusStueckliste(Integer stuecklisteIId, Integer agstklIId, TheClientDto theClientDto);
-	
+	public void kopierePositionenAusStueckliste(Integer stuecklisteIId,
+			Integer agstklIId, TheClientDto theClientDto);
+
+	public void kopiereArbeitsplanAusStuecklisteInPositionen(
+			Integer stuecklisteIId, Integer agstklIId, TheClientDto theClientDto);
+
+	public void kopiereArbeitsplanAusStuecklisteInArbeitsplan(
+			Integer stuecklisteIId, Integer agstklIId, TheClientDto theClientDto);
+
 	public void removeEinkaufsangebotposition(
 			EinkaufsangebotpositionDto einkaufsangebotpositionDto)
 			throws RemoteException;
@@ -204,21 +244,20 @@ public interface AngebotstklFac {
 			Integer agstklIId, int iSortierungNeuePositionI)
 			throws EJBExceptionLP, RemoteException;
 
-	public void createAgstkl(AgstklDto agstklDto) throws RemoteException;
-
 	public void removeAgstkl(Integer iId) throws RemoteException;
 
 	public void updateAgstkl(AgstklDto agstklDto) throws RemoteException;
 
-	public AufschlagDto[] aufschlagFindByBMaterial(Integer agstklIId, Short bMaterial,
-			TheClientDto theClientDto);
-	
+	public AufschlagDto[] aufschlagFindByBMaterial(Integer agstklIId,
+			Short bMaterial, TheClientDto theClientDto);
+
 	public void updateAgstkls(AgstklDto[] agstklDtos) throws RemoteException;
 
 	public AgstklDto agstklFindByCNrMandantCNr(String cNr, String mandantCNr)
 			throws RemoteException;
-	
-	public AgstklDto agstklFindByCNrMandantCNrOhneExc(String cNr, String mandantCNr);
+
+	public AgstklDto agstklFindByCNrMandantCNrOhneExc(String cNr,
+			String mandantCNr);
 
 	public AgstklDto[] agstklFindByAnsprechpartnerIIdKunde(
 			Integer iAnsprechpartnerIId) throws RemoteException;
@@ -236,14 +275,76 @@ public interface AngebotstklFac {
 
 	public EinkaufsangebotDto[] einkaufsangebotFindByAnsprechpartnerIId(
 			Integer iAnsprechpartnerIId) throws RemoteException;
-	
+
 	public BigDecimal[] berechneAgstklMaterialwertUndArbeitszeitwert(
 			Integer iIdAgstklI, TheClientDto theClientDto);
+
 	public void updateAgstklaufschlag(Integer agstklIId,
 			AufschlagDto[] aufschlagDtos, TheClientDto theClientDto);
 	
+	public Integer createAgstklarbeitsplan(
+			AgstklarbeitsplanDto agstklarbeitsplanDto, TheClientDto theClientDto);
+
+	public void updateAgstklarbeitsplan(
+			AgstklarbeitsplanDto agstklarbeitsplanDto, TheClientDto theClientDto);
+
+	public AgstklarbeitsplanDto agstklarbeitsplanFindByPrimaryKey(Integer iId,
+			TheClientDto theClientDto);
+
+	public void removeAgstklarbeitsplan(
+			AgstklarbeitsplanDto agstklarbeitsplanDto, TheClientDto theClientDto);
+
+	public Integer getNextArbeitsgang(Integer agstklIId,
+			TheClientDto theClientDto);
+
+	public Integer createAgstklmengenstaffel(
+			AgstklmengenstaffelDto agstklmengenstaffelDto,
+			TheClientDto theClientDto);
+
+	public void updateAgstklmengenstaffel(
+			AgstklmengenstaffelDto agstklmengenstaffelDto,
+			TheClientDto theClientDto);
+
+	public AgstklmengenstaffelDto agstklmengenstaffelFindByPrimaryKey(
+			Integer iId);
+
+	public void removeAgstklmengenstaffel(Integer agstklmengenstaffelIId);
+
+	public BigDecimal getWareneinsatzLief1(BigDecimal bdMenge,
+			Integer agstklIId, TheClientDto theClientDto);
+
+	public BigDecimal getAZeinsatzLief1(BigDecimal bdMenge, Integer agstklIId,
+			TheClientDto theClientDto);
+
+	public BigDecimal[] getVKPreis(BigDecimal bdMenge, Integer agstklIId,
+			TheClientDto theClientDto);
+
+	public LPDatenSubreport getSubreportAgstklMengenstaffel(
+			Integer iIdAngebotstkl, TheClientDto theClientDto);
+
+	public BigDecimal getVKPreisGewaehlt(BigDecimal bdMenge, Integer agstklIId,
+			TheClientDto theClientDto);
+
+	public void kopiereAgstklArbeitsplan(Integer agstklIId_Quelle,
+			Integer agstklIId_Ziel, TheClientDto theClientDto);
+
+	public AgstklarbeitsplanDto[] agstklarbeitsplanFindByAgstklIId(
+			Integer iIdAgstklI, TheClientDto theClientDto);
 	
-	public AgstklpositionDto befuellePositionMitPreisenKalkulationsart2(
-			TheClientDto theClientDto, String waehrungCNr, Integer artikelIId,
-			BigDecimal nMenge, AgstklpositionDto agstklpositionDtoI);
+	/**
+	 * Liefert die Bean als PositionImporter zur&uuml;ck, um auf die Methoden
+	 * des Interfaces {@link IImportPositionen} zuzugreifen.
+	 * 
+	 * @return this
+	 */
+	public IImportPositionen asPositionImporter() ;
+	
+	/**
+	 * Liefert die Bean als HeadImporter zur&uuml;ck, um auf die Methoden
+	 * des Interfaces {@link IImportHead} zuzugreifen.
+	 * 
+	 * @return this
+	 */
+	public IImportHead asHeadImporter();
+	
 }

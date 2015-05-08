@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,7 +35,6 @@ package com.lp.server.partner.ejb;
 import java.util.List;
 
 import javax.persistence.EntityManager;
-import javax.persistence.Query;
 
 
 public class KundeQuery {
@@ -52,7 +51,9 @@ public class KundeQuery {
 	
 	public final static String ByMandantCnrTimestamp = "KundefindByMandantCnrTimestamp" ;
 	
-		
+	public final static String ByPartnerId = "KundefindByPartnerId" ;
+	public final static String ByCountPartnerId = "KundefindByCountPartnerId" ;
+	
 	public static HvTypedQuery<Kunde> byLieferantCnrMandantCnr(EntityManager em, String lieferantCnr, String mandantCnr) {
 		HvTypedQuery<Kunde> q = new HvTypedQuery<Kunde>(em.createNamedQuery(ByLieferantCnrMandantCnr)) ;
 		q.setParameter("lieferantCnr", lieferantCnr.trim()) ;
@@ -75,5 +76,33 @@ public class KundeQuery {
 	 */
 	public static List<Kunde> listByMandantCnr(EntityManager em, String mandantCnr) {
 		return byMandantCnr(em, mandantCnr).getResultList() ;
+	}
+
+	public static HvTypedQuery<Kunde> byPartnerId(EntityManager em, Integer partnerId) {
+		HvTypedQuery<Kunde> q = new HvTypedQuery<Kunde>(em.createNamedQuery(ByPartnerId)) ;
+		q.setParameter("partnerId", partnerId) ;
+		return q ;		
+	}
+
+	public static HvTypedQuery<Integer> byPartnerCountId(EntityManager em, Integer partnerId) {
+		HvTypedQuery<Integer> q = new HvTypedQuery<Integer>(em.createNamedQuery(ByCountPartnerId)) ;
+		q.setParameter("partnerId", partnerId) ;
+		return q ;		
+	}
+	
+	/**
+	 * Eine Liste aller Kunden die der angegebenen PartnerId zugeordnet sind
+	 * 
+	 * @param em
+	 * @param partnerId
+	 * @return Eine (leere) Liste aller Kunden, die dem angegebenen Partner zugeordnet sind 
+	 */
+	public static List<Kunde> listByPartnerId(EntityManager em, Integer partnerId) {
+		return byPartnerId(em, partnerId).getResultList() ;
+	}
+	
+	public static int countByPartnerId(EntityManager em, Integer partnerId) {
+		Integer count = byPartnerCountId(em, partnerId).getSingleResult() ;
+		return count == null ? 0 : count ; 
 	}
 }

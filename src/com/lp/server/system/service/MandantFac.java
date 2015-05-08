@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -116,17 +116,26 @@ public interface MandantFac {
 	public static final String ZUSATZFUNKTION_LOHNDATENEXPORT = "LOHNDATENEXPORT               ";
 	public static final String ZUSATZFUNKTION_LIQUIDITAETSVORSCHAU = "LIQUIDITAETSVORSCHAU          ";
 	public static final String ZUSATZFUNKTION_KUNDE_JE_BESTELLPOSITION = "KUNDE_JE_BESTELLPOSITION      ";
-	public static final String ZUSATZFUNKTION_KOSTENTRAEGER = 			 "KOSTENTRAEGER                 ";
-	public static final String ZUSATZFUNKTION_GETRENNTE_LAGER = 		 "GETRENNTE_LAGER               ";
-	public static final String ZUSATZFUNKTION_BEREITSCHAFT = 			 "BEREITSCHAFT                  ";
+	public static final String ZUSATZFUNKTION_KOSTENTRAEGER = "KOSTENTRAEGER                 ";
+	public static final String ZUSATZFUNKTION_GETRENNTE_LAGER = "GETRENNTE_LAGER               ";
+	public static final String ZUSATZFUNKTION_BEREITSCHAFT = "BEREITSCHAFT                  ";
 	public static final String ZUSATZFUNKTION_ISTVERSTEURER = "ISTVERSTEURER                 ";
-	public static final String ZUSATZFUNKTION_LAGERCOCKPIT  =    "LAGERCOCKPIT                  ";
+	public static final String ZUSATZFUNKTION_LAGERCOCKPIT = "LAGERCOCKPIT                  ";
 	public static final String ZUSATZFUNKTION_MATERIALZUSCHLAG = "MATERIALZUSCHLAG              ";
 	public static final String ZUSATZFUNKTION_PROJEKTKLAMMER = "PROJEKTKLAMMER                ";
 	public static final String ZUSATZFUNKTION_SI_WERT = "SI_WERT                       ";
 	public static final String ZUSATZFUNKTION_VERSANDWEG = "VERSANDWEG                    ";
-	
-	
+	public static final String ZUSATZFUNKTION_WEBSERVICE = "WEBSERVICE                    ";
+	public static final String ZUSATZFUNKTION_EMAIL_CLIENT = "EMAIL_CLIENT                  ";
+	public static final String ZUSATZFUNKTION_ZEITEN_ABSCHLIESSEN = "ZEITEN_ABSCHLIESSEN           ";
+	public static final String ZUSATZFUNKTION_MISCHVERSTEURER = "MISCHVERSTEURER               ";
+	public static final String ZUSATZFUNKTION_AGSTKL_ARBEITSPLAN = "AGSTKL_ARBEITSPLAN            ";
+	public static final String ZUSATZFUNKTION_AUFTRAG_SCHNELLANLAGE = "AUFTRAG_SCHNELLANLAGE         ";
+	public static final String ZUSATZFUNKTION_STUECKLISTENFREIGABE = "STUECKLISTENFREIGABE          ";
+	public static final String ZUSATZFUNKTION_LIEFERSCHEINE_VERKETTEN = "LIEFERSCHEINE_VERKETTEN       ";
+	public static final String ZUSATZFUNKTION_RESERVIERUNGEN_AUFLOESEN = "RESERVIERUNGEN_AUFLOESEN      ";
+	public static final String ZUSATZFUNKTION_ERWEITERTE_PROJEKTSTEUERUNG = "ERWEITERTE_PROJEKTSTEUERUNG   ";
+
 	// zusatzberecht:1 Hier neue Berechtigung anlegen
 	public Integer createMwstsatz(MwstsatzDto mwstsatzDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
@@ -154,8 +163,9 @@ public interface MandantFac {
 	 *             get formatted Strings: mwstsatzFindAllByMandant(String
 	 *             ssMandantI, Timestamp tBelegdatum, TheClientDto theClientDto)
 	 * 
-	 * @param ssMandantI Mandantennummer
-	 * @param theClientDto           
+	 * @param ssMandantI
+	 *            Mandantennummer
+	 * @param theClientDto
 	 * @return Map: Key = I_ID des MWST-Satzes. Value = Formatierter Prozentsatz
 	 *         + Bezeichnung
 	 * @throws EJBExceptionLP
@@ -190,7 +200,7 @@ public interface MandantFac {
 	 *            String
 	 * @param tBelegdatum
 	 *            Timestamp: optional
-	 * @param bInklHandeingabe 
+	 * @param bInklHandeingabe
 	 * @param theClientDto
 	 * @return Map
 	 * @throws EJBExceptionLP
@@ -232,7 +242,7 @@ public interface MandantFac {
 
 	public SpediteurDto spediteurFindByMandantCNrCNamedesspediteursOhneExc(
 			String name, String mandant);
-	
+
 	public String createMandant(MandantDto mandantDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
@@ -318,10 +328,15 @@ public interface MandantFac {
 
 	public Integer getNachkommastellenPreisAllgemein(String mandantCNr)
 			throws EJBExceptionLP, RemoteException;
+
 	public Integer getNachkommastellenPreisVK(String mandantCNr)
-	throws EJBExceptionLP, RemoteException;
+			throws EJBExceptionLP, RemoteException;
+
 	public Integer getNachkommastellenPreisEK(String mandantCNr)
-	throws EJBExceptionLP, RemoteException;
+			throws EJBExceptionLP, RemoteException;
+
+	public Integer getNachkommastellenPreisWE(String mandantCNr)
+			throws EJBExceptionLP, RemoteException;
 
 	public Integer getNachkommastellenMenge(String mandantCNr)
 			throws EJBExceptionLP, RemoteException;
@@ -344,8 +359,8 @@ public interface MandantFac {
 	public void createZusatzfunktion(ZusatzfunktionDto zusatzfunktionDto)
 			throws EJBExceptionLP, RemoteException, EJBExceptionLP;
 
-	public DokumentenlinkbelegDto[] getDokumentenlinkbelegs(String belegartCNr,Integer belegartIId,
-			TheClientDto theClientDto);
+	public DokumentenlinkbelegDto[] getDokumentenlinkbelegs(String belegartCNr,
+			Integer belegartIId, TheClientDto theClientDto);
 
 	public void updateDokumentenlinkbeleg(String belegartCNr,
 			Integer iBelegartId,
@@ -435,34 +450,44 @@ public interface MandantFac {
 
 	public DokumentenlinkDto[] dokumentenlinkFindByBelegartCNrMandantCNrBPfadabsolut(
 			String belegartCNr, String mandantCNr, boolean bPfadAbsolut);
-	
+
 	public DokumentenlinkDto[] dokumentenlinkFindByBelegartCNrMandantCNr(
 			String belegartCNr, String mandantCNr);
 
 	public void updateDokumentenlink(DokumentenlinkDto dokumentenlinkDto);
-	
+
 	public Integer createKostentraeger(KostentraegerDto dto);
+
 	public void updateKostentraeger(KostentraegerDto dto);
+
 	public KostentraegerDto kostentraegerFindByPrimaryKey(Integer iId);
+
 	public void removeKostentraeger(KostentraegerDto dto);
 
 	public MwstsatzDto[] mwstsatzfindAllByMandant(String ssMandantI,
 			Timestamp tBelegdatum, boolean bInklHandeingabe)
 			throws EJBExceptionLP;
-	
+
 	public MwstsatzDto getMwstSatzVonBruttoBetragUndUst(String mandant,
 			Timestamp tBelegDatum, BigDecimal bruttoBetrag,
 			BigDecimal mwstBetrag);
-	
+
+	public MwstsatzDto getMwstSatzVonNettoBetragUndUst(String mandant,
+			Timestamp tBelegDatum, BigDecimal nettoBetrag, BigDecimal mwstBetrag);
+
 	public MwstsatzbezDto getMwstsatzbezSteuerfrei(TheClientDto theClient);
-	
+
 	public String formatAdresseFuerAusdruck(PartnerDto partnerDto,
 			AnsprechpartnerDto anspDto, MandantDto mandantDto, Locale locale)
 			throws EJBExceptionLP;
-	
+
 	public ReportMandantDto createReportMandantDto(TheClientDto theClient);
 
 	public boolean darfAnwenderAufZusatzfunktionZugreifen(
 			String zusatzfunktionCNr, String mandantCNr);
+
+	public java.sql.Date berechneFaelligkeitAnhandStichtag(
+			java.util.Date dBelegdatum, ZahlungszielDto zahlungszielDto,
+			TheClientDto theClientDto);
 
 }

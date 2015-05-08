@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -38,16 +38,21 @@ import java.sql.Date;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.TreeMap;
 
+import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
@@ -72,6 +77,7 @@ import com.lp.server.artikel.service.ArtikelsprDto;
 import com.lp.server.artikel.service.GeraetesnrDto;
 import com.lp.server.artikel.service.LagerDto;
 import com.lp.server.artikel.service.LagerFac;
+import com.lp.server.artikel.service.MaterialzuschlagDto;
 import com.lp.server.artikel.service.SeriennrChargennrAufLagerDto;
 import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
 import com.lp.server.artikel.service.VerkaufspreisDto;
@@ -131,12 +137,13 @@ import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.stueckliste.service.StuecklisteMitStrukturDto;
 import com.lp.server.stueckliste.service.StuecklisteReportFac;
 import com.lp.server.stueckliste.service.StuecklistepositionDto;
-import com.lp.server.system.ejbfac.BelegAktivierungController;
+import com.lp.server.system.ejbfac.BelegAktivierungFac;
 import com.lp.server.system.ejbfac.IAktivierbar;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.BelegnummerGeneratorObj;
 import com.lp.server.system.pkgenerator.format.LpBelegnummer;
 import com.lp.server.system.pkgenerator.format.LpBelegnummerFormat;
+import com.lp.server.system.service.BelegPruefungDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
 import com.lp.server.system.service.MandantFac;
@@ -150,29 +157,37 @@ import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.system.service.WechselkursDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.IPositionNumber;
 import com.lp.server.util.PositionNumberHandler;
 import com.lp.server.util.RechnungPositionNumberAdapter;
 import com.lp.server.util.RechnungPositionNumberDtoAdapter;
+import com.lp.server.util.Validator;
+import com.lp.server.util.ZwsPositionMapper;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.isort.CompositeISort;
 import com.lp.server.util.isort.IPrimitiveSwapper;
 import com.lp.service.Artikelset;
+import com.lp.service.BelegDto;
+import com.lp.service.BelegpositionDto;
 import com.lp.service.BelegpositionVerkaufDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
 @Stateless
 public class RechnungFacBean extends Facade implements RechnungFac,
-		IPrimitiveSwapper, IAktivierbar {
+		IPrimitiveSwapper, IAktivierbar, IPositionNumber {
 	@PersistenceContext
 	private EntityManager em;
+
+	@EJB
+	private BelegAktivierungFac belegAktivierungFac;
 
 	/**
 	 * Wirft eine EJBException, wenn das Feld Reverse Charge nicht meht den, auf
 	 * dem hinterlegen Auftag vorhandenen, Anzahlungen/Schlussrechnungen
 	 * uebereinstimmt.
 	 * 
-	 * @param erDtoI
+	 * @param rech
 	 */
 	private void pruefeAnzahlungSchlusszahlung(RechnungDto rech) {
 		String art = rech.getRechnungartCNr();
@@ -187,28 +202,55 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 				if (re.getRechnungartCNr().equals(
 						RechnungFac.RECHNUNGART_SCHLUSSZAHLUNG)) {
+
 					if (art.equals(RechnungFac.RECHNUNGART_SCHLUSSZAHLUNG)) {
-						// Wenn es eine Schlussrechnung gibt die schon in der
-						// FiBu ist, darf man keine weitere machen
+						// Wenn es eine Schlussrechnung gibt, darf man keine
+						// weitere machen
 						throw new EJBExceptionLP(
 								EJBExceptionLP.FEHLER_SCHLUSSRECHNUNG_BEREITS_VORHANDEN,
 								"FEHLER_SCHLUSSRECHNUNG_BEREITS_VORHANDEN", re
 										.getCNr());
-					} else {
-						// Und auch die keine Anzahlung aendern oder erzeugen
+					}
+					if (STATUS_ANGELEGT.equals(re.getStatusCNr()))
+						continue; // ist noch nicht in der Fibu, also darf man
+									// weitere Anzahlungen machen
+
+					if (rech.getIId() == null) {
+						// Man darf keine neue Anzahlung erzeugen
 						throw new EJBExceptionLP(
 								EJBExceptionLP.FEHLER_ANZAHLUNG_SCHLUSSRECHNUNG_BEREITS_VORHANDEN,
 								"FEHLER_ANZAHLUNG_SCHLUSSRECHNUNG_BEREITS_VORHANDEN",
 								re.getCNr());
+					} else {
+						RechnungDto alt = rechnungFindByPrimaryKeyOhneExc(rech
+								.getIId());
+						if (alt != null) {
+							if (STATUS_STORNIERT.equals(alt.getStatusCNr())) {
+								// stornierte darf man nicht wieder aktivieren
+								throw new EJBExceptionLP(
+										EJBExceptionLP.FEHLER_ANZAHLUNG_SCHLUSSRECHNUNG_BEREITS_VORHANDEN,
+										"FEHLER_ANZAHLUNG_SCHLUSSRECHNUNG_BEREITS_VORHANDEN",
+										re.getCNr());
+							} else if (STATUS_BEZAHLT
+									.equals(alt.getStatusCNr())) {
+								// bezahlte darf man auch nicht aendern
+								throw new EJBExceptionLP(
+										EJBExceptionLP.FEHLER_ANZAHLUNG_SCHLUSSRECHNUNG_BEREITS_VORHANDEN,
+										"FEHLER_ANZAHLUNG_SCHLUSSRECHNUNG_BEREITS_VORHANDEN",
+										re.getCNr());
+							}
+						}
 					}
 				} else if (re.getRechnungartCNr().equals(
 						RechnungFac.RECHNUNGART_ANZAHLUNG)) {
-					anzahlungenVorhanden = true;
-					if (!re.getStatusCNr().equals(RechnungFac.STATUS_BEZAHLT)) {
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_ANZAHLUNGEN_NICHT_BEZAHLT,
-								"FEHLER_ANZAHLUNGEN_NICHT_BEZAHLT", re.getCNr());
-					}
+					anzahlungenVorhanden = !STATUS_ANGELEGT.equals(re
+							.getStatusCNr());
+					// if
+					// (!re.getStatusCNr().equals(RechnungFac.STATUS_BEZAHLT)) {
+					// throw new EJBExceptionLP(
+					// EJBExceptionLP.FEHLER_ANZAHLUNGEN_NICHT_BEZAHLT,
+					// "FEHLER_ANZAHLUNGEN_NICHT_BEZAHLT", re.getCNr());
+					// }
 					if (Helper.short2boolean(re.getBReversecharge()) != Helper
 							.short2boolean(rech.getBReversecharge())) {
 						throw new EJBExceptionLP(
@@ -258,6 +300,29 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 				if (bGutschriftVerwendetNummernkreisDerRechnung) {
 					rechnungTyp = RechnungFac.RECHNUNGTYP_RECHNUNG;
 				}
+
+				// PJ18843 Wenn FIBU und Gutschrift auf Anzahlung, dann Fehler
+				if (rechnungDto.getRechnungIIdZurechnung() != null) {
+
+					RechnungDto rechnungDtoVorhanden = getRechnungFac()
+							.rechnungFindByPrimaryKey(
+									rechnungDto.getRechnungIIdZurechnung());
+
+					if (rechnungDtoVorhanden.getRechnungartCNr().equals(
+							RechnungFac.RECHNUNGART_ANZAHLUNG)) {
+						if (getMandantFac().darfAnwenderAufModulZugreifen(
+								LocaleFac.BELEGART_FINANZBUCHHALTUNG,
+								theClientDto)) {
+							throw new EJBExceptionLP(
+									EJBExceptionLP.FEHLER_RECHNUNG_GS_AUF_ANZAHLUNG_NICHT_MOEGLICH,
+									new Exception(
+											"FEHLER_RECHNUNG_GS_AUF_ANZAHLUNG_NICHT_MOEGLICH,"));
+						}
+
+					}
+
+				}
+
 			}
 			return createRechnung(rechnungDto, theClientDto, rechnungTyp);
 		} catch (RemoteException ex) {
@@ -277,7 +342,8 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		for (int i = 0; i < rDtos.length; i++) {
 			RechnungDto rDto = rDtos[i];
 
-			if (!rDto.getStatusCNr().equals(RechnungFac.STATUS_STORNIERT)) {
+			if (!Helper.isOneOf(rDto.getStatusCNr(),
+					RechnungFac.STATUS_STORNIERT, RechnungFac.STATUS_ANGELEGT)) {
 				bSchlussrechnungVorhanden = true;
 			}
 		}
@@ -363,7 +429,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 								theClientDto.getMandant(),
 								ParameterFac.KATEGORIE_KUNDEN,
 								ParameterFac.PARAMETER_AUTOMATISCHE_DEBITORENNUMMER);
-				if ((Boolean) parametermandantautoDebitDto.getCWertAsObject() == true) {
+				if ((Boolean) parametermandantautoDebitDto.getCWertAsObject()) {
 					if (rechnungDto.getKundeIId() != null) {
 
 						KundeDto kundeDto = getKundeFac()
@@ -405,78 +471,79 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			rechnung.setCZollpapier(null);
 		}
 	}
-//  rk: wird nirgends verwendet
-//	public RechnungDto updateRechnungPartnerIIdRechnungsadresse(
-//			RechnungDto rechnungDto, TheClientDto theClientDto)
-//			throws EJBExceptionLP {
-//		// log
-//		myLogger.logData(rechnungDto);
-//		RechnungDto rechnungOldDto = null;
-//		// begin
-//		if (rechnungDto != null) {
-//			Integer iId = rechnungDto.getIId();
-//			try {
-//				rechnungOldDto = getRechnungFac().rechnungFindByPrimaryKey(iId);
-//			} catch (RemoteException ex) {
-//				throwEJBExceptionLPRespectOld(ex);
-//			}
-//
-//			try {
-//				Rechnung rechnung = em.find(Rechnung.class, iId);
-//				if (rechnung == null) {
-//					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE,
-//							"");
-//				}
-//				// das Lager darf nur geaendert werden, wenn die Rechnung noch
-//				// keine posiitonen hat
-//				if (rechnung.getLagerIId() != null
-//						&& !rechnung.getLagerIId().equals(
-//								rechnungDto.getLagerIId())
-//						&& rechnungPositionFindByRechnungIId(rechnungDto
-//								.getIId()).length > 0) {
-//					throw new EJBExceptionLP(
-//							EJBExceptionLP.FEHLER_RECHNUNG_DARF_LAGER_NICHT_AENDERN,
-//							"");
-//				}
-//				if (rechnung.getKundeIId() != null
-//						&& !rechnung.getKundeIId().equals(
-//								rechnungDto.getKundeIId())) {
-//					RechnungPositionDto[] pos = rechnungPositionFindByRechnungIId(rechnungDto
-//							.getIId());
-//					for (int i = 0; i < pos.length; i++) {
-//						if (pos[i].getRechnungpositionartCNr().equals(
-//								RechnungFac.POSITIONSART_RECHNUNG_LIEFERSCHEIN)) {
-//							throw new EJBExceptionLP(
-//									EJBExceptionLP.FEHLER_RECHNUNG_HAT_LIEFERSCHEINE_EINES_ANDEREN_KUNDEN,
-//									"");
-//						}
-//					}
-//				}
-//				// belegumdatieren: das Belegdatum darf nur innerhalb des GJ der
-//				// Rechnung geaendert werden
-//				Integer iGJNeu = getParameterFac()
-//						.getGeschaeftsjahr(theClientDto.getMandant(),
-//								rechnungDto.getTBelegdatum());
-//				if (!iGJNeu.equals(rechnungDto.getIGeschaeftsjahr())) {
-//					throw new EJBExceptionLP(
-//							EJBExceptionLP.FEHLER_BELEG_DARF_NICHT_IN_EIN_ANDERES_GJ_UMDATIERT_WERDEN,
-//							new Exception("Es wurde versucht, die RE "
-//									+ rechnungDto.getCNr() + " auf "
-//									+ rechnungDto.getTBelegdatum() + " (GJ "
-//									+ iGJNeu + ") umzudatieren"));
-//				}
-//				// updaten
-//				setRechnungFromRechnungDto(rechnung, rechnungDto);
-//				// }
-//				// catch (FinderException ex) {
-//				// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE,
-//				// ex);
-//			} catch (RemoteException ex) {
-//				throwEJBExceptionLPRespectOld(ex);
-//			}
-//		}
-//		return rechnungFindByPrimaryKey(rechnungDto.getIId());
-//	}
+
+	// rk: wird nirgends verwendet
+	// public RechnungDto updateRechnungPartnerIIdRechnungsadresse(
+	// RechnungDto rechnungDto, TheClientDto theClientDto)
+	// throws EJBExceptionLP {
+	// // log
+	// myLogger.logData(rechnungDto);
+	// RechnungDto rechnungOldDto = null;
+	// // begin
+	// if (rechnungDto != null) {
+	// Integer iId = rechnungDto.getIId();
+	// try {
+	// rechnungOldDto = getRechnungFac().rechnungFindByPrimaryKey(iId);
+	// } catch (RemoteException ex) {
+	// throwEJBExceptionLPRespectOld(ex);
+	// }
+	//
+	// try {
+	// Rechnung rechnung = em.find(Rechnung.class, iId);
+	// if (rechnung == null) {
+	// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE,
+	// "");
+	// }
+	// // das Lager darf nur geaendert werden, wenn die Rechnung noch
+	// // keine posiitonen hat
+	// if (rechnung.getLagerIId() != null
+	// && !rechnung.getLagerIId().equals(
+	// rechnungDto.getLagerIId())
+	// && rechnungPositionFindByRechnungIId(rechnungDto
+	// .getIId()).length > 0) {
+	// throw new EJBExceptionLP(
+	// EJBExceptionLP.FEHLER_RECHNUNG_DARF_LAGER_NICHT_AENDERN,
+	// "");
+	// }
+	// if (rechnung.getKundeIId() != null
+	// && !rechnung.getKundeIId().equals(
+	// rechnungDto.getKundeIId())) {
+	// RechnungPositionDto[] pos = rechnungPositionFindByRechnungIId(rechnungDto
+	// .getIId());
+	// for (int i = 0; i < pos.length; i++) {
+	// if (pos[i].getRechnungpositionartCNr().equals(
+	// RechnungFac.POSITIONSART_RECHNUNG_LIEFERSCHEIN)) {
+	// throw new EJBExceptionLP(
+	// EJBExceptionLP.FEHLER_RECHNUNG_HAT_LIEFERSCHEINE_EINES_ANDEREN_KUNDEN,
+	// "");
+	// }
+	// }
+	// }
+	// // belegumdatieren: das Belegdatum darf nur innerhalb des GJ der
+	// // Rechnung geaendert werden
+	// Integer iGJNeu = getParameterFac()
+	// .getGeschaeftsjahr(theClientDto.getMandant(),
+	// rechnungDto.getTBelegdatum());
+	// if (!iGJNeu.equals(rechnungDto.getIGeschaeftsjahr())) {
+	// throw new EJBExceptionLP(
+	// EJBExceptionLP.FEHLER_BELEG_DARF_NICHT_IN_EIN_ANDERES_GJ_UMDATIERT_WERDEN,
+	// new Exception("Es wurde versucht, die RE "
+	// + rechnungDto.getCNr() + " auf "
+	// + rechnungDto.getTBelegdatum() + " (GJ "
+	// + iGJNeu + ") umzudatieren"));
+	// }
+	// // updaten
+	// setRechnungFromRechnungDto(rechnung, rechnungDto);
+	// // }
+	// // catch (FinderException ex) {
+	// // throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE,
+	// // ex);
+	// } catch (RemoteException ex) {
+	// throwEJBExceptionLPRespectOld(ex);
+	// }
+	// }
+	// return rechnungFindByPrimaryKey(rechnungDto.getIId());
+	// }
 
 	/**
 	 * Rechnung oder Gutschrift updaten.
@@ -742,7 +809,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 								rechnungDto.getTBelegdatum());
 				if (!iGJNeu.equals(rechnungDto.getIGeschaeftsjahr())) {
 					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_BELEG_DARF_NICHT_IN_EIN_ANDERES_GJ_UMDATIERT_WERDEN,
+					// EJBExceptionLP.FEHLER_BELEG_DARF_NICHT_IN_EIN_ANDERES_GJ_UMDATIERT_WERDEN,
 							new Exception("Es wurde versucht, die RE "
 									+ rechnungDto.getCNr() + " auf "
 									+ rechnungDto.getTBelegdatum() + " (GJ "
@@ -755,11 +822,22 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 						RechnungFac.RECHNUNGART_PROFORMARECHNUNG)) {
 					setzeRechnungKonditionenLSPositionen(rechnungDto,
 							theClientDto);
+
+					// PJ2276
+					RechnungPositionDto[] rePosDto = rechnungPositionFindByRechnungIId(rechnungDto
+							.getIId());
+					Set<Integer> modifiedPositions = getBelegVerkaufFac()
+							.adaptIntZwsPositions(rePosDto);
+					for (Integer index : modifiedPositions) {
+						updateRechnungPositionOhneNeuBerechnung(
+								rePosDto[index], theClientDto);
+					}
+					rechnung.setTAendern(getTimestamp());
 				}
-				// }
-				// catch (FinderException ex) {
-				// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE,
-				// ex);
+
+				em.merge(rechnung);
+				em.flush();
+
 			} catch (RemoteException ex) {
 				throwEJBExceptionLPRespectOld(ex);
 			}
@@ -1014,8 +1092,8 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 	// return wert;
 	// }
 	/**
-	 * Pr&uuml;ft, ob die L&auml;nder der Rechnungsposition im Lieferschein in das
-	 * gleiche Land gehen. Falls nicht gibt es eine EJBExceptionLP
+	 * Pr&uuml;ft, ob die L&auml;nder der Rechnungsposition im Lieferschein in
+	 * das gleiche Land gehen. Falls nicht gibt es eine EJBExceptionLP
 	 * 
 	 * @param rechnungIId
 	 *            Integer
@@ -1098,7 +1176,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 				PKConst.PK_RECHNUNGPOSITION);
 		rePosDto.setIId(pk);
 		pruefePflichtfelderBelegposition(rePosDto, theClientDto);
-		
+
 		updateTAendern(rePosDto.getRechnungIId(), theClientDto);
 
 		if (rePosDto.getPositionsartCNr().equals(
@@ -1257,7 +1335,11 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			// keine LS-zuordnung gibt
 			if (ls.getKundeIIdRechnungsadresse().equals(rechnung.getKundeIId())
 					&& rechnung.getLieferscheinIId() == null) {
-				rechnung.setLieferscheinIId(ls.getIId());
+				// SP3184
+				if (!rechnungartDto.getRechnungtypCNr().equals(
+						RechnungFac.RECHNUNGTYP_PROFORMARECHNUNG)) {
+					rechnung.setLieferscheinIId(ls.getIId());
+				}
 			}
 			rePosDto = holeLieferscheinPreise(rePosDto, theClientDto);
 
@@ -1281,8 +1363,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 					// und dieses ungleich dem Projekt des Lieferscheins ist,
 					// dann darf das nicht gehen
 
-					if (!rechnung.getProjektIId().equals(
-							ls.getProjektIId())) {
+					if (!rechnung.getProjektIId().equals(ls.getProjektIId())) {
 
 						ArrayList alInfo = new ArrayList();
 
@@ -1304,6 +1385,15 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 								new Exception(
 										"FEHLER_LIEFERSCHEINE_MIT_VERSCHIEDENEN_PROJEKTEN"));
 					}
+				}
+			}
+
+			// PJ18728
+			if (!rechnungartDto.getRechnungtypCNr().equals(
+					RechnungFac.RECHNUNGTYP_PROFORMARECHNUNG)) {
+				if (rechnung.getAuftragIId() == null
+						&& ls.getAuftragIId() != null) {
+					rechnung.setAuftragIId(ls.getAuftragIId());
 				}
 			}
 
@@ -1361,6 +1451,32 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 						.auftragpositionFindByPrimaryKey(
 								rePosDto.getAuftragpositionIId());
 				rePosDto.setXTextinhalt(auftragpositionDto.getXTextinhalt());
+			} else {
+				if (rePosDto.getPositionsartCNr().equalsIgnoreCase(
+						RechnungFac.POSITIONSART_RECHNUNG_IDENT)
+						&& rePosDto.getNMaterialzuschlagKurs() == null) {
+
+					ArtikelDto artikelDto = getArtikelFac()
+							.artikelFindByPrimaryKeySmall(
+									rePosDto.getArtikelIId(), theClientDto);
+					if (artikelDto.getMaterialIId() != null) {
+						Rechnung rechnung = em.find(Rechnung.class,
+								rePosDto.getRechnungIId());
+
+						MaterialzuschlagDto mDto = getMaterialFac()
+								.getKursMaterialzuschlagDtoInZielwaehrung(
+										artikelDto.getMaterialIId(),
+										new java.sql.Date(rechnung
+												.getTBelegdatum().getTime()),
+										rechnung.getWaehrungCNr(), theClientDto);
+						if (mDto != null) {
+							rePosDto.setNMaterialzuschlagKurs(mDto
+									.getNZuschlag());
+							rePosDto.setTMaterialzuschlagDatum(mDto
+									.getTGueltigab());
+						}
+					}
+				}
 			}
 
 			// PJ 13679
@@ -1372,6 +1488,8 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 					rePosDto.getBRabattsatzuebersteuert(),
 					rePosDto.getBMwstsatzuebersteuert(),
 					rePosDto.getBNettopreisuebersteuert());
+			rechnungPosition.setBZwsPositionspreisZeigen(Helper
+					.boolean2Short(true));
 			em.persist(rechnungPosition);
 			em.flush();
 			setRechnungpositionFromRechnungpositionDto(rechnungPosition,
@@ -1517,6 +1635,8 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 			rePosDto.setNEinzelpreis(BigDecimal.ZERO);
 			rePosDto.setNNettoeinzelpreis(BigDecimal.ZERO);
+			rePosDto.setFZusatzrabattsatz(0D);
+			rePosDto.setFRabattsatz(0D);
 
 			rePosDto.setNNettoeinzelpreisplusversteckteraufschlag(BigDecimal.ZERO);
 			rePosDto.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(BigDecimal.ZERO);
@@ -1591,6 +1711,8 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 			rePosDto.setNEinzelpreis(new BigDecimal(0));
 			rePosDto.setNNettoeinzelpreis(new BigDecimal(0));
+			rePosDto.setFZusatzrabattsatz(0D);
+			rePosDto.setFRabattsatz(0D);
 
 			rePosDto.setNNettoeinzelpreisplusversteckteraufschlag(new BigDecimal(
 					0));
@@ -1738,6 +1860,38 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			rechnungPositionDto = (RechnungPositionDto) getBelegVerkaufFac()
 					.berechneBelegpositionVerkauf(rechnungPositionDto,
 							rechnungDto);
+			oPosition.setNEinzelpreisplusaufschlag(rechnungPositionDto
+					.getNEinzelpreisplusversteckteraufschlag());
+			oPosition.setNNettoeinzelpreisplusaufschlag(rechnungPositionDto
+					.getNNettoeinzelpreisplusversteckteraufschlag());
+			oPosition
+					.setNNettoeinzelpreisplusaufschlagminusrabatt(rechnungPositionDto
+							.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+
+		}
+		return rechnungPositionDto;
+	}
+
+	public RechnungPositionDto befuelleZusaetzlichePreisfelder(
+			Integer iIdPositionI, BigDecimal zwsRabattsatz,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+		Rechnungposition oPosition = em.find(Rechnungposition.class,
+				iIdPositionI);
+		if (oPosition == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		RechnungPositionDto rechnungPositionDto = rechnungPositionFindByPrimaryKey(iIdPositionI);
+		if (oPosition.getPositionsartCNr().equals(
+				LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_HANDEINGABE)
+				|| oPosition.getPositionsartCNr().equals(
+						LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT)) {
+
+			RechnungDto rechnungDto = rechnungFindByPrimaryKey(oPosition
+					.getRechnungIId());
+			rechnungPositionDto = (RechnungPositionDto) getBelegVerkaufFac()
+					.berechneBelegpositionVerkauf(zwsRabattsatz,
+							rechnungPositionDto, rechnungDto);
 			oPosition.setNEinzelpreisplusaufschlag(rechnungPositionDto
 					.getNEinzelpreisplusversteckteraufschlag());
 			oPosition.setNNettoeinzelpreisplusaufschlag(rechnungPositionDto
@@ -1921,6 +2075,10 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			RechnungDto rechnungDto = rechnungFindByPrimaryKey(rechnungPositionDto
 					.getRechnungIId());
 
+			RechnungartDto rechnungartDto = getRechnungServiceFac()
+					.rechnungartFindByPrimaryKey(
+							rechnungDto.getRechnungartCNr(), theClientDto);
+
 			processIntelligenteZwischensummeRemove(rechnungDto,
 					rechnungPositionDto);
 
@@ -1961,6 +2119,35 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 					.trim()
 					.equals(RechnungFac.POSITIONSART_RECHNUNG_LIEFERSCHEIN
 							.trim())) {
+
+				// SP3183 Wenn der LS bereits verrechnet und in einer
+				// Progormarechnung verwendet wird, darf dieser nicht mehr aus
+				// der Proformarechnung geloescht werden
+				if (rechnungartDto.getRechnungtypCNr().equals(
+						RechnungFac.RECHNUNGTYP_PROFORMARECHNUNG)) {
+
+					LieferscheinDto lsDto = getLieferscheinFac()
+							.lieferscheinFindByPrimaryKey(
+									rechnungPositionDto.getLieferscheinIId());
+					if (lsDto.getRechnungIId() != null
+							&& lsDto.getStatusCNr().equals(
+									LieferscheinFac.LSSTATUS_VERRECHNET)) {
+
+						RechnungDto reDto = getRechnungFac()
+								.rechnungFindByPrimaryKey(
+										lsDto.getRechnungIId());
+
+						ArrayList al = new ArrayList();
+						al.add(reDto.getCNr());
+						throw new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_LIEFERSCHEIN_BEREITS_IN_PROFORMARECHNUNG,
+								al,
+								new Exception(
+										"FEHLER_LIEFERSCHEIN_BEREITS_IN_PROFORMARECHNUNG"));
+					}
+
+				}
+
 				// Eventuell vorhandene Zuordnung in den Kopfdaten loeschen
 				if (rechnungDto.getLieferscheinIId() != null
 						&& rechnungDto.getLieferscheinIId().equals(
@@ -2023,7 +2210,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			RechnungPositionDto rechnungPositionDto, boolean bucheAmLager,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		return updateRechnungPositionImpl(rechnungPositionDto, bucheAmLager,
-				new ArrayList<SeriennrChargennrMitMengeDto>(), null,
+				new ArrayList<SeriennrChargennrMitMengeDto>(), null, true,
 				theClientDto);
 	}
 
@@ -2033,12 +2220,19 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		return updateRechnungPosition(rechnungPositionDto, true, theClientDto);
 	}
 
+	private RechnungPositionDto updateRechnungPositionOhneNeuBerechnung(
+			RechnungPositionDto rechnungPositionDto, TheClientDto theClientDto) {
+		return updateRechnungPositionImpl(rechnungPositionDto, true,
+				new ArrayList<SeriennrChargennrMitMengeDto>(), null, false,
+				theClientDto);
+	}
+
 	public RechnungPositionDto updateRechnungPosition(
 			RechnungPositionDto rechnungPositionDto,
 			List<SeriennrChargennrMitMengeDto> notyetUsedIdentities,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		return updateRechnungPositionImpl(rechnungPositionDto, true,
-				notyetUsedIdentities, null, theClientDto);
+				notyetUsedIdentities, null, true, theClientDto);
 	}
 
 	public RechnungPositionDto updateRechnungPosition(
@@ -2047,145 +2241,153 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			Artikelset artikelset, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		return updateRechnungPositionImpl(rechnungPositionDto, true,
-				notyetUsedIdentities, artikelset, theClientDto);
+				notyetUsedIdentities, artikelset, true, theClientDto);
 	}
 
 	private void preiseEinesArtikelsetsUpdaten(
 			Integer rechnungpositionIIdKopfartikel, TheClientDto theClientDto) {
 
-		RechnungPositionDto rechnungPositionDtoKopfartikel = rechnungPositionFindByPrimaryKey(rechnungpositionIIdKopfartikel);
+		RechnungPositionDto rechnungPositionDtoKopfartikel = rechnungPositionFindByPrimaryKeyOhneExc(rechnungpositionIIdKopfartikel);
 
-		Query query = em
-				.createNamedQuery("RechnungPositionfindByPositionIIdArtikelset");
-		query.setParameter(1, rechnungPositionDtoKopfartikel.getIId());
-		Collection<?> lieferscheinpositionDtos = query.getResultList();
-		try {
-			RechnungDto rechnungDto = getRechnungFac()
-					.rechnungFindByPrimaryKey(
-							rechnungPositionDtoKopfartikel.getRechnungIId());
+		if (rechnungPositionDtoKopfartikel != null) {
 
-			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-					rechnungDto.getKundeIId(), theClientDto);
+			Query query = em
+					.createNamedQuery("RechnungPositionfindByPositionIIdArtikelset");
+			query.setParameter(1, rechnungPositionDtoKopfartikel.getIId());
+			Collection<?> lieferscheinpositionDtos = query.getResultList();
+			try {
+				RechnungDto rechnungDto = getRechnungFac()
+						.rechnungFindByPrimaryKey(
+								rechnungPositionDtoKopfartikel.getRechnungIId());
 
-			Integer mwstsatzbezIId = getMandantFac().mwstsatzFindByPrimaryKey(
-					rechnungPositionDtoKopfartikel.getMwstsatzIId(),
-					theClientDto).getIIMwstsatzbezId();
+				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
+						rechnungDto.getKundeIId(), theClientDto);
 
-			// Zuerst Gesamtwert berechnen
-			BigDecimal bdMenge = rechnungPositionDtoKopfartikel.getNMenge();
+				Integer mwstsatzbezIId = getMandantFac()
+						.mwstsatzFindByPrimaryKey(
+								rechnungPositionDtoKopfartikel.getMwstsatzIId(),
+								theClientDto).getIIMwstsatzbezId();
 
-			BigDecimal bdNettoeinzelpreis = rechnungPositionDtoKopfartikel
-					.getNNettoeinzelpreis();
+				// Zuerst Gesamtwert berechnen
+				BigDecimal bdMenge = rechnungPositionDtoKopfartikel.getNMenge();
 
-			BigDecimal bdGesamtwertposition = bdMenge
-					.multiply(bdNettoeinzelpreis);
+				BigDecimal bdNettoeinzelpreis = rechnungPositionDtoKopfartikel
+						.getNNettoeinzelpreis();
 
-			BigDecimal bdGesamtVKwert = new BigDecimal(0);
+				BigDecimal bdGesamtwertposition = bdMenge
+						.multiply(bdNettoeinzelpreis);
 
-			Iterator<?> it = lieferscheinpositionDtos.iterator();
+				BigDecimal bdGesamtVKwert = new BigDecimal(0);
 
-			while (it.hasNext()) {
-				Rechnungposition struktur = (Rechnungposition) it.next();
+				Iterator<?> it = lieferscheinpositionDtos.iterator();
 
-				VkpreisfindungDto vkpreisDto = getVkPreisfindungFac()
-						.verkaufspreisfindung(
-								struktur.getArtikelIId(),
-								rechnungDto.getKundeIId(),
+				while (it.hasNext()) {
+					Rechnungposition struktur = (Rechnungposition) it.next();
 
-								struktur.getNMenge(),
-								new java.sql.Date(System.currentTimeMillis()),
-								kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-								getMandantFac()
-										.mwstsatzFindByMwstsatzbezIIdAktuellster(
-												mwstsatzbezIId, theClientDto)
-										.getIId(),
-								rechnungDto.getWaehrungCNr(), theClientDto);
+					VkpreisfindungDto vkpreisDto = getVkPreisfindungFac()
+							.verkaufspreisfindung(
+									struktur.getArtikelIId(),
+									rechnungDto.getKundeIId(),
 
-				VerkaufspreisDto kundenVKPreisDto = Helper
-						.getVkpreisBerechnet(vkpreisDto);
+									struktur.getNMenge(),
+									new java.sql.Date(System
+											.currentTimeMillis()),
+									kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
+									getMandantFac()
+											.mwstsatzFindByMwstsatzbezIIdAktuellster(
+													mwstsatzbezIId,
+													theClientDto).getIId(),
+									rechnungDto.getWaehrungCNr(), theClientDto);
 
-				if (kundenVKPreisDto != null
-						&& kundenVKPreisDto.nettopreis != null) {
-					bdGesamtVKwert = bdGesamtVKwert
-							.add(kundenVKPreisDto.nettopreis.multiply(struktur
-									.getNMenge()));
+					VerkaufspreisDto kundenVKPreisDto = Helper
+							.getVkpreisBerechnet(vkpreisDto);
+
+					if (kundenVKPreisDto != null
+							&& kundenVKPreisDto.nettopreis != null) {
+						bdGesamtVKwert = bdGesamtVKwert
+								.add(kundenVKPreisDto.nettopreis
+										.multiply(struktur.getNMenge()));
+					}
+
 				}
 
-			}
+				bdGesamtVKwert = Helper.rundeKaufmaennisch(bdGesamtVKwert, 4);
 
-			bdGesamtVKwert = Helper.rundeKaufmaennisch(bdGesamtVKwert, 4);
+				it = lieferscheinpositionDtos.iterator();
 
-			it = lieferscheinpositionDtos.iterator();
+				while (it.hasNext()) {
+					Rechnungposition struktur = (Rechnungposition) it.next();
 
-			while (it.hasNext()) {
-				Rechnungposition struktur = (Rechnungposition) it.next();
-
-				struktur.setNEinzelpreis(new BigDecimal(0));
-				struktur.setNNettoeinzelpreis(new BigDecimal(0));
-
-				struktur.setNNettoeinzelpreisplusaufschlag(new BigDecimal(0));
-				struktur.setNNettoeinzelpreisplusaufschlagminusrabatt(new BigDecimal(
-						0));
-				struktur.setNBruttoeinzelpreis(new BigDecimal(0));
-
-				// Mehrwertsteuersatz: Kommt immer aus dem Kopfartikel,
-				// da dieser die Hauptleistung darstellt
-
-				VkpreisfindungDto vkpreisDto = getVkPreisfindungFac()
-						.verkaufspreisfindung(
-								struktur.getArtikelIId(),
-								rechnungDto.getKundeIId(),
-								struktur.getNMenge(),
-								new java.sql.Date(System.currentTimeMillis()),
-								kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-								getMandantFac()
-										.mwstsatzFindByMwstsatzbezIIdAktuellster(
-												mwstsatzbezIId, theClientDto)
-										.getIId(),
-								rechnungDto.getWaehrungCNr(), theClientDto);
-
-				VerkaufspreisDto kundenVKPreisDto = Helper
-						.getVkpreisBerechnet(vkpreisDto);
-
-				if (kundenVKPreisDto != null
-						&& kundenVKPreisDto.nettopreis != null
-						&& bdGesamtVKwert.doubleValue() != 0) {
-					// Preis berechnen
-					BigDecimal bdAnteilVKWert = kundenVKPreisDto.nettopreis
-							.multiply(struktur.getNMenge().multiply(bdMenge))
-							.divide(bdGesamtVKwert, 4,
-									BigDecimal.ROUND_HALF_EVEN);
-
-					struktur.setNMaterialzuschlag(kundenVKPreisDto.bdMaterialzuschlag);
-
-					struktur.setNEinzelpreis(bdGesamtwertposition.multiply(
-							bdAnteilVKWert).divide(
-							struktur.getNMenge().multiply(bdMenge), 4,
-							BigDecimal.ROUND_HALF_EVEN));
-
-					struktur.setNNettoeinzelpreis(bdGesamtwertposition
-							.multiply(bdAnteilVKWert).divide(
-									struktur.getNMenge().multiply(bdMenge), 4,
-									BigDecimal.ROUND_HALF_EVEN));
-
-					struktur.setNBruttoeinzelpreis(bdGesamtwertposition
-							.multiply(bdAnteilVKWert).divide(
-									struktur.getNMenge().multiply(bdMenge), 4,
-									BigDecimal.ROUND_HALF_EVEN));
+					struktur.setNEinzelpreis(new BigDecimal(0));
+					struktur.setNNettoeinzelpreis(new BigDecimal(0));
 
 					struktur.setNNettoeinzelpreisplusaufschlag(new BigDecimal(0));
 					struktur.setNNettoeinzelpreisplusaufschlagminusrabatt(new BigDecimal(
 							0));
+					struktur.setNBruttoeinzelpreis(new BigDecimal(0));
+
+					// Mehrwertsteuersatz: Kommt immer aus dem Kopfartikel,
+					// da dieser die Hauptleistung darstellt
+
+					VkpreisfindungDto vkpreisDto = getVkPreisfindungFac()
+							.verkaufspreisfindung(
+									struktur.getArtikelIId(),
+									rechnungDto.getKundeIId(),
+									struktur.getNMenge(),
+									new java.sql.Date(System
+											.currentTimeMillis()),
+									kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
+									getMandantFac()
+											.mwstsatzFindByMwstsatzbezIIdAktuellster(
+													mwstsatzbezIId,
+													theClientDto).getIId(),
+									rechnungDto.getWaehrungCNr(), theClientDto);
+
+					VerkaufspreisDto kundenVKPreisDto = Helper
+							.getVkpreisBerechnet(vkpreisDto);
+
+					if (kundenVKPreisDto != null
+							&& kundenVKPreisDto.nettopreis != null
+							&& bdGesamtVKwert.doubleValue() != 0) {
+						// Preis berechnen
+						BigDecimal bdAnteilVKWert = kundenVKPreisDto.nettopreis
+								.multiply(
+										struktur.getNMenge().multiply(bdMenge))
+								.divide(bdGesamtVKwert, 4,
+										BigDecimal.ROUND_HALF_EVEN);
+
+						struktur.setNMaterialzuschlag(kundenVKPreisDto.bdMaterialzuschlag);
+
+						struktur.setNEinzelpreis(bdGesamtwertposition.multiply(
+								bdAnteilVKWert).divide(
+								struktur.getNMenge().multiply(bdMenge), 4,
+								BigDecimal.ROUND_HALF_EVEN));
+
+						struktur.setNNettoeinzelpreis(bdGesamtwertposition
+								.multiply(bdAnteilVKWert).divide(
+										struktur.getNMenge().multiply(bdMenge),
+										4, BigDecimal.ROUND_HALF_EVEN));
+
+						struktur.setNBruttoeinzelpreis(bdGesamtwertposition
+								.multiply(bdAnteilVKWert).divide(
+										struktur.getNMenge().multiply(bdMenge),
+										4, BigDecimal.ROUND_HALF_EVEN));
+
+						struktur.setNNettoeinzelpreisplusaufschlag(new BigDecimal(
+								0));
+						struktur.setNNettoeinzelpreisplusaufschlagminusrabatt(new BigDecimal(
+								0));
+
+					}
 
 				}
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
 
 			}
-		} catch (RemoteException e) {
-			throwEJBExceptionLPRespectOld(e);
-
 		}
 	}
-	
+
 	private void updateTAendern(Integer rechnungIId, TheClientDto theClientDto) {
 		Rechnung rechnung = em.find(Rechnung.class, rechnungIId);
 		rechnung.setTAendern(getTimestamp());
@@ -2197,8 +2399,8 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 	private RechnungPositionDto updateRechnungPositionImpl(
 			RechnungPositionDto rechnungPositionDto, boolean bucheAmLager,
 			List<SeriennrChargennrMitMengeDto> notyetUsedIdentities,
-			Artikelset artikelset, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+			Artikelset artikelset, boolean recalculatePosition,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (rechnungPositionDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
 					"rechnungPositionDto == null"));
@@ -2269,8 +2471,10 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 					setRechnungpositionFromRechnungpositionDto(
 							rechnungPosition, rechnungPositionDto);
-					befuelleZusaetzlichePreisfelder(newPositionDto.getIId(),
-							theClientDto);
+					if (recalculatePosition) {
+						befuelleZusaetzlichePreisfelder(
+								newPositionDto.getIId(), theClientDto);
+					}
 					return newPositionDto;
 				} else {
 					RechnungPositionDto newPositionDto = createRechnungPosition(
@@ -2284,8 +2488,10 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 					rechnungPositionDto.setNMenge(temp.getNMenge());
 					setRechnungpositionFromRechnungpositionDto(
 							rechnungPosition, rechnungPositionDto);
-					befuelleZusaetzlichePreisfelder(newPositionDto.getIId(),
-							theClientDto);
+					if (recalculatePosition) {
+						befuelleZusaetzlichePreisfelder(
+								newPositionDto.getIId(), theClientDto);
+					}
 					return newPositionDto;
 				}
 			} else {
@@ -2355,8 +2561,15 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 				// Rechnungsposition speichern.
 				setRechnungpositionFromRechnungpositionDto(rechnungPosition,
 						rechnungPositionDto);
-				rechnungPositionDto = befuelleZusaetzlichePreisfelder(
-						rechnungPositionDto.getIId(), theClientDto);
+
+				if (recalculatePosition) {
+					List<SeriennrChargennrMitMengeDto> snrsVorher = rechnungPositionDto
+							.getSeriennrChargennrMitMenge();
+					rechnungPositionDto = befuelleZusaetzlichePreisfelder(
+							rechnungPositionDto.getIId(), theClientDto);
+					rechnungPositionDto
+							.setSeriennrChargennrMitMenge(snrsVorher);
+				}
 
 				// PJ 13679
 				istSteuersatzInPositionsartPositionGleich(rechnungPositionDto);
@@ -2402,8 +2615,9 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 				}
 
-				return rechnungPositionFindByPrimaryKey(rechnungPositionDto
+				RechnungPositionDto positionDto = rechnungPositionFindByPrimaryKey(rechnungPositionDto
 						.getIId());
+				return positionDto;
 			}
 
 		} catch (RemoteException e) {
@@ -2467,7 +2681,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 						rechnungposition, notyetUsedIdentities, theClientDto);
 
 				updateRechnungPositionImpl(rechnungposition, true,
-						notyetUsedIdentities, null, theClientDto);
+						notyetUsedIdentities, null, true, theClientDto);
 			}
 		}
 	}
@@ -2540,7 +2754,6 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 	public RechnungPositionDto[] rechnungPositionFindByRechnungIIdArtikelIId(
 			Integer rechnungIId, Integer artikelIId) throws EJBExceptionLP {
-		Rechnungposition rechnungposition = null;
 		try {
 			Query query = em
 					.createNamedQuery("RechnungPositionfindByRechnungIIdArtikelIId");
@@ -2623,10 +2836,21 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 				.getZwsBisPosition());
 		rechnungPosition.setZwsNettoSumme(rechnungPositionDto
 				.getZwsNettoSumme());
+		if (rechnungPositionDto.getBZwsPositionspreisZeigen() != null) {
+			rechnungPosition.setBZwsPositionspreisZeigen(rechnungPositionDto
+					.getBZwsPositionspreisZeigen());
+		} else {
+			rechnungPosition.setBZwsPositionspreisZeigen(Helper
+					.boolean2Short(true));
+		}
 		rechnungPosition.setCLvposition(rechnungPositionDto.getCLvposition());
 		rechnungPosition.setCBez(rechnungPositionDto.getCBez());
 		rechnungPosition.setNMaterialzuschlag(rechnungPositionDto
 				.getNMaterialzuschlag());
+		rechnungPosition.setNMaterialzuschlagKurs(rechnungPositionDto
+				.getNMaterialzuschlagKurs());
+		rechnungPosition.setTMaterialzuschlagDatum(rechnungPositionDto
+				.getTMaterialzuschlagDatum());
 		em.merge(rechnungPosition);
 		em.flush();
 	}
@@ -2643,15 +2867,17 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		if (r.getRechnungartCNr().equals(RechnungFac.RECHNUNGART_GUTSCHRIFT)
 				|| r.getRechnungartCNr().equals(
 						RechnungFac.RECHNUNGART_WERTGUTSCHRIFT)) {
-			rechnungPositionDto.setSeriennrChargennrMitMenge(getLagerFac()
-					.getAllSeriennrchargennrEinerBelegartposition(
-							LocaleFac.BELEGART_GUTSCHRIFT,
-							rechnungPosition.getIId()));
+			rechnungPositionDto
+					.setSeriennrChargennrMitMenge(getLagerFac()
+							.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
+									LocaleFac.BELEGART_GUTSCHRIFT,
+									rechnungPosition.getIId()));
 		} else {
-			rechnungPositionDto.setSeriennrChargennrMitMenge(getLagerFac()
-					.getAllSeriennrchargennrEinerBelegartposition(
-							LocaleFac.BELEGART_RECHNUNG,
-							rechnungPosition.getIId()));
+			rechnungPositionDto
+					.setSeriennrChargennrMitMenge(getLagerFac()
+							.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
+									LocaleFac.BELEGART_RECHNUNG,
+									rechnungPosition.getIId()));
 		}
 
 		return rechnungPositionDto;
@@ -2725,6 +2951,20 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		return assembleRechnungDtos(cl);
 	}
 
+	protected Date getSpaetestesZahldatum(int rechnungIId) {
+		List<RechnungzahlungDto> zahlungen = Arrays
+				.asList(zahlungFindByRechnungIId(rechnungIId));
+		if (zahlungen.size() == 0)
+			return null;
+		return Collections.max(zahlungen, new Comparator<RechnungzahlungDto>() {
+
+			@Override
+			public int compare(RechnungzahlungDto o1, RechnungzahlungDto o2) {
+				return o1.getDZahldatum().compareTo(o2.getDZahldatum());
+			}
+		}).getDZahldatum();
+	}
+
 	/**
 	 * Anlegen einer neuen Zahlung.
 	 * 
@@ -2755,11 +2995,14 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_RECHNUNG_BEREITS_BEZAHLT, "Rechnung "
 							+ rechnungDto.getCNr() + "bereits bezahlt");
-		if (bErledigt == true) {
+		if (bErledigt) {
 			rechnungDto.setStatusCNr(RechnungFac.STATUS_BEZAHLT);
-			rechnungDto.setTBezahltdatum(zahlungDto.getDZahldatum());
+			Date tBezahlt = getSpaetestesZahldatum(rechnungDto.getIId());
+			rechnungDto.setTBezahltdatum(tBezahlt == null ? zahlungDto
+					.getDZahldatum() : tBezahlt);
 		} else {
 			rechnungDto.setStatusCNr(RechnungFac.STATUS_TEILBEZAHLT);
+			rechnungDto.setTBezahltdatum(null);
 		}
 		// Update Rechnung ohne theClientDto da dadurch keine Pruefung ob
 		// erlaubt
@@ -2838,28 +3081,32 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 				ez = getEingangsrechnungFac().createEingangsrechnungzahlung(ez,
 						null, theClientDto);
 			}
-			List<BelegbuchungDto> belegbuchungDtos = getBelegbuchungFac(
-					theClientDto.getMandant())
-					.getAlleBelegbuchungenInklZahlungenAR(rechnungDto.getIId());
-			if (rechnungDto.getRechnungartCNr().equals(
-					RechnungFac.RECHNUNGART_GUTSCHRIFT)) {
-				belegbuchungDtos.addAll(getBelegbuchungFac(
-						theClientDto.getMandant())
-						.getAlleBelegbuchungenInklZahlungenAR(
-								zahlung.getRechnungIIdGutschrift()));
-			}
-			Integer kontoIId = getKundeFac().kundeFindByPrimaryKey(
-					rechnungDto.getKundeIId(), theClientDto)
-					.getIidDebitorenkonto();
-
-			getBelegbuchungFac(theClientDto.getMandant())
-					.belegbuchungenAusziffernWennNoetig(kontoIId,
-							belegbuchungDtos);
+			alleBelegbuchungenAuziffern(theClientDto, rechnungDto, zahlung);
 
 			return zahlungDto;
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
 		}
+	}
+
+	private void alleBelegbuchungenAuziffern(TheClientDto theClientDto,
+			RechnungDto rechnungDto, Rechnungzahlung zahlung)
+			throws RemoteException {
+		List<BelegbuchungDto> belegbuchungDtos = getBelegbuchungFac(
+				theClientDto.getMandant())
+				.getAlleBelegbuchungenInklZahlungenAR(rechnungDto.getIId());
+		if (rechnungDto.getRechnungartCNr().equals(
+				RechnungFac.RECHNUNGART_GUTSCHRIFT)) {
+			belegbuchungDtos.addAll(getBelegbuchungFac(
+					theClientDto.getMandant())
+					.getAlleBelegbuchungenInklZahlungenAR(
+							zahlung.getRechnungIIdGutschrift()));
+		}
+		Integer kontoIId = getKundeFac().kundeFindByPrimaryKey(
+				rechnungDto.getKundeIId(), theClientDto).getIidDebitorenkonto();
+
+		getBelegbuchungFac(theClientDto.getMandant())
+				.belegbuchungenAusziffernWennNoetig(kontoIId, belegbuchungDtos);
 	}
 
 	/**
@@ -2927,7 +3174,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 		Integer iId = zahlungDto.getIId();
 		zahlungDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
-		zahlungDto.setTAendern(new Timestamp(System.currentTimeMillis()));
+		zahlungDto.setTAendern(getTimestamp());
 		try {
 
 			//
@@ -3035,9 +3282,10 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			// er updaten
 			RechnungDto rechnungDto = rechnungFindByPrimaryKey(zahlungDto
 					.getRechnungIId());
-			if (bErledigt == true) {
+			if (bErledigt) {
 				rechnungDto.setStatusCNr(RechnungFac.STATUS_BEZAHLT);
-				rechnungDto.setTBezahltdatum(zahlungDto.getDZahldatum());
+				rechnungDto.setTBezahltdatum(getSpaetestesZahldatum(rechnungDto
+						.getIId()));
 			} else {
 				rechnungDto.setStatusCNr(RechnungFac.STATUS_TEILBEZAHLT);
 				rechnungDto.setTBezahltdatum(null);
@@ -3050,6 +3298,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 					.verbucheZahlungRueckgaengig(zahlungDto, theClientDto);
 			getBelegbuchungFac(theClientDto.getMandant()).verbucheZahlung(
 					zahlungDto.getIId(), theClientDto);
+			alleBelegbuchungenAuziffern(theClientDto, rechnungDto, zahlung);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
 		}
@@ -3190,20 +3439,20 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 						posDto.setLieferscheinIId(null);
 						posDto.setRechnungIIdGutschrift(null);
 						posDto.setBDrucken(Helper.boolean2Short(true));
+						posDto.setNMaterialzuschlagKurs(null);
+						posDto.setTMaterialzuschlagDatum(null);
 
 						if (posDto.getPositionsartCNr().equals(
 								RechnungFac.POSITIONSART_RECHNUNG_IDENT)) {
 
 							if (posDto.getNMenge() != null
 									&& posDto.getNEinzelpreis() != null) {
-								BigDecimal nNettoeinzelpreisInNeuerWaehrung = posDto
-										.getNEinzelpreis()
-										.multiply(
-												rechnungDtoVorhanden.getNKurs());
 
+								// SP2157 Fremdwaehrungsrechnung muss denselben
+								// Preis wie damals behalten
 								VerkaufspreisDto verkaufspreisDto = getVkPreisfindungFac()
 										.berechnePreisfelder(
-												nNettoeinzelpreisInNeuerWaehrung,
+												posDto.getNEinzelpreis(),
 												posDto.getFRabattsatz(),
 												posDto.getFZusatzrabattsatz(),
 												posDto.getMwstsatzIId(), 4, // @
@@ -3247,6 +3496,11 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 						}
 
+						if (posDto.isIntelligenteZwischensumme()) {
+							ZwsPositionMapper mapper = new ZwsPositionMapper(
+									this, this);
+							mapper.map(posDto, posDtos[i], rechnungIIdNeu);
+						}
 						createRechnungPosition(posDto,
 								rechnungDtoVorhanden.getLagerIId(),
 								theClientDto);
@@ -3509,6 +3763,11 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 									posDto, (BelegpositionVerkaufDto) agposDto,
 									theClientDto);
 
+					posDto.setNMaterialzuschlagKurs(agposDto
+							.getNMaterialzuschlagKurs());
+					posDto.setTMaterialzuschlagDatum(agposDto
+							.getTMaterialzuschlagDatum());
+
 					posDto.setBDrucken(Helper.boolean2Short(true));
 
 					if (agposDto.getPositionsartCNr().equals(
@@ -3539,6 +3798,12 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 					}
 
+					if (posDto.isIntelligenteZwischensumme()) {
+						ZwsPositionMapper mapper = new ZwsPositionMapper(
+								getAngebotpositionFac(), this);
+						mapper.map(posDto, agposDtos[i], rechnungIIdNeu);
+					}
+
 					createRechnungPosition(posDto, rechnungDto.getLagerIId(),
 							theClientDto);
 
@@ -3557,8 +3822,11 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		try {
 			LieferscheinDto lieferscheinDto = getLieferscheinFac()
 					.lieferscheinFindByPrimaryKey(lieferscheinIId, theClientDto);
-			if(!lieferscheinDto.getStatusCNr().equals(LieferscheinFac.LSSTATUS_GELIEFERT)) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_LIEFERSCHEIN_MUSS_GELIEFERT_SEIN, "LS muss geliefert sein", lieferscheinDto.getCNr());
+			if (!lieferscheinDto.getStatusCNr().equals(
+					LieferscheinFac.LSSTATUS_GELIEFERT)) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_LIEFERSCHEIN_MUSS_GELIEFERT_SEIN,
+						"LS muss geliefert sein", lieferscheinDto.getCNr());
 			}
 			// Kunde holen
 			KundeDto kundeDto = getKundeFac()
@@ -3567,7 +3835,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 							theClientDto);
 
 			// PJ 14718
-			if (Helper.short2boolean(kundeDto.getBVersteckterlieferant()) == true) {
+			if (Helper.short2boolean(kundeDto.getBVersteckterlieferant())) {
 				kundeDto.setBVersteckterlieferant(Helper.boolean2Short(false));
 				getKundeFac().updateKunde(kundeDto, theClientDto);
 			}
@@ -3638,7 +3906,14 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			// und weiter
 			// ------------------------------------------------------------------
 			// ----
-			rechnungDto.setAuftragIId(null); // keine bindung
+
+			// PJ18728
+			// SP3184
+			if (!rechnungstypCNr
+					.equals(RechnungFac.RECHNUNGTYP_PROFORMARECHNUNG)) {
+				rechnungDto.setAuftragIId(lieferscheinDto.getAuftragIId());
+				rechnungDto.setLieferscheinIId(lieferscheinDto.getIId());
+			}
 			rechnungDto.setBMindermengenzuschlag(lieferscheinDto
 					.getBMindermengenzuschlag());
 			rechnungDto.setBMwstallepositionen(Helper.boolean2Short(false));
@@ -3678,7 +3953,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			rechnungDto.setProjektIId(lieferscheinDto.getProjektIId());
 			rechnungDto.setLagerIId(kundeDto.getLagerIIdAbbuchungslager());
 			rechnungDto.setLieferartIId(lieferscheinDto.getLieferartIId());
-			rechnungDto.setLieferscheinIId(lieferscheinDto.getIId());
+
 			rechnungDto.setMandantCNr(lieferscheinDto.getMandantCNr());
 			rechnungDto.setNKurs(new BigDecimal(lieferscheinDto
 					.getFWechselkursmandantwaehrungzubelegwaehrung()
@@ -3743,16 +4018,15 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			java.sql.Date neuDatum, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		try {
-			
-			
+
 			LieferscheinDto ls = getLieferscheinFac()
-					.lieferscheinFindByPrimaryKey((Integer) keys[0],
-							theClientDto);
+					.lieferscheinFindByPrimaryKey(
+							(Integer) keys[keys.length - 1], theClientDto);
 			// Kunde holen
 			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
 					ls.getKundeIIdRechnungsadresse(), theClientDto);
 			// PJ 14718
-			if (Helper.short2boolean(kundeDto.getBVersteckterlieferant()) == true) {
+			if (Helper.short2boolean(kundeDto.getBVersteckterlieferant())) {
 				kundeDto.setBVersteckterlieferant(Helper.boolean2Short(false));
 				getKundeFac().updateKunde(kundeDto, theClientDto);
 			}
@@ -3884,48 +4158,49 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			for (int i = 0; i < keys.length; i++) {
 				Lieferschein lieferschein = this.em.find(Lieferschein.class,
 						(Integer) keys[i]);
-				if(!lieferschein.getLieferscheinstatusCNr().equals(LieferscheinFac.LSSTATUS_GELIEFERT)) {
+				if (!lieferschein.getLieferscheinstatusCNr().equals(
+						LieferscheinFac.LSSTATUS_GELIEFERT)) {
 					nichtGelieferteLS.add(lieferschein.getCNr());
 				}
-				if (lieferschein.getKundeIIdRechnungsadresse().equals(
-						ls.getKundeIIdRechnungsadresse())) {
-					// jetzt die Position anlegen
-					RechnungPositionDto rechnungPositionDto = new RechnungPositionDto();
-					rechnungPositionDto.setArtikelIId(null);
-					rechnungPositionDto.setAuftragpositionIId(null);
-					rechnungPositionDto.setBDrucken(Helper.boolean2Short(true));
-					rechnungPositionDto.setBRabattsatzuebersteuert(Helper
-							.boolean2Short(false));
-					rechnungPositionDto.setBMwstsatzuebersteuert(Helper
-							.boolean2Short(false));
-					rechnungPositionDto.setCBez(null);
-					rechnungPositionDto.setEinheitCNr(null);
-					rechnungPositionDto.setBNettopreisuebersteuert(Helper
-							.boolean2Short(false));
-					if (mwstSatzDto != null) {
-						rechnungPositionDto
-								.setMwstsatzIId(mwstSatzDto.getIId());
-					}
-					rechnungPositionDto.setFRabattsatz(new Double(0));
-					rechnungPositionDto.setISort(new Integer(0));
 
-					rechnungPositionDto.setLieferscheinIId(lieferschein
-							.getIId());
-					rechnungPositionDto.setNMenge(null);
-					rechnungPositionDto.setRechnungIId(rechnungDto.getIId());
-					rechnungPositionDto.setRechnungIIdGutschrift(null);
-					rechnungPositionDto.setXTextinhalt(null);
-					rechnungPositionDto
-							.setRechnungpositionartCNr(RechnungFac.POSITIONSART_RECHNUNG_LIEFERSCHEIN);
-					rechnungPositionDto.setCZusatzbez(null);
-					// speichern der position
-					// hier brauch ich kein lager, da nix gebucht wird
-					createRechnungPosition(rechnungPositionDto, null,
-							theClientDto);
+				// Seit PJ18783 koennen LS verschiedener RE-Adressen geliefert
+				// werden
+				// jetzt die Position anlegen
+				RechnungPositionDto rechnungPositionDto = new RechnungPositionDto();
+				rechnungPositionDto.setArtikelIId(null);
+				rechnungPositionDto.setAuftragpositionIId(null);
+				rechnungPositionDto.setBDrucken(Helper.boolean2Short(true));
+				rechnungPositionDto.setBRabattsatzuebersteuert(Helper
+						.boolean2Short(false));
+				rechnungPositionDto.setBMwstsatzuebersteuert(Helper
+						.boolean2Short(false));
+				rechnungPositionDto.setCBez(null);
+				rechnungPositionDto.setEinheitCNr(null);
+				rechnungPositionDto.setBNettopreisuebersteuert(Helper
+						.boolean2Short(false));
+				if (mwstSatzDto != null) {
+					rechnungPositionDto.setMwstsatzIId(mwstSatzDto.getIId());
 				}
+				rechnungPositionDto.setFRabattsatz(new Double(0));
+				rechnungPositionDto.setISort(new Integer(0));
+
+				rechnungPositionDto.setLieferscheinIId(lieferschein.getIId());
+				rechnungPositionDto.setNMenge(null);
+				rechnungPositionDto.setRechnungIId(rechnungDto.getIId());
+				rechnungPositionDto.setRechnungIIdGutschrift(null);
+				rechnungPositionDto.setXTextinhalt(null);
+				rechnungPositionDto
+						.setRechnungpositionartCNr(RechnungFac.POSITIONSART_RECHNUNG_LIEFERSCHEIN);
+				rechnungPositionDto.setCZusatzbez(null);
+				// speichern der position
+				// hier brauch ich kein lager, da nix gebucht wird
+				createRechnungPosition(rechnungPositionDto, null, theClientDto);
+
 			}
-			if(nichtGelieferteLS.size() > 0) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_LIEFERSCHEIN_MUSS_GELIEFERT_SEIN, "LS muss geliefert sein", nichtGelieferteLS.toString());
+			if (nichtGelieferteLS.size() > 0) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_LIEFERSCHEIN_MUSS_GELIEFERT_SEIN,
+						"LS muss geliefert sein", nichtGelieferteLS.toString());
 			}
 		} catch (RemoteException ex1) {
 			throwEJBExceptionLPRespectOld(ex1);
@@ -3999,6 +4274,23 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 						&& anzRechnungen[i].getNWert() != null) {
 					anzahlungen = anzahlungen.add(anzRechnungen[i].getNWert()
 							.add(anzRechnungen[i].getNWertust()));
+
+					// PJ18843
+					RechnungDto[] gsDtos = getRechnungFac()
+							.rechnungFindByRechnungIIdZuRechnung(
+									anzRechnungen[i].getIId());
+
+					for (int j = 0; j < gsDtos.length; j++) {
+						if (!gsDtos[j].getStatusCNr().equals(
+								RechnungFac.STATUS_STORNIERT)
+								&& gsDtos[j].getNWert() != null) {
+							anzahlungen = anzahlungen.subtract(gsDtos[j]
+									.getNWert().subtract(
+											gsDtos[j].getNWertust()));
+						}
+
+					}
+
 				}
 			}
 		} catch (RemoteException e) {
@@ -4032,6 +4324,22 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 						&& anzRechnungen[i].getNWertfw() != null) {
 					anzahlungen = anzahlungen
 							.add(anzRechnungen[i].getNWertfw());
+
+					// PJ18843
+					RechnungDto[] gsDtos = getRechnungFac()
+							.rechnungFindByRechnungIIdZuRechnung(
+									anzRechnungen[i].getIId());
+
+					for (int j = 0; j < gsDtos.length; j++) {
+						if (!gsDtos[j].getStatusCNr().equals(
+								RechnungFac.STATUS_STORNIERT)
+								&& gsDtos[j].getNWertfw() != null) {
+							anzahlungen = anzahlungen.subtract(gsDtos[j]
+									.getNWertfw());
+						}
+
+					}
+
 				}
 			}
 		} catch (RemoteException e) {
@@ -4051,6 +4359,22 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 						&& anzRechnungen[i].getNWertfw() != null) {
 					anzahlungen = anzahlungen.add(anzRechnungen[i]
 							.getNWertustfw());
+
+					// PJ18843
+					RechnungDto[] gsDtos = getRechnungFac()
+							.rechnungFindByRechnungIIdZuRechnung(
+									anzRechnungen[i].getIId());
+
+					for (int j = 0; j < gsDtos.length; j++) {
+						if (!gsDtos[j].getStatusCNr().equals(
+								RechnungFac.STATUS_STORNIERT)
+								&& gsDtos[j].getNWertustfw() != null) {
+							anzahlungen = anzahlungen.subtract(gsDtos[j]
+									.getNWertustfw());
+						}
+
+					}
+
 				}
 			}
 		} catch (RemoteException e) {
@@ -4186,9 +4510,9 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 	public java.util.Date getDatumLetzterZahlungseingang(Integer rechnungIId) {
 		RechnungzahlungDto[] zahlungen = zahlungFindByRechnungIId(rechnungIId);
 
-		for (int i = zahlungen.length - 1; i > 0; --i) {
-
-			return new java.util.Date(zahlungen[i].getDZahldatum().getTime());
+		if (zahlungen.length > 0) {
+			return new java.util.Date(zahlungen[zahlungen.length - 1]
+					.getDZahldatum().getTime());
 
 		}
 
@@ -4379,6 +4703,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			}
 			rechnungDto.setCBestellnummer(auftragDto.getCBestellnummer());
 			rechnungDto.setCBez(auftragDto.getCBezProjektbezeichnung());
+			rechnungDto.setProjektIId(auftragDto.getProjektIId());
 			rechnungDto.setCFusstextuebersteuert(null);
 			rechnungDto.setCKopftextuebersteuert(null);
 			rechnungDto.setCNr(null);
@@ -4957,6 +5282,30 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 	public Integer createGutschriftAusRechnung(Integer rechnungIId,
 			java.sql.Date dBelegdatum, TheClientDto theClientDto)
 			throws EJBExceptionLP {
+		return createGutschriftAusRechnungImpl(rechnungIId, dBelegdatum,
+				Gutschriftart.GUTSCHRIFT, theClientDto);
+	}
+
+	/**
+	 * Eine Gutschrift aus einer Rechnung erstellen und dabei die Gutschriftsart
+	 * setzen
+	 * 
+	 * G&uuml;tige Gutschriftarten sind: RECHNUNGART_GUTSCHRIFT,
+	 * RECHNUNGART_WERTGUTSCHRIFT
+	 * 
+	 * @return die Id der neu erstellten Gutschrift
+	 */
+	public Integer createGutschriftAusRechnung(Integer rechnungIId,
+			java.sql.Date dBelegdatum, String gutschriftartCnr,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+		Gutschriftart gutschriftart = Gutschriftart.fromCnr(gutschriftartCnr);
+		return createGutschriftAusRechnungImpl(rechnungIId, dBelegdatum,
+				gutschriftart, theClientDto);
+	}
+
+	private Integer createGutschriftAusRechnungImpl(Integer rechnungIId,
+			java.sql.Date dBelegdatum, Gutschriftart gutschriftart,
+			TheClientDto theClientDto) {
 		RechnungDto newR = new RechnungDto();
 		try {
 			RechnungDto oldR = rechnungFindByPrimaryKey(rechnungIId);
@@ -4972,7 +5321,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			newR.setMandantCNr(oldR.getMandantCNr());
 			newR.setMwstsatzIId(oldR.getMwstsatzIId());
 			newR.setNKurs(oldR.getNKurs());
-			newR.setRechnungartCNr(RechnungFac.RECHNUNGART_GUTSCHRIFT);
+			newR.setRechnungartCNr(gutschriftart.asCnr());
 			newR.setRechnungIIdZurechnung(oldR.getIId());
 			newR.setWaehrungCNr(oldR.getWaehrungCNr());
 			newR.setTBelegdatum(new Timestamp(dBelegdatum.getTime()));
@@ -5365,7 +5714,6 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 									+ rechnung.getStatusCNr()));
 		}
 	}
-	
 
 	public void aktiviereRechnung(Integer rechnungIId, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
@@ -5377,34 +5725,38 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 	}
 
 	@Override
-	public void aktiviereBelegControlled(Integer iid, Timestamp t,
-			TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException {
-		new BelegAktivierungController(this).aktiviereBelegControlled(iid, t, theClientDto);
-	}
-	
-	@Override
-	public Timestamp berechneBelegControlled(Integer iid,
+	public BelegPruefungDto aktiviereBelegControlled(Integer iid, Timestamp t,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		return new BelegAktivierungController(this).berechneBelegControlled(iid, theClientDto);
+		return belegAktivierungFac.aktiviereBelegControlled(this, iid, t,
+				theClientDto);
+		// new BelegAktivierungController(this).aktiviereBelegControlled(iid, t,
+		// theClientDto);
 	}
-	
+
+	@Override
+	public BelegPruefungDto berechneBelegControlled(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return belegAktivierungFac.berechneBelegControlled(this, iid,
+				theClientDto);
+		// return new BelegAktivierungController(this).berechneBelegControlled(
+		// iid, theClientDto);
+	}
+
 	@Override
 	public void pruefeAktivierbar(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
-		
+
 		RechnungDto rechnungDto = rechnungFindByPrimaryKey(iid);
 		// nur wenn sie noch nicht aktiviert ist
 		if (rechnungDto.getStatusCNr().equals(RechnungFac.STATUS_BEZAHLT)
 				|| rechnungDto.getStatusCNr().equals(
 						RechnungFac.STATUS_TEILBEZAHLT)
-				|| rechnungDto.getStatusCNr().equals(
-						RechnungFac.STATUS_OFFEN)
+				|| rechnungDto.getStatusCNr().equals(RechnungFac.STATUS_OFFEN)
 				|| rechnungDto.getStatusCNr().equals(
 						RechnungFac.STATUS_VERBUCHT)) {
 			return;
 		}
-		
+
 		// Positionen holen
 		RechnungPositionDto[] rePosDto = rechnungPositionFindByRechnungIId(rechnungDto
 				.getIId());
@@ -5419,13 +5771,100 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 									+ rechnungDto.getCNr()
 									+ " hat keine Positionen und kann daher nicht aktiviert werden"));
 		}
+
+		pruefeObGleicherMwstSatzBeiReverseCharge(rechnungDto, rePosDto);
 	}
-	
+
+	/**
+	 * Bei ReverseCharge Rechnung m&uuml;ssen alle Positionen den gleichen
+	 * Mwstsatz haben</br>
+	 * 
+	 * Eigentlich ist das ein Workaround f&uuml;r das sp&auml;ter folgende
+	 * Verbuchen der Rechnung
+	 * 
+	 * @param rechnungDto
+	 * @param positionDtos
+	 * @throws RemoteException
+	 * @throws EJBExceptionLP
+	 */
+	private void pruefeObGleicherMwstSatzBeiReverseCharge(
+			RechnungDto rechnungDto, RechnungPositionDto[] positionDtos)
+			throws EJBExceptionLP, RemoteException {
+		if (!rechnungDto.isReverseCharge())
+			return;
+
+		MwstSatzVerifier mwstVerifier = new MwstSatzVerifier();
+		if (!mwstVerifier.isSame(positionDtos)) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_RECHNUNG_UNTERSCHIEDLICHE_MWSTSAETZE_BEI_RC,
+					new Exception(rechnungDto.getCNr()));
+		}
+
+		if (mwstVerifier.getMwstSatzId() != null) {
+			if (!mwstVerifier.getMwstSatzId().equals(
+					rechnungDto.getMwstsatzIId())) {
+				Rechnung rechnung = em.find(Rechnung.class,
+						rechnungDto.getIId());
+				rechnung.setMwstsatzIId(mwstVerifier.getMwstSatzId());
+				em.merge(rechnung);
+				em.flush();
+				rechnungDto.setMwstsatzIId(mwstVerifier.getMwstSatzId());
+			}
+		}
+	}
+
+	private class MwstSatzVerifier {
+		private Integer mwstSatzId;
+
+		public boolean isSame(RechnungPositionDto[] positionDtos)
+				throws EJBExceptionLP, RemoteException {
+			boolean same = true;
+
+			for (int i = 0; same && (i < positionDtos.length); i++) {
+				if (positionDtos[i].isLieferschein()) {
+					same &= isSame(getLieferscheinpositionFac()
+							.lieferscheinpositionFindByLieferscheinIId(
+									positionDtos[i].getLieferscheinIId()));
+				} else {
+					if (positionDtos[i].isMengenbehaftet()) {
+						same &= isSame(positionDtos[i]);
+					}
+				}
+			}
+
+			return same;
+		}
+
+		public boolean isSame(BelegpositionVerkaufDto[] positionDtos) {
+			for (int i = 0; i < positionDtos.length; i++) {
+				if (!isSame(positionDtos[i])) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		public boolean isSame(BelegpositionVerkaufDto positionDto) {
+			if (positionDto.isMengenbehaftet()) {
+				if (mwstSatzId == null) {
+					mwstSatzId = positionDto.getMwstsatzIId();
+				}
+				return mwstSatzId.equals(positionDto.getMwstsatzIId());
+			}
+
+			return true;
+		}
+
+		public Integer getMwstSatzId() {
+			return mwstSatzId;
+		}
+	}
+
 	@Override
 	public void aktiviereBeleg(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
 		Rechnung rechnung = em.find(Rechnung.class, iid);
-		if(rechnung.getStatusCNr().equals(STATUS_STORNIERT))
+		if (rechnung.getStatusCNr().equals(STATUS_STORNIERT))
 			return;
 
 		// PJ 15710
@@ -5433,43 +5872,41 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		kunde.setBIstinteressent(Helper.boolean2Short(false));
 		em.merge(kunde);
 		em.flush();
-	
+
 		// SP 2012/00448
 		ParametermandantDto parametermandantautoDebitDto = getParameterFac()
-				.getMandantparameter(
-						theClientDto.getMandant(),
+				.getMandantparameter(theClientDto.getMandant(),
 						ParameterFac.KATEGORIE_KUNDEN,
 						ParameterFac.PARAMETER_AUTOMATISCHE_DEBITORENNUMMER);
-		if ((Boolean) parametermandantautoDebitDto.getCWertAsObject() == true) {
+		if ((Boolean) parametermandantautoDebitDto.getCWertAsObject()) {
 			if (rechnung.getKundeIId() != null) {
-				KundeDto kundeDto = getKundeFac()
-						.kundeFindByPrimaryKey(
-								rechnung.getKundeIId(), theClientDto);
+				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
+						rechnung.getKundeIId(), theClientDto);
 				if (kundeDto.getIidDebitorenkonto() == null) {
 					KontoDto ktoDto = getKundeFac()
 							.createDebitorenkontoZuKundenAutomatisch(
-									rechnung.getKundeIId(), false,
-									null, theClientDto);
+									rechnung.getKundeIId(), false, null,
+									theClientDto);
 					kundeDto.setIDebitorenkontoAsIntegerNotiId(new Integer(
 							ktoDto.getCNr()));
 					getKundeFac().updateKunde(kundeDto, theClientDto);
 				}
 			}
 		}
-		if(rechnung.getStatusCNr().equals(RechnungFac.STATUS_ANGELEGT)) {
+		if (rechnung.getStatusCNr().equals(RechnungFac.STATUS_ANGELEGT)) {
 			// neuer Status: OFFEN
 			rechnung.setStatusCNr(RechnungFac.STATUS_OFFEN);
 			rechnung.setTGedruckt(getTimestamp());
 			em.merge(rechnung);
 			em.flush();
 			// in die Fibu uebernehmen
-			getBelegbuchungFac(theClientDto.getMandant()).verbucheRechnung(
-					iid, theClientDto);
+			getBelegbuchungFac(theClientDto.getMandant()).verbucheRechnung(iid,
+					theClientDto);
 		}
 	}
-	
+
 	@Override
-	public void berechneBeleg(Integer iid, TheClientDto theClientDto)
+	public Timestamp berechneBeleg(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
 		// int iNachkommaStellen = 2;
 
@@ -5485,27 +5922,30 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		CoinRoundingHelper rounder = new CoinRoundingHelper(this,
 				getKundeFac(), getArtikelFac(), getParameterFac(),
 				getMandantFac());
-		
+
 		ParametermandantDto parameterWerbeabgabe = getParameterFac()
 				.getMandantparameter(theClientDto.getMandant(),
 						ParameterFac.KATEGORIE_ARTIKEL,
 						ParameterFac.PARAMETER_WERBEABGABE_ARTIKEL);
 
-
 		RechnungDto rechnungDto = rechnungFindByPrimaryKey(iid);
+
+		// wenn schon exportiert, nichts rechnen
+		if (rechnungDto.getTFibuuebernahme() != null)
+			return rechnungDto.getTFibuuebernahme();
 		RechnungPositionDto[] rePosDto = rechnungPositionFindByRechnungIId(rechnungDto
 				.getIId());
-		
+		if (!STATUS_ANGELEGT.equals(rechnungDto.getStatusCNr()))
+			return rechnungDto.getTAendern();
+
 		String werbeabgabeArtikel = parameterWerbeabgabe.getCWert();
 		if (werbeabgabeArtikel != null
 				&& werbeabgabeArtikel.trim().length() > 0) {
 			parameterWerbeabgabe = getParameterFac().getMandantparameter(
-					theClientDto.getMandant(),
-					ParameterFac.KATEGORIE_ARTIKEL,
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
 					ParameterFac.PARAMETER_WERBEABGABE_PROZENT);
 
-			double dProzent = (Integer) parameterWerbeabgabe
-					.getCWertAsObject();
+			double dProzent = (Integer) parameterWerbeabgabe.getCWertAsObject();
 
 			ArtikelDto aDtoWerbeabgabe = getArtikelFac()
 					.artikelFindByCNrMandantCNrOhneExc(werbeabgabeArtikel,
@@ -5532,14 +5972,12 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 				if (!isPositionskontierung) {
 					// Aktuellen MWST-Satz uebersetzen.
-					KundeDto kundeDto = getKundeFac()
-							.kundeFindByPrimaryKey(
-									rechnungDto.getKundeIId(), theClientDto);
+					KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
+							rechnungDto.getKundeIId(), theClientDto);
 
 					mwstsatzDtoAktuell = getMandantFac()
 							.mwstsatzFindByMwstsatzbezIIdAktuellster(
-									kundeDto.getMwstsatzbezIId(),
-									theClientDto);
+									kundeDto.getMwstsatzbezIId(), theClientDto);
 
 				} else {
 					mwstsatzDtoAktuell = getMandantFac()
@@ -5573,8 +6011,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 				reposWerbeabgabeDto.setBelegIId(rechnungDto.getIId());
 				reposWerbeabgabeDto.setNMenge(new BigDecimal(1));
 				reposWerbeabgabeDto.setEinheitCNr(SystemFac.EINHEIT_STUECK);
-				reposWerbeabgabeDto.setMwstsatzIId(mwstsatzDtoAktuell
-						.getIId());
+				reposWerbeabgabeDto.setMwstsatzIId(mwstsatzDtoAktuell.getIId());
 
 				// Wert der Werbeabgabepflichtigen Artikelberechnen
 				BigDecimal bdWertDerAbgabepflichtigenArtikel = new BigDecimal(
@@ -5595,15 +6032,13 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 										.add(rePosDto[i]
 												.getNEinzelpreis()
 												.multiply(
-														rePosDto[i]
-																.getNMenge()));
+														rePosDto[i].getNMenge()));
 							} else {
 								bdWertDerAbgabepflichtigenArtikel = bdWertDerAbgabepflichtigenArtikel
 										.add(rePosDto[i]
 												.getNNettoeinzelpreisplusversteckteraufschlag()
 												.multiply(
-														rePosDto[i]
-																.getNMenge()));
+														rePosDto[i].getNMenge()));
 							}
 
 						}
@@ -5629,8 +6064,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 							.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte()
 							.multiply(
 									new BigDecimal(mwstsatzDtoAktuell
-											.getFMwstsatz())
-											.movePointLeft(2));
+											.getFMwstsatz()).movePointLeft(2));
 
 					reposWerbeabgabeDto
 							.setNBruttoeinzelpreis(reposWerbeabgabeDto
@@ -5659,29 +6093,26 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		 * Etwaigen Rundungsartikel entfernen. Es wird akzeptiert, dass
 		 */
 		if (rounder.removeRoundingPosition(rePosDto, theClientDto)) {
-			rePosDto = rechnungPositionFindByRechnungIId(rechnungDto
-					.getIId());
+			rePosDto = rechnungPositionFindByRechnungIId(rechnungDto.getIId());
 		}
 
-		rechnungDto.setNWertfw(getRechnungswertInRechnungswaehrung(
-				rechnungDto, rePosDto, theClientDto));
+		rechnungDto.setNWertfw(getRechnungswertInRechnungswaehrung(rechnungDto,
+				rePosDto, theClientDto));
 		// bei Reverse Charge ist die UST 0
 
 		// Default Chrgennummernbehaftet
-		ParametermandantDto parameter = getParameterFac()
-				.getMandantparameter(theClientDto.getMandant(),
-						ParameterFac.KATEGORIE_KUNDEN,
-						ParameterFac.PARAMETER_REVERSE_CHARGE_VERWENDEN);
+		ParametermandantDto parameter = getParameterFac().getMandantparameter(
+				theClientDto.getMandant(), ParameterFac.KATEGORIE_KUNDEN,
+				ParameterFac.PARAMETER_REVERSE_CHARGE_VERWENDEN);
 
 		boolean bReversecharge = (Boolean) parameter.getCWertAsObject();
 
-		if (Helper.short2boolean(rechnungDto.getBReversecharge()) == true
-				&& bReversecharge == true) {
+		if (Helper.short2boolean(rechnungDto.getBReversecharge())
+				&& bReversecharge) {
 			rechnungDto.setNWertustfw(new BigDecimal(0));
 		} else {
-			rechnungDto
-					.setNWertustfw(getRechnungswertInRechnungswaehrungUST(
-							rechnungDto, rePosDto, theClientDto));
+			rechnungDto.setNWertustfw(getRechnungswertInRechnungswaehrungUST(
+					rechnungDto, rePosDto, theClientDto));
 		}
 		// beim aktivieren wird der aktuelle wechselkurs herangezogen
 		BigDecimal fKurs = getLocaleFac().getWechselkurs2(
@@ -5690,8 +6121,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		WechselkursDto wDto = getLocaleFac().getKursZuDatum(
 				theClientDto.getSMandantenwaehrung(),
 				rechnungDto.getWaehrungCNr(),
-				new Date(rechnungDto.getTBelegdatum().getTime()),
-				theClientDto);
+				new Date(rechnungDto.getTBelegdatum().getTime()), theClientDto);
 
 		if (wDto != null) {
 			fKurs = wDto.getNKurs();
@@ -5705,6 +6135,16 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		BigDecimal bdWert = rechnungDto.getNWertfw().divide(
 				rechnungDto.getNKurs(), iNachkommaStellen,
 				BigDecimal.ROUND_HALF_EVEN);
+		// der Rechnungs/Gutschriftswert darf nicht kleiner 0 sein
+		// if (bdWert.compareTo(new BigDecimal(0)) < 0) {
+		if (bdWert.signum() < 0) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_RECHNUNG_WERT_DARF_NICHT_NEGATIV_SEIN,
+					new Exception("Wert der " + rechnungDto.getRechnungartCNr()
+							+ " " + rechnungDto.getCNr()
+							+ " darf nicht <0 sein"));
+		}
+
 		BigDecimal bdWertUst;
 		// bei Reverse Charge ist die UST 0
 		if (Helper.short2boolean(rechnungDto.getBReversecharge())) {
@@ -5714,18 +6154,10 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 					rechnungDto.getNKurs(), iNachkommaStellen,
 					BigDecimal.ROUND_HALF_EVEN);
 		}
-		// der Rechnungs/Gutschriftswert darf nicht kleiner 0 sein
-		if (bdWert.compareTo(new BigDecimal(0)) < 0) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_RECHNUNG_WERT_DARF_NICHT_NEGATIV_SEIN,
-					new Exception("Wert der "
-							+ rechnungDto.getRechnungartCNr() + " "
-							+ rechnungDto.getCNr() + " darf noch <0 sein"));
-		}
 		rechnungDto.setNWert(bdWert);
 		rechnungDto.setNWertust(bdWertUst);
-		rechnungDto.setNWert(Helper.rundeKaufmaennisch(
-				rechnungDto.getNWert(), FinanzFac.NACHKOMMASTELLEN));
+		rechnungDto.setNWert(Helper.rundeKaufmaennisch(rechnungDto.getNWert(),
+				FinanzFac.NACHKOMMASTELLEN));
 		rechnungDto.setNWertfw(Helper.rundeKaufmaennisch(
 				rechnungDto.getNWertfw(), FinanzFac.NACHKOMMASTELLEN));
 		rechnungDto.setNWertust(Helper.rundeKaufmaennisch(
@@ -5754,8 +6186,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 				RechnungartDto raDto = getRechnungServiceFac()
 						.rechnungartFindByPrimaryKey(
-								rechnungDto.getRechnungartCNr(),
-								theClientDto);
+								rechnungDto.getRechnungartCNr(), theClientDto);
 
 				if (raDto.getRechnungtypCNr().equals(
 						RechnungFac.RECHNUNGTYP_GUTSCHRIFT)) {
@@ -5847,10 +6278,10 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		}
 
 		// kein Update, wenn storniert
-		if (!rechnungDto.getStatusCNr()
-				.equals(RechnungFac.STATUS_STORNIERT)) {
-			updateRechnung(rechnungDto, theClientDto);
+		if (!rechnungDto.getStatusCNr().equals(RechnungFac.STATUS_STORNIERT)) {
+			rechnungDto = updateRechnung(rechnungDto, theClientDto);
 		}
+		return rechnungDto.getTAendern();
 	}
 
 	/**
@@ -5871,7 +6302,32 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 						EJBExceptionLP.FEHLER_STORNIEREN_ZAHLUNGEN_VORHANDEN,
 						"FEHLER_STORNIEREN_ZAHLUNGEN_VORHANDEN");
 			}
+
 			RechnungDto rechnungDto = rechnungFindByPrimaryKey(rechnungIId);
+
+			// SP3205
+			if (rechnungDto.getRechnungartCNr().equals(
+					RechnungFac.RECHNUNGART_ANZAHLUNG)) {
+				// Wenn bereits eine Schlussrechnun,gibt kann die Anzahlgun
+				// nicht storniert werden
+				for (RechnungDto re : rechnungFindByAuftragIId(rechnungDto
+						.getAuftragIId())) {
+					if (re.getRechnungartCNr().equals(
+							RechnungFac.RECHNUNGART_SCHLUSSZAHLUNG)
+							&& !re.getStatusCNr().equals(
+									RechnungFac.STATUS_STORNIERT)) {
+
+						ArrayList al = new ArrayList();
+						al.add(re.getCNr());
+						throw new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_STORNIEREN_ANZAHLUNG_SCHLUSSRECHNUNG_VORHANDEN,
+								al,
+								new Exception(
+										"FEHLER_STORNIEREN_ANZAHLUNG_SCHLUSSRECHNUNG_VORHANDEN"));
+					}
+				}
+			}
+
 			pruefeAnzahlungSchlusszahlung(rechnungDto);
 			rechnungDto.setStatusCNr(RechnungFac.STATUS_STORNIERT);
 			// Die Werte null setzen
@@ -6121,27 +6577,46 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 	public BigDecimal berechneSummeOffenBrutto(String mandantCNr,
 			String sKriterium, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, TheClientDto theClientDto) {
-		BigDecimal wert = new BigDecimal(0);
+		return berechneSummeOffen(mandantCNr, sKriterium, gcVon, gcBis, null,
+				true, theClientDto);
+	}
+
+	public BigDecimal berechneSummeOffenNetto(String mandantCNr,
+			String sKriterium, GregorianCalendar gcVon,
+			GregorianCalendar gcBis, Integer kundeIId,
+			boolean bStatistikadresse, TheClientDto theClientDto) {
+		return berechneSummeOffen(mandantCNr, sKriterium, gcVon, gcBis,
+				kundeIId, false, theClientDto);
+	}
+
+	private BigDecimal berechneSummeOffen(String mandantCNr, String sKriterium,
+			GregorianCalendar gcVon, GregorianCalendar gcBis, Integer kundeIId,
+			boolean brutto, TheClientDto theClientDto) {
+		BigDecimal wert = BigDecimal.ZERO;
+		BigDecimal wertUst = BigDecimal.ZERO;
+
 		Collection<String> cRechnungstyp = new LinkedList<String>();
 		cRechnungstyp.add(RechnungFac.RECHNUNGTYP_RECHNUNG);
-		cRechnungstyp.add(RechnungFac.RECHNUNGTYP_GUTSCHRIFT);
+		if (sKriterium.equals(RechnungFac.KRIT_MIT_GUTSCHRIFTEN))
+			cRechnungstyp.add(RechnungFac.RECHNUNGTYP_GUTSCHRIFT);
+
 		Collection<String> cStati = new LinkedList<String>();
 		cStati.add(RechnungFac.STATUS_OFFEN);
 		cStati.add(RechnungFac.STATUS_TEILBEZAHLT);
 		cStati.add(RechnungFac.STATUS_VERBUCHT);
 		FLRRechnungReport[] r = rechnungFindByBelegdatumVonBis(mandantCNr,
 				new java.sql.Date(gcVon.getTimeInMillis()), new java.sql.Date(
-						gcBis.getTimeInMillis()), cRechnungstyp, cStati, null,
-				false);
+						gcBis.getTimeInMillis()), cRechnungstyp, cStati,
+				kundeIId, false);
 		for (int i = 0; i < r.length; i++) {
 			if (r[i].getFlrrechnungart().getRechnungtyp_c_nr()
 					.equals(RechnungFac.RECHNUNGTYP_RECHNUNG)) {
 
 				wert = wert.add(r[i].getN_wert());
-				wert = wert.add(r[i].getN_wertust());
+				wertUst = wertUst.add(r[i].getN_wertust());
 				wert = wert.subtract(getBereitsBezahltWertVonRechnung(
 						r[i].getI_id(), null));
-				wert = wert.subtract(getBereitsBezahltWertVonRechnungUst(
+				wertUst = wertUst.subtract(getBereitsBezahltWertVonRechnungUst(
 						r[i].getI_id(), null));
 
 				// Anzahlungen abziehen
@@ -6161,7 +6636,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 								wert = wert.subtract(anzRechnungen[k]
 										.getNWert());
-								wert = wert.subtract(anzRechnungen[k]
+								wertUst = wertUst.subtract(anzRechnungen[k]
 										.getNWertust());
 
 							}
@@ -6175,116 +6650,35 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 			} else if (r[i].getFlrrechnungart().getRechnungtyp_c_nr()
 					.equals(RechnungFac.RECHNUNGTYP_GUTSCHRIFT)) {
-				if (sKriterium.equals(RechnungFac.KRIT_MIT_GUTSCHRIFTEN)) {
-					wert = wert.subtract(r[i].getN_wert());
-					wert = wert.subtract(r[i].getN_wertust());
-				}
+				wert = wert.subtract(r[i].getN_wert());
+				wertUst = wertUst.subtract(r[i].getN_wertust());
 			}
 		}
-		return wert;
-	}
-
-	public BigDecimal berechneSummeOffenNetto(String mandantCNr,
-			String sKriterium, GregorianCalendar gcVon,
-			GregorianCalendar gcBis, Integer kundeIId,
-			boolean bStatistikadresse, TheClientDto theClientDto) {
-		BigDecimal wert = new BigDecimal(0);
-		Collection<String> cRechnungstyp = new LinkedList<String>();
-		cRechnungstyp.add(RechnungFac.RECHNUNGTYP_RECHNUNG);
-		cRechnungstyp.add(RechnungFac.RECHNUNGTYP_GUTSCHRIFT);
-		Collection<String> cStati = new LinkedList<String>();
-		cStati.add(RechnungFac.STATUS_OFFEN);
-		cStati.add(RechnungFac.STATUS_TEILBEZAHLT);
-		cStati.add(RechnungFac.STATUS_VERBUCHT);
-		FLRRechnungReport[] r = rechnungFindByBelegdatumVonBis(mandantCNr,
-				new java.sql.Date(gcVon.getTimeInMillis()), new java.sql.Date(
-						gcBis.getTimeInMillis()), cRechnungstyp, cStati,
-				kundeIId, bStatistikadresse);
-		for (int i = 0; i < r.length; i++) {
-			if (r[i].getFlrrechnungart().getRechnungtyp_c_nr()
-					.equals(RechnungFac.RECHNUNGTYP_RECHNUNG)) {
-				wert = wert.add(r[i].getN_wert());
-				wert = wert.subtract(getBereitsBezahltWertVonRechnung(
-						r[i].getI_id(), null));
-			} else if (r[i].getFlrrechnungart().getRechnungtyp_c_nr()
-					.equals(RechnungFac.RECHNUNGTYP_GUTSCHRIFT)) {
-				if (sKriterium.equals(RechnungFac.KRIT_MIT_GUTSCHRIFTEN)) {
-					wert = wert.subtract(r[i].getN_wert());
-				}
-			}
-
-			// Anzahlungen abziehen
-			if (r[i].getFlrrechnungart().getC_nr()
-					.equals(RechnungFac.RECHNUNGART_SCHLUSSZAHLUNG)
-					&& r[i].getFlrauftrag() != null) {
-
-				try {
-					RechnungDto[] anzRechnungen = getRechnungFac()
-							.rechnungFindByAuftragIId(
-									r[i].getFlrauftrag().getI_id());
-
-					for (int k = 0; k < anzRechnungen.length; k++) {
-						if (anzRechnungen[k].getRechnungartCNr().equals(
-								RechnungFac.RECHNUNGART_ANZAHLUNG)
-								&& anzRechnungen[k].getNWert() != null) {
-
-							wert = wert.subtract(anzRechnungen[k].getNWert());
-
-						}
-					}
-
-				} catch (RemoteException e) {
-					throwEJBExceptionLPRespectOld(e);
-				}
-
-			}
-
-		}
-		return wert;
+		return brutto ? wert.add(wertUst) : wert;
 	}
 
 	public BigDecimal berechneSummeUmsatzBrutto(String mandantCNr,
 			String sKriterium, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, TheClientDto theClientDto) {
-		BigDecimal wert = new BigDecimal(0);
-		Collection<String> cRechnungstyp = new LinkedList<String>();
-		cRechnungstyp.add(RechnungFac.RECHNUNGTYP_RECHNUNG);
-		cRechnungstyp.add(RechnungFac.RECHNUNGTYP_GUTSCHRIFT);
-		Collection<String> cStati = new LinkedList<String>();
-		cStati.add(RechnungFac.STATUS_BEZAHLT);
-		cStati.add(RechnungFac.STATUS_OFFEN);
-		cStati.add(RechnungFac.STATUS_TEILBEZAHLT);
-		cStati.add(RechnungFac.STATUS_VERBUCHT);
-		FLRRechnungReport[] r = rechnungFindByBelegdatumVonBis(mandantCNr,
-				new java.sql.Date(gcVon.getTimeInMillis()), new java.sql.Date(
-						gcBis.getTimeInMillis()), cRechnungstyp, cStati, null,
-				false);
-		for (int i = 0; i < r.length; i++) {
-			if (r[i].getFlrrechnungart().getRechnungtyp_c_nr()
-					.equals(RechnungFac.RECHNUNGTYP_RECHNUNG)) {
-				wert = wert.add(r[i].getN_wert());
-				wert = wert.add(r[i].getN_wertust());
-			} else if (r[i].getFlrrechnungart().getRechnungtyp_c_nr()
-					.equals(RechnungFac.RECHNUNGTYP_GUTSCHRIFT)) {
-				if (sKriterium.equals(RechnungFac.KRIT_MIT_GUTSCHRIFTEN)) {
-					if (r[i].getStatus_c_nr() != RechnungFac.STATUS_STORNIERT
-							&& r[i].getN_wert() != null) {
-						wert = wert.subtract((r[i].getN_wert()));
-						wert = wert.subtract(r[i].getN_wertust());
-					}
-				}
-			}
-		}
-		return wert;
+		return berechneSummeUmsatz(mandantCNr, sKriterium, gcVon, gcBis, true,
+				theClientDto);
 	}
 
 	public BigDecimal berechneSummeUmsatzNetto(String mandantCNr,
 			String sKriterium, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, TheClientDto theClientDto) {
-		BigDecimal wert = new BigDecimal(0);
+		return berechneSummeUmsatz(mandantCNr, sKriterium, gcVon, gcBis, false,
+				theClientDto);
+	}
+
+	private BigDecimal berechneSummeUmsatz(String mandantCNr,
+			String sKriterium, GregorianCalendar gcVon,
+			GregorianCalendar gcBis, boolean brutto, TheClientDto theClientDto) {
+		BigDecimal wert = BigDecimal.ZERO;
 		Collection<String> cRechnungstyp = new LinkedList<String>();
 		cRechnungstyp.add(RechnungFac.RECHNUNGTYP_RECHNUNG);
-		cRechnungstyp.add(RechnungFac.RECHNUNGTYP_GUTSCHRIFT);
+		if (sKriterium.equals(KRIT_MIT_GUTSCHRIFTEN))
+			cRechnungstyp.add(RechnungFac.RECHNUNGTYP_GUTSCHRIFT);
 		Collection<String> cStati = new LinkedList<String>();
 		cStati.add(RechnungFac.STATUS_BEZAHLT);
 		cStati.add(RechnungFac.STATUS_OFFEN);
@@ -6298,14 +6692,13 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			if (r[i].getFlrrechnungart().getRechnungtyp_c_nr()
 					.equals(RechnungFac.RECHNUNGTYP_RECHNUNG)) {
 				wert = wert.add(r[i].getN_wert());
+				if (brutto)
+					wert = wert.add(r[i].getN_wertust());
 			} else if (r[i].getFlrrechnungart().getRechnungtyp_c_nr()
 					.equals(RechnungFac.RECHNUNGTYP_GUTSCHRIFT)) {
-				if (sKriterium.equals(RechnungFac.KRIT_MIT_GUTSCHRIFTEN)) {
-					if (r[i].getStatus_c_nr() != RechnungFac.STATUS_STORNIERT
-							&& r[i].getN_wert() != null) {
-						wert = wert.subtract(r[i].getN_wert());
-					}
-				}
+				wert = wert.subtract((r[i].getN_wert()));
+				if (brutto)
+					wert = wert.subtract(r[i].getN_wertust());
 			}
 		}
 		return wert;
@@ -6315,56 +6708,23 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			String sKriterium, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, boolean bNurNichtabgerechnete,
 			TheClientDto theClientDto) {
-		BigDecimal wert = new BigDecimal(0);
-		Collection<String> cRechnungstyp = new LinkedList<String>();
-		cRechnungstyp.add(RechnungFac.RECHNUNGTYP_RECHNUNG);
-		Collection<String> cStati = new LinkedList<String>();
-		cStati.add(RechnungFac.STATUS_BEZAHLT);
-		cStati.add(RechnungFac.STATUS_OFFEN);
-		cStati.add(RechnungFac.STATUS_TEILBEZAHLT);
-		cStati.add(RechnungFac.STATUS_VERBUCHT);
-		FLRRechnungReport[] r = rechnungFindByBelegdatumVonBis(mandantCNr,
-				new java.sql.Date(gcVon.getTimeInMillis()), new java.sql.Date(
-						gcBis.getTimeInMillis()), cRechnungstyp, cStati, null,
-				false);
-		for (int i = 0; i < r.length; i++) {
-
-			if (r[i].getFlrrechnungart().getC_nr()
-					.equals(RechnungFac.RECHNUNGART_ANZAHLUNG)) {
-
-				if (bNurNichtabgerechnete && r[i].getFlrauftrag() != null) {
-					try {
-						RechnungDto[] anzRechnungen = getRechnungFac()
-								.rechnungFindByAuftragIId(
-										r[i].getFlrauftrag().getI_id());
-						boolean bSchlusszahlungGefunden = false;
-						for (int k = 0; k < anzRechnungen.length; k++) {
-							if (anzRechnungen[k].getRechnungartCNr().equals(
-									RechnungFac.RECHNUNGART_SCHLUSSZAHLUNG)) {
-								bSchlusszahlungGefunden = true;
-								break;
-							}
-						}
-						if (bSchlusszahlungGefunden == true) {
-							continue;
-						}
-					} catch (RemoteException e) {
-						throwEJBExceptionLPRespectOld(e);
-					}
-				}
-
-				wert = wert.add(r[i].getN_wert());
-				wert = wert.add(r[i].getN_wertust());
-			}
-		}
-		return wert;
+		return berechneSummeAnzahlung(mandantCNr, sKriterium, gcVon, gcBis,
+				bNurNichtabgerechnete, true, theClientDto);
 	}
 
 	public BigDecimal berechneSummeAnzahlungNetto(String mandantCNr,
 			String sKriterium, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, boolean bNurNichtabgerechnete,
 			TheClientDto theClientDto) {
-		BigDecimal wert = new BigDecimal(0);
+		return berechneSummeAnzahlung(mandantCNr, sKriterium, gcVon, gcBis,
+				bNurNichtabgerechnete, false, theClientDto);
+	}
+
+	private BigDecimal berechneSummeAnzahlung(String mandantCNr,
+			String sKriterium, GregorianCalendar gcVon,
+			GregorianCalendar gcBis, boolean bNurNichtabgerechnete,
+			boolean brutto, TheClientDto theClientDto) {
+		BigDecimal wert = BigDecimal.ZERO;
 		Collection<String> cRechnungstyp = new LinkedList<String>();
 		cRechnungstyp.add(RechnungFac.RECHNUNGTYP_RECHNUNG);
 		Collection<String> cStati = new LinkedList<String>();
@@ -6377,6 +6737,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 						gcBis.getTimeInMillis()), cRechnungstyp, cStati, null,
 				false);
 		for (int i = 0; i < r.length; i++) {
+
 			if (r[i].getFlrrechnungart().getC_nr()
 					.equals(RechnungFac.RECHNUNGART_ANZAHLUNG)) {
 
@@ -6393,7 +6754,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 								break;
 							}
 						}
-						if (bSchlusszahlungGefunden == true) {
+						if (bSchlusszahlungGefunden) {
 							continue;
 						}
 					} catch (RemoteException e) {
@@ -6402,6 +6763,8 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 				}
 
 				wert = wert.add(r[i].getN_wert());
+				if (brutto)
+					wert = wert.add(r[i].getN_wertust());
 			}
 		}
 		return wert;
@@ -6430,7 +6793,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 			c.add(Restrictions.in("ra.c_nr", stati));
 
-			if (bStatistikadresse == true) {
+			if (bStatistikadresse) {
 
 				if (kundeIId != null) {
 					c.add(Restrictions
@@ -6563,7 +6926,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 							RechnungFac.FLR_RECHNUNGART_RECHNUNGTYP_C_NR,
 							RechnungFac.RECHNUNGTYP_RECHNUNG));
 			if (kundeIId != null) {
-				if (bStatistikadresse == true) {
+				if (bStatistikadresse) {
 					c.add(Restrictions
 							.eq(RechnungFac.FLR_RECHNUNG_KUNDE_I_ID_STATISTIKADRESSE,
 									kundeIId));
@@ -6610,7 +6973,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 				Restrictions.eq(RechnungFac.FLR_RECHNUNGART_RECHNUNGTYP_C_NR,
 						RechnungFac.RECHNUNGTYP_RECHNUNG));
 		if (kundeIId != null) {
-			if (bStatistikadresse == true) {
+			if (bStatistikadresse) {
 				c.add(Restrictions.eq(
 						RechnungFac.FLR_RECHNUNG_KUNDE_I_ID_STATISTIKADRESSE,
 						kundeIId));
@@ -7003,7 +7366,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			}
 
 			if (kundeIId != null) {
-				if (bStatistikadresse == true) {
+				if (bStatistikadresse) {
 
 					c.add(Restrictions
 							.eq(RechnungFac.FLR_RECHNUNG_KUNDE_I_ID_STATISTIKADRESSE,
@@ -7421,16 +7784,16 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		try {
 			AuftragDto auftragDto = getAuftragFac().auftragFindByPrimaryKey(
 					auftragIId);
-			if (auftragDto.getCNr().equals("12/0000396"))
-				System.out.println();
+			// if (auftragDto.getCNr().equals("12/0000396"))
+			// System.out.println();
 			// nur wenn der Auftrag offen ist
 			if (auftragDto.getAuftragartCNr().equals(
 					AuftragServiceFac.AUFTRAGART_WIEDERHOLEND)
-					&& !auftragDto.getAuftragstatusCNr().equals(
+					&& !auftragDto.getStatusCNr().equals(
 							AuftragServiceFac.AUFTRAGSTATUS_STORNIERT)
-					&& !auftragDto.getAuftragstatusCNr().equals(
+					&& !auftragDto.getStatusCNr().equals(
 							AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT)
-					&& !auftragDto.getAuftragstatusCNr().equals(
+					&& !auftragDto.getStatusCNr().equals(
 							AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT)) {
 				// Wiederholungsintervall muss definiert sein
 				String sWiederholungsintervall = auftragDto
@@ -7507,6 +7870,36 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			return null;
 		else
 			return iAnzahl;
+	}
+
+	public int getAnzahlMengenbehafteteRechnungpositionen(Integer rechnungIId,
+			TheClientDto theClientDto) {
+
+		int iAnzahl = 0;
+		Query query = em.createNamedQuery("RechnungPositionfindByRechnungIId");
+		query.setParameter(1, rechnungIId);
+		Collection<?> c = query.getResultList();
+		for (Iterator<?> iter = c.iterator(); iter.hasNext();) {
+			Rechnungposition pos = ((Rechnungposition) iter.next());
+
+			if (pos.getNMenge() != null) {
+
+				if (pos.getArtikelIId() != null) {
+					ArtikelDto aDto = getArtikelFac()
+							.artikelFindByPrimaryKeySmall(pos.getArtikelIId(),
+									theClientDto);
+					if (Helper.short2boolean(aDto.getBKalkulatorisch())) {
+						continue;
+					}
+
+				}
+
+				iAnzahl++;
+			}
+		}
+		myLogger.exit("Anzahl: " + iAnzahl);
+
+		return iAnzahl;
 	}
 
 	private void doCreateRechnungAusAuftrag(AuftragDto auftragDto,
@@ -7594,6 +7987,13 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 				.konvertiereNachRechnungpositionDto(abPos, theClientDto);
 		for (int i = 0; i < rePos.length; i++) {
 			rePos[i].setRechnungIId(rechnungIId);
+
+			if (rePos[i].isIntelligenteZwischensumme()) {
+				ZwsPositionMapper mapper = new ZwsPositionMapper(
+						getAuftragpositionFac(), this);
+				mapper.map(abPos[i], rePos[i], rechnungIId);
+			}
+
 			getRechnungFac().createRechnungPosition(rePos[i],
 					rechnungDto.getLagerIId(), theClientDto);
 		}
@@ -7914,6 +8314,16 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		return a;
 	}
 
+	public RechnungPositionDto[] rechnungPositionByAuftragposition(
+			Integer iIdAuftragpositionI) {
+
+		Query query = em
+				.createNamedQuery("RechnungPositionfindByAuftragpositionIId");
+		query.setParameter(1, iIdAuftragpositionI);
+		return assembleRechnungpositionDtos(query.getResultList());
+
+	}
+
 	/**
 	 * Aus einem Lieferschein jene Position heraussuchen, die zu einer
 	 * bestimmten Auftragposition gehoert.
@@ -7926,6 +8336,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 	 * @return LieferscheinpositionDto die entsprechende Position, null wenn es
 	 *         keine gibt
 	 */
+
 	public RechnungPositionDto getRechnungPositionByRechnungAuftragposition(
 			Integer iIdRechnungI, Integer iIdAuftragpositionI)
 			throws EJBExceptionLP {
@@ -8015,207 +8426,214 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 	 * @throws EJBExceptionLP
 	 *             Ausnahme
 	 */
-	public void uebernimmAlleOffenenAuftragpositionenOhneBenutzerinteraktion(
-			Integer iIdRechnungI, Integer auftragIIdI, TheClientDto theClientDto)
-			throws EJBExceptionLP {
-		try {
-			RechnungDto rechnungDto = rechnungFindByPrimaryKey(iIdRechnungI);
-			AuftragpositionDto[] aAuftragpositionDto = getAuftragpositionFac()
-					.auftragpositionFindByAuftrag(auftragIIdI);
-
-			boolean bEsGibtNochPositiveOffene = false;
-			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
-					MandantFac.ZUSATZFUNKTION_VERLEIH, theClientDto)) {
-				for (int i = 0; i < aAuftragpositionDto.length; i++) {
-					if (!AuftragServiceFac.AUFTRAGPOSITIONSTATUS_ERLEDIGT
-							.equals(aAuftragpositionDto[i]
-									.getAuftragpositionstatusCNr())) {
-						if (aAuftragpositionDto[i].getNMenge() != null
-								&& aAuftragpositionDto[i].getNMenge()
-										.doubleValue() > 0) {
-							bEsGibtNochPositiveOffene = true;
-						}
-					}
-				}
-			}
-
-			for (int i = 0; i < aAuftragpositionDto.length; i++) {
-				// IMS 2129
-				if (aAuftragpositionDto[i].getNMenge() != null) {
-
-					// wenn es noch positive offene gibt, dann duerfen dei
-					// negativen noch nicht geliert werden
-
-					if (aAuftragpositionDto[i].getNMenge().doubleValue() < 0
-							&& bEsGibtNochPositiveOffene) {
-						continue;
-					}
-
-					// dieses Flag legt fest, ob eine Rechnungsposition fuer die
-					// aktuelle
-					// Auftragposition angleget oder aktualisiert werden soll
-					boolean bRechnungpositionErzeugen = false;
-
-					// die Menge, mit der eine neue Rechnungsposition angelegt
-					// oder eine
-					// bestehende Rechnungsposition aktualisiert werden soll
-					BigDecimal nMengeFuerRechnungposition = null;
-
-					// die Serien- oder Chargennummer, die bei der Abbuchung
-					// verwendet werden soll
-					String cSerienchargennummer = null;
-
-					if (aAuftragpositionDto[i].getPositionsartCNr().equals(
-							AuftragServiceFac.AUFTRAGPOSITIONART_HANDEINGABE)) {
-						bRechnungpositionErzeugen = true;
-						nMengeFuerRechnungposition = aAuftragpositionDto[i]
-								.getNOffeneMenge();
-					} else if (aAuftragpositionDto[i].getPositionsartCNr()
-							.equals(AuftragServiceFac.AUFTRAGPOSITIONART_IDENT)) {
-						ArtikelDto artikelDto = getArtikelFac()
-								.artikelFindByPrimaryKey(
-										aAuftragpositionDto[i].getArtikelIId(),
-										theClientDto);
-
-						// nicht lagerbewirtschaftete Artikel werden mit der
-						// vollen offenen Menge uebernommen
-						if (!Helper.short2boolean(artikelDto
-								.getBLagerbewirtschaftet())) {
-							bRechnungpositionErzeugen = true;
-							nMengeFuerRechnungposition = aAuftragpositionDto[i]
-									.getNOffeneMenge();
-						} else {
-							if (Helper.short2boolean(artikelDto
-									.getBSeriennrtragend())) {
-								// seriennummerbehaftete Artikel koennen nicht
-								// automatisch uebernommen werden
-							} else if (Helper.short2boolean(artikelDto
-									.getBChargennrtragend())) {
-								// chargennummernbehaftete Artikel koennen nur
-								// uebernommen werden, wenn
-								// es nur eine Charge gibt und mit der Menge,
-								// die in dieser Charge
-								// vorhanden ist
-								SeriennrChargennrAufLagerDto[] alleChargennummern = getLagerFac()
-										.getAllSerienChargennrAufLager(
-												artikelDto.getIId(),
-												rechnungDto.getLagerIId(),
-												theClientDto, true, false);
-								if (alleChargennummern != null
-										&& alleChargennummern.length == 1) {
-									BigDecimal nLagerstd = alleChargennummern[0]
-											.getNMenge();
-									// ist ausreichend auf Lager?
-									if (nLagerstd
-											.compareTo(aAuftragpositionDto[i]
-													.getNOffeneMenge()) >= 0) {
-										bRechnungpositionErzeugen = true;
-										nMengeFuerRechnungposition = aAuftragpositionDto[i]
-												.getNOffeneMenge();
-									}
-									// nicht genug auf Lager, aber es kann
-									// zumindest ein Teil abgebucht werden.
-									else if (nLagerstd
-											.compareTo(new BigDecimal(0)) > 0) {
-										bRechnungpositionErzeugen = true;
-										nMengeFuerRechnungposition = nLagerstd;
-									}
-								}
-							} else {
-								// bei lagerbewirtschafteten Artikeln muss die
-								// Menge auf Lager
-								// beruecksichtigt werden
-								BigDecimal nMengeAufLager = getLagerFac()
-										.getMengeAufLager(artikelDto.getIId(),
-												rechnungDto.getLagerIId(),
-												null, theClientDto);
-								if (nMengeAufLager.doubleValue() >= aAuftragpositionDto[i]
-										.getNOffeneMenge().doubleValue()) {
-									bRechnungpositionErzeugen = true;
-									nMengeFuerRechnungposition = aAuftragpositionDto[i]
-											.getNOffeneMenge();
-								} else if (nMengeAufLager.doubleValue() > 0) {
-									bRechnungpositionErzeugen = true;
-									nMengeFuerRechnungposition = nMengeAufLager;
-								}
-							}
-						}
-					} else if (aAuftragpositionDto[i]
-							.getPositionsartCNr()
-							.equals(AuftragServiceFac.AUFTRAGPOSITIONART_INTELLIGENTE_ZWISCHENSUMME)) {
-						bRechnungpositionErzeugen = true;
-						nMengeFuerRechnungposition = aAuftragpositionDto[i]
-								.getNOffeneMenge();
-					}
-
-					if (bRechnungpositionErzeugen
-							&& nMengeFuerRechnungposition != null) {
-						RechnungPositionDto rechnungpositionBisherDto = getRechnungPositionByRechnungAuftragposition(
-								iIdRechnungI, aAuftragpositionDto[i].getIId());
-
-						if (rechnungpositionBisherDto == null) {
-							AuftragpositionDto[] abpos = new AuftragpositionDto[] { aAuftragpositionDto[i] };
-							RechnungPositionDto rechnungpositionDto = getBelegpositionkonvertierungFac()
-									.konvertiereNachRechnungpositionDto(abpos,
-											theClientDto)[0];
-
-							rechnungpositionDto.setRechnungIId(iIdRechnungI);
-							rechnungpositionDto
-									.setNMenge(nMengeFuerRechnungposition);
-
-							if (aAuftragpositionDto[i]
-									.getPositionsartCNr()
-									.equals(AuftragServiceFac.AUFTRAGPOSITIONART_INTELLIGENTE_ZWISCHENSUMME)) {
-								Integer von = getAuftragpositionFac()
-										.getPositionNummer(
-												aAuftragpositionDto[i]
-														.getZwsVonPosition());
-								if (von != null) {
-									rechnungpositionDto
-											.setZwsVonPosition(getRechnungFac()
-													.getPositionIIdFromPositionNummer(
-															iIdRechnungI, von));
-								}
-								Integer bis = getAuftragpositionFac()
-										.getPositionNummer(
-												aAuftragpositionDto[i]
-														.getZwsBisPosition());
-								if (bis != null) {
-									rechnungpositionDto
-											.setZwsBisPosition(getRechnungFac()
-													.getPositionIIdFromPositionNummer(
-															iIdRechnungI, von));
-								}
-							}
-							createRechnungPosition(rechnungpositionDto,
-									rechnungDto.getLagerIId(), theClientDto);
-						} else {
-							rechnungpositionBisherDto
-									.setNMenge(nMengeFuerRechnungposition);
-
-							updateRechnungpositionSichtAuftrag(
-									rechnungpositionBisherDto, theClientDto);
-						}
-					}
-				} else {
-					if (!AuftragServiceFac.AUFTRAGPOSITIONSTATUS_ERLEDIGT
-							.equals(aAuftragpositionDto[i]
-									.getAuftragpositionstatusCNr())) {
-						AuftragpositionDto[] abpos = new AuftragpositionDto[] { aAuftragpositionDto[i] };
-						RechnungPositionDto rechnungpositionDto = getBelegpositionkonvertierungFac()
-								.konvertiereNachRechnungpositionDto(abpos,
-										theClientDto)[0];
-						rechnungpositionDto.setRechnungIId(iIdRechnungI);
-						rechnungpositionDto.setISort(null);
-						createRechnungPosition(rechnungpositionDto,
-								rechnungDto.getLagerIId(), theClientDto);
-					}
-				}
-			}
-		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
-		}
-	}
+	// public void uebernimmAlleOffenenAuftragpositionenOhneBenutzerinteraktion(
+	// Integer iIdRechnungI, Integer auftragIIdI, TheClientDto theClientDto)
+	// throws EJBExceptionLP {
+	// try {
+	// RechnungDto rechnungDto = rechnungFindByPrimaryKey(iIdRechnungI);
+	// AuftragpositionDto[] aAuftragpositionDto = getAuftragpositionFac()
+	// .auftragpositionFindByAuftrag(auftragIIdI);
+	//
+	// boolean bEsGibtNochPositiveOffene = false;
+	// if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+	// MandantFac.ZUSATZFUNKTION_VERLEIH, theClientDto)) {
+	// for (int i = 0; i < aAuftragpositionDto.length; i++) {
+	// if (!AuftragServiceFac.AUFTRAGPOSITIONSTATUS_ERLEDIGT
+	// .equals(aAuftragpositionDto[i]
+	// .getAuftragpositionstatusCNr())) {
+	// if (aAuftragpositionDto[i].getNMenge() != null
+	// && aAuftragpositionDto[i].getNMenge()
+	// .doubleValue() > 0) {
+	// bEsGibtNochPositiveOffene = true;
+	// }
+	// }
+	// }
+	// }
+	//
+	// for (int i = 0; i < aAuftragpositionDto.length; i++) {
+	// // IMS 2129
+	// if (aAuftragpositionDto[i].getNMenge() != null) {
+	//
+	// // wenn es noch positive offene gibt, dann duerfen dei
+	// // negativen noch nicht geliert werden
+	//
+	// if (aAuftragpositionDto[i].getNMenge().doubleValue() < 0
+	// && bEsGibtNochPositiveOffene) {
+	// continue;
+	// }
+	//
+	// // dieses Flag legt fest, ob eine Rechnungsposition fuer die
+	// // aktuelle
+	// // Auftragposition angleget oder aktualisiert werden soll
+	// boolean bRechnungpositionErzeugen = false;
+	//
+	// // die Menge, mit der eine neue Rechnungsposition angelegt
+	// // oder eine
+	// // bestehende Rechnungsposition aktualisiert werden soll
+	// BigDecimal nMengeFuerRechnungposition = null;
+	//
+	// // die Serien- oder Chargennummer, die bei der Abbuchung
+	// // verwendet werden soll
+	// String cSerienchargennummer = null;
+	//
+	// if (aAuftragpositionDto[i].getPositionsartCNr().equals(
+	// AuftragServiceFac.AUFTRAGPOSITIONART_HANDEINGABE)) {
+	// bRechnungpositionErzeugen = true;
+	// nMengeFuerRechnungposition = aAuftragpositionDto[i]
+	// .getNOffeneMenge();
+	// } else if (aAuftragpositionDto[i].getPositionsartCNr()
+	// .equals(AuftragServiceFac.AUFTRAGPOSITIONART_IDENT)) {
+	// ArtikelDto artikelDto = getArtikelFac()
+	// .artikelFindByPrimaryKey(
+	// aAuftragpositionDto[i].getArtikelIId(),
+	// theClientDto);
+	//
+	// // nicht lagerbewirtschaftete Artikel werden mit der
+	// // vollen offenen Menge uebernommen
+	// if (!Helper.short2boolean(artikelDto
+	// .getBLagerbewirtschaftet())) {
+	// bRechnungpositionErzeugen = true;
+	// nMengeFuerRechnungposition = aAuftragpositionDto[i]
+	// .getNOffeneMenge();
+	// } else {
+	// if (Helper.short2boolean(artikelDto
+	// .getBSeriennrtragend())) {
+	// // seriennummerbehaftete Artikel koennen nicht
+	// // automatisch uebernommen werden
+	// } else if (Helper.short2boolean(artikelDto
+	// .getBChargennrtragend())) {
+	// // chargennummernbehaftete Artikel koennen nur
+	// // uebernommen werden, wenn
+	// // es nur eine Charge gibt und mit der Menge,
+	// // die in dieser Charge
+	// // vorhanden ist
+	// SeriennrChargennrAufLagerDto[] alleChargennummern = getLagerFac()
+	// .getAllSerienChargennrAufLager(
+	// artikelDto.getIId(),
+	// rechnungDto.getLagerIId(),
+	// theClientDto, true, false);
+	// if (alleChargennummern != null
+	// && alleChargennummern.length == 1) {
+	// BigDecimal nLagerstd = alleChargennummern[0]
+	// .getNMenge();
+	// // ist ausreichend auf Lager?
+	// if (nLagerstd
+	// .compareTo(aAuftragpositionDto[i]
+	// .getNOffeneMenge()) >= 0) {
+	// bRechnungpositionErzeugen = true;
+	// nMengeFuerRechnungposition = aAuftragpositionDto[i]
+	// .getNOffeneMenge();
+	// }
+	// // nicht genug auf Lager, aber es kann
+	// // zumindest ein Teil abgebucht werden.
+	// else if (nLagerstd
+	// .compareTo(new BigDecimal(0)) > 0) {
+	// bRechnungpositionErzeugen = true;
+	// nMengeFuerRechnungposition = nLagerstd;
+	// }
+	// }
+	// } else {
+	// // bei lagerbewirtschafteten Artikeln muss die
+	// // Menge auf Lager
+	// // beruecksichtigt werden
+	// BigDecimal nMengeAufLager = getLagerFac()
+	// .getMengeAufLager(artikelDto.getIId(),
+	// rechnungDto.getLagerIId(),
+	// null, theClientDto);
+	// if (nMengeAufLager.doubleValue() >= aAuftragpositionDto[i]
+	// .getNOffeneMenge().doubleValue()) {
+	// bRechnungpositionErzeugen = true;
+	// nMengeFuerRechnungposition = aAuftragpositionDto[i]
+	// .getNOffeneMenge();
+	// } else if (nMengeAufLager.doubleValue() > 0) {
+	// bRechnungpositionErzeugen = true;
+	// nMengeFuerRechnungposition = nMengeAufLager;
+	// }
+	// }
+	// }
+	// } else if (aAuftragpositionDto[i]
+	// .getPositionsartCNr()
+	// .equals(AuftragServiceFac.AUFTRAGPOSITIONART_INTELLIGENTE_ZWISCHENSUMME))
+	// {
+	// bRechnungpositionErzeugen = true;
+	// nMengeFuerRechnungposition = aAuftragpositionDto[i]
+	// .getNOffeneMenge();
+	// }
+	//
+	// if (bRechnungpositionErzeugen
+	// && nMengeFuerRechnungposition != null) {
+	// RechnungPositionDto rechnungpositionBisherDto =
+	// getRechnungPositionByRechnungAuftragposition(
+	// iIdRechnungI, aAuftragpositionDto[i].getIId());
+	//
+	// if (rechnungpositionBisherDto == null) {
+	// AuftragpositionDto[] abpos = new AuftragpositionDto[] {
+	// aAuftragpositionDto[i] };
+	// RechnungPositionDto rechnungpositionDto =
+	// getBelegpositionkonvertierungFac()
+	// .konvertiereNachRechnungpositionDto(abpos,
+	// theClientDto)[0];
+	//
+	// rechnungpositionDto.setRechnungIId(iIdRechnungI);
+	// rechnungpositionDto
+	// .setNMenge(nMengeFuerRechnungposition);
+	//
+	// if (aAuftragpositionDto[i]
+	// .getPositionsartCNr()
+	// .equals(AuftragServiceFac.AUFTRAGPOSITIONART_INTELLIGENTE_ZWISCHENSUMME))
+	// {
+	// Integer von = getAuftragpositionFac()
+	// .getPositionNummer(
+	// aAuftragpositionDto[i]
+	// .getZwsVonPosition());
+	// if (von != null) {
+	// rechnungpositionDto
+	// .setZwsVonPosition(getRechnungFac()
+	// .getPositionIIdFromPositionNummer(
+	// iIdRechnungI, von));
+	// }
+	// Integer bis = getAuftragpositionFac()
+	// .getPositionNummer(
+	// aAuftragpositionDto[i]
+	// .getZwsBisPosition());
+	// if (bis != null) {
+	// rechnungpositionDto
+	// .setZwsBisPosition(getRechnungFac()
+	// .getPositionIIdFromPositionNummer(
+	// iIdRechnungI, von));
+	// }
+	// }
+	// createRechnungPosition(rechnungpositionDto,
+	// rechnungDto.getLagerIId(), theClientDto);
+	// } else {
+	// rechnungpositionBisherDto
+	// .setNMenge(nMengeFuerRechnungposition);
+	//
+	// updateRechnungpositionSichtAuftrag(
+	// rechnungpositionBisherDto, theClientDto);
+	// }
+	// }
+	// } else {
+	// if (!AuftragServiceFac.AUFTRAGPOSITIONSTATUS_ERLEDIGT
+	// .equals(aAuftragpositionDto[i]
+	// .getAuftragpositionstatusCNr())) {
+	// AuftragpositionDto[] abpos = new AuftragpositionDto[] {
+	// aAuftragpositionDto[i] };
+	// RechnungPositionDto rechnungpositionDto =
+	// getBelegpositionkonvertierungFac()
+	// .konvertiereNachRechnungpositionDto(abpos,
+	// theClientDto)[0];
+	// rechnungpositionDto.setRechnungIId(iIdRechnungI);
+	// rechnungpositionDto.setISort(null);
+	// createRechnungPosition(rechnungpositionDto,
+	// rechnungDto.getLagerIId(), theClientDto);
+	// }
+	// }
+	// }
+	// } catch (RemoteException ex) {
+	// throwEJBExceptionLPRespectOld(ex);
+	// }
+	// }
 
 	private boolean isArtikelSetHead(Integer artikelIId,
 			TheClientDto theClientDto) {
@@ -8377,10 +8795,29 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 						// bei lagerbewirtschafteten Artikeln muss die
 						// Menge auf Lager
 						// beruecksichtigt werden
-						BigDecimal nMengeAufLager = getLagerFac()
-								.getMengeAufLager(artikelDto.getIId(),
-										rechnungDto.getLagerIId(), null,
-										theClientDto);
+
+						BigDecimal nMengeAufLager = null;
+						boolean bImmerAusreichendVerfuegbar = false;
+						try {
+							ParametermandantDto parameterM = getParameterFac()
+									.getMandantparameter(
+											theClientDto.getMandant(),
+											ParameterFac.KATEGORIE_ARTIKEL,
+											ParameterFac.PARAMETER_LAGER_IMMER_AUSREICHEND_VERFUEGBAR);
+							bImmerAusreichendVerfuegbar = ((Boolean) parameterM
+									.getCWertAsObject()).booleanValue();
+
+						} catch (RemoteException ex) {
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+						}
+						if (bImmerAusreichendVerfuegbar) {
+							nMengeAufLager = new BigDecimal(999999999);
+						} else {
+							nMengeAufLager = getLagerFac().getMengeAufLager(
+									artikelDto.getIId(),
+									rechnungDto.getLagerIId(), null,
+									theClientDto);
+						}
 
 						if (nMengeAufLager.signum() > 0) {
 							bRechnungpositionErzeugen = true;
@@ -8411,9 +8848,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 						}
 					}
 				}
-			} else if (auftragpositionDto
-					.getPositionsartCNr()
-					.equals(AuftragServiceFac.AUFTRAGPOSITIONART_INTELLIGENTE_ZWISCHENSUMME)) {
+			} else if (auftragpositionDto.isIntelligenteZwischensumme()) {
 				bRechnungpositionErzeugen = true;
 				nMengeFuerRechnungposition = auftragpositionDto
 						.getNOffeneMenge();
@@ -8431,10 +8866,14 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 
 					rechnungpositionDto.setRechnungIId(rechnungDto.getIId());
 					rechnungpositionDto.setNMenge(nMengeFuerRechnungposition);
+					rechnungpositionDto
+							.setNMaterialzuschlagKurs(auftragpositionDto
+									.getNMaterialzuschlagKurs());
+					rechnungpositionDto
+							.setTMaterialzuschlagDatum(auftragpositionDto
+									.getTMaterialzuschlagDatum());
 
-					if (auftragpositionDto
-							.getPositionsartCNr()
-							.equals(AuftragServiceFac.AUFTRAGPOSITIONART_INTELLIGENTE_ZWISCHENSUMME)) {
+					if (auftragpositionDto.isIntelligenteZwischensumme()) {
 						Integer von = getAuftragpositionFac()
 								.getPositionNummer(
 										auftragpositionDto.getZwsVonPosition());
@@ -8451,8 +8890,11 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 							rechnungpositionDto
 									.setZwsBisPosition(getRechnungFac()
 											.getPositionIIdFromPositionNummer(
-													rechnungDto.getIId(), von));
+													rechnungDto.getIId(), bis));
 						}
+						rechnungpositionDto
+								.setBZwsPositionspreisDrucken(auftragpositionDto
+										.getBZwsPositionspreisZeigen());
 					}
 
 					if (auftragpositionDto.getPositioniIdArtikelset() != null) {
@@ -8503,6 +8945,9 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 						.konvertiereNachRechnungpositionDto(abpos, theClientDto)[0];
 				rechnungpositionDto.setRechnungIId(rechnungDto.getIId());
 				rechnungpositionDto.setISort(null);
+				// SP2426 Damit die Auftragsposition nicht Erledigt wird
+				rechnungpositionDto.setAuftragpositionIId(null);
+
 				createdRePosDto = createRechnungPosition(rechnungpositionDto,
 						rechnungDto.getLagerIId(), theClientDto);
 			}
@@ -9442,7 +9887,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 			try {
 				Rechnung rechnung = em.find(Rechnung.class, iId);
 				setRechnungFromRechnungDto(rechnung, rechnungDto);
-//				rechnung.setPersonalIIdAendern(theClientDto.getIDPersonal());
+				// rechnung.setPersonalIIdAendern(theClientDto.getIDPersonal());
 				rechnung.setTAendern(getTimestamp());
 			} catch (Exception e) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, e);
@@ -9973,7 +10418,7 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 				.listByPositionIIdArtikelset(em, rechnungposIId);
 		for (Rechnungposition rechnungposition : positions) {
 			List<SeriennrChargennrMitMengeDto> snrs = getLagerFac()
-					.getAllSeriennrchargennrEinerBelegartposition(
+					.getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
 							LocaleFac.BELEGART_RECHNUNG,
 							rechnungposition.getIId());
 			if (hasSeriennrchargennr(snrs)) {
@@ -9984,17 +10429,135 @@ public class RechnungFacBean extends Facade implements RechnungFac,
 		return allSnrs;
 	}
 
-	@Override
-	public boolean hatAenderungenNach(Integer iid, Timestamp t) throws EJBExceptionLP,
-			RemoteException {
+	public java.util.List<Timestamp> getAenderungsZeitpunkte(Integer iid)
+			throws EJBExceptionLP, RemoteException {
+		List<Timestamp> timestamps = new ArrayList<Timestamp>();
 		RechnungDto r = rechnungFindByPrimaryKey(iid);
-		if(r.getTAendern() != null && r.getTAendern().after(t))
-			return true;
-		if(r.getTStorniert() != null && r.getTStorniert().after(t))
-			return true;
-		if(r.getTManuellerledigt() != null && r.getTManuellerledigt().after(t))
-			return true;
-		return false;
+
+		timestamps.add(r.getTAendern());
+		timestamps.add(r.getTStorniert());
+		timestamps.add(r.getTManuellerledigt());
+
+		return timestamps;
 	}
 
+	// PJ2276
+	public void repairRechnungZws2276(Integer rechnungId,
+			TheClientDto theClientDto) {
+		RechnungDto rechnungDto = rechnungFindByPrimaryKey(rechnungId);
+		if (RechnungFac.STATUS_STORNIERT.equals(rechnungDto.getStatusCNr()))
+			return;
+
+		RechnungPositionDto[] rePosDto = rechnungPositionFindByRechnungIId(rechnungDto
+				.getIId());
+		getBelegVerkaufFac().prepareIntZwsPositions(rePosDto);
+		Set<Integer> modifiedPositions = getBelegVerkaufFac()
+				.adaptIntZwsPositions(rePosDto);
+		for (Integer index : modifiedPositions) {
+			Rechnungposition rechnungposition = em.find(Rechnungposition.class,
+					rePosDto[index].getIId());
+			rechnungposition
+					.setNNettoeinzelpreisplusaufschlagminusrabatt(rePosDto[index]
+							.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+			em.merge(rechnungposition);
+			em.flush();
+
+			if (LocaleFac.POSITIONSART_IDENT.equals(rechnungposition
+					.getPositionsartCNr())) {
+				RechnungPositionDto rechnungPositionDto = rechnungPositionFindByPrimaryKey(rechnungposition
+						.getIId());
+				bucheRechnungPositionAmLager(rechnungPositionDto,
+						rechnungDto.getLagerIId(), false, theClientDto);
+			}
+		}
+	}
+
+	public List<Integer> repairRechnungZws2276GetList(TheClientDto theClientDto) {
+		Session session = FLRSessionFactory.getFactory().openSession();
+		String sQuery = "SELECT DISTINCT rechnung_i_id "
+				+ " FROM FLRRechnungPosition AS repos WHERE repos.positionsart_c_nr = 'IZwischensumme'";
+
+		org.hibernate.Query rechnungIdsQuery = session.createQuery(sQuery);
+
+		List<Integer> resultList = new ArrayList<Integer>();
+		List<Integer> queryList = (List<Integer>) rechnungIdsQuery.list();
+		for (Integer rechnung_i_id : queryList) {
+			Rechnung rechnung = em.find(Rechnung.class, rechnung_i_id);
+			if (theClientDto.getMandant().equals(rechnung.getMandantCNr())) {
+				resultList.add(rechnung_i_id);
+			}
+		}
+
+		session.close();
+		return resultList;
+	}
+
+	@Override
+	public RechnungzahlungDto createUpdateZahlung(
+			RechnungzahlungDto rechnungZahlungDto, boolean rechnungErledigt,
+			RechnungzahlungDto gutschriftZahlungDto,
+			boolean gutschriftErledigt, TheClientDto theClientDto) {
+		Validator.notNull(rechnungZahlungDto, "rechnungZahlungDto");
+
+		if (gutschriftZahlungDto != null) {
+			if (!rechnungZahlungDto.isGutschrift()) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_GUTSCHRIFTZAHLUNG_OHNE_GUTSCHRIFTART,
+						rechnungZahlungDto.getRechnungIId().toString());
+			}
+
+			if (gutschriftZahlungDto.getIId() == null) {
+				gutschriftZahlungDto = createZahlung(gutschriftZahlungDto,
+						gutschriftErledigt, theClientDto);
+			} else {
+				updateZahlung(gutschriftZahlungDto, gutschriftErledigt,
+						theClientDto);
+			}
+
+			rechnungZahlungDto
+					.setRechnungzahlungIIdGutschrift(gutschriftZahlungDto
+							.getIId());
+			// Gutschrift.rechnungId == Gutschrift-Id
+			rechnungZahlungDto.setRechnungIIdGutschrift(gutschriftZahlungDto
+					.getRechnungIId());
+		}
+
+		if (rechnungZahlungDto.getIId() == null) {
+			rechnungZahlungDto = createZahlung(rechnungZahlungDto,
+					rechnungErledigt, theClientDto);
+		} else {
+			updateZahlung(rechnungZahlungDto, rechnungErledigt, theClientDto);
+		}
+
+		return rechnungZahlungDto;
+	}
+
+	@Override
+	public BelegPruefungDto berechneAktiviereBelegControlled(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return belegAktivierungFac.berechneAktiviereControlled(this, iid,
+				theClientDto);
+		// new BelegAktivierungController(this).berechneAktiviereControlled(iid,
+		// theClientDto) ;
+	}
+
+	@Override
+	public BelegDto getBelegDto(Integer iid, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
+		RechnungDto rechnungDto = rechnungFindByPrimaryKey(iid);
+		rechnungDto.setBelegartCNr(LocaleFac.BELEGART_RECHNUNG);
+		return rechnungDto;
+	}
+
+	@Override
+	public BelegpositionDto[] getBelegPositionDtos(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return rechnungPositionFindByRechnungIId(iid);
+	}
+
+	@Override
+	public Integer getKundeIdDesBelegs(BelegDto belegDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return ((RechnungDto) belegDto).getKundeIId();
+	}
 }

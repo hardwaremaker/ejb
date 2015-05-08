@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -37,7 +37,9 @@ import java.math.BigDecimal;
 
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.LagerDto;
+import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.fertigung.service.LosDto;
+import com.lp.server.lieferschein.service.LieferscheinDto;
 
 /**
  * <p>
@@ -60,16 +62,34 @@ import com.lp.server.fertigung.service.LosDto;
  * @version not attributable Date $Date: 2008/08/07 12:59:36 $
  */
 public class AufgeloesteFehlmengenDto implements Serializable {
+	public AuftragDto getAuftagDto() {
+		return auftagDto;
+	}
+
+	public void setAuftagDto(AuftragDto auftagDto) {
+		this.auftagDto = auftagDto;
+	}
+
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 	private String artikelCNr;
 	private LosDto losDto;
+	private AuftragDto auftagDto;
 	private ArtikelDto artikelDto;
 	private String[] sSeriennrChnr;
 	private LagerDto lagerDto;
 	private String lagerCNr;
+	private LieferscheinDto lieferscheinDto;
+
+	public LieferscheinDto getLieferscheinDto() {
+		return lieferscheinDto;
+	}
+
+	public void setLieferscheinDto(LieferscheinDto lieferscheinDto) {
+		this.lieferscheinDto = lieferscheinDto;
+	}
 
 	public AufgeloesteFehlmengenDto() {
 	}

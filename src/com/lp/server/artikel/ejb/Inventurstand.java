@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -42,7 +42,7 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "InventurstandfindByInventurIIdArtikelIIdLagerIId", query = "SELECT OBJECT (o) FROM Inventurstand o WHERE o.inventurIId=?1 AND o.artikelIId=?2 AND o.lagerIId=?3") })
+@NamedQueries({ @NamedQuery(name = "InventurstandfindByInventurIIdArtikelIIdLagerIId", query = "SELECT OBJECT (o) FROM Inventurstand o WHERE o.inventurIId=?1 AND o.artikelIId=?2 AND o.lagerIId=?3") })
 @Entity
 @Table(name = "WW_INVENTURSTAND")
 public class Inventurstand implements Serializable {
@@ -68,6 +68,40 @@ public class Inventurstand implements Serializable {
 	@Column(name = "LAGER_I_ID")
 	private Integer lagerIId;
 
+	@Column(name = "N_BASISPREIS")
+	private BigDecimal nBasispreis;
+
+	@Column(name = "F_ABWERTUNG")
+	private Double fAbwertung;
+
+	
+	@Column(name = "C_KOMMENTAR")
+	private String cKommentar;
+	
+	public String getCKommentar() {
+		return cKommentar;
+	}
+
+	public void setCKommentar(String cKommentar) {
+		this.cKommentar = cKommentar;
+	}
+
+	public BigDecimal getNBasispreis() {
+		return nBasispreis;
+	}
+
+	public void setNBasispreis(BigDecimal nBasispreis) {
+		this.nBasispreis = nBasispreis;
+	}
+
+	public Double getFAbwertung() {
+		return fAbwertung;
+	}
+
+	public void setFAbwertung(Double fAbwertung) {
+		this.fAbwertung = fAbwertung;
+	}
+
 	private static final long serialVersionUID = 1L;
 
 	public Inventurstand() {
@@ -76,13 +110,14 @@ public class Inventurstand implements Serializable {
 
 	public Inventurstand(Integer id, Integer inventurIId2, Integer artikelIId2,
 			Integer lagerIId2, BigDecimal inventurmenge,
-			BigDecimal inventurpreis) {
+			BigDecimal inventurpreis, BigDecimal nBasispreis) {
 		setIId(id);
 		setInventurIId(inventurIId2);
 		setArtikelIId(artikelIId2);
 		setLagerIId(lagerIId2);
 		setNInventurmenge(inventurmenge);
 		setNInventurpreis(inventurpreis);
+		setNBasispreis(nBasispreis);
 	}
 
 	public Integer getIId() {

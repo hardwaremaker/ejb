@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -153,7 +153,8 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 					theClientDto.getLocUi(), null, theClientDto);
 		} else {
 			try {
-				jasperReport = (JasperReport) JRLoader.loadObjectFromFile(reportdir);
+				jasperReport = (JasperReport) JRLoader
+						.loadObjectFromFile(reportdir);
 			} catch (JRException ex) {
 				Throwable eCause = ex.getCause();
 				if (eCause instanceof FileNotFoundException) {
@@ -597,6 +598,15 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 
 			Integer i = new Integer(spalte);
 
+			if (i >= data[index].length) {
+				ArrayList al = new ArrayList();
+				al.add(jRField.getName());
+
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_FLRDRUCK_SPALTE_NICHT_VORHANDEN,
+						al, new Exception(jRField.getName()));
+			}
+
 			if (data[index][i] != null) {
 				Object o = data[index][i];
 
@@ -744,6 +754,13 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 	public PositionRpt getPositionForReport(String sBelegart,
 			Integer iBelegpositionIId, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
+		return getPositionForReport(sBelegart, iBelegpositionIId, false,
+				theClientDto);
+	}
+
+	public PositionRpt getPositionForReport(String sBelegart,
+			Integer iBelegpositionIId, boolean bLieferscheinDruckAusRechnung,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		if (LocaleFac.BELEGART_AGSTUECKLISTE.equals(sBelegart)) {
 			return getAGStuecklisteposition(iBelegpositionIId, theClientDto);
 		} else if (LocaleFac.BELEGART_ANFRAGE.equals(sBelegart)) {
@@ -793,7 +810,15 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NOT_IMPLEMENTED_YET,
 					"");
 		} else if (LocaleFac.BELEGART_LIEFERSCHEIN.equals(sBelegart)) {
-			return getLIeferscheinposition(iBelegpositionIId, theClientDto);
+
+			if (bLieferscheinDruckAusRechnung == true) {
+				return getLIeferscheinposition(iBelegpositionIId,
+						LocaleFac.BELEGART_RECHNUNG, theClientDto);
+			} else {
+				return getLIeferscheinposition(iBelegpositionIId,
+						LocaleFac.BELEGART_LIEFERSCHEIN, theClientDto);
+			}
+
 		} else if (LocaleFac.BELEGART_LOS.equals(sBelegart)) {
 			// No need atm maybe implemented some time
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NOT_IMPLEMENTED_YET,
@@ -861,8 +886,8 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 	}
 
 	private PositionRpt getLIeferscheinposition(
-			Integer iLieferscheinpositionIId, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException {
+			Integer iLieferscheinpositionIId, String sBelegart,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		PositionRpt positionRpt = new PositionRpt();
 		LieferscheinpositionDto lieferscheinpositionDto = getLieferscheinpositionFac()
 				.lieferscheinpositionFindByPrimaryKey(iLieferscheinpositionIId,
@@ -884,14 +909,12 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 			Locale locDruck = Helper.string2Locale(kundeDto.getPartnerDto()
 					.getLocaleCNrKommunikation());
 			BelegPositionDruckIdentDto druckDto = printIdent(
-					lieferscheinpositionDto, LocaleFac.BELEGART_LIEFERSCHEIN,
-					artikelDto, locDruck, kundeDto.getPartnerIId(),
-					theClientDto);
+					lieferscheinpositionDto, sBelegart, artikelDto, locDruck,
+					kundeDto.getPartnerIId(), theClientDto);
 			positionRpt.setSIdent(druckDto.getSIdentnummer());
 			positionRpt.setSBezeichnung(druckDto.getSBezeichnung());
 			positionRpt.setSZusatzbezeichnung(druckDto.getSZusatzBezeichnung());
-			
-			
+
 			positionRpt.setSPositionsartCNr(lieferscheinpositionDto
 					.getPositionsartCNr());
 			positionRpt.setBdMenge(lieferscheinpositionDto.getNMenge());
@@ -899,6 +922,7 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 			positionRpt.setDRabatt(lieferscheinpositionDto.getFRabattsatz());
 			positionRpt.setBdPreis(lieferscheinpositionDto
 					.getNNettoeinzelpreis());
+			positionRpt.setSEccn(artikelDto.getCEccn());
 		} else if (LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT
 				.equals(lieferscheinpositionDto.getPositionsartCNr())) {
 			positionRpt.setSPositionsartCNr(lieferscheinpositionDto
@@ -913,9 +937,8 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 			Locale locDruck = Helper.string2Locale(kundeDto.getPartnerDto()
 					.getLocaleCNrKommunikation());
 			BelegPositionDruckIdentDto druckDto = printIdent(
-					lieferscheinpositionDto, LocaleFac.BELEGART_LIEFERSCHEIN,
-					artikelDto, locDruck, kundeDto.getPartnerIId(),
-					theClientDto);
+					lieferscheinpositionDto, sBelegart, artikelDto, locDruck,
+					kundeDto.getPartnerIId(), theClientDto);
 			positionRpt.setSIdent(druckDto.getSIdentnummer());
 			positionRpt.setSBezeichnung(druckDto.getSBezeichnung());
 			positionRpt.setSZusatzbezeichnung(druckDto.getSZusatzBezeichnung());
@@ -987,7 +1010,7 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 			Locale locDruck = Helper.string2Locale(kundeDto.getPartnerDto()
 					.getLocaleCNrKommunikation());
 			BelegPositionDruckIdentDto druckDto = printIdent(
-					rechnungpositionDto, LocaleFac.BELEGART_AUFTRAG,
+					rechnungpositionDto, LocaleFac.BELEGART_RECHNUNG,
 					artikelDto, locDruck, kundeDto.getPartnerIId(),
 					theClientDto);
 			positionRpt.setSIdent(druckDto.getSIdentnummer());
@@ -1003,6 +1026,7 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 			positionRpt.setFVerpackungsmenge(artikelDto.getFVerpackungsmenge());
 			positionRpt.setBdMaterialzuschlag(rechnungpositionDto
 					.getNMaterialzuschlag());
+			positionRpt.setSEccn(artikelDto.getCEccn());
 		}
 		if (RechnungFac.POSITIONSART_RECHNUNG_HANDEINGABE
 				.equals(rechnungpositionDto.getRechnungpositionartCNr())) {
@@ -1201,6 +1225,7 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 			positionRpt.setSText(druckDto.getSArtikelkommentar());
 			positionRpt.setTTermin(auftragspositionDto
 					.getTUebersteuerbarerLiefertermin());
+			positionRpt.setSEccn(artikelDto.getCEccn());
 
 		} else if (AuftragServiceFac.AUFTRAGPOSITIONART_LEERZEILE
 				.equals(auftragspositionDto.getPositionsartCNr())) {
@@ -1295,6 +1320,7 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 					.getSArtikelZusatzBezeichnung2());
 			positionRpt.setSText(druckDto.getSArtikelkommentar());
 			positionRpt.setFVerpackungsmenge(artikelDto.getFVerpackungsmenge());
+			positionRpt.setSEccn(artikelDto.getCEccn());
 
 		} else if (AngebotServiceFac.ANGEBOTPOSITIONART_LEERZEILE
 				.equals(angebotPositionDto.getPositionsartCNr())) {
@@ -1409,11 +1435,19 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 			positionRpt.setSEinheit(anfragepositionDto.getEinheitCNr());
 			positionRpt.setBdPreis(anfragepositionDto.getNRichtpreis());
 			positionRpt.setFVerpackungsmenge(artikelDto.getFVerpackungsmenge());
+			positionRpt.setSEccn(artikelDto.getCEccn());
+
 			ArtikellieferantDto artikellieferantDto = getArtikelFac()
-					.artikellieferantFindByArtikellIIdLieferantIIdOhneExc(
+					.getArtikelEinkaufspreis(
 							anfragepositionDto.getArtikelIId(),
 							anfrageDto.getLieferantIIdAnfrageadresse(),
+							anfragepositionDto.getNMenge(),
+
+							anfrageDto.getWaehrungCNr(),
+							new java.sql.Date(anfrageDto
+									.getTBelegdatum().getTime()),
 							theClientDto);
+			
 			if (artikellieferantDto != null) {
 				positionRpt.setSLieferantenArtikelnummer(artikellieferantDto
 						.getCArtikelnrlieferant());
@@ -1466,6 +1500,7 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 			ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(
 					agstklpositionDto.getArtikelIId(), theClientDto);
 			positionRpt.setSIdent(artikelDto.getCNr());
+
 			positionRpt.setSPositionsartCNr(agstklpositionDto
 					.getAgstklpositionsartCNr());
 			positionRpt.setSBezeichnung(agstklpositionDto.getCBez());
@@ -1498,6 +1533,7 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 			positionRpt.setDRabatt(agstklpositionDto.getFRabattsatz());
 			positionRpt.setBdPreis(agstklpositionDto.getNNettoeinzelpreis());
 			positionRpt.setFVerpackungsmenge(artikelDto.getFVerpackungsmenge());
+			positionRpt.setSEccn(artikelDto.getCEccn());
 		} else {
 			// throw new
 			// EJBExceptionLP(EJBExceptionLP.FEHLER_NOT_IMPLEMENTED_YET,null);
@@ -1531,6 +1567,7 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 					.getTUebersteuerterLiefertermin());
 			positionRpt.setDRabatt(bestellpositionDto.getDRabattsatz());
 			positionRpt.setBdPreis(bestellpositionDto.getNNettoeinzelpreis());
+			positionRpt.setSEccn(artikelDto.getCEccn());
 		} else if (BestellpositionFac.BESTELLPOSITIONART_IDENT
 				.equals(bestellpositionDto.getPositionsartCNr())) {
 			positionRpt.setSPositionsartCNr(bestellpositionDto
@@ -1565,11 +1602,19 @@ public class SystemReportFacBean extends LPReport implements SystemReportFac,
 			positionRpt.setDRabatt(bestellpositionDto.getDRabattsatz());
 			positionRpt.setBdPreis(bestellpositionDto.getNNettoeinzelpreis());
 			positionRpt.setFVerpackungsmenge(artikelDto.getFVerpackungsmenge());
+			
 			ArtikellieferantDto artikellieferantDto = getArtikelFac()
-					.artikellieferantFindByArtikellIIdLieferantIIdOhneExc(
+					.getArtikelEinkaufspreis(
 							bestellpositionDto.getArtikelIId(),
-							bestellungDto.getLieferantIIdBestelladresse(),
+							bestellungDto
+									.getLieferantIIdBestelladresse(),
+									bestellpositionDto.getNMenge(),
+
+							bestellungDto.getWaehrungCNr(),
+							new java.sql.Date(bestellungDto
+									.getDBelegdatum().getTime()),
 							theClientDto);
+			
 			if (artikellieferantDto != null) {
 				positionRpt.setSLieferantenArtikelnummer(artikellieferantDto
 						.getCArtikelnrlieferant());

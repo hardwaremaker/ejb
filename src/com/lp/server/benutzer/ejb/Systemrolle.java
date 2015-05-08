@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -45,14 +45,29 @@ import javax.persistence.Table;
 @Entity
 @Table(name = "PERS_SYSTEMROLLE")
 public class Systemrolle implements Serializable {
+	
+	private static final long serialVersionUID = 1L;
+	
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
 
 	@Column(name = "C_BEZ")
 	private String cBez;
-
-	private static final long serialVersionUID = 1L;
+	
+	@Column(name = "I_MAX_USERS")
+	private Integer iMaxUsers;
+	
+	@Column(name = "ALIAS_ROLLE_I_ID")
+	private Integer aliasRolleIId;
+	
+	public Integer getAliasRolleIId() {
+		return aliasRolleIId;
+	}
+	
+	public void setAliasRolleIId(Integer aliasRolleIId) {
+		this.aliasRolleIId = aliasRolleIId;
+	}
 
 	public Systemrolle() {
 		super();
@@ -77,6 +92,14 @@ public class Systemrolle implements Serializable {
 
 	public void setCBez(String cBez) {
 		this.cBez = cBez;
+	}
+	
+	public Integer getIMaxUsers() {
+		return iMaxUsers;
+	}
+	
+	public void setIMaxUsers(Integer iMaxUsers) {
+		this.iMaxUsers = iMaxUsers;
 	}
 
 }

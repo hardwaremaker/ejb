@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -93,7 +93,8 @@ public interface KundeReportFac {
 	public final static int REPORT_STATISTIK_VERLEIHFAKTOR = 24;
 	public final static int REPORT_STATISTIK_SETARTIKEL_TYP = 25;
 	public final static int REPORT_STATISTIK_MATERIALZUSCHLAG = 26;
-	public final static int REPORT_STATISTIK_ANZAHL_FELDER = 27;
+	public final static int REPORT_STATISTIK_WERT = 27;
+	public final static int REPORT_STATISTIK_ANZAHL_FELDER = 28;
 	
 	public final static int REPORT_MONATSSTATISTIK_MONAT = 0;
 	public final static int REPORT_MONATSSTATISTIK_JAHR = 1;

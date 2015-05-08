@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -137,8 +137,8 @@ public class RechnungUmsatzHandler extends UmsatzUseCaseHandlerTabelle {
 				BigDecimal bdUmsatzBrutto = null;
 				BigDecimal bdUmsatzNetto = null;
 
-				BigDecimal bdAnzahlungBruttoGesamt = null;
-				BigDecimal bdAnzahlungNettoGesamt = null;
+				BigDecimal bdAnzahlungBrutto = null;
+				BigDecimal bdAnzahlungNetto = null;
 
 				switch (i) {
 
@@ -215,14 +215,14 @@ public class RechnungUmsatzHandler extends UmsatzUseCaseHandlerTabelle {
 						theClientDto);
 
 				// den Anzahlung Gesamtbrutto bestimmen
-				bdAnzahlungBruttoGesamt = getRechnungFac()
+				bdAnzahlungBrutto = getRechnungFac()
 						.berechneSummeAnzahlungBrutto(
 								mandantCNr,
 								fkAuswertung.kritName, gcBerechnungsdatumVonI,
 								gcBerechnungsdatumBisI,false, theClientDto);
 
 				// den Anzahlung Gesamtnetto bestimmen
-				bdAnzahlungNettoGesamt = getRechnungFac()
+				bdAnzahlungNetto = getRechnungFac()
 						.berechneSummeAnzahlungNetto(mandantCNr,
 								fkAuswertung.kritName, gcBerechnungsdatumVonI,
 								gcBerechnungsdatumBisI,false, theClientDto);
@@ -236,7 +236,7 @@ public class RechnungUmsatzHandler extends UmsatzUseCaseHandlerTabelle {
 								gcBerechnungsdatumBisI,true, theClientDto);
 
 				// den Anzahlung netto bestimmen
-				BigDecimal bdAnzahlungNettoGesamtNichtAbgerechnet = getRechnungFac()
+				BigDecimal bdAnzahlungNettoNichtAbgerechnet = getRechnungFac()
 						.berechneSummeAnzahlungNetto(mandantCNr,
 								fkAuswertung.kritName, gcBerechnungsdatumVonI,
 								gcBerechnungsdatumBisI,true, theClientDto);
@@ -244,14 +244,14 @@ public class RechnungUmsatzHandler extends UmsatzUseCaseHandlerTabelle {
 	
 				// die Zeilen fuer die Anzeige zusammenbauen
 				RechnungUmsatzTabelleDto oErUebersichtDto = new RechnungUmsatzTabelleDto();
-				if (sZeilenHeader != null) {
+				if (sZeilenHeader != null || i == IDX_SUMMEN_GESAMT) {
 					oErUebersichtDto.setSZeilenheader(sZeilenHeader);
 					oErUebersichtDto.setBdOffeneBrutto(bdOffeneBrutto);
 					oErUebersichtDto.setBdOffeneNetto(bdOffeneNetto);
-					oErUebersichtDto.setBdUmsatzBrutto(bdUmsatzBrutto.subtract(bdAnzahlungBruttoGesamt));
-					oErUebersichtDto.setBdUmsatzNetto(bdUmsatzNetto.subtract(bdAnzahlungNettoGesamt));
+					oErUebersichtDto.setBdUmsatzBrutto(bdUmsatzBrutto.subtract(bdAnzahlungBrutto));
+					oErUebersichtDto.setBdUmsatzNetto(bdUmsatzNetto.subtract(bdAnzahlungNetto));
 					oErUebersichtDto.setBdAnzahlungBrutto(bdAnzahlungBruttoNichtAbgerechnet);
-					oErUebersichtDto.setBdAnzahlungNetto(bdAnzahlungNettoGesamtNichtAbgerechnet);
+					oErUebersichtDto.setBdAnzahlungNetto(bdAnzahlungNettoNichtAbgerechnet);
 				}
 
 				// die Summen des Vorjahrs muss man sich fuer spaeter merken
@@ -260,15 +260,15 @@ public class RechnungUmsatzHandler extends UmsatzUseCaseHandlerTabelle {
 				}
 				// die Gesamtsummen bestehen aus den Summen des laufenden Jahres
 				// und des Vorjahres
-				if (i == IDX_SUMMEN_GESAMT) {
-					oErUebersichtDto.setBdOffeneBrutto(bdOffeneBrutto);
-					oErUebersichtDto.setBdOffeneNetto(bdOffeneNetto);
-					oErUebersichtDto.setBdUmsatzBrutto(Helper.getBigDecimalNull());
-					oErUebersichtDto.setBdUmsatzNetto(Helper.getBigDecimalNull());
-					oErUebersichtDto.setBdAnzahlungBrutto(Helper.getBigDecimalNull());
-					oErUebersichtDto.setBdAnzahlungNetto(Helper.getBigDecimalNull());
-					
-				}
+//				if (i == IDX_SUMMEN_GESAMT) {
+//					oErUebersichtDto.setBdOffeneBrutto(bdOffeneBrutto);
+//					oErUebersichtDto.setBdOffeneNetto(bdOffeneNetto);
+//					oErUebersichtDto.setBdUmsatzBrutto(Helper.getBigDecimalNull());
+//					oErUebersichtDto.setBdUmsatzNetto(Helper.getBigDecimalNull());
+//					oErUebersichtDto.setBdAnzahlungBrutto(Helper.getBigDecimalNull());
+//					oErUebersichtDto.setBdAnzahlungNetto(Helper.getBigDecimalNull());
+//					
+//				}
 
 
 				hmSammelstelle.put(new Integer(i), oErUebersichtDto);

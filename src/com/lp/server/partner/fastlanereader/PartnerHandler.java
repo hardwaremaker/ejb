@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.partner.fastlanereader;
 
+import java.awt.Color;
 import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
@@ -63,6 +64,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -130,6 +132,10 @@ public class PartnerHandler extends UseCaseHandler {
 				rows[row][col++] = o[6];
 				rows[row][col++] = o[7];
 
+				if (Helper.short2boolean((Short) o[8])) {
+					rows[row][col++] = Color.LIGHT_GRAY;
+				}
+
 				row++;
 				col = 0;
 
@@ -161,8 +167,6 @@ public class PartnerHandler extends UseCaseHandler {
 					+ " LEFT JOIN partner.flrlandplzort.flrland AS flrland "
 					+ " LEFT OUTER JOIN partner.ansprechpartner AS ansprechpartnerset "
 					+ " LEFT OUTER JOIN ansprechpartnerset.flrpartneransprechpartner AS partneransprechpartner "
-
-
 
 					+ buildWhereClause();
 			Query query = session.createQuery(queryString);
@@ -247,98 +251,52 @@ public class PartnerHandler extends UseCaseHandler {
 						where.append(" "
 								+ filterKriterien[i].value.toLowerCase() + ")");
 					} else if (filterKriterien[i].kritName
+							.equals(PartnerFac.PARTNERQP1_TELEFONNUMMERN_SUCHE)) {
+						
+						
+						where.append(" replace(replace(replace(replace(replace(coalesce(replace(partner.c_telefon,' ',''),'') ||' '|| coalesce(replace(partner.c_fax,' ',''),'') ||' '|| coalesce(replace(ansprechpartnerset.c_handy,' ',''),'') ||' '|| coalesce(replace(partneransprechpartner.c_fax,' ',''),'') ||' '|| coalesce(replace(partneransprechpartner.c_telefon,' ',''),'') ,'(','') ,')','') ,'+','') ,'-','') ,'/','')");
+						where.append(" " + filterKriterien[i].operator);
+						where.append(" "
+								+ filterKriterien[i].value.toLowerCase()
+										.replaceAll(" ", ""));
+						
+					} else if (filterKriterien[i].kritName
 							.equals(PartnerFac.PARTNERQP1_ERWEITERTE_SUCHE)) {
 
-						where.append(" (replace(lower(partner.c_name1nachnamefirmazeile1),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
-						where.append(" OR replace(lower(partner.c_name2vornamefirmazeile2),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
-						where.append(" OR replace(lower(partner.c_name3vorname2abteilung),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
-						where.append(" OR replace(lower(partner.c_kbez),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
-						where.append(" OR replace(lower(partner.c_strasse),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
+						
+					
+						
+						
+						String suchstring = "  coalesce(partner.c_name1nachnamefirmazeile1,'')||' '||coalesce(partner.c_name2vornamefirmazeile2,'')||' '||coalesce(partner.c_name3vorname2abteilung,'')||' '||coalesce(partner.c_kbez,'')";
+							suchstring += "||' '||coalesce(partner.c_strasse,'')||' '||coalesce(partneransprechpartner.c_name1nachnamefirmazeile1,'')||' '||coalesce(partneransprechpartner.c_name2vornamefirmazeile2,'')";
+						
+							suchstring += "||' '||coalesce(partneransprechpartner.c_name3vorname2abteilung,'')||' '||coalesce(partner.c_email,'')||' '||coalesce(partner.c_fax,'')";
+						
+							suchstring += "||' '||coalesce(partner.c_telefon,'')||' '||coalesce(ansprechpartnerset.c_handy,'')||' '||coalesce(ansprechpartnerset.c_email,'')";
+							suchstring += "||' '||coalesce(cast(ansprechpartnerset.x_bemerkung as string),'')||' '||coalesce(cast(partner.x_bemerkung as string),'')";
+							
 
-						where.append(" OR replace(lower(partneransprechpartner.c_name1nachnamefirmazeile1),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
-						where.append(" OR replace(lower(partneransprechpartner.c_name2vornamefirmazeile2),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
-						where.append(" OR replace(lower(partneransprechpartner.c_name3vorname2abteilung),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
+						String[] teile = filterKriterien[i].value.toLowerCase()
+								.split(" ");
+						
 
-						where.append(" OR replace(lower(partner.c_email),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
-						where.append(" OR replace(lower(partner.c_fax),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
-						where.append(" OR replace(lower(partner.c_telefon),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
+						for (int p = 0; p < teile.length; p++) {
 
-						where.append(" OR replace(lower(partneransprechpartner.c_email),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
-						where.append(" OR replace(lower(partneransprechpartner.c_fax),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
-						where.append(" OR replace(lower(partneransprechpartner.c_telefon),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
-						where.append(" OR replace(lower(ansprechpartnerset.c_handy),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
+							if (teile[p].startsWith("-")) {
+								where.append(" NOT ");
 
-						where.append(" OR replace(lower(cast(ansprechpartnerset.x_bemerkung as string)),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", ""));
+								teile[p] = teile[p].substring(1);
 
-						where.append(" OR replace(lower(cast(partner.x_bemerkung as string)),' ','')");
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" "
-								+ filterKriterien[i].value.toLowerCase()
-										.replaceAll(" ", "") + ")");
+							}
+
+							where.append(" lower(" + suchstring + ") like '%"
+									+ teile[p].toLowerCase() + "%'");
+							if (p < teile.length - 1) {
+								where.append(" AND ");
+							}
+						}
+
+						
 
 					} else {
 
@@ -431,14 +389,12 @@ public class PartnerHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
-		return "SELECT distinct partner.i_id, partner.partnerart_c_nr,partner.c_name1nachnamefirmazeile1,partner.c_name2vornamefirmazeile2,partner.flrlandplzort.flrland.c_lkz,partner.flrlandplzort.c_plz,partner.flrlandplzort.flrort.c_name,partner.f_gmtversatz FROM FLRPartner AS partner "
+		return "SELECT distinct partner.i_id, partner.partnerart_c_nr,partner.c_name1nachnamefirmazeile1,partner.c_name2vornamefirmazeile2,partner.flrlandplzort.flrland.c_lkz,partner.flrlandplzort.c_plz,partner.flrlandplzort.flrort.c_name,partner.f_gmtversatz,partner.b_versteckt FROM FLRPartner AS partner "
 				+ " LEFT JOIN partner.flrlandplzort AS flrlandplzort "
 				+ " LEFT JOIN partner.flrlandplzort.flrort AS flrort "
 				+ " LEFT JOIN partner.flrlandplzort.flrland AS flrland "
 				+ " LEFT OUTER JOIN partner.ansprechpartner AS ansprechpartnerset "
 				+ " LEFT OUTER JOIN ansprechpartnerset.flrpartneransprechpartner AS partneransprechpartner ";
-
-			
 
 	}
 
@@ -500,7 +456,7 @@ public class PartnerHandler extends UseCaseHandler {
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
 					String.class, String.class, String.class, String.class,
-					String.class, String.class, Double.class },
+					String.class, String.class, Double.class, Color.class },
 					new String[] {
 							"i_id",
 							getTextRespectUISpr("lp.art", mandantCNr, locUI),
@@ -513,7 +469,7 @@ public class PartnerHandler extends UseCaseHandler {
 							getTextRespectUISpr("lp.ort", mandantCNr, locUI),
 							getTextRespectUISpr("part.auswahl.gmt",
 									theClientDto.getMandant(),
-									theClientDto.getLocUi()) }, new int[] {
+									theClientDto.getLocUi()), "" }, new int[] {
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_L,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
@@ -521,7 +477,7 @@ public class PartnerHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_S,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XS }, new String[] {
+							QueryParameters.FLR_BREITE_XS, 0 }, new String[] {
 							"i_id",
 							PartnerFac.FLR_PARTNER_PARTNERART,
 							PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
@@ -536,7 +492,7 @@ public class PartnerHandler extends UseCaseHandler {
 							PartnerFac.FLR_PARTNER_FLRLANDPLZORT + "."
 									+ SystemFac.FLR_LP_FLRORT + "."
 									+ SystemFac.FLR_LP_ORTNAME,
-							PartnerFac.FLR_PARTNER_F_GMTVERSATZ }));
+							PartnerFac.FLR_PARTNER_F_GMTVERSATZ, "" }));
 
 		}
 		return super.getTableInfo();
@@ -551,18 +507,18 @@ public class PartnerHandler extends UseCaseHandler {
 			// Nicht gefunden
 		}
 		if (partnerDto != null) {
-//			String sPartner = partnerDto.getCName1nachnamefirmazeile1()
-//					.replace("/", ".").replace("'", " ").trim();
-//			if (partnerDto.getCName2vornamefirmazeile2() != null) {
-//				sPartner = sPartner
-//						+ " "
-//						+ partnerDto.getCName2vornamefirmazeile2()
-//								.replace("/", ".").replace("'", " ").trim();
-//			}
-//			String sPath = JCRDocFac.HELIUMV_NODE + "/"
-//					+ theClientDto.getMandant() + "/"
-//					+ LocaleFac.BELEGART_PARTNER.trim() + "/"
-//					+ LocaleFac.BELEGART_PARTNER.trim() + "/" + sPartner;
+			// String sPartner = partnerDto.getCName1nachnamefirmazeile1()
+			// .replace("/", ".").replace("'", " ").trim();
+			// if (partnerDto.getCName2vornamefirmazeile2() != null) {
+			// sPartner = sPartner
+			// + " "
+			// + partnerDto.getCName2vornamefirmazeile2()
+			// .replace("/", ".").replace("'", " ").trim();
+			// }
+			// String sPath = JCRDocFac.HELIUMV_NODE + "/"
+			// + theClientDto.getMandant() + "/"
+			// + LocaleFac.BELEGART_PARTNER.trim() + "/"
+			// + LocaleFac.BELEGART_PARTNER.trim() + "/" + sPartner;
 			DocPath docPath = new DocPath(new DocNodePartner(partnerDto));
 			return new PrintInfoDto(docPath, null, getSTable());
 		} else {

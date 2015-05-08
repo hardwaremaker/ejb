@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -65,6 +65,7 @@ public class PrintKontoblaetterModel implements Serializable {
 	private String kontotypCNr ;
 	
 	private boolean druckInMandantenWaehrung;
+	private boolean sortiereNachAZK;
 	
 	public PrintKontoblaetterModel() {
 	}
@@ -265,5 +266,13 @@ public class PrintKontoblaetterModel implements Serializable {
 
 	public boolean isDruckInMandantenWaehrung() {
 		return druckInMandantenWaehrung;
+	}
+
+	public boolean isSortiereNachAZK() {
+		return sortiereNachAZK;
+	}
+
+	public void setSortiereNachAZK(boolean sortiereNachAZK) {
+		this.sortiereNachAZK = sortiereNachAZK;
 	}	
 }

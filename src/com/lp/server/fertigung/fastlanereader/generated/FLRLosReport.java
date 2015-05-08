@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,17 +19,17 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.fertigung.fastlanereader.generated;
 
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport;
@@ -56,6 +56,9 @@ public class FLRLosReport implements Serializable {
 
     /** nullable persistent field */
     private String c_nr;
+
+    /** nullable persistent field */
+    private String c_kommentar;
 
     /** nullable persistent field */
     private String status_c_nr;
@@ -136,9 +139,10 @@ public class FLRLosReport implements Serializable {
     private Set ablieferungset;
 
     /** full constructor */
-    public FLRLosReport(String mandant_c_nr, String c_nr, String status_c_nr, String c_projekt, Integer stueckliste_i_id, Date t_produktionsende, Date t_produktionsbeginn, Date t_ausgabe, Date t_erledigt, Date t_manuellerledigt, Date t_aktualisierungstueckliste, Date t_aktualisierungarbeitszeit, Date t_anlegen, Date t_produktionsstop, BigDecimal n_losgroesse, Double f_bewertung, Integer wiederholendelose_i_id, Integer kostenstelle_i_id, Integer fertigungsgruppe_i_id, Integer partner_i_id_fertigungsort, FLRStueckliste flrstueckliste, FLRKostenstelle flrkostenstelle, FLRAuftragposition flrauftragposition, FLRAuftragReport flrauftrag, FLRKunde flrkunde, FLRFertigungsgruppe flrfertigungsgruppe, FLRFertigungsgruppe flrwiederholendelose, Set ablieferungset) {
+    public FLRLosReport(String mandant_c_nr, String c_nr, String c_kommentar, String status_c_nr, String c_projekt, Integer stueckliste_i_id, Date t_produktionsende, Date t_produktionsbeginn, Date t_ausgabe, Date t_erledigt, Date t_manuellerledigt, Date t_aktualisierungstueckliste, Date t_aktualisierungarbeitszeit, Date t_anlegen, Date t_produktionsstop, BigDecimal n_losgroesse, Double f_bewertung, Integer wiederholendelose_i_id, Integer kostenstelle_i_id, Integer fertigungsgruppe_i_id, Integer partner_i_id_fertigungsort, FLRStueckliste flrstueckliste, FLRKostenstelle flrkostenstelle, FLRAuftragposition flrauftragposition, FLRAuftragReport flrauftrag, FLRKunde flrkunde, FLRFertigungsgruppe flrfertigungsgruppe, FLRFertigungsgruppe flrwiederholendelose, Set ablieferungset) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
+        this.c_kommentar = c_kommentar;
         this.status_c_nr = status_c_nr;
         this.c_projekt = c_projekt;
         this.stueckliste_i_id = stueckliste_i_id;
@@ -198,6 +202,14 @@ public class FLRLosReport implements Serializable {
 
     public void setC_nr(String c_nr) {
         this.c_nr = c_nr;
+    }
+
+    public String getC_kommentar() {
+        return this.c_kommentar;
+    }
+
+    public void setC_kommentar(String c_kommentar) {
+        this.c_kommentar = c_kommentar;
     }
 
     public String getStatus_c_nr() {

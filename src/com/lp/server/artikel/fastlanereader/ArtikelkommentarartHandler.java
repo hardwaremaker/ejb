@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -47,6 +47,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -349,18 +350,58 @@ public class ArtikelkommentarartHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class }, new String[] {
-					"i_id",
-					getTextRespectUISpr("lp.kennung", theClientDto.getMandant(),
-							theClientDto.getLocUi()),
-					getTextRespectUISpr("lp.bezeichnung", theClientDto
-							.getMandant(), theClientDto.getLocUi()) },
-					new String[] { "artikelkommentarart.i_id",
+			setTableInfo(new TableInfo(
+					new Class[] {
+							Integer.class,
+							String.class,
+							String.class
+					},
+					
+					new String[] {
+							"i_id",
+							getTextRespectUISpr("lp.kennung",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.bezeichnung",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi())
+					
+					},
+					
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST
+					},
+					
+					new String[] {
+							"artikelkommentarart.i_id",
 							"artikelkommentarart.c_nr",
-							"artikelkommentarartsprset.c_bez" }));
+							"artikelkommentarartsprset.c_bez"
+					})
+			);
 
 		}
 		return super.getTableInfo();
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

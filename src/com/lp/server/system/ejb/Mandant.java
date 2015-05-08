@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -127,7 +127,17 @@ public class Mandant implements Serializable {
 	@Column(name = "I_JAHRE_RUECKDATIERBAR")
 	private Integer jahreRueckdatierbar;
 	
+	@Column(name = "KOSTENSTELLE_I_ID_FIBU")
+	private Integer kostenstelleIIdFibu;
 	
+	public Integer getKostenstelleIIdFibu() {
+		return kostenstelleIIdFibu;
+	}
+
+	public void setKostenstelleIIdFibu(Integer kostenstelleIIdFibu) {
+		this.kostenstelleIIdFibu = kostenstelleIIdFibu;
+	}
+
 	public Integer getKundeIIdStueckliste() {
 		return kundeIIdStueckliste;
 	}

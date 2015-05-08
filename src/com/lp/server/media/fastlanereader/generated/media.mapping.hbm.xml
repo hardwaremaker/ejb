@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<!--
+  HELIUM V, Open Source ERP software for sustained success
+  at small and medium-sized enterprises.
+  Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+  
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published 
+  by the Free Software Foundation, either version 3 of theLicense, or 
+  (at your option) any later version.
+  
+  According to sec. 7 of the GNU Affero General Public License, version 3, 
+  the terms of the AGPL are supplemented with the following terms:
+  
+  "HELIUM V" and "HELIUM 5" are registered trademarks of 
+  HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+  AGPL does not imply a trademark license. Therefore any rights, title and
+  interest in our trademarks remain entirely with us. If you want to propagate
+  modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
+  you may only do so if you have a written permission by HELIUM V IT-Solutions 
+  GmbH (to acquire a permission please contact HELIUM V IT-Solutions
+  at trademark@heliumv.com).
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+  
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  
+  Contact: developers@heliumv.com
+-->
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="com.lp.server.media.fastlanereader.generated">
+
+	<class name="FLRMediaEmailMeta" table="MEDIA_EMAILMETA">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		
+		<property name="c_from" column="C_FROM" type="java.lang.String" not-null="true" />
+		<property name="c_to" column="C_TO" type="java.lang.String" not-null="true" />
+		<property name="c_cc" column="C_CC" type="java.lang.String" not-null="true" />
+		<property name="c_subject" column="C_SUBJECT" type="java.lang.String" not-null="true" />
+		<property name="t_emaildate" column="T_EMAILDATE" type="java.sql.Timestamp" not-null="true" />
+		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Timestamp" not-null="true" />
+		<property name="b_priority" column="B_PRIORITY" type="java.lang.Short" not-null="true" />
+		<property name="x_content" column="X_CONTENT" type="java.lang.String" not-null="false" />
+	</class>
+	
+	<class name="FLRMediaInbox" table="MEDIA_INBOX">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		
+		<property name="media_i_id" column="MEDIA_I_ID" type="java.lang.Integer" not-null="true" />
+		<property name="personal_i_id" column="PERSONAL_I_ID" type="java.lang.Integer" not-null="true" />
+		<property name="status_c_nr" column="STATUS_C_NR" type="java.lang.String" not-null="true" />
+		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short" not-null="true" />
+		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Timestamp" not-null="true" />
+		<property name="personal_i_id_anlegen" column="PERSONAL_I_ID_ANLEGEN" type="java.lang.Integer" not-null="true" />
+		<property name="t_aendern" column="T_AENDERN" type="java.sql.Timestamp" not-null="true" />
+		<property name="personal_i_id_aendern" column="PERSONAL_I_ID_AENDERN" type="java.lang.Integer" not-null="true" />
+
+		<many-to-one name="flrmedia"
+			class="com.lp.server.media.fastlanereader.generated.FLRMediaEmailMeta" column="MEDIA_I_ID"
+			insert="false" update="false" />
+	</class>
+	
+	<class name="FLRMediaStoreBeleg" table="MEDIA_STOREBELEG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		
+		<property name="media_i_id" column="MEDIA_I_ID" type="java.lang.Integer" not-null="true" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" not-null="true" />
+		<property name="c_belegartnr" column="C_BELEGARTNR" type="java.lang.String" not-null="true" />
+		<property name="beleg_i_id" column="BELEG_I_ID" type="java.lang.Integer" not-null="true" />
+		<property name="belegposition_i_id" column="BELEGPOSITION_I_ID" type="java.lang.Integer" not-null="false" />
+		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Timestamp" not-null="true" />
+		<property name="personal_i_id_anlegen" column="PERSONAL_I_ID_ANLEGEN" type="java.lang.Integer" not-null="true" />
+		<property name="t_aendern" column="T_AENDERN" type="java.sql.Timestamp" not-null="true" />
+		<property name="personal_i_id_aendern" column="PERSONAL_I_ID_AENDERN" type="java.lang.Integer" not-null="true" />
+		<property name="t_gelesen" column="T_GELESEN" type="java.sql.Timestamp" not-null="false" />
+
+		<many-to-one name="flrmedia"
+			class="com.lp.server.media.fastlanereader.generated.FLRMediaEmailMeta" column="MEDIA_I_ID"
+			insert="false" update="false" />
+	</class>	
+</hibernate-mapping>

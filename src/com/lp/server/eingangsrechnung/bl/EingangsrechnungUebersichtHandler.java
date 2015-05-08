@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -40,7 +40,7 @@ import java.util.Locale;
 import java.util.TreeMap;
 
 import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
-import com.lp.server.eingangsrechnung.service.EingangsrechnungUebersichtTabelleDto;
+import com.lp.server.rechnung.service.RechnungUmsatzTabelleDto;
 import com.lp.server.util.UmsatzUseCaseHandlerTabelle;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
@@ -71,7 +71,7 @@ public class EingangsrechnungUebersichtHandler extends
 	 */
 	private static final long serialVersionUID = 1L;
 	private final int iAnzahlZeilen = 17;
-	private final int iAnzahlSpalten = 7;
+	private final int iAnzahlSpalten = 10;
 
 	/**
 	 * Konstruktor.
@@ -95,14 +95,17 @@ public class EingangsrechnungUebersichtHandler extends
 			Locale locUI = theClientDto.getLocUi();
 			tableInfo = new TableInfo(new Class[] { String.class, String.class,
 					BigDecimal.class, BigDecimal.class, String.class,
+					BigDecimal.class, BigDecimal.class, String.class,
 					BigDecimal.class, BigDecimal.class },
 
 			new String[] { "", "  ",
 					getTextRespectUISpr("lp.brutto", mandantCNr, locUI),
 					getTextRespectUISpr("lp.netto", mandantCNr, locUI), "  ",
 					getTextRespectUISpr("lp.brutto", mandantCNr, locUI),
+					getTextRespectUISpr("lp.netto", mandantCNr, locUI), "  ",
+					getTextRespectUISpr("lp.brutto", mandantCNr, locUI),
 					getTextRespectUISpr("lp.netto", mandantCNr, locUI) },
-					new String[] { "", "", "", "", "", "", "" });
+					new String[] { "", "", "", "", "", "", "", "" , "" , ""});
 		}
 		return this.tableInfo;
 	}
@@ -125,9 +128,10 @@ public class EingangsrechnungUebersichtHandler extends
 			// enthaelt KRIT_BELEGDATUM | KRIT_LIEFERTERMIN | KRIT_FINALTERMIN =
 			// vierstellige Jahreszahl
 			FilterKriterium fkDatum = aFilterKriterium[EingangsrechnungFac.IDX_KRIT_DATUM];
-			FilterKriterium fkJahr = aFilterKriterium[EingangsrechnungFac.IDX_KRIT_JAHR];
 
 			FilterKriterium fkZusatzkosten = aFilterKriterium[EingangsrechnungFac.IDX_KRIT_ZUSATZKOSTEN];
+			FilterKriterium fkJahr = aFilterKriterium[EingangsrechnungFac.IDX_KRIT_JAHR];
+			
 			boolean bZusatzkosten = Helper.short2boolean(new Short(
 					fkZusatzkosten.value));
 			init(fkJahr);
@@ -137,16 +141,10 @@ public class EingangsrechnungUebersichtHandler extends
 			GregorianCalendar gcBerechnungsdatumVonI = null;
 			GregorianCalendar gcBerechnungsdatumBisI = null;
 
-			BigDecimal bdOffeneBruttoGesamt = new BigDecimal(0);
-			BigDecimal bdOffeneNettoGesamt = new BigDecimal(0);
-
-			BigDecimal bdUmsatzBruttoGesamt = new BigDecimal(0);
-			BigDecimal bdUmsatzNettoGesamt = new BigDecimal(0);
-
-			EingangsrechnungUebersichtTabelleDto oSummenVorjahr = null;
+			RechnungUmsatzTabelleDto oSummenVorjahr = null;
 
 			// zuerste eine HashMap mit den darzustellenden Daten zusammenbauen
-			TreeMap<Integer, EingangsrechnungUebersichtTabelleDto> hmSammelstelle = new TreeMap<Integer, EingangsrechnungUebersichtTabelleDto>();
+			TreeMap<Integer, RechnungUmsatzTabelleDto> hmSammelstelle = new TreeMap<Integer, RechnungUmsatzTabelleDto>();
 
 			for (int i = 0; i < iAnzahlZeilen; i++) {
 				// die jeweiligen Spalten einer Zeile
@@ -155,10 +153,12 @@ public class EingangsrechnungUebersichtHandler extends
 				BigDecimal bdOffeneNetto = null;
 				BigDecimal bdUmsatzBrutto = null;
 				BigDecimal bdUmsatzNetto = null;
+				BigDecimal bdAnzahlungNichtVerrechnetBrutto = null;
+				BigDecimal bdAnzahlungNichtVerrechnetNetto = null;
 				// die Zeilen fuer die Anzeige zusammenbauen
-				EingangsrechnungUebersichtTabelleDto oErUebersichtDto = new EingangsrechnungUebersichtTabelleDto();
+				RechnungUmsatzTabelleDto oErUebersichtDto = new RechnungUmsatzTabelleDto();
 				switch (i) {
-				case 0:
+				case IDX_SUMMEN_VORJAHR:
 					// in dieser Zeile stehen die Summen fuer das gesamte
 					// Vorjahr
 					sZeilenHeader = getTextRespectUISpr("lp.vorjahr",
@@ -193,7 +193,7 @@ public class EingangsrechnungUebersichtHandler extends
 					gcBerechnungsdatumBisI = new GregorianCalendar(iJahr + 1,
 							iIndexBeginnMonat, 1);
 					break;
-				case 16:
+				case IDX_SUMMEN_GESAMT:
 					/*
 					 * sZeilenHeader = getTextRespectUISpr("lp.gesamtsumme",
 					 * theClientDto.getMandant(), theClientDto.getLocUi());
@@ -205,7 +205,11 @@ public class EingangsrechnungUebersichtHandler extends
 					 * oErUebersichtDto.setBdUmsatzNetto(bdUmsatzBruttoGesamt);
 					 * hmSammelstelle.put(new Integer(i), oErUebersichtDto);
 					 */
-					continue;
+					sZeilenHeader = getTextRespectUISpr("lp.gesamtsumme",mandantCNr, locUI);
+					
+					gcBerechnungsdatumVonI = new GregorianCalendar(1900,iIndexBeginnMonat, 1);
+					gcBerechnungsdatumBisI = new GregorianCalendar(iJahr + 1,iIndexBeginnMonat, 1);
+					break;
 				default:
 					sZeilenHeader = aMonatsnamen[iCurrentMonat];
 					// das Zeitintervall auf das laufende Monat festlegen
@@ -226,47 +230,49 @@ public class EingangsrechnungUebersichtHandler extends
 				// den offenen Bruttowert bestimmen
 				bdOffeneBrutto = getEingangsrechnungFac()
 						.berechneSummeOffenBruttoInMandantenwaehrung(
-								theClientDto, fkDatum.kritName,
-								fkJahr.kritName, gcBerechnungsdatumVonI,
+								theClientDto, fkDatum.kritName, gcBerechnungsdatumVonI,
 								gcBerechnungsdatumBisI, bZusatzkosten);
-
-				bdOffeneBruttoGesamt = bdOffeneBruttoGesamt.add(bdOffeneBrutto);
 
 				// den offenen Nettowert bestimmen
 				bdOffeneNetto = getEingangsrechnungFac()
 						.berechneSummeOffenNettoInMandantenwaehrung(
-								theClientDto, fkDatum.kritName,
-								fkJahr.kritName, gcBerechnungsdatumVonI,
+								theClientDto, fkDatum.kritName, gcBerechnungsdatumVonI,
 								gcBerechnungsdatumBisI, bZusatzkosten);
 
-				bdOffeneNettoGesamt = bdOffeneNettoGesamt.add(bdOffeneNetto);
 
 				// den Umsatz brutto bestimmen
 				bdUmsatzBrutto = getEingangsrechnungFac()
 						.berechneSummeUmsatzBrutto(theClientDto,
-								fkDatum.kritName, fkJahr.kritName, waehrung,
+								fkDatum.kritName, waehrung,
 								gcBerechnungsdatumVonI, gcBerechnungsdatumBisI,
 								bZusatzkosten);
 
-				bdUmsatzBruttoGesamt = bdUmsatzBruttoGesamt.add(bdUmsatzBrutto);
 
 				// den Umsatz netto bestimmen
 				bdUmsatzNetto = getEingangsrechnungFac()
 						.berechneSummeUmsatzNetto(theClientDto,
-								fkDatum.kritName, fkJahr.kritName, waehrung,
+								fkDatum.kritName, waehrung,
 								gcBerechnungsdatumVonI, gcBerechnungsdatumBisI,
 								bZusatzkosten);
 
-				bdUmsatzNettoGesamt = bdUmsatzNettoGesamt.add(bdUmsatzNetto);
+				bdAnzahlungNichtVerrechnetBrutto = getEingangsrechnungFac()
+						.berechneSummeAnzahlungenNichtVerrechnetBrutto(
+								theClientDto, fkDatum.kritName, gcBerechnungsdatumVonI, gcBerechnungsdatumBisI);
+				
+				bdAnzahlungNichtVerrechnetNetto = getEingangsrechnungFac()
+						.berechneSummeAnzahlungenNichtVerrechnetNetto(
+								theClientDto, fkDatum.kritName, gcBerechnungsdatumVonI, gcBerechnungsdatumBisI);
 
-				if (sZeilenHeader != null) {
+				if (sZeilenHeader != null || i == IDX_SUMMEN_GESAMT) {
 					oErUebersichtDto.setSZeilenheader(sZeilenHeader);
-					oErUebersichtDto.setBdOffenBrutto(bdOffeneBrutto);
-					oErUebersichtDto.setBdOffenNetto(bdOffeneNetto);
+					oErUebersichtDto.setBdOffeneBrutto(bdOffeneBrutto);
+					oErUebersichtDto.setBdOffeneNetto(bdOffeneNetto);
 					// oAuftragUebersichtDto.setSEmpty(null) // ist bereits
 					// ueber Dto gesetzt
 					oErUebersichtDto.setBdUmsatzBrutto(bdUmsatzBrutto);
 					oErUebersichtDto.setBdUmsatzNetto(bdUmsatzNetto);
+					oErUebersichtDto.setBdAnzahlungBrutto(bdAnzahlungNichtVerrechnetBrutto);
+					oErUebersichtDto.setBdAnzahlungNetto(bdAnzahlungNichtVerrechnetNetto);
 				}
 
 				// die Summen des Vorjahrs muss man sich fuer spaeter merken
@@ -275,15 +281,15 @@ public class EingangsrechnungUebersichtHandler extends
 				}
 				// die Gesamtsummen bestehen aus den Summen des laufenden Jahres
 				// und des Vorjahres
-				if (i == IDX_SUMMEN_GESAMT) {
-					oErUebersichtDto.setSZeilenheader(sZeilenHeader);
-					oErUebersichtDto.setBdOffenBrutto(bdOffeneBrutto);
-					oErUebersichtDto.setBdOffenNetto(bdOffeneNetto);
-					oErUebersichtDto.setBdUmsatzBrutto(Helper
-							.getBigDecimalNull());
-					oErUebersichtDto.setBdUmsatzNetto(Helper
-							.getBigDecimalNull());
-				}
+//				else if (i == IDX_SUMMEN_GESAMT) {
+//					oErUebersichtDto.setSZeilenheader(sZeilenHeader);
+//					oErUebersichtDto.setBdOffeneBrutto(bdOffeneBrutto);
+//					oErUebersichtDto.setBdOffeneNetto(bdOffeneNetto);
+//					oErUebersichtDto.setBdUmsatzBrutto(Helper.getBigDecimalNull());
+//					oErUebersichtDto.setBdUmsatzNetto(Helper.getBigDecimalNull());
+//					oErUebersichtDto.setBdAnzahlungBrutto(Helper.getBigDecimalNull());
+//					oErUebersichtDto.setBdAnzahlungNetto(Helper.getBigDecimalNull());
+//				}
 
 				hmSammelstelle.put(new Integer(i), oErUebersichtDto);
 			}
@@ -296,21 +302,23 @@ public class EingangsrechnungUebersichtHandler extends
 			int row = 0;
 			int col = 0;
 
-			Collection<EingangsrechnungUebersichtTabelleDto> clSichtLieferstatus = hmSammelstelle
+			Collection<RechnungUmsatzTabelleDto> clSichtLieferstatus = hmSammelstelle
 					.values();
-			Iterator<EingangsrechnungUebersichtTabelleDto> it = clSichtLieferstatus
+			Iterator<RechnungUmsatzTabelleDto> it = clSichtLieferstatus
 					.iterator();
 
 			while (it.hasNext()) {
-				EingangsrechnungUebersichtTabelleDto oErUebersichtDto = (EingangsrechnungUebersichtTabelleDto) it
-						.next();
+				RechnungUmsatzTabelleDto oErUebersichtDto = it.next();
 				rows[row][col++] = "";
 				rows[row][col++] = oErUebersichtDto.getSZeilenHeader();
-				rows[row][col++] = oErUebersichtDto.getBdOffenBrutto();
-				rows[row][col++] = oErUebersichtDto.getBdOffenNetto();
+				rows[row][col++] = oErUebersichtDto.getBdOffeneBrutto();
+				rows[row][col++] = oErUebersichtDto.getBdOffeneNetto();
 				rows[row][col++] = oErUebersichtDto.getSEmpty();
 				rows[row][col++] = oErUebersichtDto.getBdUmsatzBrutto();
 				rows[row][col++] = oErUebersichtDto.getBdUmsatzNetto();
+				rows[row][col++] = oErUebersichtDto.getSEmpty();
+				rows[row][col++] = oErUebersichtDto.getBdAnzahlungBrutto();
+				rows[row][col++] = oErUebersichtDto.getBdAnzahlungNetto();
 				row++;
 				col = 0;
 			}

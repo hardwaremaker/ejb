@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -49,6 +49,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -306,22 +307,66 @@ public class MahnstufeHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, Integer.class, Integer.class,
-							BigDecimal.class, Float.class },
+					new Class[] {
+							Integer.class,
+							Integer.class,
+							Integer.class,
+							BigDecimal.class,
+							Float.class
+					},
+							
 					new String[] {
 							"Id",
-							getTextRespectUISpr("lp.mahnstufe", mandantCNr,
-									locUI),
+							getTextRespectUISpr("lp.mahnstufe", mandantCNr,	locUI),
 							getTextRespectUISpr("lp.tage", mandantCNr, locUI),
 							getTextRespectUISpr("lp.spesen", mandantCNr, locUI),
-							getTextRespectUISpr("lp.zinssatz", mandantCNr,
-									locUI) }, new String[] {
+							getTextRespectUISpr("lp.zinssatz", mandantCNr, locUI)
+					},
+					
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST
+					},
+					
+					new String[] {
 							FinanzFac.FLR_MAHNSTUFE_I_ID,
 							FinanzFac.FLR_MAHNSTUFE_I_ID,
 							FinanzFac.FLR_MAHNSTUFE_I_TAGE,
 							FinanzFac.FLR_MAHNSTUFE_N_MAHNSPESEN,
-							FinanzFac.FLR_MAHNSTUFE_F_ZINSSATZ }));
+							FinanzFac.FLR_MAHNSTUFE_F_ZINSSATZ
+					})
+			);
 		}
 		return super.getTableInfo();
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,10 +32,14 @@
  ******************************************************************************/
 package com.lp.server.finanz.service;
 
+import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import javax.ejb.Remote;
@@ -89,29 +93,17 @@ public interface FinanzServiceFac {
 	public static final String KONTOTYP_KREDITOR = "Kreditorenkonto";
 	public static final String KONTOTYP_SACHKONTO = "Sachkonto";
 
-	public final static String KONTOART_AUFWANDSKONTO_STEUERBAR = "Aufwandskonto steuerbar fr.UST";
-	public final static String KONTOART_DRITTLAND_ERLOES = "Drittland Erloes";
-	public final static String KONTOART_DRITTLAND_ERWERB = "Drittland Erwerb";
-	public final static String KONTOART_ERLOSKONTO_STEUERBAR = "Erloeskonto steuerbar fr. UST";
-	public final static String KONTOART_INNERGEMEINSCHAFTLICHER_ERLOES = "Innergemeinschaftlicher Erloes";
-	public final static String KONTOART_INNERGEMEINSCHAFTLICHER_ERWERB = "Innergemeinschaftlicher Erwerb";
-	public final static String KONTOART_NICHT_STEUERBAR = "Nicht steuerbar";
-	public final static String KONTOART_REVERSE_CHARGE = "Reverse Charge";
-	public final static String KONTOART_STEUERBARES_ERLOESKONTO = "Steuerbares Erloeskonto";
-	public final static String KONTOART_STEUERKONTO_AUS_IG_ERWERB = "Steuerkonto aus IG Erwerb";
 	public final static String KONTOART_UST_ODER_ERWERBSSTEUERKONTO = "UST- oder Erwerbssteuerkonto";
-	public final static String KONTOART_VORSTEUERABZUG_ERLAUBT = "Vorsteuerabzug erlaubt";
-	public final static String KONTOART_VORSTEUERKONTO = "Vorsteuerkonto";
-
+	
 	// die neuen Kontoarten fuer das Fibumodul
 	public final static String KONTOART_UST = "Ust Konto";
 	public final static String KONTOART_VST = "Vst Konto";
 	public final static String KONTOART_UST_SAMMEL = "Ust Sammelkonto";
 	public final static String KONTOART_VST_SAMMEL = "Vst Sammelkonto";
 	public final static String KONTOART_FA_ZAHLLAST = "FA Zahllastkonto";
-	public final static String KONTOART_SAMMEL = "Sammelkonto";
 	public final static String KONTOART_EROEFFNUNG = "Eroeffnungskonto";
 	public final static String KONTOART_ABGABEN = "Abgaben";
+	public final static String KONTOART_NICHT_ZUTREFFEND = "Nicht zutreffend";
 	
 	public final static String UVAART_EU_AUSLAND_MIT_UID = "EU Ausland mit UiD";
 	public final static String UVAART_EXPORT_DRITTLAND = "Export Drittland";
@@ -121,13 +113,60 @@ public interface FinanzServiceFac {
 	public final static String UVAART_IMPORT_DRITTLAND = "Import Drittland";
 	public final static String UVAART_INLAND_10 = "Umsatz Inland red.Steuer"; // "Inland 10";
 	public final static String UVAART_INLAND_20 = "Umsatz Inland Normalsteuer"; // "Inland 20";
-	public final static String UVAART_NICHT_DEFINIERT = "Nicht definiert";
+	public final static String UVAART_NICHT_ZUTREFFEND = "Nicht zutreffend";
 	public final static String UVAART_REVERSE_CHARGE = "Reverse Charge";
 	public final static String UVAART_UMSATZ_REVERSE_CHARGE = "Umsatz Reverse Charge";
 	public final static String UVAART_ZAHLLASTKONTO = "Zahllastkonto";
 	public final static String UVAART_ZAHLUNG_10 = "Anzahlung red.Steuer"; // "Zahlung 10";
 	public final static String UVAART_ZAHLUNG_20 = "Anzahlung Normalsteuer"; // "Zahlung 20";
 
+	public static final String STEUERART_UST = "UST";
+	public static final String STEUERART_VST = "VST";
+	public static final String STEUERART_EUST = "EUST";
+	
+	/**
+	 * Gibt alle IIds der Steuerkonten zur&uuml;ck, welche im angegebenen Finanzamt hinterlegt sind.
+	 * Die Konto-IId ist der Key in der zur&uuml;ckgegebenen Map, die IId der MehrwertsteuerBezeichung die Value.
+	 * Ist ein Konto in mehreren Steuers&auml;tzen in Verwendung ist die Value null.
+	 * @param finanzamtIId
+	 * @param theClientDto
+	 * @return eine Map mit den KontoIIds als Key und den MwstsatzbezIId als Value
+	 */
+	public Map<Integer, Integer> getAllIIdsSteuerkontoMitIIdMwstBez(Integer finanzamtIId, TheClientDto theClientDto);
+
+	/**
+	 * Gibt alle IIds der Umsatzsteuersteuerkonten zur&uuml;ck, welche im angegebenen Finanzamt hinterlegt sind.
+	 * Die Konto-IId ist der Key in der zur&uuml;ckgegebenen Map, die IId der MehrwertsteuerBezeichung die Value.
+	 * Ist ein Konto in mehreren Steuers&auml;tzen in Verwendung ist die Value null.
+	 * @param finanzamtIId
+	 * @param theClientDto
+	 * @return eine Map mit den KontoIIds als Key und den MwstsatzbezIId als Value
+	 */
+	public Map<Integer, Integer> getAllIIdsUstkontoMitIIdMwstBez(Integer finanzamtIId, TheClientDto theClientDto);
+	
+	/**
+	 * Gibt alle IIds der Einfuhr-Umsatzsteuersteuerkonten zur&uuml;ck, welche im angegebenen Finanzamt hinterlegt sind.
+	 * Die Konto-IId ist der Key in der zur&uuml;ckgegebenen Map, die IId der MehrwertsteuerBezeichung die Value.
+	 * Ist ein Konto in mehreren Steuers&auml;tzen in Verwendung ist die Value null.
+	 * @param finanzamtIId
+	 * @param theClientDto
+	 * @return eine Map mit den KontoIIds als Key und den MwstsatzbezIId als Value
+	 */
+	public Map<Integer, Integer> getAllIIdsEUstkontoMitIIdMwstBez(Integer finanzamtIId, TheClientDto theClientDto);
+	
+	public List<SteuerkategoriekontoDto> steuerkategorieFindByKontoIIdMwstSatzBezIId(Integer kontoIId, Integer mwstSatzBezIId);
+	/**
+	 * Gibt alle IIds der Vorsteuerkonten zur&uuml;ck, welche im angegebenen Finanzamt hinterlegt sind.
+	 * Die Konto-IId ist der Key in der zur&uuml;ckgegebenen Map, die IId der MehrwertsteuerBezeichung die Value.
+	 * Ist ein Konto in mehreren Steuers&auml;tzen in Verwendung ist die Value null.
+	 * @param finanzamtIId
+	 * @param theClientDto
+	 * @return eine Map mit den KontoIIds als Key und den MwstsatzbezIId als Value
+	 */
+	public Map<Integer, Integer> getAllIIdsVstkontoMitIIdMwstBez(Integer finanzamtIId, TheClientDto theClientDto);
+
+	public Set<Integer> getAllMitlaufendeKonten(Integer finanzamtIId, TheClientDto theClientDto);
+	
 	public KontotypsprDto kontotypsprFindByPrimaryKey(String kontotypCNr,
 			String localeCNr) throws EJBExceptionLP, RemoteException;
 
@@ -259,7 +298,7 @@ public interface FinanzServiceFac {
 			String buchungsartCNr, String spracheCNr) throws EJBExceptionLP,
 			RemoteException;
 
-	public TreeMap<?, ?> getAllBuchungsarten(Locale locale1, Locale locale2)
+	public TreeMap<?, ?> getAllBuchungsarten(Locale locale1, Locale locale2, String mandantCNr)
 			throws EJBExceptionLP, RemoteException;
 
 	public void createBuchungsart(BuchungsartDto buchungsartDto,
@@ -300,10 +339,13 @@ public interface FinanzServiceFac {
 			RemoteException;
 
 	public Integer getUstKontoFuerSteuerkategorie(Integer steuerkategorieIId,
-			Integer mwstsatzbezId) throws EJBExceptionLP, RemoteException;
-
+			Integer mwstsatzbezId);
+	
+	public Integer getEUstKontoFuerSteuerkategorie(Integer steuerkategorieIId,
+			Integer mwstsatzbezId);
+	
 	public Integer getVstKontoFuerSteuerkategorie(Integer steuerkategorieIId,
-			Integer mwstsatzbezId) throws EJBExceptionLP, RemoteException;
+			Integer mwstsatzbezId);
 
 	public void verbucheBelegePeriode(Integer geschaeftsjahr, int periode,
 			boolean alleNeu, TheClientDto theClientDto) throws EJBExceptionLP,
@@ -350,6 +392,7 @@ public interface FinanzServiceFac {
 	 * 
 	 * @param finanzamtIId
 	 * @param theClientDto
+	 * @throws EJBExceptionLP 
 	 */
 	public void createIfNeededSteuerkategorieForFinanzamtIId(
 			Integer finanzamtIId, TheClientDto theClientDto)
@@ -403,5 +446,11 @@ public interface FinanzServiceFac {
 	public UvaverprobungDto uvaVerprobungFindbyFinanzamtIIdGeschaeftsjahrPeriodeAbrechnungszeitraumMandant(
 			Integer finanzamtIId, int iGeschaeftsjahr, int iPeriode,
 			int iAbrechnungszeitraum, TheClientDto theClientDto);
-	 
+
+	/**
+	 * Berechnet den Saldo &uuml;ber alle Bankverbindungen bei denen {@link BankverbindungDto#isbInLiquiditaetsVorschau()} = true ist.
+	 * @param theClientDto 
+	 * @return den Kontostand
+	 */
+	public BigDecimal getLiquiditaetsKontostand(Integer geschaeftsjahrIId, TheClientDto theClientDto);
 }

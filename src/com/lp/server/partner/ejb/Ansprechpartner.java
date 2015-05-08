@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -43,16 +43,21 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.ICEmail;
+
 @NamedQueries( {
 		@NamedQuery(name = "AnsprechpartnerfindByPartnerFunktionGueltigAb", query = "SELECT OBJECT(c) FROM Ansprechpartner c WHERE c.partnerIId = ?1 AND c.partnerIIdAnsprechpartner = ?2 AND c.ansprechpartnerfunktionIId= ?3 AND c.tGueltigab= ?4"),
 		@NamedQuery(name = "AnsprechpartnerfindByPartnerIIdAnsprechpartner", query = "SELECT OBJECT(c) FROM Ansprechpartner c WHERE c.partnerIIdAnsprechpartner = ?1"),
 		@NamedQuery(name = "AnsprechpartnerfindByPartnerIId", query = "SELECT OBJECT(c) FROM Ansprechpartner c WHERE c.partnerIId = ?1 ORDER BY c.iSort"),
+		@NamedQuery(name = "AnsprechpartnerfindByCEmail", query = "SELECT OBJECT(c) FROM Ansprechpartner c WHERE c.cEmail = ?1"),
 		@NamedQuery(name = "AnsprechpartnerejbSelectMaxISort", query = "SELECT MAX (o.iSort) FROM Ansprechpartner o WHERE o.partnerIId = ?1"),
 		@NamedQuery(name = "AnsprechpartnerfindByPartnerIIdAndPartnerIIdAnsprechpartner", query = "SELECT OBJECT(c) FROM Ansprechpartner c WHERE c.partnerIId = ?1 AND c.partnerIIdAnsprechpartner = ?2"),
-		@NamedQuery(name = "AnsprechpartnerfindByPartnerIIdOrPartnerIIdAnsprechpartner", query = "SELECT OBJECT(C) FROM Ansprechpartner c WHERE c.partnerIId = ?1 OR c.partnerIIdAnsprechpartner = ?1") })
+		@NamedQuery(name = "AnsprechpartnerfindByPartnerIIdOrPartnerIIdAnsprechpartner", query = "SELECT OBJECT(C) FROM Ansprechpartner c WHERE c.partnerIId = ?1 OR c.partnerIIdAnsprechpartner = ?1"),
+		@NamedQuery(name = AnsprechpartnerQuery.ByEmail, query = "SELECT OBJECT(C) FROM Ansprechpartner c WHERE LOWER(c.cEmail) like :email")
+})
 @Entity
 @Table(name = "PART_ANSPRECHPARTNER")
-public class Ansprechpartner implements Serializable {
+public class Ansprechpartner implements Serializable, ICEmail {
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
@@ -83,7 +88,29 @@ public class Ansprechpartner implements Serializable {
 	
 	@Column(name = "B_NEWSLETTER_EMPFAENGER")
 	private Short bNewsletterEmpfaenger;
+	
+	@Column(name = "C_KENNWORT")
+	private String cKennwort;
+	
+	public String getCKennwort() {
+		return this.cKennwort;
+	}
 
+	public void setCKennwort(String cKennwort) {
+		this.cKennwort = cKennwort;
+	}
+	
+	@Column(name = "C_ABTEILUNG")
+	private String cAbteilung;
+
+
+	public String getCAbteilung() {
+		return cAbteilung;
+	}
+
+	public void setCAbteilung(String cAbteilung) {
+		this.cAbteilung = cAbteilung;
+	}
 
 	public String getCFremdsystemnr() {
 		return cFremdsystemnr;

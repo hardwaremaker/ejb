@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -331,6 +331,7 @@ public class AuftragpositionDto extends BelegpositionVerkaufDto implements
 		auftragpositionDto.tUebersteuerbarerLiefertermin = this.tUebersteuerbarerLiefertermin;
 		auftragpositionDto.bDrucken = this.bDrucken;
 		auftragpositionDto.setTypCNr(this.getTypCNr());
+		auftragpositionDto.setLieferantIId(this.getLieferantIId());
 		return auftragpositionDto;
 	}
 
@@ -377,6 +378,8 @@ public class AuftragpositionDto extends BelegpositionVerkaufDto implements
 				.getNNettoeinzelpreis());
 		lieferscheinpositionDto.setNMaterialzuschlag(this
 				.getNMaterialzuschlag());
+		lieferscheinpositionDto.setNMaterialzuschlagKurs(this.getNMaterialzuschlagKurs());
+		lieferscheinpositionDto.setTMaterialzuschlagDatum(this.getTMaterialzuschlagDatum());
 		lieferscheinpositionDto
 				.setNNettoeinzelpreisplusversteckteraufschlag(this
 						.getNNettoeinzelpreisplusversteckteraufschlag());

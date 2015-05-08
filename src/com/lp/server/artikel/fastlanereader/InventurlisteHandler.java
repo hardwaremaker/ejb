@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.artikel.fastlanereader;
 
+import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
 
@@ -42,6 +43,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.artikel.service.InventurFac;
+import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -54,8 +56,8 @@ import com.lp.util.EJBExceptionLP;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Inventurlisten implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Inventurlisten
+ * implementiert. Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -102,12 +104,11 @@ public class InventurlisteHandler extends UseCaseHandler {
 				Object o[] = (Object[]) resultListIterator.next();
 				rows[row][col++] = o[0];
 
-				String artikel = (String) o[1];
+				rows[row][col++] = o[1];
 
-				if (o[2] != null) {
-					artikel += " " + (String) o[2];
-				}
-				rows[row][col++] = artikel;
+				rows[row][col++] = o[2];
+				rows[row][col++] = o[6];
+
 				rows[row][col++] = o[3];
 				rows[row][col++] = o[4];
 				rows[row++][col++] = o[5];
@@ -220,9 +221,7 @@ public class InventurlisteHandler extends UseCaseHandler {
 							orderBy.append(", ");
 						}
 						sortAdded = true;
-						orderBy
-								.append("inventurliste."
-										+ kriterien[i].kritName);
+						orderBy.append("inventurliste." + kriterien[i].kritName);
 						orderBy.append(" ");
 						orderBy.append(kriterien[i].value);
 					}
@@ -259,7 +258,7 @@ public class InventurlisteHandler extends UseCaseHandler {
 	}
 
 	private String getFromClause() {
-		return "SELECT inventurliste.i_id , inventurliste.flrartikel.c_nr,aspr.c_bez,inventurliste.flrlager.c_nr, inventurliste.c_seriennrchargennr, inventurliste.n_inventurmenge "
+		return "SELECT inventurliste.i_id , inventurliste.flrartikel.c_nr,aspr.c_bez,inventurliste.flrlager.c_nr, inventurliste.c_seriennrchargennr, inventurliste.n_inventurmenge, aspr.c_zbez "
 				+ " FROM FLRInventurliste AS inventurliste "
 				+ " LEFT OUTER JOIN inventurliste.flrartikel.artikelsprset AS aspr "
 				+ "";
@@ -324,26 +323,63 @@ public class InventurlisteHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class, String.class,
-					java.math.BigDecimal.class }, new String[] {
-					"ID",
-					getTextRespectUISpr("lp.artikel", theClientDto.getMandant(),
-							theClientDto.getLocUi()),
-					getTextRespectUISpr("lp.lager", theClientDto.getMandant(),
-							theClientDto.getLocUi()),
-					getTextRespectUISpr("lp.snrchargennr", theClientDto
-							.getMandant(), theClientDto.getLocUi()),
-					getTextRespectUISpr("lp.menge", theClientDto.getMandant(),
-							theClientDto.getLocUi()) }, new int[] {
-					-1, // diese Spalte wird ausgeblendet
-					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-					QueryParameters.FLR_BREITE_L, QueryParameters.FLR_BREITE_L,
-					QueryParameters.FLR_BREITE_M }, new String[] { "i_id",
-					InventurFac.FLR_INVENTURLISTE_FLRARTIKEL + ".c_nr",
-					InventurFac.FLR_INVENTURLISTE_FLRLAGER + ".c_nr",
-					InventurFac.FLR_INVENTURLISTE_C_SERIENNRCHARGENNR,
-					InventurFac.FLR_INVENTURLISTE_N_INVENTURMENGE }));
+			try {
+				int iNachkommastellenMenge = getMandantFac()
+						.getNachkommastellenMenge(theClientDto.getMandant());
+
+				setTableInfo(new TableInfo(
+						new Class[] {
+								Integer.class,
+								String.class,
+								String.class,
+								String.class,
+								String.class,
+								String.class,
+								super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge) },
+						new String[] {
+								"ID",
+								getTextRespectUISpr("lp.artikel",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()),
+								getTextRespectUISpr("lp.bezeichnung",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()),
+								getTextRespectUISpr("artikel.zusatzbez",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()),
+								getTextRespectUISpr("lp.lager",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()),
+								getTextRespectUISpr("lp.snrchargennr",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()),
+								getTextRespectUISpr("lp.menge",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()) },
+						new int[] {
+								-1, // diese Spalte wird ausgeblendet
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_L,
+								QueryParameters.FLR_BREITE_L,
+								QueryParameters.FLR_BREITE_L,
+								QueryParameters.FLR_BREITE_L,
+								QueryParameters.FLR_BREITE_M },
+						new String[] {
+								"i_id",
+								InventurFac.FLR_INVENTURLISTE_FLRARTIKEL
+										+ ".c_nr",
+								Facade.NICHT_SORTIERBAR,
+								Facade.NICHT_SORTIERBAR,
+								InventurFac.FLR_INVENTURLISTE_FLRLAGER
+										+ ".c_nr",
+								InventurFac.FLR_INVENTURLISTE_C_SERIENNRCHARGENNR,
+								InventurFac.FLR_INVENTURLISTE_N_INVENTURMENGE }));
+
+			} catch (RemoteException ex) {
+				throwEJBExceptionLPRespectOld(ex);
+				return null;
+			}
+
 		}
 		return super.getTableInfo();
 	}

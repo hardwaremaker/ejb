@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -330,7 +330,7 @@ public class ReklamationHandler extends UseCaseHandler {
 
 				+ " left join reklamation.flrkunde.flrpartner as flrkd "
 				+ " left join reklamation.flrlieferant.flrpartner as flrlf "
-				+ " left join reklamation.flrmaschine as flrmasch "
+				+ " left join reklamation.flrmaschine as flrmaschine "
 				+ "  LEFT OUTER JOIN reklamation.flrartikel.artikelsprset AS aspr ";
 
 	}
@@ -351,7 +351,7 @@ public class ReklamationHandler extends UseCaseHandler {
 				session = setFilter(session);
 				String queryString = "select reklamation.i_id from FLRReklamation reklamation left join reklamation.flrkunde.flrpartner as flrkd "
 						+ " left join reklamation.flrlieferant.flrpartner as flrlf "
-						+ " left join reklamation.flrmaschine as flrmasch "
+						+ " left join reklamation.flrmaschine as flrmaschine "
 						+ "  LEFT OUTER JOIN reklamation.flrartikel.artikelsprset AS aspr "
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
@@ -412,16 +412,18 @@ public class ReklamationHandler extends UseCaseHandler {
 							getTextRespectUISpr("bes.belegdatum", mandantCNr,
 									locUI),
 							getTextRespectUISpr("lp.status", mandantCNr, locUI), },
-					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M,
+					new int[] {
+							-1,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_PREIS,
-							QueryParameters.FLR_BREITE_XS },
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST
+							},
 
 					new String[] {
 							"i_id",
@@ -437,7 +439,7 @@ public class ReklamationHandler extends UseCaseHandler {
 									+ LieferantFac.FLR_PARTNER
 									+ "."
 									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
-							"flrmasch.flrmschinengruppe.c_bez",
+							"flrmaschine.flrmaschinengruppe.c_bez",
 							ReklamationFac.FLR_REKLAMATION_FLRARTIKEL + ".c_nr",
 							Facade.NICHT_SORTIERBAR,
 							ReklamationFac.FLR_REKLAMATION_C_GRUND,

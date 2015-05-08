@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -71,7 +71,9 @@ import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLBUYERPARTY;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLCONTACT;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLDELIVERYPARTY;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLINVOICEPARTY;
+import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLORDERITEMTEXT;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLORDERPARTIES;
+import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLORDERPOSTEXTLIST;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLORDERRESPONSE;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLORDERRESPONSEITEM;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLORDERRESPONSEITEMLIST;
@@ -477,7 +479,6 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 			return null ;
 		}
 		
-		
 		@Override
 		public AuftragDto createAuftrag(KundeDto kundeDto) {
 			AuftragDto[] dtos = findAuftrag(kundeDto) ;
@@ -502,7 +503,8 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 			try {
 				AuftragDto auftragDto = buildAuftragDto(kundeDto, getOrderAdapter()) ;
 				auftragDto.setKundeIIdRechnungsadresse(getKundeIIdRechnungadresse(kundeDto, getOrderAdapter(), getXmlOrder()));
-				auftragDto.setKundeIIdLieferadresse(getKundeIIdLieferadresse(kundeDto, getXmlOrder())) ;
+				auftragDto.setKundeIIdLieferadresse(getKundeIIdLieferadresse(kundeDto, getXmlOrder())) ;				
+				auftragDto.setCBezProjektbezeichnung(kundeDto.getCLieferantennr()) ;
 				
 				ExternerAnsprechpartner ansprPartner = getAnsprechpartnerIIdAuftrag(kundeDto, getXmlOrder()) ;
 				auftragDto.setAnsprechpartnerIId(ansprPartner.getAnsprechpartnerIId()) ;
@@ -713,7 +715,7 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 				
 				einheit = validEinheit ;
 			}
-			
+				
 			positionDto.setEinheitCNr(einheit) ;
 			positionDto.setNEinzelpreis(xmlPosition.getARTICLEPRICE().getPRICEAMOUNT()) ;
 			positionDto.setNNettoeinzelpreis(xmlPosition.getARTICLEPRICE().getPRICEAMOUNT()) ;
@@ -725,15 +727,27 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 			positionDto.setBNettopreisuebersteuert(Helper.boolean2Short(false)) ;
 			positionDto.setFRabattsatz(new Double(0.0)) ;
 			positionDto.setFZusatzrabattsatz(new Double(0.0)) ;
+			positionDto.setNRabattbetrag(BigDecimal.ZERO) ;
+			positionDto.setNMaterialzuschlag(BigDecimal.ZERO) ;
 			
-			BigDecimal taxPercent = xmlPosition.getARTICLEPRICE().getTAX() ;
-			Integer xmlMwstSatz = getMwstsatzIIdForTax(taxPercent) ;
-			if(!xmlMwstSatz.equals(kundeDto.getMwstsatzbezIId())) {
-				ChangeEntry<?> changedEntry = new ChangeEntry<Integer>(kundeDto.getMwstsatzbezIId(), xmlMwstSatz, "Der MwSt.Satz {1} ist nicht mit dem Artikel MwstSatz {0} ident, es wird {0} verwendet.") ;
-//				createPositionText(auftragDto, changeEntry) ;	
-				addChangeEntry(changedEntry) ;
+//			BigDecimal taxPercent = xmlPosition.getARTICLEPRICE().getTAX() ;
+//			Integer xmlMwstSatz = getMwstsatzIIdForTax(taxPercent) ;
+//			if(!xmlMwstSatz.equals(kundeDto.getMwstsatzbezIId())) {
+//				ChangeEntry<?> changedEntry = new ChangeEntry<Integer>(kundeDto.getMwstsatzbezIId(), xmlMwstSatz, "Der MwSt.Satz {1} ist nicht mit dem Artikel MwstSatz {0} ident, es wird {0} verwendet.") ;
+////				createPositionText(auftragDto, changeEntry) ;	
+//				addChangeEntry(changedEntry) ;
+//			}
+
+			BigDecimal taxPercent = getXmlTaxPercent(xmlPosition.getARTICLEPRICE()) ;
+			if(taxPercent != null) {
+				Integer xmlMwstSatz = getMwstsatzIIdForTax(taxPercent) ;
+				if(kundeDto.getMwstsatzbezIId() != null && !xmlMwstSatz.equals(kundeDto.getMwstsatzbezIId())) {
+					ChangeEntry<?> changeEntry = new ChangeEntry<Integer>(kundeDto.getMwstsatzbezIId(), 
+							xmlMwstSatz, "Der MwSt.Satz {1} ist nicht mit dem Kunden MwstSatz {0} ident, es wird {0} verwendet.") ;
+					addChangeEntry(changeEntry) ;
+				}
 			}
-			
+						
 			positionDto.setMwstsatzIId(kundeDto.getMwstsatzbezIId()) ;
 			updateMwstBetraege(positionDto) ;
 
@@ -862,6 +876,13 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 			}
 			
 			BigDecimal vkPrice = getPrice(kundeDto, auftragDto, itemDto, xmlPosition.getQUANTITY()) ;
+			if(vkPrice == null) {
+				vkPrice = new BigDecimal("0.00") ;
+				ChangeEntry<?> changeEntry = new ChangeEntry<BigDecimal>(vkPrice, vkPrice, 
+						"Es konnnte kein Preis ermittelt werden. Es wird {0} verwendet.") ;
+				addChangeEntry(changeEntry) ;				
+			}
+			
 			BigDecimal xmlPrice = xmlPosition.getARTICLEPRICE().getPRICEAMOUNT() ;
 			
 			if(vkPrice.compareTo(xmlPrice) != 0) {
@@ -959,6 +980,17 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 						addChangeEntry(changeEntry) ;
 					} else {
 						AuftragpositionDto positionDto = createPositionIdent(kundeDto, auftragDto, itemDto, xmlPosition) ;
+					}
+					
+					XMLXMLORDERPOSTEXTLIST textList = xmlPosition.getORDERPOSTEXTLIST() ;
+					if(textList != null) {
+						List<XMLXMLORDERITEMTEXT> texts = textList.getORDERITEMTEXT() ;
+						for (XMLXMLORDERITEMTEXT itemText : texts) {
+							if(!isEmptyString(itemText.getCCTEXTVALUE())) {
+								addChangeEntry(new ChangeEntry<String>(
+										itemText.getCCTEXTIDENTIFIER(), "", "Bestelltext: {0}, '" + itemText.getCCTEXTVALUE() + "'")) ;
+							}
+						}					
 					}
 					
 					createPositionsForChangeEntries(auftragDto) ;
@@ -1062,20 +1094,25 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 		@Override
 		public ArtikelDto findArtikel(KundeDto kundeDto, AuftragDto auftragDto) {
 //			if(isEmptyString(getXmlItem().getCCDRAWINGNR())) return null ;
+
+			String itemCnr = "" ;
 			
-			String itemCnr = emptyString(getXmlItem().getCCDRAWINGNR()) ;
+			// Mit der Buyer_AID versuchen
+			List<XMLXMLBUYERAID> xmlBuyerIds= getXmlItem().getARTICLEID().getBUYERAID() ;
+			if(xmlBuyerIds != null && xmlBuyerIds.size() > 0) {
+				itemCnr = xmlBuyerIds.get(0).getValue() ;
+			}
+
+			if(isEmptyString(itemCnr)) {
+				itemCnr = emptyString(getXmlItem().getCCDRAWINGNR()) ;
+			}
+			
 			String indexNr = emptyString(getXmlItem().getCCINDEXNR()) ;
 			if("-".equals(indexNr)) {
 				indexNr = "" ;
 			}
 	
 			if(isEmptyString(itemCnr)) {
-				// Mit der Buyer_AID versuchen
-				List<XMLXMLBUYERAID> xmlBuyerIds= getXmlItem().getARTICLEID().getBUYERAID() ;
-				if(xmlBuyerIds != null && xmlBuyerIds.size() > 0) {
-					itemCnr = xmlBuyerIds.get(0).getValue() ;
- 				}
-
 				if(isEmptyString(itemCnr)) return null ;
 			}
 			
@@ -1151,7 +1188,7 @@ public class WebshopOrderServiceEjb extends WebshopOrderServiceBase {
 					}
 				}				
 			} catch(RemoteException e) {}
-
+			
 			if(itemDto == null) {
 				String customerItemNr = "'" + itemCnr + "' Revision '" + indexNr + "'" ;
 				PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKeyOhneExc(kundeDto.getPartnerIId(), getAuthController().getWebClientDto()) ;

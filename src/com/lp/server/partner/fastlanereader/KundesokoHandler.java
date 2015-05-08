@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -37,6 +37,7 @@ import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -44,6 +45,7 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikellistespr;
 import com.lp.server.artikel.service.VerkaufspreisDto;
 import com.lp.server.partner.fastlanereader.generated.FLRKundesoko;
 import com.lp.server.partner.service.KundesokoFac;
@@ -88,7 +90,7 @@ public class KundesokoHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 	public static final String FLR_KUNDESOKO = "flrkundesoko.";
-	public static final String FLR_KUNDESOKO_FROM_CLAUSE = " from FLRKundesoko AS flrkundesoko LEFT OUTER JOIN flrkundesoko.flrartikel AS flrart LEFT OUTER JOIN flrkundesoko.flrartikelgruppe AS flrag ";
+	public static final String FLR_KUNDESOKO_FROM_CLAUSE = " from FLRKundesoko AS flrkundesoko LEFT OUTER JOIN flrkundesoko.flrartikel AS flrart LEFT OUTER JOIN flrkundesoko.flrartikelgruppe AS flrag LEFT OUTER JOIN flrart.artikelsprset AS aspr";
 	int iPreisbasis = 0;
 
 	/**
@@ -113,6 +115,7 @@ public class KundesokoHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
+			session = setFilter(session);
 			String queryString = this.getFromClause() + this.buildWhereClause()
 					+ this.buildOrderByClause();
 			// myLogger.info("HQL: " + queryString);
@@ -136,6 +139,12 @@ public class KundesokoHandler extends UseCaseHandler {
 				rows[row][col++] = kundesoko.getArtikel_i_id() == null ? kundesoko
 						.getFlrartikelgruppe().getC_nr() : kundesoko
 						.getFlrartikel().getC_nr();
+
+				if (o[2] != null) {
+					rows[row][col++] = ((FLRArtikellistespr) o[2]).getC_bez();
+				} else {
+					rows[row][col++] = null;
+				}
 
 				// die hinterlegten Mengenstaffeln holen
 				KundesokomengenstaffelDto[] aMengenstaffelDtos = getKundesokoFac()
@@ -197,11 +206,11 @@ public class KundesokoHandler extends UseCaseHandler {
 				}
 
 				rows[row][col++] = nBerechneterPreis;
+
+				rows[row][col++] = kundesoko.getC_kundeartikelnummer();
 				rows[row][col++] = kundesoko.getT_preisgueltigab();
 				rows[row][col++] = kundesoko.getT_preisgueltigbis() == null ? null
 						: kundesoko.getT_preisgueltigbis();
-				rows[row][col++] = kundesoko.getC_kundeartikelnummer();
-
 				if (kundesoko.getArtikel_i_id() != null) {
 
 					if (Helper.short2boolean(getArtikelFac()
@@ -246,6 +255,7 @@ public class KundesokoHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
+			session = setFilter(session);
 			String queryString = "select count(*) " + this.getFromClause()
 					+ this.buildWhereClause();
 			Query query = session.createQuery(queryString);
@@ -292,10 +302,24 @@ public class KundesokoHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" " + FLR_KUNDESOKO
-							+ filterKriterien[i].kritName);
+
+					if (filterKriterien[i].isBIgnoreCase()) {
+
+						where.append(" lower(" + FLR_KUNDESOKO
+								+ filterKriterien[i].kritName + ")");
+					} else {
+						where.append(" " + FLR_KUNDESOKO
+								+ filterKriterien[i].kritName + "");
+					}
 					where.append(" " + filterKriterien[i].operator);
-					where.append(" " + filterKriterien[i].value);
+
+					if (filterKriterien[i].isBIgnoreCase()) {
+						where.append(" "
+								+ filterKriterien[i].value.toLowerCase());
+					} else {
+						where.append(" " + filterKriterien[i].value);
+					}
+
 				}
 			}
 			if (filterAdded) {
@@ -380,7 +404,8 @@ public class KundesokoHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-
+			String mandantCNr = theClientDto.getMandant();
+			Locale locUI = theClientDto.getLocUi();
 			try {
 				ParametermandantDto param = getParameterFac()
 						.getMandantparameter(theClientDto.getMandant(),
@@ -393,52 +418,46 @@ public class KundesokoHandler extends UseCaseHandler {
 				throwEJBExceptionLPRespectOld(e);
 			}
 
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class, BigDecimal.class,
-					java.util.Date.class, java.util.Date.class, String.class,
-					Color.class },
+			setTableInfo(new TableInfo(
+					new Class[] { Integer.class, String.class, String.class,
+							String.class, BigDecimal.class, String.class,
+							java.util.Date.class, java.util.Date.class,
+							Color.class },
 					new String[] {
 							"i_id",
 							"",
-							getTextRespectUISpr("lp.artikel",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.artikel", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
+									locUI),
 							getTextRespectUISpr(
 									"bes.nettogesamtpreisminusrabatte",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.gueltig_ab",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.gueltig_bis",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
+									mandantCNr, locUI),
+
 							getTextRespectUISpr("lp.kundenartikelnummer",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()), },
+									mandantCNr, locUI),
+							getTextRespectUISpr("lp.gueltig_ab", mandantCNr,
+									locUI),
+							getTextRespectUISpr("lp.gueltig_bis", mandantCNr,
+									locUI), },
 
-					new int[] {
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // diese
-							// Spalte
-							// wird
-							// ausgeblendet
-							QueryParameters.FLR_BREITE_XXS, // Kuerzel
-							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // Format
-							// 1234.123
-
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // Breite
-							// variabel
+					new int[] { -1, QueryParameters.FLR_BREITE_XXS,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XM }, new String[] {
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST
+
+					}, new String[] {
 							"i_id",
 							Facade.NICHT_SORTIERBAR,
-							"flrartikel.c_nr", // Artikel oder
+							"flrartikel.c_nr",
+							Facade.NICHT_SORTIERBAR,// Artikel oder
 							// Artikelgruppe
 							Facade.NICHT_SORTIERBAR,
+							KundesokoFac.FLR_KUNDESOKO_KUNDEARTIKELNUMMER,
 							KundesokoFac.FLR_KUNDESOKO_PREISGUELTIGAB,
-							KundesokoFac.FLR_KUNDESOKO_PREISGUELTIGBIS,
-							KundesokoFac.FLR_KUNDESOKO_KUNDEARTIKELNUMMER }));
+							KundesokoFac.FLR_KUNDESOKO_PREISGUELTIGBIS }));
 		}
 		return super.getTableInfo();
 	}
@@ -456,12 +475,13 @@ public class KundesokoHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
+				session = setFilter(session);
 				String queryString = "select " + FLR_KUNDESOKO + "i_id"
 						+ FLR_KUNDESOKO_FROM_CLAUSE + this.buildWhereClause()
 						+ this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-				boolean idFound = false;
+//				boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {

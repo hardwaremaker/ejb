@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -41,7 +41,9 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "PartnerartfindAll", query = "SELECT OBJECT(o) FROM Partnerart o ORDER BY cNr ASC") })
+@NamedQueries({
+		@NamedQuery(name = "PartnerartfindAll", query = "SELECT OBJECT(o) FROM Partnerart o ORDER BY o.cNr ASC"),
+		@NamedQuery(name = "PartnerartfindByCNr", query = "SELECT OBJECT(o) FROM Partnerart o WHERE o.cNr= ?1 ") })
 @Entity
 @Table(name = "PART_PARTNERART")
 public class Partnerart implements Serializable {

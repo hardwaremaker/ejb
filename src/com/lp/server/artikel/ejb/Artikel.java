@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -47,6 +47,7 @@ import com.lp.server.util.ICNr;
 
 @NamedQueries({
 		@NamedQuery(name = "ArtikelfindByCNrMandantCNr", query = "SELECT OBJECT(C) FROM Artikel c WHERE c.cNr = ?1 AND c.mandantCNr=?2"),
+		@NamedQuery(name = "ArtikelfindByArtikelIIdErsatz", query = "SELECT OBJECT(C) FROM Artikel c WHERE c.artikelIIdErsatz = ?1"),
 		@NamedQuery(name = "ArtikelfindByCVerkaufseannrMandantCNr", query = "SELECT OBJECT(C) FROM Artikel c WHERE c.cVerkaufseannr = ?1 AND c.mandantCNr=?2"),
 		@NamedQuery(name = "ArtikelfindByCVerpackungseannrMandantCNr", query = "SELECT OBJECT(C) FROM Artikel c WHERE c.cVerpackungseannr = ?1 AND c.mandantCNr=?2"),
 		@NamedQuery(name = "ArtikelfindByCNr", query = "SELECT OBJECT(C) FROM Artikel c WHERE c.cNr = ?1"),
@@ -82,6 +83,18 @@ public class Artikel implements Serializable, ICNr {
 
 	@Column(name = "B_CHARGENNRTRAGEND")
 	private Short bChargennrtragend;
+
+	
+	@Column(name = "VORZUG_I_ID")
+	private Integer vorzugIId;
+	
+	public Integer getVorzugIId() {
+		return vorzugIId;
+	}
+
+	public void setVorzugIId(Integer vorzugIId) {
+		this.vorzugIId = vorzugIId;
+	}
 
 	@Column(name = "B_BESTELLMENGENEINHEIT_INVERS")
 	private Short bBestellmengeneinheitInvers;
@@ -184,6 +197,19 @@ public class Artikel implements Serializable, ICNr {
 	@Column(name = "F_VERSCHNITTFAKTOR")
 	private Double fVerschnittfaktor;
 
+	
+	@Column(name = "F_UEBERPRODUKTION")
+	private Double fUeberproduktion;
+
+	
+	public Double getFUeberproduktion() {
+		return fUeberproduktion;
+	}
+
+	public void setFUeberproduktion(Double fUeberproduktion) {
+		this.fUeberproduktion = fUeberproduktion;
+	}
+
 	@Column(name = "F_DETAILPROZENTMINDESTSTAND")
 	private Double fDetailprozentmindeststand;
 
@@ -224,6 +250,16 @@ public class Artikel implements Serializable, ICNr {
 
 	@Column(name = "C_VERKAUFSEANNR")
 	private String cVerkaufseannr;
+
+	@Column(name = "C_ECCN")
+	private String cEccn;
+	public String getCEccn() {
+		return cEccn;
+	}
+
+	public void setCEccn(String cEccn) {
+		this.cEccn = cEccn;
+	}
 
 	@Column(name = "C_WARENVERKEHRSNUMMER")
 	private String cWarenverkehrsnummer;
@@ -405,7 +441,19 @@ public class Artikel implements Serializable, ICNr {
 		this.personalIIdLetztewartung = personalIIdLetztewartung;
 	}
 
+
+	@Column(name = "F_FERTIGUNGS_VPE")
+	private Double fFertigungsVpe;
+
 	
+	public Double getFFertigungsVpe() {
+		return fFertigungsVpe;
+	}
+
+	public void setFFertigungsVpe(Double fFertigungsVpe) {
+		this.fFertigungsVpe = fFertigungsVpe;
+	}
+
 	@Column(name = "F_AUFSCHLAG_PROZENT")
 	private Double fAufschlagProzent;
 
@@ -426,6 +474,58 @@ public class Artikel implements Serializable, ICNr {
 
 	public void setNAufschlagBetrag(BigDecimal nAufschlagBetrag) {
 		this.nAufschlagBetrag = nAufschlagBetrag;
+	}
+
+	
+	@Column(name = "C_UL")
+	private String cUL;
+	@Column(name = "REACH_I_ID")
+	private Integer reachIId;
+	@Column(name = "ROHS_I_ID")
+	private Integer rohsIId;
+	@Column(name = "AUTOMOTIVE_I_ID")
+	private Integer automotiveIId;
+	@Column(name = "MEDICAL_I_ID")
+	private Integer medicalIId;
+	
+	public String getCUL() {
+		return cUL;
+	}
+
+	public void setCUL(String cUL) {
+		this.cUL = cUL;
+	}
+
+	public Integer getReachIId() {
+		return reachIId;
+	}
+
+	public void setReachIId(Integer reachIId) {
+		this.reachIId = reachIId;
+	}
+
+	public Integer getRohsIId() {
+		return rohsIId;
+	}
+
+	public void setRohsIId(Integer rohsIId) {
+		this.rohsIId = rohsIId;
+	}
+
+	public Integer getAutomotiveIId() {
+		return automotiveIId;
+	}
+
+	public void setAutomotiveIId(Integer automotiveIId) {
+		this.automotiveIId = automotiveIId;
+	}
+
+	public Integer getMedicalIId() {
+		return medicalIId;
+	}
+
+	public void setMedicalIId(Integer medicalIId) {
+		this.medicalIId = medicalIId;
 	}
 
 	private static final long serialVersionUID = 1L;

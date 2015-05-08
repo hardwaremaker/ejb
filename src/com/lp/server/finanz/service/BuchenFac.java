@@ -1,33 +1,33 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.finanz.service;
@@ -36,6 +36,7 @@ import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -188,7 +189,7 @@ public interface BuchenFac {
 	 * Erzeugen eines Saldovortrags/Perioden&uuml;bernahme f&uuml;r ein Personenkonto</br>
 	 * Die vorzutragenden Buchungsdetails(iids) m&uuml;ssen im saldovortragModel
 	 * &uuml;bergeben werden.
-	 * 
+	 *
 	 * @param saldovortragModel
 	 * @param theClientDto
 	 * @throws RemoteException
@@ -200,7 +201,7 @@ public interface BuchenFac {
 	/**
 	 * Erzeugen eines Saldovortrags/Perioden&uuml;bernahme f&uuml;r ein Personenkonto</br>
 	 * Die vorzutragenden Buchungsdetails werden automatisch ermittelt.
-	 * 
+	 *
 	 * @param saldovortragModel
 	 * @param theClientDto
 	 * @throws RemoteException
@@ -213,7 +214,7 @@ public interface BuchenFac {
 	 * Erzeuge fuer alle Personenkonten des angegebenen Typs die
 	 * Vortragsbuchungen</br> Jedes Konto wird in einer eigenen Transaktion
 	 * ausgef&uuml;hrt.
-	 * 
+	 *
 	 * @param kontotyp
 	 *            FinanzServiceFac.KONTOTYP_DEBITOR bzw. KONTOTYP_KREDITOR
 	 * @param geschaeftsJahr
@@ -229,7 +230,7 @@ public interface BuchenFac {
 
 	/**
 	 * Erzeugen eines Saldovortrags/Perioden&uuml;bernahme f&uuml;r ein Sachkonto
-	 * 
+	 *
 	 * @param saldovortragModel
 	 * @param theClientDto
 	 * @throws RemoteException
@@ -240,7 +241,7 @@ public interface BuchenFac {
 
 	/**
 	 * Nur f&uuml;r die Interne Verwendung
-	 * 
+	 *
 	 * @param vortragModel
 	 * @param theClientDto
 	 * @throws RemoteException
@@ -256,12 +257,32 @@ public interface BuchenFac {
 	public BuchungdetailDto[] buchungdetailsFindByBuchungIIdOhneMitlaufende(
 			Integer buchungIId, TheClientDto theClientDto);
 
-	public void storniereFinanzamtsbuchungen(int geschaeftsjahr,
+	public HashMap<String,Integer> storniereFinanzamtsbuchungen(int geschaeftsjahr,
 			Date buchungsDatum, int finanzamtIId, TheClientDto theClientDto);
+
+	public void setAuszifferungenFinanzamtsbuchungen(int geschaeftsjahr,
+			Date buchungsDatum, int finanzamtIId, HashMap<String, Integer> hmAZ, TheClientDto theClientDto);
 
 	public boolean isKontoMitEBKonsistent(Integer kontoIId, int geschaeftsjahr,
 			TheClientDto theClientDto);
 
 	public BigDecimal getSaldoUVAOhneEBVonKonto(Integer i_id,
 			int iGeschaeftsjahr, int iPeriode, TheClientDto theClientDto);
+
+	/**
+	 * Holt den Saldo eines Kontos und ber&uuml;cksichtigt <b>alle</b> Buchungen,
+	 * deren Buchungsdatum vor dem aktuellen Zeitpunkt liegt.
+	 * @param kontoIId
+	 * @return den Saldo
+	 */
+	public BigDecimal getAktuellenSaldoVonKonto(Integer kontoIId);
+
+	/**
+	 * Holt den Saldo eines Kontos f&uuml;r ein Gesch&auml;ftsjahr
+	 * deren Buchungsdatum vor dem aktuellen Zeitpunkt liegt.
+	 * @param kontoIId
+	 * @param geschaftsjahrIId
+	 * @return der aktuelle Saldo des Kontos
+	 */
+	public BigDecimal getAktuellenSaldoVonKontoFuerGeschaeftsjahr(Integer kontoIId, Integer geschaftsjahrIId);
 }

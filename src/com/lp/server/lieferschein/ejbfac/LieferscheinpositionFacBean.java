@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -37,8 +37,11 @@ import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeMap;
 
 import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
@@ -62,6 +65,7 @@ import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikelreservierungDto;
 import com.lp.server.artikel.service.ArtikelsprDto;
 import com.lp.server.artikel.service.GeraetesnrDto;
+import com.lp.server.artikel.service.MaterialzuschlagDto;
 import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
 import com.lp.server.artikel.service.VerkaufspreisDto;
 import com.lp.server.artikel.service.VkpreisfindungDto;
@@ -82,6 +86,7 @@ import com.lp.server.lieferschein.service.LieferscheinpositionFac;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.rechnung.ejb.Rechnungposition;
 import com.lp.server.rechnung.service.RechnungDto;
+import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.rechnung.service.RechnungPositionDto;
 import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.stueckliste.service.StuecklisteFac;
@@ -94,9 +99,11 @@ import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.IPositionNumber;
 import com.lp.server.util.LieferscheinPositionNumberAdapter;
 import com.lp.server.util.PositionNumberHandler;
 import com.lp.server.util.PositionNumberHandlerLieferschein;
+import com.lp.server.util.ZwsPositionMapper;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.isort.CompositeISort;
 import com.lp.server.util.isort.IPrimitiveSwapper;
@@ -105,7 +112,7 @@ import com.lp.util.Helper;
 
 @Stateless
 public class LieferscheinpositionFacBean extends Facade implements
-		LieferscheinpositionFac, IPrimitiveSwapper {
+		LieferscheinpositionFac, IPrimitiveSwapper, IPositionNumber {
 	@PersistenceContext
 	private EntityManager em;
 
@@ -205,7 +212,7 @@ public class LieferscheinpositionFacBean extends Facade implements
 						Lieferscheinposition l = (Lieferscheinposition) c
 								.iterator().next();
 						gestpreis = getLagerFac()
-								.getGestehungspreisEinerAbgangsposition(
+								.getGestehungspreisEinerAbgangspositionMitTransaktion(
 										LocaleFac.BELEGART_LIEFERSCHEIN,
 										l.getIId(), sSerienchargennummer);
 					}
@@ -228,6 +235,20 @@ public class LieferscheinpositionFacBean extends Facade implements
 				new ArrayList<SeriennrChargennrMitMengeDto>(), theClientDto);
 	}
 
+	
+	public Integer reservierungAufloesen(Integer auftragIId, LieferscheinpositionDto lsPosDto, TheClientDto theClientDto){
+		try {
+			Integer lieferscheinIId = getAuftragFac().vorhandenenLieferscheinEinesAuftagsHolenBzwNeuAnlegen(auftragIId, theClientDto);
+			lsPosDto.setBelegIId(lieferscheinIId);
+			
+			createLieferscheinposition(lsPosDto, true,  theClientDto);
+			return lieferscheinIId;
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+			return null;
+		}
+	}
+	
 	/**
 	 * Eine neue Lieferscheinposition anlegen. <br>
 	 * Preisinformationen werden in Lieferscheinwaehrung abgelegt.
@@ -249,7 +270,7 @@ public class LieferscheinpositionFacBean extends Facade implements
 	 * @throws EJBExceptionLP
 	 *             Ausnahme
 	 * @return Integer PK der neuen Lieferscheinposition
-	 * @throws RemoteException 
+	 * @throws RemoteException
 	 */
 	public Integer createLieferscheinposition(
 			LieferscheinpositionDto lieferscheinpositionDtoI,
@@ -283,10 +304,25 @@ public class LieferscheinpositionFacBean extends Facade implements
 			lieferscheinpositionDtoI.setBKeinlieferrest(new Short((short) 0));
 		}
 
+		// Tests schicken auch mal null in das Feld
+		if (lieferscheinpositionDtoI
+				.getNNettoeinzelpreisplusversteckteraufschlag() == null) {
+			if (lieferscheinpositionDtoI.isMengenbehaftet()) {
+				lieferscheinpositionDtoI
+						.setNEinzelpreisplusversteckteraufschlag(BigDecimal.ZERO);
+			}
+		}
+		if (lieferscheinpositionDtoI
+				.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte() == null) {
+			if (lieferscheinpositionDtoI.isMengenbehaftet()) {
+				lieferscheinpositionDtoI
+						.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(BigDecimal.ZERO);
+			}
+		}
+
 		// wenn es sich um eine Handeingabeposition handelt und kein bestehender
-		// Artikel mitgelifert wird, muss ein Handartikel angelegt werden
-		if (lieferscheinpositionDtoI.getLieferscheinpositionartCNr().equals(
-				LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_HANDEINGABE)
+		// Artikel mitgeliefert wird, muss ein Handartikel angelegt werden
+		if (lieferscheinpositionDtoI.isHandeingabe()
 				&& lieferscheinpositionDtoI.getArtikelIId() == null) {
 			Integer iIdArtikel = null;
 
@@ -384,6 +420,41 @@ public class LieferscheinpositionFacBean extends Facade implements
 					lieferscheinpositionDtoI.setXTextinhalt(auftragpositionDto
 							.getXTextinhalt());
 				}
+			} else {
+				// Wenn kein Auftragspositionsbezug, dann Zuschlag/Datum holen
+
+				if (lieferscheinpositionDtoI
+						.getPositionsartCNr()
+						.equalsIgnoreCase(
+								LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT)) {
+
+					ArtikelDto artikelDto = getArtikelFac()
+							.artikelFindByPrimaryKeySmall(
+									lieferscheinpositionDtoI.getArtikelIId(),
+									theClientDto);
+					if (artikelDto.getMaterialIId() != null) {
+						LieferscheinDto lsDto = getLieferscheinFac()
+								.lieferscheinFindByPrimaryKey(
+										lieferscheinpositionDtoI.getBelegIId(),
+										theClientDto);
+
+						MaterialzuschlagDto mDto = getMaterialFac()
+								.getKursMaterialzuschlagDtoInZielwaehrung(
+										artikelDto.getMaterialIId(),
+										new java.sql.Date(lsDto
+												.getTBelegdatum().getTime()),
+										lsDto.getWaehrungCNr(), theClientDto);
+						if (mDto != null) {
+							lieferscheinpositionDtoI
+									.setNMaterialzuschlagKurs(mDto
+											.getNZuschlag());
+							lieferscheinpositionDtoI
+									.setTMaterialzuschlagDatum(mDto
+											.getTGueltigab());
+						}
+					}
+				}
+
 			}
 
 			getLieferscheinFac().pruefeUndSetzeLieferscheinstatusBeiAenderung(
@@ -396,6 +467,8 @@ public class LieferscheinpositionFacBean extends Facade implements
 					lieferscheinpositionDtoI.getLieferscheinpositionartCNr(),
 					lieferscheinpositionDtoI.getBNettopreisuebersteuert(),
 					lieferscheinpositionDtoI.getBKeinlieferrest());
+			lieferscheinposition.setBZwsPositionspreisZeigen(Helper
+					.boolean2Short(true));
 			em.persist(lieferscheinposition);
 			em.flush();
 
@@ -404,15 +477,31 @@ public class LieferscheinpositionFacBean extends Facade implements
 
 			befuelleZusaetzlichePreisfelder(lieferscheinpositionDtoI.getIId(),
 					theClientDto);
-			lieferscheinpositionDtoI
-					.setNEinzelpreisplusversteckteraufschlag(lieferscheinposition
-							.getNNettoeinzelpreisplusversteckteraufschlag());
-			lieferscheinpositionDtoI
-					.setNNettoeinzelpreisplusversteckteraufschlag(lieferscheinposition
-							.getNNettogesamtpreisplusversteckteraufschlag());
-			lieferscheinpositionDtoI
-					.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(lieferscheinposition
-							.getNNettogesamtpreisplusversteckteraufschlagminusrabatt());
+			// Doppelt gemoppelt
+			// lieferscheinpositionDtoI
+			// .setNEinzelpreisplusversteckteraufschlag(lieferscheinposition
+			// .getNNettoeinzelpreisplusversteckteraufschlag());
+			// lieferscheinpositionDtoI
+			// .setNNettoeinzelpreisplusversteckteraufschlag(lieferscheinposition
+			// .getNNettogesamtpreisplusversteckteraufschlag());
+			// lieferscheinpositionDtoI
+			// .setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(lieferscheinposition
+			// .getNNettogesamtpreisplusversteckteraufschlagminusrabatt());
+			//
+
+			LieferscheinpositionDto[] alleLsPos = lieferscheinpositionFindByLieferscheinIId(lieferscheinpositionDtoI
+					.getLieferscheinIId());
+			Set<Integer> modifiedPositions = new HashSet<Integer>();
+			LieferscheinDto lieferscheinDto = getLieferscheinFac()
+					.lieferscheinFindByPrimaryKey(
+							lieferscheinpositionDtoI.getLieferscheinIId(),
+							theClientDto);
+
+			getBelegVerkaufFac().berechneBelegpositionVerkauf(
+					lieferscheinpositionDtoI, lieferscheinDto, alleLsPos,
+					modifiedPositions);
+			System.out
+					.println("Modified positions " + modifiedPositions.size());
 
 			// IMS 2129
 			if (lieferscheinpositionDtoI.getNMenge() != null
@@ -469,8 +558,11 @@ public class LieferscheinpositionFacBean extends Facade implements
 				resolveArtikelset(lieferscheinpositionDtoI, identities,
 						theClientDto);
 			}
-			
-			getLieferscheinFac().updateTAendern(lieferscheinpositionDtoI.getLieferscheinIId(), theClientDto);
+
+			getLieferscheinFac()
+					.updateTAendern(
+							lieferscheinpositionDtoI.getLieferscheinIId(),
+							theClientDto);
 
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -512,7 +604,8 @@ public class LieferscheinpositionFacBean extends Facade implements
 	private void resolveArtikelsetFromStueckliste(
 			LieferscheinpositionDto lieferscheinpositionDtoI,
 			List<SeriennrChargennrMitMengeDto> identities,
-			Integer stuecklisteIId, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+			Integer stuecklisteIId, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 		LieferscheinpositionDto lieferscheinPositionDtoKopfartikel = lieferscheinpositionFindByPrimaryKey(
 				lieferscheinpositionDtoI.getIId(), theClientDto);
 
@@ -543,6 +636,8 @@ public class LieferscheinpositionFacBean extends Facade implements
 			lieferscheinpositionDtoI.setNNettoeinzelpreis(BigDecimal.ZERO);
 			lieferscheinpositionDtoI.setNMwstbetrag(BigDecimal.ZERO);
 			lieferscheinpositionDtoI.setNRabattbetrag(BigDecimal.ZERO);
+			lieferscheinpositionDtoI.setFZusatzrabattsatz(0D);
+			lieferscheinpositionDtoI.setFRabattsatz(0D);
 			lieferscheinpositionDtoI
 					.setNNettoeinzelpreisplusversteckteraufschlag(BigDecimal.ZERO);
 			lieferscheinpositionDtoI
@@ -583,7 +678,8 @@ public class LieferscheinpositionFacBean extends Facade implements
 	private void resolveArtikelsetFromAuftragArtikelset(
 			LieferscheinpositionDto lieferscheinpositionDtoI,
 			List<SeriennrChargennrMitMengeDto> identities,
-			Integer auftragpositionIId, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+			Integer auftragpositionIId, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 		LieferscheinpositionDto lieferscheinPositionDtoKopfartikel = lieferscheinpositionFindByPrimaryKey(
 				lieferscheinpositionDtoI.getIId(), theClientDto);
 
@@ -603,6 +699,8 @@ public class LieferscheinpositionFacBean extends Facade implements
 			lieferscheinpositionDtoI.setNEinzelpreis(BigDecimal.ZERO);
 			lieferscheinpositionDtoI.setNNettoeinzelpreis(BigDecimal.ZERO);
 			lieferscheinpositionDtoI.setNMwstbetrag(BigDecimal.ZERO);
+			lieferscheinpositionDtoI.setFZusatzrabattsatz(0D);
+			lieferscheinpositionDtoI.setFRabattsatz(0D);
 			lieferscheinpositionDtoI.setNRabattbetrag(BigDecimal.ZERO);
 			lieferscheinpositionDtoI
 					.setNNettoeinzelpreisplusversteckteraufschlag(BigDecimal.ZERO);
@@ -669,7 +767,7 @@ public class LieferscheinpositionFacBean extends Facade implements
 				.listByPositionIIdArtikelset(em, lieferscheinposIId);
 		for (Lieferscheinposition lieferscheinposition : positions) {
 			List<SeriennrChargennrMitMengeDto> snrs = getLagerFac()
-					.getAllSeriennrchargennrEinerBelegartposition(
+					.getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
 							LocaleFac.BELEGART_LIEFERSCHEIN,
 							lieferscheinposition.getIId());
 			if (hasSeriennrchargennr(snrs)) {
@@ -729,7 +827,9 @@ public class LieferscheinpositionFacBean extends Facade implements
 				sortierungAnpassenBeiEinfuegenEinerPositionVorPosition(
 						lieferscheinpositionDtoI.getLieferscheinIId(),
 						lieferscheinpositionDtoI.getISort());
-				getLieferscheinFac().updateTAendern(lieferscheinpositionDtoI.getLieferscheinIId(), theClientDto);
+				getLieferscheinFac().updateTAendern(
+						lieferscheinpositionDtoI.getLieferscheinIId(),
+						theClientDto);
 				return lieferscheinpositionDtoI;
 			}
 			// }
@@ -1167,10 +1267,11 @@ public class LieferscheinpositionFacBean extends Facade implements
 			sortierungAnpassenBeiLoeschenEinerPosition(
 					lieferscheinpositionDtoI.getLieferscheinIId(),
 					lieferscheinpositionDtoI.getISort().intValue());
-			
-			//wegen Aenderungszeitpunkt
-			getLieferscheinFac().updateLieferscheinOhneWeitereAktion(ls, theClientDto);
-			
+
+			// wegen Aenderungszeitpunkt
+			getLieferscheinFac().updateLieferscheinOhneWeitereAktion(ls,
+					theClientDto);
+
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		} catch (Throwable t) {
@@ -1324,20 +1425,16 @@ public class LieferscheinpositionFacBean extends Facade implements
 						// getBigDecimalNull()); // die Lagerbuchung bezieht
 						// sich immer auf eine bestimmte Position!
 
-						if (oDtoI == null) {
-							throw new EJBExceptionLP(
-									EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-									new Exception("oDtoI == null"));
-						}
-
-						ArtikelDto oArtikelDto = getArtikelFac()
-								.artikelFindByPrimaryKey(oDtoI.getArtikelIId(),
-										theClientDto);
-
 						Integer iQuelleLager = null;
 						Integer iZielLager = null;
 
 						iZielLager = oAktuellerLieferschein.getLagerIId();
+
+						// SP2159 //PJ18261
+						if (oDtoI.getLagerIId() != null) {
+							iZielLager = oDtoI.getLagerIId();
+						}
+
 						iQuelleLager = oAktuellerLieferschein.getZiellagerIId();
 						// den Nettogesamtpreis in Mandantenwaehrung umrechnen
 						BigDecimal bdNettogesamtpreis = oDtoI
@@ -1382,12 +1479,6 @@ public class LieferscheinpositionFacBean extends Facade implements
 
 					} else if (oDtoI.getNMenge().doubleValue() < 0) {
 
-						if (oDtoI == null) {
-							throw new EJBExceptionLP(
-									EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-									new Exception("oDtoI == null"));
-						}
-
 						ArtikelDto oArtikelDto = getArtikelFac()
 								.artikelFindByPrimaryKey(oDtoI.getArtikelIId(),
 										theClientDto);
@@ -1430,6 +1521,12 @@ public class LieferscheinpositionFacBean extends Facade implements
 
 						iZielLager = oAktuellerLieferschein.getZiellagerIId();
 						iQuelleLager = oAktuellerLieferschein.getLagerIId();
+
+						// SP2159 //PJ18261
+						if (oDtoI.getLagerIId() != null) {
+							iQuelleLager = oDtoI.getLagerIId();
+						}
+
 						// den Nettogesamtpreis in Mandantenwaehrung umrechnen
 						BigDecimal bdNettogesamtpreis = oDtoI
 								.getNNettoeinzelpreis();
@@ -1862,11 +1959,24 @@ public class LieferscheinpositionFacBean extends Facade implements
 				.getZwsBisPosition());
 		lieferscheinposition.setZwsNettoSumme(lieferscheinpositionDto
 				.getZwsNettoSumme());
+		if (lieferscheinpositionDto.getBZwsPositionspreisZeigen() != null) {
+			lieferscheinposition
+					.setBZwsPositionspreisZeigen(lieferscheinpositionDto
+							.getBZwsPositionspreisZeigen());
+		} else {
+			lieferscheinposition.setBZwsPositionspreisZeigen(Helper
+					.boolean2Short(true));
+		}
 		lieferscheinposition.setCLvposition(lieferscheinpositionDto
 				.getCLvposition());
 		lieferscheinposition.setNMaterialzuschlag(lieferscheinpositionDto
 				.getNMaterialzuschlag());
 		lieferscheinposition.setLagerIId(lieferscheinpositionDto.getLagerIId());
+
+		lieferscheinposition.setNMaterialzuschlagKurs(lieferscheinpositionDto
+				.getNMaterialzuschlagKurs());
+		lieferscheinposition.setTMaterialzuschlagDatum(lieferscheinpositionDto
+				.getTMaterialzuschlagDatum());
 
 		em.merge(lieferscheinposition);
 		em.flush();
@@ -1878,7 +1988,7 @@ public class LieferscheinpositionFacBean extends Facade implements
 		LieferscheinpositionDto lieferscheinpositionDto = LieferscheinpositionDtoAssembler
 				.createDto(lieferscheinposition);
 		lieferscheinpositionDto.setSeriennrChargennrMitMenge(getLagerFac()
-				.getAllSeriennrchargennrEinerBelegartposition(
+				.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 						LocaleFac.BELEGART_LIEFERSCHEIN,
 						lieferscheinpositionDto.getIId()));
 
@@ -2332,25 +2442,27 @@ public class LieferscheinpositionFacBean extends Facade implements
 	}
 
 	public void vertauscheLieferscheinpositionenMinus(Integer iIdBasePosition,
-			List<Integer> possibleIIds, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+			List<Integer> possibleIIds, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 		CompositeISort<Lieferscheinposition> comp = new CompositeISort<Lieferscheinposition>(
 				new LieferscheinpositionSwapper(this, em));
 		comp.vertauschePositionenMinus(iIdBasePosition, possibleIIds);
 		lieferscheinpositionFindByPrimaryKey(iIdBasePosition, theClientDto);
 		getLieferscheinFac().updateTAendern(
-				lieferscheinpositionFindByPrimaryKey(iIdBasePosition, theClientDto).getLieferscheinIId(),
-				theClientDto);
+				lieferscheinpositionFindByPrimaryKey(iIdBasePosition,
+						theClientDto).getLieferscheinIId(), theClientDto);
 	}
 
 	public void vertauscheLieferscheinpositionenPlus(Integer iIdBasePosition,
-			List<Integer> possibleIIds, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+			List<Integer> possibleIIds, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 		CompositeISort<Lieferscheinposition> comp = new CompositeISort<Lieferscheinposition>(
 				new LieferscheinpositionSwapper(this, em));
 		comp.vertauschePositionenPlus(iIdBasePosition, possibleIIds);
 		lieferscheinpositionFindByPrimaryKey(iIdBasePosition, theClientDto);
 		getLieferscheinFac().updateTAendern(
-				lieferscheinpositionFindByPrimaryKey(iIdBasePosition, theClientDto).getLieferscheinIId(),
-				theClientDto);
+				lieferscheinpositionFindByPrimaryKey(iIdBasePosition,
+						theClientDto).getLieferscheinIId(), theClientDto);
 	}
 
 	/**
@@ -2427,6 +2539,63 @@ public class LieferscheinpositionFacBean extends Facade implements
 							+ iIdLieferscheinI);
 		}
 		return angebotpositionDto;
+	}
+
+	public void positionenAnhandAuftragsreihenfolgeAnordnen(
+			Integer iIdLieferscheinI, TheClientDto theClientDto) {
+
+		TreeMap<Integer, Lieferscheinposition> tmLspositionenMitAuftragsbezug = new TreeMap<Integer, Lieferscheinposition>();
+
+		ArrayList<Lieferscheinposition> alLsPositionenOhneauftragsbezug = new ArrayList<Lieferscheinposition>();
+
+		Query query = em
+				.createNamedQuery("LieferscheinpositionfindByLieferschein");
+		query.setParameter(1, iIdLieferscheinI);
+		Collection<?> lieferscheinpositionDtos = query.getResultList();
+
+		Iterator it = lieferscheinpositionDtos.iterator();
+
+		while (it.hasNext()) {
+			Lieferscheinposition lspos = (Lieferscheinposition) it.next();
+
+			if (lspos.getAuftragpositionIId() != null) {
+
+				Auftragposition ap = em.find(Auftragposition.class,
+						lspos.getAuftragpositionIId());
+
+				tmLspositionenMitAuftragsbezug.put(ap.getISort(), lspos);
+			} else {
+				alLsPositionenOhneauftragsbezug.add(lspos);
+			}
+
+		}
+
+		// Pj18433
+		// Nun neu durchsortieren, beginnend mit 1
+
+		int isort = 1;
+
+		Iterator<Integer> it1 = tmLspositionenMitAuftragsbezug.keySet()
+				.iterator();
+		while (it1.hasNext()) {
+			Lieferscheinposition lspos = tmLspositionenMitAuftragsbezug.get(it1
+					.next());
+
+			lspos.setISort(isort);
+			em.merge(lspos);
+			isort++;
+
+		}
+
+		// Nun die zusaetzlichen Positionen hinten dranhangen
+		for (int i = 0; i < alLsPositionenOhneauftragsbezug.size(); i++) {
+			Lieferscheinposition lspos = alLsPositionenOhneauftragsbezug.get(i);
+
+			lspos.setISort(isort);
+			em.merge(lspos);
+			isort++;
+		}
+
 	}
 
 	public void sortierungAnpassenInBezugAufEndsumme(Integer iIdLieferscheinI,
@@ -2580,6 +2749,17 @@ public class LieferscheinpositionFacBean extends Facade implements
 
 		return lieferscheinposition == null ? null
 				: assembleLieferscheinpositionDto(lieferscheinposition);
+	}
+
+	public LieferscheinpositionDto lieferscheinpositionFindByPrimaryKeyOhneExcUndOhneSnrChnrList(
+			Integer iIdLieferscheinpositionI) {
+
+		Lieferscheinposition lieferscheinposition = em.find(
+				Lieferscheinposition.class, iIdLieferscheinpositionI);
+
+		return lieferscheinposition == null ? null
+				: LieferscheinpositionDtoAssembler
+				.createDto(lieferscheinposition);
 	}
 
 	public LieferscheinpositionDto lieferscheinpositionFindPositionIIdISort(
@@ -2760,7 +2940,8 @@ public class LieferscheinpositionFacBean extends Facade implements
 				}
 
 			}
-			getLieferscheinFac().updateTAendern(rechnungDto.getIId(), theClientDto);
+			getLieferscheinFac().updateTAendern(rechnungDto.getIId(),
+					theClientDto);
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
 
@@ -2837,7 +3018,7 @@ public class LieferscheinpositionFacBean extends Facade implements
 	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 *             Ausnahme
-	 * @throws RemoteException 
+	 * @throws RemoteException
 	 */
 	public Integer updateLieferscheinposition(
 			LieferscheinpositionDto oLieferscheinpositionDtoI,
@@ -2865,7 +3046,8 @@ public class LieferscheinpositionFacBean extends Facade implements
 			updateLieferscheinstatusLieferscheinposition(
 					oLieferscheinpositionDtoI, theClientDto);
 		}
-		getLieferscheinFac().updateTAendern(oLieferscheinpositionDtoI.getLieferscheinIId(), theClientDto);
+		getLieferscheinFac().updateTAendern(
+				oLieferscheinpositionDtoI.getLieferscheinIId(), theClientDto);
 
 		return iIdLieferscheinposition;
 	}
@@ -2898,18 +3080,21 @@ public class LieferscheinpositionFacBean extends Facade implements
 			updateLieferscheinstatusLieferscheinposition(
 					oLieferscheinpositionDtoI, theClientDto);
 		}
-		getLieferscheinFac().updateTAendern(oLieferscheinpositionDtoI.getLieferscheinIId(), theClientDto);
+		getLieferscheinFac().updateTAendern(
+				oLieferscheinpositionDtoI.getLieferscheinIId(), theClientDto);
 
 		return iIdLieferscheinposition;
 	}
 
 	public void lieferscheinpositionKeinLieferrestEintragen(
-			Integer lieferscheinpositionIId, boolean bKeinLieferrest, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+			Integer lieferscheinpositionIId, boolean bKeinLieferrest,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		Lieferscheinposition lieferscheinposition = em.find(
 				Lieferscheinposition.class, lieferscheinpositionIId);
 		lieferscheinposition.setBKeinlieferrest(Helper
 				.boolean2Short(bKeinLieferrest));
-		getLieferscheinFac().updateTAendern(lieferscheinposition.getLieferscheinIId(), theClientDto);
+		getLieferscheinFac().updateTAendern(
+				lieferscheinposition.getLieferscheinIId(), theClientDto);
 	}
 
 	/**
@@ -3000,6 +3185,45 @@ public class LieferscheinpositionFacBean extends Facade implements
 					lieferscheinposition, lieferscheinpositionDtoI);
 			befuelleZusaetzlichePreisfelder(lieferscheinpositionDtoI.getIId(),
 					theClientDto);
+
+			if (lieferscheinpositionDtoI.isIntelligenteZwischensumme()) {
+				LieferscheinpositionDto[] alleLsPos = lieferscheinpositionFindByLieferscheinIId(lieferscheinpositionDtoI
+						.getLieferscheinIId());
+				Set<Integer> modifiedPositions = new HashSet<Integer>();
+				LieferscheinDto lieferscheinDto = getLieferscheinFac()
+						.lieferscheinFindByPrimaryKey(
+								lieferscheinpositionDtoI.getLieferscheinIId(),
+								theClientDto);
+
+				getBelegVerkaufFac().berechneBelegpositionVerkauf(
+						lieferscheinpositionDtoI, lieferscheinDto, alleLsPos,
+						modifiedPositions);
+				System.out.println("Modified positions "
+						+ modifiedPositions.size());
+				for (Integer modifiedPositionIndex : modifiedPositions) {
+					Lieferscheinposition lspos = em.find(
+							Lieferscheinposition.class,
+							alleLsPos[modifiedPositionIndex].getIId());
+					lspos.setNNettogesamtpreisplusversteckteraufschlagminusrabatt(alleLsPos[modifiedPositionIndex]
+							.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+					em.merge(lspos);
+					em.flush();
+				}
+
+				for (Integer index : modifiedPositions) {
+					if ((alleLsPos[index].getNMenge() != null)
+							&& (alleLsPos[index].getAuftragpositionIId() == null)
+							&& alleLsPos[index].getPositionsartCNr().equals(
+									LocaleFac.POSITIONSART_IDENT)) {
+						int signum = alleLsPos[index].getNMenge().signum();
+						if (signum > 0) {
+							bucheAbLager(alleLsPos[index], theClientDto);
+						} else if (signum < 0) {
+							bucheZuLager(alleLsPos[index], theClientDto);
+						}
+					}
+				}
+			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
@@ -3016,7 +3240,7 @@ public class LieferscheinpositionFacBean extends Facade implements
 	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 *             Ausnahme
-	 * @throws RemoteException 
+	 * @throws RemoteException
 	 */
 	private Integer updateLieferscheinpositionIdentLagerbewUndNichtLagerbew(
 			LieferscheinpositionDto lieferscheinpositionDtoI,
@@ -3046,19 +3270,188 @@ public class LieferscheinpositionFacBean extends Facade implements
 			List<SeriennrChargennrMitMengeDto> identities,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 
-		Integer iIdLieferscheinposition = null;
-
 		// die Lagerbuchung und die Lieferscheinposition korrigieren
 		LieferscheinpositionDto lieferscheinpositionBisherDto = lieferscheinpositionFindByPrimaryKey(
 				lieferscheinpositionDtoI.getIId(), theClientDto);
-		removeLieferscheinposition(lieferscheinpositionBisherDto, theClientDto);
-		sortierungAnpassenBeiEinfuegenEinerPositionVorPosition(
-				lieferscheinpositionDtoI.getLieferscheinIId(),
-				lieferscheinpositionDtoI.getISort());
-		iIdLieferscheinposition = createLieferscheinposition(
-				lieferscheinpositionDtoI, true, identities, theClientDto);
 
+		Integer iIdLieferscheinposition = lieferscheinpositionBisherDto
+				.getIId();
+
+		List<ZwsRemoveData> zwsRemoveDatas = findPossibleIntZwsPositions(
+				lieferscheinpositionDtoI, theClientDto);
+
+		boolean bLagerGleich = false;
+
+		if (lieferscheinpositionBisherDto.getLagerIId() == null
+				&& lieferscheinpositionDtoI.getLagerIId() == null) {
+			bLagerGleich = true;
+		} else if (lieferscheinpositionBisherDto.getLagerIId() != null
+				&& lieferscheinpositionBisherDto.getLagerIId().equals(
+						lieferscheinpositionDtoI.getLagerIId())) {
+			bLagerGleich = true;
+		}
+
+		boolean bSnrsGleich = SeriennrChargennrMitMengeDto.sind2ListenGleich(
+				lieferscheinpositionBisherDto.getSeriennrChargennrMitMenge(),
+				lieferscheinpositionDtoI.getSeriennrChargennrMitMenge());
+
+		if (lieferscheinpositionBisherDto.getArtikelIId().equals(
+				lieferscheinpositionDtoI.getArtikelIId())
+				&& lieferscheinpositionDtoI.getNMenge().doubleValue() == lieferscheinpositionBisherDto
+						.getNMenge().doubleValue()
+				&& bLagerGleich == true
+				&& bSnrsGleich == true) {
+
+			// Es muss nur der Preis upgedatet werden
+			LieferscheinpositionDto[] alleLsPos = lieferscheinpositionFindByLieferscheinIId(lieferscheinpositionDtoI
+					.getLieferscheinIId());
+			Set<Integer> modifiedPositions = new HashSet<Integer>();
+			LieferscheinDto lieferscheinDto = getLieferscheinFac()
+					.lieferscheinFindByPrimaryKey(
+							lieferscheinpositionDtoI.getLieferscheinIId(),
+							theClientDto);
+
+			getBelegVerkaufFac().berechneBelegpositionVerkauf(
+					lieferscheinpositionDtoI, lieferscheinDto, alleLsPos,
+					modifiedPositions);
+
+			Lieferscheinposition lsposZeile = em.find(
+					Lieferscheinposition.class,
+					lieferscheinpositionBisherDto.getIId());
+			setLieferscheinpositionFromLieferscheinpositionDto(lsposZeile,
+					lieferscheinpositionDtoI);
+			int signumLsPos = lieferscheinpositionDtoI.getNMenge().signum();
+			if (signumLsPos > 0) {
+				bucheAbLager(lieferscheinpositionDtoI, theClientDto);
+			} else if (signumLsPos < 0) {
+				bucheZuLager(lieferscheinpositionDtoI, theClientDto);
+			}
+
+			System.out
+					.println("Modified positions " + modifiedPositions.size());
+			for (Integer modifiedPositionIndex : modifiedPositions) {
+				Lieferscheinposition lspos = em.find(
+						Lieferscheinposition.class,
+						alleLsPos[modifiedPositionIndex].getIId());
+				lspos.setNNettogesamtpreisplusversteckteraufschlagminusrabatt(alleLsPos[modifiedPositionIndex]
+						.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+				em.merge(lspos);
+				em.flush();
+			}
+
+			for (Integer index : modifiedPositions) {
+				if ((alleLsPos[index].getNMenge() != null)
+						&& (alleLsPos[index].getAuftragpositionIId() == null)
+						&& alleLsPos[index].getPositionsartCNr().equals(
+								LocaleFac.POSITIONSART_IDENT)) {
+					int signum = alleLsPos[index].getNMenge().signum();
+					if (signum > 0) {
+						bucheAbLager(alleLsPos[index], theClientDto);
+					} else if (signum < 0) {
+						bucheZuLager(alleLsPos[index], theClientDto);
+					}
+				}
+			}
+
+		} else {
+
+			removeLieferscheinposition(lieferscheinpositionBisherDto,
+					theClientDto);
+			sortierungAnpassenBeiEinfuegenEinerPositionVorPosition(
+					lieferscheinpositionDtoI.getLieferscheinIId(),
+					lieferscheinpositionDtoI.getISort());
+
+			iIdLieferscheinposition = createLieferscheinposition(
+					lieferscheinpositionDtoI, true, identities, theClientDto);
+
+			for (ZwsRemoveData zwsRemoveData : zwsRemoveDatas) {
+				Integer newPosId = getLSPositionIIdFromPositionNummer(
+						zwsRemoveData.getZwsPos().getBelegIId(),
+						zwsRemoveData.getPosNr());
+				if (newPosId.equals(iIdLieferscheinposition)) {
+					Lieferscheinposition lspos = em.find(
+							Lieferscheinposition.class, zwsRemoveData
+									.getZwsPos().getIId());
+					if (zwsRemoveData.isFrom()) {
+						lspos.setZwsVonPosition(newPosId);
+					} else {
+						lspos.setZwsBisPosition(newPosId);
+					}
+					em.merge(lspos);
+					em.flush();
+				} else {
+					myLogger.error("Die errechnete PositionsId '" + newPosId
+							+ "' stimmt nicht der erzeugten '"
+							+ iIdLieferscheinposition
+							+ "'\u00fcberein. LS-Beleg: '"
+							+ zwsRemoveData.getZwsPos().getBelegIId() + "'.");
+				}
+			}
+		}
 		return iIdLieferscheinposition;
+	}
+
+	private class ZwsRemoveData {
+		private LieferscheinpositionDto zwsPos;
+		private Integer posNr;
+		private boolean isFrom;
+
+		public ZwsRemoveData(LieferscheinpositionDto zwsPos, boolean isFrom,
+				Integer posNr) {
+			this.zwsPos = zwsPos;
+			this.isFrom = isFrom;
+			this.posNr = posNr;
+		}
+
+		public LieferscheinpositionDto getZwsPos() {
+			return zwsPos;
+		}
+
+		public Integer getPosNr() {
+			return posNr;
+		}
+
+		public boolean isFrom() {
+			return this.isFrom;
+		}
+	}
+
+	/**
+	 * Spezialbehandlung der Position, die in einem Von bzw. Bis der IntZws
+	 * ist.</br>
+	 * <p>
+	 * Wenn die Von-Pos oder auch die Bis-Pos entfernt und wieder neu
+	 * eingef&uuml;gt wird, dann stimmt nat&uuml;rlich diese IId nicht mehr mit
+	 * jener &uuml;berein, die in der ZwsPos eingetragen ist
+	 * </p>
+	 * 
+	 * @param removedDto
+	 * @param theClientDto
+	 */
+	private List<ZwsRemoveData> findPossibleIntZwsPositions(
+			LieferscheinpositionDto removedDto, TheClientDto theClientDto) {
+		List<ZwsRemoveData> foundZwsPosIds = new ArrayList<ZwsRemoveData>();
+		LieferscheinpositionDto[] lsPosDtos = lieferscheinpositionFindByLieferscheinIId(removedDto
+				.getBelegIId());
+		for (LieferscheinpositionDto lsPosDto : lsPosDtos) {
+			if (lsPosDto.isIntelligenteZwischensumme()) {
+				if (lsPosDto.getZwsVonPosition().equals(removedDto.getIId())) {
+					ZwsRemoveData zwsRemoveData = new ZwsRemoveData(lsPosDto,
+							true,
+							getLSPositionNummer(lsPosDto.getZwsVonPosition()));
+					foundZwsPosIds.add(zwsRemoveData);
+					continue;
+				}
+				if (lsPosDto.getZwsBisPosition().equals(removedDto.getIId())) {
+					ZwsRemoveData zwsRemoveData = new ZwsRemoveData(lsPosDto,
+							false,
+							getLSPositionNummer(lsPosDto.getZwsBisPosition()));
+					foundZwsPosIds.add(zwsRemoveData);
+					continue;
+				}
+			}
+		}
+		return foundZwsPosIds;
 	}
 
 	/**
@@ -3093,7 +3486,7 @@ public class LieferscheinpositionFacBean extends Facade implements
 	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 *             Ausnahme
-	 * @throws RemoteException 
+	 * @throws RemoteException
 	 */
 	private Integer updateLieferscheinpositionIdentSeriennr(
 			LieferscheinpositionDto lieferscheinpositionDtoI,
@@ -3281,7 +3674,10 @@ public class LieferscheinpositionFacBean extends Facade implements
 			getAuftragpositionFac().updateOffeneMengeAuftragposition(
 					lieferscheinpositionDtoI.getAuftragpositionIId(),
 					theClientDto);
-			getLieferscheinFac().updateTAendern(lieferscheinpositionDtoI.getLieferscheinIId(), theClientDto);
+			getLieferscheinFac()
+					.updateTAendern(
+							lieferscheinpositionDtoI.getLieferscheinIId(),
+							theClientDto);
 
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -3300,7 +3696,7 @@ public class LieferscheinpositionFacBean extends Facade implements
 	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 *             Ausnahme
-	 * @throws RemoteException 
+	 * @throws RemoteException
 	 */
 	public void updateLieferscheinpositionOhneWeitereAktion(
 			LieferscheinpositionDto lieferscheinpositionDtoI,
@@ -3316,7 +3712,8 @@ public class LieferscheinpositionFacBean extends Facade implements
 				lieferscheinposition, lieferscheinpositionDtoI);
 		befuelleZusaetzlichePreisfelder(lieferscheinpositionDtoI.getIId(),
 				theClientDto);
-		getLieferscheinFac().updateTAendern(lieferscheinpositionDtoI.getLieferscheinIId(), theClientDto);
+		getLieferscheinFac().updateTAendern(
+				lieferscheinpositionDtoI.getLieferscheinIId(), theClientDto);
 	}
 
 	public void updateLieferscheinpositionAusRechnung(
@@ -3337,7 +3734,8 @@ public class LieferscheinpositionFacBean extends Facade implements
 	 *            die aktuelle Lieferscheinposition
 	 * @param rechnungpositionIId
 	 *            Integer
-	 * @param snrs die Seriennummern/Chargeninfos
+	 * @param snrs
+	 *            die Seriennummern/Chargeninfos
 	 * @param theClientDto
 	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
@@ -3558,6 +3956,162 @@ public class LieferscheinpositionFacBean extends Facade implements
 
 		}
 
+	}
+
+	public Integer createLieferscheinAusLieferschein(Integer lieferscheinIId,
+			boolean bUebernimmKonditionenDesKunden, TheClientDto theClientDto) {
+		Integer lieferrscheinIIdNeu = null;
+		try {
+			LieferscheinDto lieferscheinDtoVorhanden = getLieferscheinFac()
+					.lieferscheinFindByPrimaryKey(lieferscheinIId, theClientDto);
+			lieferscheinDtoVorhanden.setIId(null);
+			lieferscheinDtoVorhanden.setCNr(null);
+			lieferscheinDtoVorhanden.setRechnungIId(null);
+			lieferscheinDtoVorhanden.setAuftragIId(null);
+			if (lieferscheinDtoVorhanden.getLieferscheinartCNr().equals(
+					LieferscheinFac.LSART_AUFTRAG)) {
+				lieferscheinDtoVorhanden
+						.setLieferscheinartCNr(LieferscheinFac.LSART_FREI);
+			}
+
+			lieferscheinDtoVorhanden.setNGesamtwertinbelegwaehrung(null);
+			lieferscheinDtoVorhanden.setNGesamtwertInLieferscheinwaehrung(null);
+			lieferscheinDtoVorhanden
+					.setNGestehungswertInMandantenwaehrung(null);
+
+			lieferscheinDtoVorhanden.setTBelegdatum(Helper
+					.cutTimestamp(new java.sql.Timestamp(System
+							.currentTimeMillis())));
+
+			if (bUebernimmKonditionenDesKunden) {
+
+				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
+						lieferscheinDtoVorhanden.getKundeIIdLieferadresse(),
+						theClientDto);
+				Double dAllgemeinerrabattsatz = new Double(0);
+				if (kundeDto.getFRabattsatz() != null) {
+					dAllgemeinerrabattsatz = kundeDto.getFRabattsatz();
+				}
+				lieferscheinDtoVorhanden
+						.setFAllgemeinerRabattsatz(dAllgemeinerrabattsatz);
+
+				if (kundeDto.getLieferartIId() != null) {
+					lieferscheinDtoVorhanden.setLieferartIId(kundeDto
+							.getLieferartIId());
+				}
+				if (kundeDto.getZahlungszielIId() != null) {
+					lieferscheinDtoVorhanden.setZahlungszielIId(kundeDto
+							.getZahlungszielIId());
+				}
+				if (kundeDto.getSpediteurIId() != null) {
+					lieferscheinDtoVorhanden.setSpediteurIId(kundeDto
+							.getSpediteurIId());
+				}
+
+			}
+
+			lieferscheinDtoVorhanden.setTStorniert(null);
+			lieferscheinDtoVorhanden.setPersonalIIdStorniert(null);
+
+			lieferscheinDtoVorhanden.setTManuellerledigt(null);
+			lieferscheinDtoVorhanden.setPersonalIIdManuellerledigt(null);
+			lieferscheinDtoVorhanden
+					.setStatusCNr(LieferscheinFac.LSSTATUS_ANGELEGT);
+
+			lieferrscheinIIdNeu = getLieferscheinFac().createLieferschein(
+					lieferscheinDtoVorhanden, theClientDto);
+
+			LieferscheinpositionDto[] posDtos = getLieferscheinpositionFac()
+					.lieferscheinpositionFindByLieferscheinIId(lieferscheinIId);
+
+			for (int i = 0; i < posDtos.length; i++) {
+				LieferscheinpositionDto posDto = posDtos[i];
+
+				// Lieferschein auslassen
+
+				if (posDto.getAuftragpositionIId() == null) {
+					try {
+						posDto.setIId(null);
+						posDto.setLieferscheinIId(lieferrscheinIIdNeu);
+						posDto.setBelegIId(lieferrscheinIIdNeu);
+						posDto.setPositioniIdArtikelset(null);
+						posDto.setAuftragpositionIId(null);
+						posDto.setNMaterialzuschlagKurs(null);
+						posDto.setTMaterialzuschlagDatum(null);
+
+						if (posDto.getPositionsartCNr().equals(
+								RechnungFac.POSITIONSART_RECHNUNG_IDENT)) {
+
+							if (posDto.getNMenge() != null
+									&& posDto.getNEinzelpreis() != null) {
+
+								// SP2157 Fremdwaehrungsrechnung muss denselben
+								// Preis wie damals behalten
+								VerkaufspreisDto verkaufspreisDto = getVkPreisfindungFac()
+										.berechnePreisfelder(
+												posDto.getNEinzelpreis(),
+												posDto.getFRabattsatz(),
+												posDto.getFZusatzrabattsatz(),
+												posDto.getMwstsatzIId(), 4, // @
+												// todo
+												// Konstante
+												// PJ
+												// 3778
+												theClientDto);
+
+								posDto.setNEinzelpreis(verkaufspreisDto.einzelpreis);
+								posDto.setNNettoeinzelpreis(verkaufspreisDto.nettopreis);
+								posDto.setNBruttoeinzelpreis(verkaufspreisDto.bruttopreis);
+
+							}
+
+							ArtikelDto artikelDto = getArtikelFac()
+									.artikelFindByPrimaryKeySmall(
+											posDto.getArtikelIId(),
+											theClientDto);
+
+							if (Helper.short2boolean(artikelDto
+									.getBLagerbewirtschaftet())) {
+								BigDecimal lagerstand = getLagerFac()
+										.getLagerstand(
+												posDto.getArtikelIId(),
+												lieferscheinDtoVorhanden
+														.getLagerIId(),
+												theClientDto);
+								if (lagerstand.doubleValue() < posDto
+										.getNMenge().doubleValue()) {
+									posDto.setNMenge(lagerstand);
+								}
+							}
+
+							if (Helper.short2boolean(artikelDto
+									.getBSeriennrtragend())
+									|| Helper.short2boolean(artikelDto
+											.getBChargennrtragend())) {
+								posDto.setNMenge(new BigDecimal(0));
+							}
+
+						}
+
+						if (posDto.isIntelligenteZwischensumme()) {
+							ZwsPositionMapper mapper = new ZwsPositionMapper(
+									this, this);
+							mapper.map(posDto, posDtos[i], lieferrscheinIIdNeu);
+						}
+						getLieferscheinpositionFac()
+								.createLieferscheinposition(posDto, true,
+										theClientDto);
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+					}
+				}
+
+			}
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		return lieferrscheinIIdNeu;
 	}
 
 	private LieferscheinDto findLieferscheinByLieferscheinpositionIId(

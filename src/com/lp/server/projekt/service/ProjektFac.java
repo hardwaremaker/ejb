@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.projekt.service;
 
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
 import javax.ejb.Remote;
 
@@ -76,6 +77,7 @@ public interface ProjektFac {
 	public static final String FLR_PROJEKT_I_SORT = "i_sort";
 	public static final String FLR_PROJEKT_I_WAHRSCHEINLICHKEIT = "i_wahrscheinlichkeit";
 	public static final String FLR_PROJEKT_N_UMSATZGEPLANT = "n_umsatzgeplant";
+	public static final String FLR_PROJEKT_FLRPROJEKTSTATUS = "flrprojektstatus";
 	
 
 	public static final String FLR_HISTORY_PERSONAL_I_ID = "personal_i_id";
@@ -84,6 +86,7 @@ public interface ProjektFac {
 	public static final String FLR_HISTORY_X_TEXT = "x_text";
 	public static final String FLR_HISTORY_FLRPERSONAL = "flrpersonal";
 	public static final String FLR_HISTORY_FLRPROJEKT = "flrprojekt";
+	
 
 	public static int IDX_SPALTE_DAUER = 6;
 	public static int IDX_SPALTE_KOSTEN = 7;
@@ -168,4 +171,9 @@ public interface ProjektFac {
 	 public Double berechneGesamtSchaetzung(Integer personal_i_id_zugewiesener, TheClientDto theClientDto)
 	  throws RemoteException;
 
+	 public String getBelegnr(Integer projektNummer, Integer geschaeftsjahr, 
+			 TheClientDto theClientDto) throws RemoteException ;
+	 public LinkedHashMap<String, ProjektVerlaufHelperDto> getProjektVerlauf(Integer projektIId,TheClientDto theClientDto);
+	 public HistoryDto[] historyFindByProjektIid(Integer iId)
+				throws EJBExceptionLP;
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -37,6 +37,7 @@ import java.util.*;
 
 import com.lp.server.angebot.ejb.*;
 import com.lp.server.angebot.service.*;
+import com.lp.server.artikel.ejb.Farbcode;
 import com.lp.server.system.ejb.Einheitspr;
 import com.lp.server.system.ejb.EinheitsprPK;
 import com.lp.server.system.pkgenerator.*;
@@ -1047,6 +1048,18 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 		myLogger.logData(angeboterledigungsgrundDtoI);
 
 		try {
+			Query query = em.createNamedQuery("AngeboterledigungsgrundfindByCNr");
+			query.setParameter(1, angeboterledigungsgrundDtoI.getCNr());
+			
+			// @todo getSingleResult oder getResultList ?
+			Angeboterledigungsgrund doppelt = (Angeboterledigungsgrund) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("ANGB_ANGEBOTERLEDIGUNGSGRUND.C_NR"));
+		} catch (NoResultException ex1) {
+			// nothing here
+		}
+		
+		try {
 			Angeboterledigungsgrund angeboterledigungsgrund = new Angeboterledigungsgrund(
 					angeboterledigungsgrundDtoI.getCNr(),
 					angeboterledigungsgrundDtoI.getMandantCNr(),
@@ -1140,6 +1153,24 @@ public class AngebotServiceFacBean extends Facade implements AngebotServiceFac {
 								+ angeboterledigungsgrundDtoI.toString());
 			}
 
+			
+			try {
+				Query query = em.createNamedQuery("AngeboterledigungsgrundfindByCNr");
+				query.setParameter(1, angeboterledigungsgrundDtoI.getCNr());
+				
+				// @todo getSingleResult oder getResultList ?
+				String cNrVorhanden = ((Angeboterledigungsgrund) query.getSingleResult())
+						.getCNr();
+				if (angeboterledigungsgrund.getCNr().equals(cNrVorhanden) == false) {
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+							new Exception("ANGB_ANGEBOTSERLEDIGUNGSGRUND.C_NR"));
+				}
+			} catch (NoResultException ex) {
+
+			}
+			
+			
 			setAngeboterledigungsgrundFromAngeboterledigungsgrundDto(
 					angeboterledigungsgrund, angeboterledigungsgrundDtoI);
 

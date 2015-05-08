@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -60,8 +60,16 @@ public class Zahlungsvorschlag implements Serializable {
 	@Column(name = "N_ANGEWANDTERSKONTOSATZ")
 	private BigDecimal nAngewandterskontosatz;
 
-	@Column(name = "N_OFFEN")
-	private BigDecimal nOffen;
+	@Column(name = "N_ER_BRUTTO_BETRAG")
+	private BigDecimal nErBruttoBetrag;
+	@Column(name = "N_BEREITS_BEZAHLT")
+	private BigDecimal nBereitsBezahlt;
+	@Column(name = "N_ZAHLBETRAG")
+	private BigDecimal nZahlbetrag;
+	@Column(name = "B_WAERE_VOLLSTAENDIG_BEZAHLT")
+	private Short bWaereVollstaendigBezahlt;
+	
+	
 
 	@Column(name = "EINGANGSRECHNUNG_I_ID")
 	private Integer eingangsrechnungIId;
@@ -77,14 +85,49 @@ public class Zahlungsvorschlag implements Serializable {
 
 	public Zahlungsvorschlag(Integer id, Integer zahlungsvorschlaglaufIId,
 			Integer eingangsrechnungIId, Short bezahlen, Date faellig,
-			BigDecimal angewandterskontosatz, BigDecimal offen) {
+			BigDecimal angewandterskontosatz, BigDecimal erBruttoBetrag, BigDecimal bereitsBezahlt, BigDecimal zahlbetrag,Short waereVollstaendigBezahlt) {
 		setIId(id);
 		setZahlungsvorschlaglaufIId(zahlungsvorschlaglaufIId);
 		setEingangsrechnungIId(eingangsrechnungIId);
 		setBBezahlen(bezahlen);
 		setTFaellig(faellig);
 		setNAngewandterskontosatz(angewandterskontosatz);
-		setNOffen(offen);
+		setNErBruttoBetrag(erBruttoBetrag);
+		setNBereitsBezahlt(bereitsBezahlt);
+		setNZahlbetrag(zahlbetrag);
+		setBWaereVollstaendigBezahlt(waereVollstaendigBezahlt);
+	}
+
+	public BigDecimal getNErBruttoBetrag() {
+		return nErBruttoBetrag;
+	}
+
+	public void setNErBruttoBetrag(BigDecimal nErBruttoBetrag) {
+		this.nErBruttoBetrag = nErBruttoBetrag;
+	}
+
+	public BigDecimal getNBereitsBezahlt() {
+		return nBereitsBezahlt;
+	}
+
+	public void setNBereitsBezahlt(BigDecimal nBereitsBezahlt) {
+		this.nBereitsBezahlt = nBereitsBezahlt;
+	}
+
+	public BigDecimal getNZahlbetrag() {
+		return nZahlbetrag;
+	}
+
+	public void setNZahlbetrag(BigDecimal nZahlbetrag) {
+		this.nZahlbetrag = nZahlbetrag;
+	}
+
+	public Short getBWaereVollstaendigBezahlt() {
+		return bWaereVollstaendigBezahlt;
+	}
+
+	public void setBWaereVollstaendigBezahlt(Short bWaereVollstaendigBezahlt) {
+		this.bWaereVollstaendigBezahlt = bWaereVollstaendigBezahlt;
 	}
 
 	public Integer getIId() {
@@ -119,13 +162,6 @@ public class Zahlungsvorschlag implements Serializable {
 		this.nAngewandterskontosatz = nAngewandterskontosatz;
 	}
 
-	public BigDecimal getNOffen() {
-		return this.nOffen;
-	}
-
-	public void setNOffen(BigDecimal nOffen) {
-		this.nOffen = nOffen;
-	}
 
 	public Integer getEingangsrechnungIId() {
 		return this.eingangsrechnungIId;

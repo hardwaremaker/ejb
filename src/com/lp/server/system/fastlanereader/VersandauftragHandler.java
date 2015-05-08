@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -48,6 +48,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -302,7 +303,7 @@ public class VersandauftragHandler extends UseCaseHandler {
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-				boolean idFound = false;
+//				boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {
@@ -340,8 +341,8 @@ public class VersandauftragHandler extends UseCaseHandler {
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
-							String.class, java.sql.Timestamp.class,java.sql.Timestamp.class,
-							String.class },
+							String.class, java.sql.Timestamp.class,
+							java.sql.Timestamp.class, String.class },
 					new String[] {
 							"Id",
 							getTextRespectUISpr("lp.betreff", mandantCNr, locUI),
@@ -354,6 +355,16 @@ public class VersandauftragHandler extends UseCaseHandler {
 							getTextRespectUISpr("lp.sendezeitpunkt",
 									mandantCNr, locUI),
 							getTextRespectUISpr("lp.status", mandantCNr, locUI) },
+
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
 					new String[] {
 							VersandFac.FLR_VERSANDAUFTRAG_I_ID,
 							VersandFac.FLR_VERSANDAUFTRAG_C_BETREFF,

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -39,6 +39,7 @@ import java.sql.Timestamp;
 import javax.ejb.Remote;
 
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.DatumsfilterVonBis;
 import com.lp.server.util.report.JasperPrintLP;
 
 @Remote
@@ -59,7 +60,12 @@ public interface LagerReportFac {
 	public static final String REPORT_WARENENTNAHMESTATISTIK = "ww_warenentnahmestatistik.jasper";
 	public static final String REPORT_ARTIKLEGRUPPEN = "ww_artikelgruppen.jasper";
 	public static final String REPORT_SHOPGRUPPEN = "ww_shopgruppen.jasper";
+	public static final String REPORT_INDIREKTE_WARENEINSATZ_STATISTIK = "ww_indirektewareneinsatzstatistik.jasper";
+	
 
+	public final static int REPORT_INDIREKTE_WARENEINSATZ_SORTIERUNG_KUNDE_ARTIKEL = 0;
+	public final static int REPORT_INDIREKTE_WARENEINSATZ_SORTIERUNG_KUNDE_BELEG = 1;
+	
 	
 	public final static int REPORT_WARENENTNAHMESTATISTIK_SORTIERUNG_ARTIKELNR = 0;
 	public final static int REPORT_WARENENTNAHMESTATISTIK_SORTIERUNG_ARTIKELGRUPPE = 1;
@@ -202,5 +208,9 @@ public interface LagerReportFac {
 			Integer artikelklasseIId, Integer lagerplatzIId,int iArtikelarten,
 			TheClientDto theClientDto) throws RemoteException;
 	public BigDecimal recalcGestehungspreisKomplett(Integer artikelIId, boolean debugFile);
+	public JasperPrintLP printIndirekterWareneinsatz(
+			DatumsfilterVonBis datumsfilter, Integer kundeIId, int iSortierung,
+			TheClientDto theClientDto);
+	
 	
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.finanz.fastlanereader;
 
+import java.awt.Color;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -41,11 +42,9 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
-import com.lp.server.finanz.ejb.Finanzamt;
+import com.lp.server.finanz.fastlanereader.generated.FLRFinanzErgebnisgruppe;
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto;
 import com.lp.server.finanz.service.FinanzFac;
-import com.lp.server.finanz.service.FinanzServiceFac;
-import com.lp.server.finanz.service.KontoartsprDto;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -98,25 +97,36 @@ public class KontoHandlerSachkonten extends KontoHandler {
 				rows[row][col++] = konto.getC_bez();
 				if (konto.getFlrergebnisgruppe() != null) {
 
-					if (Helper.short2boolean(konto.getFlrergebnisgruppe()
-							.getB_bilanzgruppe()) == true) {
-						rows[row][col++] = "B:"
-								+ konto.getFlrergebnisgruppe().getC_bez();
-					} else {
-						rows[row][col++] = "E:"
-								+ konto.getFlrergebnisgruppe().getC_bez();
-					}
+					FLRFinanzErgebnisgruppe ergebnisgruppe = konto.getFlrergebnisgruppe() ;
+					rows[row][col++] =
+//							(Helper.short2boolean(ergebnisgruppe.getB_bilanzgruppe()) ?
+//									"B:" : "E:") + ergebnisgruppe.getC_bez() ;
+							(Helper.short2boolean(ergebnisgruppe.getB_bilanzgruppe()) ?
+									getTextRespectUISpr("fb.bilanzgruppe", theClientDto.getMandant(), theClientDto.getLocMandant(), ergebnisgruppe.getC_bez()) :
+									getTextRespectUISpr("fb.ergebnisgruppe", theClientDto.getMandant(), theClientDto.getLocMandant(), ergebnisgruppe.getC_bez())) ;
+					
+//					if (Helper.short2boolean(konto.getFlrergebnisgruppe()
+//							.getB_bilanzgruppe()) == true) {
+//						rows[row][col++] = "B:"
+//								+ konto.getFlrergebnisgruppe().getC_bez();
+//					} else {
+//						rows[row][col++] = "E:"
+//								+ konto.getFlrergebnisgruppe().getC_bez();
+//					}
 
-				} else {
-					rows[row][col++] = "";
-				}
-				if (konto.getFlrkontoust() != null) {
-					rows[row][col++] = konto.getFlrkontoust().getC_nr();
 				} else {
 					rows[row][col++] = "";
 				}
 				if (konto.getFlrkontoart() != null) {
 					rows[row][col++] = getFinanzServiceFac().uebersetzeKontoartOptimal(konto.getFlrkontoart().getC_nr(),
+							theClientDto.getLocUi(), theClientDto.getLocMandant());
+				} else {
+					rows[row][col++] = "";
+				}
+				
+				if (konto.getFlruvaart() != null) {
+//					rows[row][col++] = konto.getFlruvaart().getC_nr();
+					rows[row][col++] = getFinanzServiceFac().uebersetzeUvaartOptimal(konto.getFlruvaart().getI_id(),
 							theClientDto.getLocUi(), theClientDto.getLocMandant());
 				} else {
 					rows[row][col++] = "";
@@ -131,6 +141,8 @@ public class KontoHandlerSachkonten extends KontoHandler {
 
 				// getFinanzFac().finanzamtFindByPrimaryKey(konto.getFinanzamt_i_id(),
 				// theClientDto.getMandant(), theClientDto);
+
+				rows[row][col++] = konto.getB_versteckt() > (short) 0 ? Color.lightGray : null ;
 
 				row++;
 				col = 0;
@@ -152,23 +164,27 @@ public class KontoHandlerSachkonten extends KontoHandler {
 	protected TableInfo produceTableInfo() {
 		String mandantCNr = theClientDto.getMandant();
 		Locale locUI = theClientDto.getLocUi();
-		return new TableInfo(new Class[] { Integer.class, String.class,
-				String.class, String.class, String.class, String.class,
-				String.class }, new String[] { "Id",
-				getTextRespectUISpr("lp.nr", mandantCNr, locUI),
-				getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
-				getTextRespectUISpr("lp.hauptgruppe", mandantCNr, locUI),
-				getTextRespectUISpr("lp.ust", mandantCNr, locUI),
-				getTextRespectUISpr("lp.art", mandantCNr, locUI),
-				getTextRespectUISpr("lp.kurzbezeichnung", mandantCNr, locUI) },
-				new int[] { -1, 6, -1, 18, 6, 30, 25 }, new String[] {
+		return new TableInfo(
+				new Class[] { 
+						Integer.class, String.class,
+						String.class, String.class, String.class, String.class,
+						String.class, Color.class	 },
+				new String[] { "Id",
+					getTextRespectUISpr("lp.nr", mandantCNr, locUI),
+					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+					getTextRespectUISpr("lp.hauptgruppe", mandantCNr, locUI),
+					getTextRespectUISpr("fb.kontoart", mandantCNr, locUI),
+					getTextRespectUISpr("fb.uvaart", mandantCNr, locUI),
+					getTextRespectUISpr("fb.finanzamt", mandantCNr, locUI), "" },
+				new int[] { -1, 6, -1, 18, 6, 30, 25, 0 },
+				new String[] {
 						FinanzFac.FLR_KONTO_I_ID,
 						FinanzFac.FLR_KONTO_C_NR,
 						FinanzFac.FLR_KONTO_C_BEZ,
-						FinanzFac.FLR_KONTO_C_NR, // ergbnisgruppe
-						FinanzFac.FLR_KONTO_C_NR, // ustkonto
+						FinanzFac.FLR_KONTO_FLRERGEBNISGRUPPE + "." + FinanzFac.FLR_ERGEBNISGRUPPE_C_BEZ, // ergbnisgruppe
 						FinanzFac.FLR_KONTO_FLRKONTOART + "."
 								+ FinanzFac.FLR_KONTOART_C_NR,
-						FinanzFac.FLR_KONTO_C_NR });
+						FinanzFac.FLR_KONTO_FLRUVAART + "." + FinanzFac.FLR_UVAART_C_KENNZEICHEN, // uvaart
+						NICHT_SORTIERBAR, "" });
 	}
 }

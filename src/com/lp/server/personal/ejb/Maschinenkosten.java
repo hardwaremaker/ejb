@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -59,6 +59,17 @@ public class Maschinenkosten implements Serializable {
 	@Column(name = "N_STUNDENSATZ")
 	private BigDecimal nStundensatz;
 
+	@Column(name = "N_VKSTUNDENSATZ")
+	private BigDecimal nVkstundensatz;
+
+	public BigDecimal getNVkstundensatz() {
+		return nVkstundensatz;
+	}
+
+	public void setNVkstundensatz(BigDecimal nVkstundensatz) {
+		this.nVkstundensatz = nVkstundensatz;
+	}
+
 	@Column(name = "MASCHINE_I_ID")
 	private Integer maschineIId;
 
@@ -69,11 +80,12 @@ public class Maschinenkosten implements Serializable {
 	}
 
 	public Maschinenkosten(Integer id, Integer maschineIId2,
-			Timestamp gueltigab, BigDecimal stundensatz) {
+			Timestamp gueltigab, BigDecimal stundensatz,BigDecimal vkstundensatz) {
 		setIId(id);
 		setMaschineIId(maschineIId2);
 		setTGueltigab(gueltigab);
 		setNStundensatz(stundensatz);
+		setNVkstundensatz(vkstundensatz);
 	}
 
 	public Integer getIId() {

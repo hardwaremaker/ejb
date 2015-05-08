@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -46,12 +46,14 @@ import javax.ejb.Stateless;
 import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.NonUniqueResultException;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 
 import org.hibernate.Session;
 
+import com.lp.server.artikel.service.ArtikelDto;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
 import com.lp.server.finanz.ejb.Bankverbindung;
 import com.lp.server.finanz.ejb.Ergebnisgruppe;
 import com.lp.server.finanz.ejb.Finanzamt;
@@ -88,11 +90,13 @@ import com.lp.server.finanz.service.KontolandDtoAssembler;
 import com.lp.server.finanz.service.RechenregelDto;
 import com.lp.server.finanz.service.RechenregelDtoAssembler;
 import com.lp.server.finanz.service.SteuerkategorieDto;
+import com.lp.server.partner.ejb.HvTypedQuery;
 import com.lp.server.partner.ejb.Partner;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerDtoAssembler;
+import com.lp.server.personal.service.ZeitabschlussDto;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.service.GeschaeftsjahrMandantDto;
 import com.lp.server.system.service.LocaleFac;
@@ -103,6 +107,7 @@ import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.logger.HvDtoLogger;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.EJBLineNumberExceptionLP;
 import com.lp.util.Helper;
@@ -156,8 +161,9 @@ public class FinanzFacBean extends Facade implements FinanzFac {
 		if (kontoDto.getBVersteckt() == null) {
 			kontoDto.setBVersteckt(Helper.boolean2Short(false));
 		}
+		Konto konto = null ;
 		try {
-			Konto konto = new Konto(kontoDto.getIId(),
+			konto = new Konto(kontoDto.getIId(),
 					kontoDto.getMandantCNr(), kontoDto.getCNr(),
 					kontoDto.getCBez(), kontoDto.getUvaartIId(),
 					kontoDto.getBAutomeroeffnungsbuchung(),
@@ -171,9 +177,16 @@ public class FinanzFacBean extends Facade implements FinanzFac {
 			kontoDto.setTAendern(konto.getTAendern());
 			kontoDto.setTAnlegen(konto.getTAnlegen());
 			setKontoFromKontoDto(konto, kontoDto);
+			
+			HvDtoLogger<KontoDto> logger = new HvDtoLogger<KontoDto>(
+					em, kontoDto.getIId(), theClientDto);
+			logger.logInsert(kontoDto);
+			
 			return kontoFindByPrimaryKey(konto.getIId());
-		} catch (EntityExistsException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		} catch(PersistenceException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);			
+//		} catch (EntityExistsException e) {
+//			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
 	}
 
@@ -198,6 +211,12 @@ public class FinanzFacBean extends Facade implements FinanzFac {
 			try {
 				em.remove(toRemove);
 				em.flush();
+				
+				HvDtoLogger<KontoDto> logger = new HvDtoLogger<KontoDto>(
+						em, kontoDto.getIId(), theClientDto);
+				logger.logDelete(kontoDto);
+
+				
 			} catch (EntityExistsException er) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
 						er);
@@ -221,6 +240,14 @@ public class FinanzFacBean extends Facade implements FinanzFac {
 	public KontoDto updateKonto(KontoDto kontoDto, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		if (kontoDto != null) {
+			
+			KontoDto kontoDto_Vorher = kontoFindByPrimaryKey(
+					kontoDto.getIId());
+
+			HvDtoLogger<KontoDto> kontoLogger = new HvDtoLogger<KontoDto>(em,
+					theClientDto);
+			kontoLogger.log(kontoDto_Vorher, kontoDto);
+			
 			// Auf Zykel preufen
 			pruefeZykel(kontoDto);
 			// Daten der Aenderung
@@ -386,6 +413,7 @@ public class FinanzFacBean extends Facade implements FinanzFac {
 		konto.setTEBAnlegen(kontoDto.gettEBAnlegen()) ;
 		konto.setErgebnisgruppeIId_negativ(kontoDto.getErgebnisgruppeIId_negativ());
 		konto.setBOhneUst(kontoDto.getBOhneUst());
+		konto.setcSteuerart(kontoDto.getcSteuerart());
 		
 		em.merge(konto);
 		em.flush();
@@ -837,25 +865,13 @@ public class FinanzFacBean extends Facade implements FinanzFac {
 
 	public BankverbindungDto bankverbindungFindByKontoIIdOhneExc(
 			Integer kontoIId) throws EJBExceptionLP {
-		BankverbindungDto bankverbindungDto = null;
-		try {
-			Query query = em.createNamedQuery("BankverbindungfindByKontoIId");
-			query.setParameter(1, kontoIId);
-			bankverbindungDto = assembleBankverbindungDto((Bankverbindung) query
-					.getSingleResult());
-			// if (bankverbindungDto.isEmpty()) {
-			// throw new EJBExceptionLP(EJBExceptionLP.FEHLER, null);
-			// }
-		} catch (NoResultException ex) {
-			// nothing here.
-		} catch (NonUniqueResultException ex1) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, "");
-		}
-
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
-		// }
-		return bankverbindungDto;
+		HvTypedQuery<Bankverbindung> query = new HvTypedQuery<Bankverbindung>(
+				em.createNamedQuery("BankverbindungfindByKontoIId"));
+		query.setParameter(1, kontoIId);
+		List<Bankverbindung> list = query.getResultList();
+		if(list == null || list.size() == 0) return null;
+		if(list.size() > 1) throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, "");
+		return assembleBankverbindungDto(list.get(0));
 	}
 
 	public BankverbindungDto bankverbindungFindByBankIIdMandantCNrCKontonummerOhneExc(
@@ -898,6 +914,7 @@ public class FinanzFacBean extends Facade implements FinanzFac {
 		bankverbindung.setTAendern(bankverbindungDto.getTAendern());
 		bankverbindung.setPersonalIIdAendern(bankverbindungDto
 				.getPersonalIIdAendern());
+		bankverbindung.setbInLiquiditaetsvorschau(Helper.boolean2Short(bankverbindungDto.isbInLiquiditaetsVorschau()));
 		em.merge(bankverbindung);
 		em.flush();
 	}
@@ -1054,22 +1071,32 @@ public class FinanzFacBean extends Facade implements FinanzFac {
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, e);
 		}
 	}
+	public KassenbuchDto getHauptkassabuch(TheClientDto theClientDto) {
+		
+			
+			Query query = em.createNamedQuery("KassenbuchfindByBHauptkassenbuch");
+			query.setParameter(1, Helper.boolean2Short(true));
+			query.setParameter(2,  theClientDto.getMandant()) ;
+			Collection<Kassenbuch> cl = query.getResultList();
+			
+			if(cl.iterator().hasNext()){
+				return assembleKassenbuchDto(cl.iterator().next());
+			} else {
+				return null;
+			}
+			
+		
+	}
 
 	public KassenbuchDto kassenbuchFindByKontoIIdOhneExc(Integer kontoIId)
 			throws EJBExceptionLP {
-		KassenbuchDto kassenbuchDto = null;
-		try {
-			Query query = em.createNamedQuery("KassenbuchfindByKontoIId");
-			query.setParameter(1, kontoIId);
-			kassenbuchDto = assembleKassenbuchDto((Kassenbuch) query
-					.getSingleResult());
-		} catch (NoResultException ex) {
-			// nothing here.
-		} catch (NonUniqueResultException ex1) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, "");
-		}
-
-		return kassenbuchDto;
+		HvTypedQuery<Kassenbuch> query = new HvTypedQuery<Kassenbuch>(
+				em.createNamedQuery("KassenbuchfindByKontoIId"));
+		query.setParameter(1, kontoIId);
+		List<Kassenbuch> list = query.getResultList();
+		if(list == null || list.size() == 0) return null;
+		if(list.size() > 1) throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT, "");
+		return assembleKassenbuchDto(list.get(0));
 	}
 
 	/***
@@ -1439,6 +1466,7 @@ public class FinanzFacBean extends Facade implements FinanzFac {
 			query.setParameter(3, mandant);
 			return assembleKontoDto((Konto) query.getSingleResult());
 		} catch (Exception e) {
+			e.printStackTrace();
 		}
 		return kontoDto;
 	}
@@ -1655,7 +1683,24 @@ public class FinanzFacBean extends Facade implements FinanzFac {
 
 	/**
 	 * Ein Personenkonto fuer einen Kunden/Lieferanten anlegen. Die Nummer wird
-	 * dabei automatisch generiert
+	 * dabei automatisch generiert.
+	 * 
+	 * Die Regel zur Zusammenstellung der Kontonummer wird durch einen
+	 * Mandantenparameter definiert Vorerst wird nur die Standard-Regel
+	 * implementiert x yy z* x ... Kontoklasse lt.
+	 * Mandantenparameter/Debitor/Kreditor yy ... Anfangsbuchstabe des Partners
+	 * (A=01, B=02, ...) zuzueglich Startwert z* ... laufende Nummer (die
+	 * naechste freie) mit der verbleibenden Stellenanzahl
+	 * 
+	 * Sonderfaelle: Ziffern 0 - 9 werden nach dem Zahlwort eingeordnet (z.B. 3
+	 * als drei)
+	 * 
+	 * PJ 15226: zusaetzlich zu dieser Regel wird eine fortlaufende Nummerierung
+	 * ohne Ruecksicht auf den Partnernamen implementiert. Die Anwendung ist
+	 * abhaengig vom Mandantenparameter FINANZ_DEBITORENNUMMER_FORTLAUFEND (0
+	 * ... 2+3 Stelle aus Partner, 1 ... nur fortlaufend) Gilt fuer Debitoren
+	 * und Kreditoren ACHTUNG: wenn der Parameter nachtraeglich auf 1 gesetzt
+	 * wird, werden Luecken aufgefuellt!
 	 * 
 	 * @param partnerDto
 	 *            PartnerDto
@@ -1665,11 +1710,12 @@ public class FinanzFacBean extends Facade implements FinanzFac {
 	 *            String
 	 * @return KontoDto
 	 * @throws EJBExceptionLP
+	 * @throws RemoteException
 	 */
 	public KontoDto createKontoFuerPartnerAutomatisch(PartnerDto partnerDto,
 			String kontotypCNr, boolean kontoAnlegen,
 			String kontonummerVorgabe, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+			throws EJBExceptionLP, RemoteException {
 		KontoDto kontoDto = null;
 		
 		try {
@@ -1680,111 +1726,100 @@ public class FinanzFacBean extends Facade implements FinanzFac {
 		} catch (RemoteException e1) {
 			throw new EJBExceptionLP(e1);
 		}
+		
+		String vonParameterCNr = null;
+		String bisParameterCNr = null;
+		String kategorieCNr = null;
+		if (kontotypCNr.equals(FinanzServiceFac.KONTOTYP_DEBITOR)) {
+			vonParameterCNr = ParameterFac.PARAMETER_DEBITORENNUMMER_VON;
+			bisParameterCNr = ParameterFac.PARAMETER_DEBITORENNUMMER_BIS;
+			kategorieCNr = ParameterFac.KATEGORIE_KUNDEN;
+		} else if (kontotypCNr.equals(FinanzServiceFac.KONTOTYP_KREDITOR)) {
+			vonParameterCNr = ParameterFac.PARAMETER_KREDITOREN_VON;
+			bisParameterCNr = ParameterFac.PARAMETER_KREDITOREN_BIS;
+			kategorieCNr = ParameterFac.KATEGORIE_LIEFERANT;
+		}
+		ParametermandantDto vonParameter = getParameterFac()
+				.getMandantparameter(theClientDto.getMandant(),
+						kategorieCNr, vonParameterCNr);
+		ParametermandantDto bisParameter = getParameterFac()
+				.getMandantparameter(theClientDto.getMandant(),
+						kategorieCNr, bisParameterCNr);
+		
 		if (kontonummerVorgabe != null) {
-			try {
-				kontoDto = kontoErstellen(kontonummerVorgabe, kontotypCNr,
-						partnerDto, kontoAnlegen, theClientDto);
-			} catch (RemoteException e) {
-				throwEJBExceptionLPRespectOld(e);
-				return null;
-			}
+			int kontonummer = Integer.parseInt(kontonummerVorgabe);
+			if(kontonummer < Integer.parseInt(vonParameter.getCWert()) ||
+					kontonummer > Integer.parseInt(bisParameter.getCWert()))
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_KONTONUMMER_AUSSERHALB_DEFINITION,
+						"FEHLER_FINANZ_KONTONUMMER_AUSSERHALB_DEFINITION", kontonummerVorgabe, vonParameter.getCWert(), bisParameter.getCWert());
+			kontoDto = kontoErstellen(kontonummerVorgabe, kontotypCNr,
+					partnerDto, kontoAnlegen, theClientDto);
 			// Es konnte kein Konto erstellt werden
 			if (kontoDto == null) {
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_FINANZ_EXPORT_PERSONENKONTO_KANN_NICHT_AUTOMATISCH_ERSTELLT_WERDEN,
 						"");
 			}
+			return kontoDto;
 		} else {
 			Integer iStellenanzahl = getAnzahlStellenVonKontoNummer(
 					kontotypCNr, theClientDto.getMandant());
-			// Die Regel zur Zusammenstellung der Kontonummer wird durch einen
-			// Mandantenparameter definiert
-			// Vorerst wird nur die Standard-Regel implementiert
-			// x yy z*
-			// x ... Kontoklasse lt. Mandantenparameter/Debitor/Kreditor
-			// yy ... Anfangsbuchstabe des Partners (A=01, B=02, ...) zuzueglich
-			// Startwert
-			// z* ... laufende Nummer (die naechste freie) mit der verbleibenden
-			// Stellenanzahl
 			//
-			// Sonderfaelle: Ziffern 0 - 9 werden nach dem Zahlwort eingeordnet
-			// (z.B. 3 als drei)
-			//
-			// PJ 15226: zusaetzlich zu dieser Regel wird eine fortlaufende
-			// Nummerierung
-			// ohne Ruecksicht auf den Partnernamen implementiert. Die Anwendung
-			// ist abhaengig
-			// vom Mandantenparameter FINANZ_DEBITORENNUMMER_FORTLAUFEND
-			// (0 ... 2+3 Stelle aus Partner, 1 ... nur fortlaufend)
-			// Gilt fuer Debitoren und Kreditoren
-			// ACHTUNG: wenn der Parameter nachtraeglich auf 1 gesetzt wird,
-			// werden Luecken aufgefuellt!
-			//
+			// Ermittlung der der Kontoklasse
+			char cKontoklasse = vonParameter.getCWert().charAt(0);
 
-			String parameterCNr = null;
-			String kategorieCNr = null;
-			if (kontotypCNr.equals(FinanzServiceFac.KONTOTYP_DEBITOR)) {
-				parameterCNr = ParameterFac.PARAMETER_DEBITORENNUMMER_VON;
-				kategorieCNr = ParameterFac.KATEGORIE_KUNDEN;
-			} else if (kontotypCNr.equals(FinanzServiceFac.KONTOTYP_KREDITOR)) {
-				parameterCNr = ParameterFac.PARAMETER_KREDITOREN_VON;
-				kategorieCNr = ParameterFac.KATEGORIE_LIEFERANT;
+			ParametermandantDto paraDebFortlaufend = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_FINANZ,
+							ParameterFac.PARAMETER_FINANZ_DEBITORENNUMMER_FORTLAUFEND);
+
+			boolean debfortlaufend = (Boolean) paraDebFortlaufend
+					.getCWertAsObject();
+
+			String sBereich = "";
+			if (!debfortlaufend) {
+				// Ermittlung der 2stelligen nummer anhand Anfangsbuchstabe
+				// des
+				// Partnernamens
+				sBereich = getPartnerteilDerNummer(partnerDto, vonParameter);
 			}
-			try {
-				// Ermittlung der der Kontoklasse
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(theClientDto.getMandant(),
-								kategorieCNr, parameterCNr);
-				char cKontoklasse = parameter.getCWert().charAt(0);
-
-				ParametermandantDto paraDebFortlaufend = getParameterFac()
-						.getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_FINANZ,
-								ParameterFac.PARAMETER_FINANZ_DEBITORENNUMMER_FORTLAUFEND);
-
-				boolean debfortlaufend = (Boolean) paraDebFortlaufend
-						.getCWertAsObject();
-
-				String sBereich = "";
-				if (!debfortlaufend) {
-					// Ermittlung der 2stelligen nummer anhand Anfangsbuchstabe
-					// des
-					// Partnernamens
-					sBereich = getPartnerteilDerNummer(partnerDto, parameter);
-				}
-				// jetzt die naechste noch nicht vergebene Kontonummer finden
-				int iVerbleibendeStellen = iStellenanzahl.intValue() - 1
-						- sBereich.length();
-				for (int i = 0; i < Math.pow(10, iVerbleibendeStellen); i++) {
-					DecimalFormat nf = new DecimalFormat(
-							"000000000000".substring(0, iVerbleibendeStellen));
-					String sLfdNummer = nf.format(i);
-					// Kontonummer zusammenbasteln
-					String sKontonummer = cKontoklasse + sBereich + sLfdNummer;
-					// Pruefen, ob das Konto schon existiert
-					kontoDto = getFinanzFac()
-							.kontoFindByCnrKontotypMandantOhneExc(sKontonummer,
-									kontotypCNr, theClientDto.getMandant(),
-									theClientDto);
-					if (kontoDto == null) {
-						kontoDto = kontoErstellen(sKontonummer, kontotypCNr,
-								partnerDto, kontoAnlegen, theClientDto);
-						break;
-					}
-				}
-				// Es konnte kein Konto erstellt werden
-				if (kontoDto == null) {
+			// jetzt die naechste noch nicht vergebene Kontonummer finden
+			int iVerbleibendeStellen = iStellenanzahl.intValue() - 1
+					- sBereich.length();
+			int beginnWert = Integer.parseInt(vonParameter.getCWert().substring(1+sBereich.length()));
+			for (int i = beginnWert; i < Math.pow(10, iVerbleibendeStellen); i++) {
+				DecimalFormat nf = new DecimalFormat(
+						"000000000000".substring(0, iVerbleibendeStellen));
+				String sLfdNummer = nf.format(i);
+				// Kontonummer zusammenbasteln
+				String sKontonummer = cKontoklasse + sBereich + sLfdNummer;
+				if(Integer.parseInt(sKontonummer)>Integer.parseInt(bisParameter.getCWert())) {
 					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_FINANZ_EXPORT_PERSONENKONTO_KANN_NICHT_AUTOMATISCH_ERSTELLT_WERDEN,
-							"");
+							EJBExceptionLP.FEHLER_FINANZ_KEINE_KONTONUMMER_FUER_BEREICH_VERFUEGBAR,
+							"FEHLER_FINANZ_KEINE_KONTONUMMER_FUER_BEREICH_VERFUEGBAR", vonParameter.getCWert() + " - " + bisParameter.getCWert());
 				}
-			} catch (RemoteException ex) {
-				throwEJBExceptionLPRespectOld(ex);
-				return null;
+				// Pruefen, ob das Konto schon existiert
+				kontoDto = getFinanzFac()
+						.kontoFindByCnrKontotypMandantOhneExc(sKontonummer,
+								kontotypCNr, theClientDto.getMandant(),
+								theClientDto);
+				if (kontoDto == null) {
+					return kontoErstellen(sKontonummer, kontotypCNr,
+							partnerDto, kontoAnlegen, theClientDto);
+				}
 			}
+			// Es konnte kein Konto erstellt werden
+			
+			StringBuffer sb = new StringBuffer();
+			sb.append(cKontoklasse);
+			sb.append(sBereich);
+			for(int i = 0; i < iVerbleibendeStellen; i++) 
+				sb.append("x");
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_FINANZ_KEINE_KONTONUMMER_FUER_BEREICH_VERFUEGBAR,
+					"FEHLER_FINANZ_KEINE_KONTONUMMER_FUER_BEREICH_VERFUEGBAR", sb.toString());
 		}
-		return kontoDto;
 	}
 
 	private String getPartnerteilDerNummer(PartnerDto partnerDto,
@@ -1866,6 +1901,8 @@ public class FinanzFacBean extends Facade implements FinanzFac {
 				LocaleFac.BELEGART_FINANZBUCHHALTUNG, theClientDto)) {
 			String laenderart = getFinanzServiceFac().getLaenderartZuPartner(
 					partnerDto.getIId(), theClientDto);
+			if(laenderart == null)
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_KEIN_LAND_IM_KUNDEN, "laenderart = null");
 			SteuerkategorieDto steuerkategorieDto = getSteuerkategorieZuLaenderart(
 					kontoDto.getFinanzamtIId(), laenderart, theClientDto);
 			if (steuerkategorieDto == null)

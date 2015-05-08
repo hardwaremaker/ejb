@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -82,7 +82,10 @@ import com.lp.server.system.service.HeliumTokenAuthController;
 import com.lp.server.system.service.LandDto;
 import com.lp.server.system.service.LandplzortDto;
 import com.lp.server.system.service.MandantDto;
+import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.OrtDto;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
@@ -752,6 +755,7 @@ public class WebshopCustomerOrderServiceEjb extends  WebshopOrderServiceBase {
 		private KundeFinder kundeFinder ;
 		private Timestamp earliestDeliveryTime ;
 		private Timestamp latestDeliveryTime ;
+		private int nachkommastellenPreiseVK = -1 ;
 		
 		public AuftragFinderWebshop(OT2ORDER convertedOrder, KundeFinder theKundeFinder) {
 			xmlOrder = convertedOrder ;
@@ -982,9 +986,15 @@ public class WebshopCustomerOrderServiceEjb extends  WebshopOrderServiceBase {
 			
 			positionDto.setEinheitCNr(einheit) ;
 
-			if(null == itemDto.getMwstsatzbezIId()) {
-				itemDto.setMwstsatzbezIId(kundeDto.getMwstsatzbezIId()) ;
-			}
+// Der Steuersatz des Artikels wird ignoriert, es wird immer der beim Kunden hinterlegte verwendet			
+//			if(null == itemDto.getMwstsatzbezIId()) {
+//				itemDto.setMwstsatzbezIId(kundeDto.getMwstsatzbezIId()) ;
+//			}
+			
+			// Es wird immer der Mehrwertsteuersatz vom Kunden verwendet
+			// Hintergrund: Im Shop bestellen neben Endkunden auch Haendler
+			// auch Endkunden und Mini-Haendler in Deutschland die eben Mwst zahlen muessen
+			itemDto.setMwstsatzbezIId(kundeDto.getMwstsatzbezIId()) ;
 			
 			BigDecimal vkPrice = getPrice(kundeDto, auftragDto, itemDto, positionDto.getNMenge()) ;
 			BigDecimal xmlPrice = getXmlPrice(positionDto.getNMenge(), xmlPosition) ;
@@ -994,20 +1004,21 @@ public class WebshopCustomerOrderServiceEjb extends  WebshopOrderServiceBase {
 						"Der angegebene Preis {1} entspricht nicht dem hinterlegtem Preis {0}. Es wird der Shop-Preis {1} verwendet.")) ;				
 				vkPrice = xmlPrice ;
 			}
-			
-			BigDecimal xmlTax = getXmlTax(xmlPosition) ;
-			if(xmlTax != null) {
-				Integer xmlMwstSatz = getMwstsatzIIdForTax(xmlTax.movePointRight(2)) ;
-				if(xmlMwstSatz == null) {
-					addChangeEntry(new ChangeEntry<BigDecimal>(BigDecimal.ZERO, xmlTax, "Der MwSt.Satz {1} des Webshops ist in Helium V unbekannt.")) ;
-				} else {
-					if(itemDto.getMwstsatzbezIId() != null && !xmlMwstSatz.equals(itemDto.getMwstsatzbezIId())) {
-						ChangeEntry<?> changeEntry = new ChangeEntry<Integer>(itemDto.getMwstsatzbezIId(), xmlMwstSatz, "Der MwSt.Satz {1} ist nicht mit dem Artikel MwstSatz {0} ident, es wird {0} verwendet.") ;
-						addChangeEntry(changeEntry) ;
-					}	
-				}
-			}
-			
+
+// Der Steuersatz vom Shop wird ignoriert			
+//			BigDecimal xmlTax = getXmlTax(xmlPosition) ;
+//			if(xmlTax != null) {
+//				Integer xmlMwstSatz = getMwstsatzIIdForTax(xmlTax.movePointRight(2)) ;
+//				if(xmlMwstSatz == null) {
+//					addChangeEntry(new ChangeEntry<BigDecimal>(BigDecimal.ZERO, xmlTax, "Der MwSt.Satz {1} des Webshops ist in Helium V unbekannt.")) ;
+//				} else {
+//					if(itemDto.getMwstsatzbezIId() != null && !xmlMwstSatz.equals(itemDto.getMwstsatzbezIId())) {
+//						ChangeEntry<?> changeEntry = new ChangeEntry<Integer>(itemDto.getMwstsatzbezIId(), xmlMwstSatz, "Der MwSt.Satz {1} ist nicht mit dem Artikel MwstSatz {0} ident, es wird {0} verwendet.") ;
+//						addChangeEntry(changeEntry) ;
+//					}	
+//				}
+//			}
+				
 			positionDto.setNEinzelpreis(vkPrice) ;
 			positionDto.setNNettoeinzelpreis(vkPrice) ;
 			positionDto.setNBruttoeinzelpreis(vkPrice) ;
@@ -1018,8 +1029,11 @@ public class WebshopCustomerOrderServiceEjb extends  WebshopOrderServiceBase {
 			positionDto.setBNettopreisuebersteuert(Helper.boolean2Short(false)) ;
 			positionDto.setFRabattsatz(new Double(0.0)) ;
 			positionDto.setFZusatzrabattsatz(new Double(0.0)) ;
-
+			positionDto.setNRabattbetrag(BigDecimal.ZERO) ;
+			positionDto.setNMaterialzuschlag(BigDecimal.ZERO) ;
 			positionDto.setMwstsatzIId(itemDto.getMwstsatzbezIId()) ;
+			updateMwstBetraege(positionDto);
+			
 			Timestamp earliest = null ;
 			Timestamp latest = null ;
 			
@@ -1045,7 +1059,34 @@ public class WebshopCustomerOrderServiceEjb extends  WebshopOrderServiceBase {
 			return getAuftragpositionFac().auftragpositionFindByPrimaryKeyOhneExc(positionIId) ;
 		}
 
-
+		private int getIUINachkommastellenPreiseVK() throws RemoteException {
+			if (nachkommastellenPreiseVK < 0) {
+				ParametermandantDto parameter = getParameterFac()
+						.getMandantparameter(
+								getAuthController().getWebClientDto().getMandant(),
+								ParameterFac.KATEGORIE_ALLGEMEIN,
+								ParameterFac.PARAMETER_PREISERABATTE_UI_NACHKOMMASTELLEN_VK);
+				nachkommastellenPreiseVK = ((Integer) parameter.getCWertAsObject())
+						.intValue();
+			}
+			return nachkommastellenPreiseVK;
+		}
+		
+		private BigDecimal calculateMwstbetrag(Integer mwstsatzId, BigDecimal nettoeinzelpreis) throws RemoteException {
+			MwstsatzDto mwstSatzDto = getMandantFac()
+					.mwstsatzFindByPrimaryKey(mwstsatzId, getAuthController().getWebClientDto());
+			BigDecimal mwstBetrag = Helper
+					.getProzentWert(nettoeinzelpreis, new BigDecimal(
+							mwstSatzDto.getFMwstsatz()), getIUINachkommastellenPreiseVK()) ;
+			return mwstBetrag ;
+		}
+		
+		private void updateMwstBetraege(AuftragpositionDto positionDto)  throws RemoteException {
+			BigDecimal mwstBetrag = calculateMwstbetrag(positionDto.getMwstsatzIId(), positionDto.getNNettoeinzelpreis()) ;
+			positionDto.setNMwstbetrag(mwstBetrag);
+			positionDto.setNBruttoeinzelpreis(positionDto.getNNettoeinzelpreis().add(mwstBetrag));			
+		}
+	
 		@Override
 		public void createPositions(KundeDto kundeDto, AuftragDto auftragDto) {
 			try {

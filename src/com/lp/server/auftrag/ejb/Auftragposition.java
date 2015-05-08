@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -192,6 +192,44 @@ public class Auftragposition implements Serializable, IISort, IPositionIIdArtike
 	@Column(name = "N_ZWSNETTOSUMME") 
 	private BigDecimal zwsNettoSumme ;
 
+	@Column(name = "B_ZWSPOSITIONSPREISZEIGEN")
+	private Short bZwsPositionspreisZeigen ;
+	
+	@Column(name = "T_MATERIALZUSCHLAG_DATUM")
+	private Timestamp tMaterialzuschlagDatum ;
+	
+
+	public Timestamp getTMaterialzuschlagDatum() {
+		return tMaterialzuschlagDatum;
+	}
+
+	public void setTMaterialzuschlagDatum(Timestamp tMaterialzuschlagDatum) {
+		this.tMaterialzuschlagDatum = tMaterialzuschlagDatum;
+	}
+
+	@Column(name = "N_MATERIALZUSCHLAG_KURS")
+	private BigDecimal nMaterialzuschlagKurs ;
+
+	
+	public BigDecimal getNMaterialzuschlagKurs() {
+		return nMaterialzuschlagKurs;
+	}
+
+	public void setNMaterialzuschlagKurs(BigDecimal nMaterialzuschlagKurs) {
+		this.nMaterialzuschlagKurs = nMaterialzuschlagKurs;
+	}
+	@Column(name = "LIEFERANT_I_ID")
+	private Integer lieferantIId;
+	public Integer getLieferantIId() {
+		return lieferantIId;
+	}
+
+	public void setLieferantIId(Integer lieferantIId) {
+		this.lieferantIId = lieferantIId;
+	}
+
+	
+	
 	public Integer getKostentraegerIId() {
 		return kostentraegerIId;
 	}
@@ -606,5 +644,13 @@ public class Auftragposition implements Serializable, IISort, IPositionIIdArtike
 
 	public void setZwsNettoSumme(BigDecimal zwsNettoSumme) {
 		this.zwsNettoSumme = zwsNettoSumme;
+	}
+
+	public Short getBZwsPositionspreisZeigen() {
+		return bZwsPositionspreisZeigen;
+	}
+
+	public void setBZwsPositionspreisZeigen(Short bZwsPositionpreisZeigen) {
+		this.bZwsPositionspreisZeigen = bZwsPositionpreisZeigen;
 	}
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -59,6 +59,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Restrictions;
 
 import com.lp.server.auftrag.service.AuftragServiceFac;
+import com.lp.server.bestellung.ejb.Wareneingang;
 import com.lp.server.eingangsrechnung.ejb.Eingangsrechnung;
 import com.lp.server.eingangsrechnung.ejb.EingangsrechnungAuftragszuordnung;
 import com.lp.server.eingangsrechnung.ejb.EingangsrechnungKontierung;
@@ -81,9 +82,7 @@ import com.lp.server.finanz.service.FinanzFac;
 import com.lp.server.finanz.service.FinanzamtDto;
 import com.lp.server.finanz.service.KontoDto;
 import com.lp.server.inserat.service.InseraterDto;
-import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.partner.service.LieferantDto;
-import com.lp.server.personal.service.ZeitdatenDto;
 import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.format.LpBelegnummer;
@@ -106,36 +105,79 @@ public class EingangsrechnungFacBean extends Facade implements
 		EingangsrechnungFac {
 	@PersistenceContext
 	private EntityManager em;
-
+	
 	/**
-	 * Wirft eine EJBException, wenn das Feld Reverse Charge nicht meht den, auf
-	 * der hinterlegen Bestellung, vorhandenen Anzahlungen/Schlussrechnungen
-	 * uebereinstimmt.
-	 * 
-	 * @param erDtoI
+	 * Wirft eine EJBException, wenn das Feld Reverse Charge in <code>rech</code> nicht mit den, auf
+	 * der hinterlegen Bestellung vorhandenen, Anzahlungen/Schlussrechnungen
+	 * uebereinstimmt, oder ung&uuml;ltige Anzahlungen oder Schlussrechnungen gemacht werden w&uuml;rden.
+	 * @param rech
 	 */
-	private void pruefeReverseChargeWieBeiVorhandenAnzahlungen(
-			EingangsrechnungDto erDtoI) {
-		String art = erDtoI.getEingangsrechnungartCNr();
-		if (art.equals(EingangsrechnungFac.EINGANGSRECHNUNGART_ANZAHLUNG)
-				|| art.equals(EingangsrechnungFac.EINGANGSRECHNUNGART_SCHLUSSZAHLUNG)) {
-			for (EingangsrechnungDto er : eingangsrechnungFindByBestellungIId(erDtoI
-					.getBestellungIId())) {
-				if (er.getIId().equals(erDtoI.getIId()))
+	private void pruefeAnzahlungSchlusszahlung(EingangsrechnungDto rech) {
+		String art = rech.getEingangsrechnungartCNr();
+		if (art.equals(EINGANGSRECHNUNGART_ANZAHLUNG)
+				|| art.equals(EINGANGSRECHNUNGART_SCHLUSSZAHLUNG)) {
+			boolean anzahlungenVorhanden = false;
+			for (EingangsrechnungDto re : eingangsrechnungFindByBestellungIId(rech.getBestellungIId())) {
+				if (re.getIId().equals(rech.getIId()))
 					continue;
-				if (er.getEingangsrechnungartCNr().equals(
-						EingangsrechnungFac.EINGANGSRECHNUNGART_ANZAHLUNG)
-						|| er.getEingangsrechnungartCNr()
-								.equals(EingangsrechnungFac.EINGANGSRECHNUNGART_SCHLUSSZAHLUNG)) {
-					if (Helper.short2boolean(er.getBReversecharge()) != Helper
-							.short2boolean(erDtoI.getBReversecharge())) {
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_ER_ANZAHLUNGEN_REVERSE_CHARGE_ABWEICHEND,
-								"FEHLER_ER_ANZAHLUNGEN_REVERSE_CHARGE_ABWEICHEND",
-								er.getCNr());
-					}
+				if (re.getStatusCNr().equals(STATUS_STORNIERT))
+					continue;
 
+				if (re.getEingangsrechnungartCNr().equals(
+						EINGANGSRECHNUNGART_SCHLUSSZAHLUNG)) {
+					if (art.equals(EINGANGSRECHNUNGART_SCHLUSSZAHLUNG)) {
+						// Wenn es eine Schlussrechnung gibt, darf man keine weitere machen
+						throw new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_SCHLUSSRECHNUNG_BEREITS_VORHANDEN,
+								"FEHLER_SCHLUSSRECHNUNG_BEREITS_VORHANDEN", re
+										.getCNr());
+					}
+					if(rech.getIId() == null) {
+						// Man darf keine neue Anzahlung erzeugen
+						throw new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_ANZAHLUNG_SCHLUSSRECHNUNG_BEREITS_VORHANDEN,
+								"FEHLER_ANZAHLUNG_SCHLUSSRECHNUNG_BEREITS_VORHANDEN",
+								re.getCNr());
+					} else {
+						EingangsrechnungDto alt = eingangsrechnungFindByPrimaryKeyOhneExc(rech.getIId());
+						if(alt != null) {
+							if(STATUS_STORNIERT.equals(alt.getStatusCNr())) {
+								// stornierte darf man nicht wieder aktivieren
+								throw new EJBExceptionLP(
+										EJBExceptionLP.FEHLER_ANZAHLUNG_SCHLUSSRECHNUNG_BEREITS_VORHANDEN,
+										"FEHLER_ANZAHLUNG_SCHLUSSRECHNUNG_BEREITS_VORHANDEN",
+										re.getCNr());
+							} else if(STATUS_ERLEDIGT.equals(alt.getStatusCNr())) {
+								// bezahlte darf man auch nicht aendern
+								throw new EJBExceptionLP(
+										EJBExceptionLP.FEHLER_ANZAHLUNG_SCHLUSSRECHNUNG_BEREITS_VORHANDEN,
+										"FEHLER_ANZAHLUNG_SCHLUSSRECHNUNG_BEREITS_VORHANDEN",
+										re.getCNr());
+							}
+						}
+					}
+				} else if (re.getEingangsrechnungartCNr().equals(
+						EINGANGSRECHNUNGART_ANZAHLUNG)) {
+					anzahlungenVorhanden = true;
+					if (!re.getStatusCNr().equals(STATUS_ERLEDIGT)) {
+						throw new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_ANZAHLUNGEN_NICHT_BEZAHLT,
+								"FEHLER_ANZAHLUNGEN_NICHT_BEZAHLT", re.getCNr());
+					}
+					if (Helper.short2boolean(re.getBReversecharge()) != Helper
+							.short2boolean(rech.getBReversecharge())) {
+						throw new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_AR_ANZAHLUNGEN_REVERSE_CHARGE_ABWEICHEND,
+								"FEHLER_AR_ANZAHLUNGEN_REVERSE_CHARGE_ABWEICHEND",
+								re.getCNr());
+					}
 				}
+			}
+			if (art.equals(EINGANGSRECHNUNGART_SCHLUSSZAHLUNG)
+					&& !anzahlungenVorhanden) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_KEINE_ANZAHLUNGEN_VORHANDEN,
+						new Exception("FEHLER_KEINE_ANZAHLUNGEN_VORHANDEN"));
 			}
 		}
 	}
@@ -159,7 +201,7 @@ public class EingangsrechnungFacBean extends Facade implements
 		// }
 		// }
 
-		pruefeReverseChargeWieBeiVorhandenAnzahlungen(erDtoI);
+		pruefeAnzahlungSchlusszahlung(erDtoI);
 
 		LpBelegnummerFormat f = getBelegnummerGeneratorObj()
 				.getBelegnummernFormat(erDtoI.getMandantCNr());
@@ -291,6 +333,19 @@ public class EingangsrechnungFacBean extends Facade implements
 					EJBExceptionLP.FEHLER_STORNIEREN_ZAHLUNGEN_VORHANDEN,
 					"FEHLER_STORNIEREN_ZAHLUNGEN_VORHANDEN");
 		}
+		
+		
+		//SP2733 Aus WE entfernen
+		Query query = em
+				.createNamedQuery("WareneingangfindByEingangsrechnungIId");
+		query.setParameter(1, eingangsrechnungIId);
+		Collection<?> cl = query.getResultList();
+		Iterator it=cl.iterator();
+		while(it.hasNext()){
+			Wareneingang we= (Wareneingang) it.next();
+			we.setEingangsrechnungIId(null);
+		}
+		
 		updateEingangsrechnungStatus(theClientDto, eingangsrechnungIId,
 				EingangsrechnungFac.STATUS_STORNIERT);
 		// fibu: Verbuchen rueckgaengig
@@ -412,6 +467,23 @@ public class EingangsrechnungFacBean extends Facade implements
 				// Nachfolger setzten
 				er.setEingangsrechnungIIdNachfolger(idNeu);
 				iAnzahlAngelegt++;
+				
+				//SP3278 Kontierung kopieren
+				boolean bMehrfach = er.getKontoIId() == null
+						|| er.getKostenstelleIId() == null;
+				
+				if(bMehrfach){
+					EingangsrechnungKontierungDto[] erkontierungDtos=eingangsrechnungKontierungFindByEingangsrechnungIId(flrEingangsrechnung.getI_id());
+				
+					for(EingangsrechnungKontierungDto erkontierungDto:erkontierungDtos){
+						erkontierungDto.setEingangsrechnungIId(idNeu);
+						erkontierungDto.setTAendern(new Timestamp(System.currentTimeMillis()));
+						erkontierungDto.setTAnlegen(new Timestamp(System.currentTimeMillis()));
+						createEingangsrechnungKontierung(erkontierungDto, theClientDto);
+					}
+				}
+				
+				
 			}
 
 		}
@@ -430,7 +502,7 @@ public class EingangsrechnungFacBean extends Facade implements
 		// begin
 		// erlaubt ??
 		pruefeUpdateAufEingangsrechnungErlaubt(erDtoI.getIId(), theClientDto);
-		pruefeReverseChargeWieBeiVorhandenAnzahlungen(erDtoI);
+		pruefeAnzahlungSchlusszahlung(erDtoI);
 		try {
 			// Pruefen auf doppelte Lieferantenrechnungsnummer
 			// if (erDtoI.getCLieferantenrechnungsnummer() != null) {
@@ -695,7 +767,7 @@ public class EingangsrechnungFacBean extends Facade implements
 				EingangsrechnungFac.EINGANGSRECHNUNGART_GUTSCHRIFT);
 		Collection<?> eingangsrechnungDtos = query.getResultList();
 
-		Iterator it = eingangsrechnungDtos.iterator();
+		Iterator<?> it = eingangsrechnungDtos.iterator();
 		while (it.hasNext()) {
 			offene.add(assembleEingangsrechnungDto((Eingangsrechnung) it.next()));
 		}
@@ -842,6 +914,7 @@ public class EingangsrechnungFacBean extends Facade implements
 		eingangsrechnung.setCWeartikel(eingangsrechnungDto.getCWeartikel());
 		eingangsrechnung.setEingangsrechnungIdZollimport(eingangsrechnungDto
 				.getEingangsrechnungIdZollimport());
+		eingangsrechnung.setTGedruckt(eingangsrechnungDto.getTGedruckt());
 		em.merge(eingangsrechnung);
 		em.flush();
 	}
@@ -876,6 +949,10 @@ public class EingangsrechnungFacBean extends Facade implements
 				.getIDPersonal());
 		eingangsrechnungAuftragszuordnungDto.setPersonalIIdAnlegen(theClientDto
 				.getIDPersonal());
+		
+		if(eingangsrechnungAuftragszuordnungDto.getBKeineAuftragswertung()==null){
+			eingangsrechnungAuftragszuordnungDto.setBKeineAuftragswertung(Helper.boolean2Short(false));
+		}
 		try {
 			EingangsrechnungAuftragszuordnung eingangsrechnungAuftragszuordnung = new EingangsrechnungAuftragszuordnung(
 					eingangsrechnungAuftragszuordnungDto.getIId(),
@@ -886,7 +963,7 @@ public class EingangsrechnungFacBean extends Facade implements
 					eingangsrechnungAuftragszuordnungDto
 							.getPersonalIIdAnlegen(),
 					eingangsrechnungAuftragszuordnungDto
-							.getPersonalIIdAendern());
+							.getPersonalIIdAendern(),eingangsrechnungAuftragszuordnungDto.getBKeineAuftragswertung());
 			em.persist(eingangsrechnungAuftragszuordnung);
 			em.flush();
 
@@ -1063,6 +1140,8 @@ public class EingangsrechnungFacBean extends Facade implements
 						.getPersonalIIdAendern());
 		eingangsrechnungAuftragszuordnung
 				.setTAendern(eingangsrechnungAuftragszuordnungDto.getTAendern());
+		eingangsrechnungAuftragszuordnung
+		.setBKeineAuftragswertung(eingangsrechnungAuftragszuordnungDto.getBKeineAuftragswertung());
 		em.merge(eingangsrechnungAuftragszuordnung);
 		em.flush();
 	}
@@ -1158,7 +1237,7 @@ public class EingangsrechnungFacBean extends Facade implements
 	 */
 	public BigDecimal getSummeZuAuftraegenZugeordnet(Integer eingangsrechnungIId)
 			throws EJBExceptionLP {
-		BigDecimal restWert = new BigDecimal(0);
+		BigDecimal restWert = BigDecimal.ZERO;
 		EingangsrechnungAuftragszuordnungDto[] azDtos = eingangsrechnungAuftragszuordnungFindByEingangsrechnungIId(eingangsrechnungIId);
 		for (int i = 0; i < azDtos.length; i++) {
 			restWert = restWert.add(azDtos[i].getNBetrag());
@@ -1178,78 +1257,70 @@ public class EingangsrechnungFacBean extends Facade implements
 		 */
 		return getDate();
 	}
+	
+	@Override
+	public BigDecimal berechneSummeAnzahlungenNichtVerrechnetBrutto(
+			TheClientDto theClientDto, String sKriteriumDatum, GregorianCalendar gcVon,
+			GregorianCalendar gcBis)
+			throws EJBExceptionLP, RemoteException {
+		return berechneSummeAnzahlungenNichtVerrechnet(theClientDto, sKriteriumDatum,
+				gcVon, gcBis, true);
+	} 
+	
+	@Override
+	public BigDecimal berechneSummeAnzahlungenNichtVerrechnetNetto(
+			TheClientDto theClientDto, String sKriteriumDatum,
+			GregorianCalendar gcVon, GregorianCalendar gcBis)
+					throws EJBExceptionLP, RemoteException {
+		return berechneSummeAnzahlungenNichtVerrechnet(theClientDto, sKriteriumDatum,
+				gcVon, gcBis, false);
+	}
+
+	private BigDecimal berechneSummeAnzahlungenNichtVerrechnet(
+			TheClientDto theClientDto, String sKriteriumDatum,
+			GregorianCalendar gcVon, GregorianCalendar gcBis, boolean brutto) throws EJBExceptionLP, RemoteException {
+		
+		BigDecimal summe = BigDecimal.ZERO;
+		EingangsrechnungDto[] erDtos = getEingangsrechnungen(theClientDto,
+				sKriteriumDatum, gcVon, gcBis);
+		
+		for(EingangsrechnungDto er : erDtos) {
+			if(!er.getEingangsrechnungartCNr().equals(EINGANGSRECHNUNGART_ANZAHLUNG))
+				continue;
+			if(hatSchlussrechnung(er.getBestellungIId()))
+				continue;
+			
+			summe = summe.add(er.getNBetrag());
+			if(!brutto) summe = summe.subtract(er.getNUstBetrag());
+		}
+		
+		return summe;
+	}
 
 	public BigDecimal berechneSummeOffenBruttoInMandantenwaehrung(
-			TheClientDto theClientDto, String sKriteriumDatum,
-			String sKriteriumJahr, GregorianCalendar gcVon,
+			TheClientDto theClientDto, String sKriteriumDatum, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, boolean bZusatzkosten) {
-		String s = "SELECT er, (SELECT SUM(erz.n_betrag) FROM FLREingangsrechnungzahlung erz WHERE erz.eingangsrechnung_i_id=er.i_id GROUP BY erz.eingangsrechnung_i_id ) FROM FLREingangsrechnung er WHERE er.mandant_c_nr='"
-				+ theClientDto.getMandant()
-				+ "' AND er.status_c_nr NOT IN ('"
-				+ EingangsrechnungFac.STATUS_STORNIERT
-				+ "','"
-				+ EingangsrechnungFac.STATUS_ERLEDIGT + "') AND ";
-
-		if (bZusatzkosten) {
-			s += " er.eingangsrechnungart_c_nr ='"
-					+ EINGANGSRECHNUNGART_ZUSATZKOSTEN + "' AND ";
-		} else {
-			s += " er.eingangsrechnungart_c_nr <>'"
-					+ EINGANGSRECHNUNGART_ZUSATZKOSTEN + "' AND ";
-		}
-
-		if (sKriteriumDatum.equals(EingangsrechnungFac.KRIT_DATUM_BELEGDATUM)) {
-
-			s += " er.t_belegdatum>='"
-					+ Helper.formatDateWithSlashes(new java.sql.Date(gcVon
-							.getTimeInMillis()))
-					+ "' AND er.t_belegdatum<'"
-					+ Helper.formatDateWithSlashes(new java.sql.Date(gcBis
-							.getTimeInMillis())) + "'";
-
-		} else {
-			s += " er.t_freigabedatum>='"
-					+ Helper.formatDateWithSlashes(new java.sql.Date(gcVon
-							.getTimeInMillis()))
-					+ "' AND er.t_freigabedatum<'"
-					+ Helper.formatDateWithSlashes(new java.sql.Date(gcBis
-							.getTimeInMillis())) + "'";
-
-		}
-		SessionFactory factory = FLRSessionFactory.getFactory();
-		Session session = factory.openSession();
-
-		org.hibernate.Query queryErz = session.createQuery(s);
-
-		List<?> resultList = queryErz.list();
-
-		Iterator resultListIterator = resultList.iterator();
-		BigDecimal bdSumme = new BigDecimal(0);
-		while (resultListIterator.hasNext()) {
-
-			Object[] o = (Object[]) resultListIterator.next();
-			FLREingangsrechnung er = (FLREingangsrechnung) o[0];
-
-			BigDecimal bdBezahlt = new BigDecimal(0);
-			if (o[1] != null) {
-				bdBezahlt = (BigDecimal) o[1];
-			}
-
-			// rechnungsbetrag
-			bdSumme = bdSumme.add(er.getN_betrag());
-			// minus bereits bezahlt
-			bdSumme = bdSumme.subtract(bdBezahlt);
-		}
-
-		return bdSumme;
+		return berechneSummeOffenInMandantenwaehrung(theClientDto, sKriteriumDatum,
+				gcVon, gcBis, bZusatzkosten, true);
 	}
 
 	public BigDecimal berechneSummeOffenNettoInMandantenwaehrung(
-			TheClientDto theClientDto, String sKriteriumDatum,
-			String sKriteriumJahr, GregorianCalendar gcVon,
+			TheClientDto theClientDto, String sKriteriumDatum, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, boolean bZusatzkosten) {
+		return berechneSummeOffenInMandantenwaehrung(theClientDto, sKriteriumDatum,
+				gcVon, gcBis, bZusatzkosten, false);
+	}
+	
+	public BigDecimal berechneSummeOffenInMandantenwaehrung(
+			TheClientDto theClientDto, String sKriteriumDatum, GregorianCalendar gcVon,
+			GregorianCalendar gcBis, boolean bZusatzkosten, boolean brutto) {
 
-		String s = "SELECT er, (SELECT SUM(erz.n_betrag) FROM FLREingangsrechnungzahlung erz WHERE erz.eingangsrechnung_i_id=er.i_id GROUP BY erz.eingangsrechnung_i_id ),(SELECT SUM(erz.n_betrag_ust) FROM FLREingangsrechnungzahlung erz WHERE erz.eingangsrechnung_i_id=er.i_id GROUP BY erz.eingangsrechnung_i_id ) FROM FLREingangsrechnung er WHERE er.mandant_c_nr='"
+		String s = "SELECT er, "
+				+ 		"(SELECT SUM(erz.n_betrag) FROM FLREingangsrechnungzahlung erz "
+				+ 		"WHERE erz.eingangsrechnung_i_id=er.i_id GROUP BY erz.eingangsrechnung_i_id ),"
+				+ 		"(SELECT SUM(erz.n_betrag_ust) FROM FLREingangsrechnungzahlung erz "
+				+ "WHERE erz.eingangsrechnung_i_id=er.i_id GROUP BY erz.eingangsrechnung_i_id ) "
+				+ "FROM FLREingangsrechnung er WHERE er.mandant_c_nr='"
 				+ theClientDto.getMandant()
 				+ "' AND er.status_c_nr NOT IN ('"
 				+ EingangsrechnungFac.STATUS_STORNIERT
@@ -1289,93 +1360,80 @@ public class EingangsrechnungFacBean extends Facade implements
 
 		List<?> resultList = queryErz.list();
 
-		Iterator resultListIterator = resultList.iterator();
-		BigDecimal bdSumme = new BigDecimal(0);
+		Iterator<?> resultListIterator = resultList.iterator();
+		BigDecimal bdSumme = BigDecimal.ZERO;
 		while (resultListIterator.hasNext()) {
 
 			Object[] o = (Object[]) resultListIterator.next();
 			FLREingangsrechnung er = (FLREingangsrechnung) o[0];
-
-			BigDecimal bdBezahlt = new BigDecimal(0);
-			if (o[1] != null) {
-				bdBezahlt = (BigDecimal) o[1];
+			
+			// Anzahlungen, die schon eine Schlussrechnung haben, ignorieren.
+			if(er.getEingangsrechnungart_c_nr().equals(EINGANGSRECHNUNGART_ANZAHLUNG)) {
+				if(hatSchlussrechnung(er.getFlrbestellung().getI_id())) continue;
 			}
-			BigDecimal bdBezahltUst = new BigDecimal(0);
-			if (o[2] != null) {
-				bdBezahltUst = (BigDecimal) o[2];
-			}
-			// rechnungsbetrag netto
-			bdSumme = bdSumme.add(er.getN_betrag()
-					.subtract(er.getN_ustbetrag()));
-			// bereits bezahlt netto
-			BigDecimal bdBezahltNetto = bdBezahlt.subtract(bdBezahltUst);
-			bdSumme = bdSumme.subtract(bdBezahltNetto);
 
+			BigDecimal bdBezahlt = o[1] == null ? 
+					BigDecimal.ZERO : (BigDecimal) o[1];
+			BigDecimal bdBezahltUst = o[2] == null ? 
+					BigDecimal.ZERO : (BigDecimal) o[2];
+			
+			// rechnungsbetrag
+			bdSumme = bdSumme.add(er.getN_betrag());
+			if(!brutto)
+				bdSumme = bdSumme.subtract(er.getN_ustbetrag());
+			
+			// bereits bezahlt
+			bdSumme = bdSumme.subtract(bdBezahlt);
+			
+			if(!brutto)
+				bdSumme = bdSumme.add(bdBezahltUst);
 		}
 
 		return bdSumme;
+	}
+	
+	private boolean hatSchlussrechnung(Integer bestellungIId) {
+		for(EingangsrechnungDto erDto : eingangsrechnungFindByBestellungIId(bestellungIId)) {
+			if(erDto.getEingangsrechnungartCNr().equals(EINGANGSRECHNUNGART_SCHLUSSZAHLUNG)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public BigDecimal berechneSummeUmsatzBrutto(TheClientDto theClientDto,
-			String sKriteriumDatum, String sKriteriumJahr,
+			String sKriteriumDatum,
 			String sKriteriumWaehrung, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, boolean bZusatzkosten)
 			throws EJBExceptionLP {
-		EingangsrechnungDto[] erDtos = getEingangsrechnungen(theClientDto,
-				sKriteriumDatum, sKriteriumJahr, gcVon, gcBis);
-		BigDecimal bdSumme = new BigDecimal(0);
-		for (int i = 0; i < erDtos.length; i++) {
-			if (erDtos[i].getStatusCNr().equals(
-					EingangsrechnungFac.STATUS_ANGELEGT)
-					||
-					// erDtos[i].getStatusCNr().equals(EingangsrechnungFac.
-					// STATUS_VERBUCHT) ||
-					erDtos[i].getStatusCNr().equals(
-							EingangsrechnungFac.STATUS_TEILBEZAHLT)
-					|| erDtos[i].getStatusCNr().equals(
-							EingangsrechnungFac.STATUS_ERLEDIGT)) {
-
-				if (bZusatzkosten) {
-					if (erDtos[i]
-							.getEingangsrechnungartCNr()
-							.equals(EingangsrechnungFac.EINGANGSRECHNUNGART_ZUSATZKOSTEN)) {
-						bdSumme = bdSumme.add(erDtos[i].getNBetrag());
-					}
-				} else {
-					if (!erDtos[i]
-							.getEingangsrechnungartCNr()
-							.equals(EingangsrechnungFac.EINGANGSRECHNUNGART_ZUSATZKOSTEN)) {
-						bdSumme = bdSumme.add(erDtos[i].getNBetrag());
-					}
-				}
-
-			}
-		}
-		try {
-			String sMandantWaehrung = getMandantFac().mandantFindByPrimaryKey(
-					theClientDto.getMandant(), theClientDto).getWaehrungCNr();
-			// noetigenfalls in die gewuenschte Waehrung umrechnen
-			if (!sMandantWaehrung.equals(sKriteriumWaehrung)) {
-				// TODO: AD woher kommt Datum
-				bdSumme = getLocaleFac().rechneUmInAndereWaehrungZuDatum(
-						bdSumme, sMandantWaehrung, sKriteriumWaehrung,
-						new Date(gcBis.getTimeInMillis()), theClientDto);
-			}
-		} catch (Exception t) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, t);
-		}
-		return bdSumme;
+		return berechneSummeUmsatz(theClientDto, sKriteriumDatum, 
+				sKriteriumWaehrung, gcVon, gcBis, bZusatzkosten, true);
 	}
 
 	public BigDecimal berechneSummeUmsatzNetto(TheClientDto theClientDto,
-			String sKriteriumDatum, String sKriteriumJahr,
+			String sKriteriumDatum,
 			String sKriteriumWaehrung, GregorianCalendar gcVon,
 			GregorianCalendar gcBis, boolean bZusatzkosten)
 			throws EJBExceptionLP {
+		return berechneSummeUmsatz(theClientDto, sKriteriumDatum,
+				sKriteriumWaehrung, gcVon, gcBis, bZusatzkosten, false);
+	}
+
+	private BigDecimal berechneSummeUmsatz(TheClientDto theClientDto,
+			String sKriteriumDatum,
+			String sKriteriumWaehrung, GregorianCalendar gcVon,
+			GregorianCalendar gcBis, boolean bZusatzkosten, boolean brutto)
+			throws EJBExceptionLP {
 		EingangsrechnungDto[] erDtos = getEingangsrechnungen(theClientDto,
-				sKriteriumDatum, sKriteriumJahr, gcVon, gcBis);
-		BigDecimal bdSumme = new BigDecimal(0);
+				sKriteriumDatum, gcVon, gcBis);
+		BigDecimal bdSumme = BigDecimal.ZERO;
 		for (int i = 0; i < erDtos.length; i++) {
+			if(erDtos[i].getEingangsrechnungartCNr().equals(EINGANGSRECHNUNGART_ANZAHLUNG))
+				continue;
+			if (bZusatzkosten != erDtos[i].getEingangsrechnungartCNr()
+					.equals(EINGANGSRECHNUNGART_ZUSATZKOSTEN)) {
+				continue;
+			}
 			if (erDtos[i].getStatusCNr().equals(
 					EingangsrechnungFac.STATUS_ANGELEGT)
 					||
@@ -1386,21 +1444,11 @@ public class EingangsrechnungFacBean extends Facade implements
 					|| erDtos[i].getStatusCNr().equals(
 							EingangsrechnungFac.STATUS_ERLEDIGT)) {
 
-				if (bZusatzkosten) {
-					if (erDtos[i]
-							.getEingangsrechnungartCNr()
-							.equals(EingangsrechnungFac.EINGANGSRECHNUNGART_ZUSATZKOSTEN)) {
-						bdSumme = bdSumme.add(erDtos[i].getNBetrag().subtract(
-								erDtos[i].getNUstBetrag()));
-					}
-				} else {
-					if (!erDtos[i]
-							.getEingangsrechnungartCNr()
-							.equals(EingangsrechnungFac.EINGANGSRECHNUNGART_ZUSATZKOSTEN)) {
-						bdSumme = bdSumme.add(erDtos[i].getNBetrag().subtract(
-								erDtos[i].getNUstBetrag()));
-					}
-				}
+				BigDecimal bdBetrag = erDtos[i].getNBetrag();
+				if(!brutto) bdBetrag = bdBetrag.subtract(erDtos[i].getNUstBetrag());
+				
+				
+				bdSumme = bdSumme.add(bdBetrag);
 
 			}
 		}
@@ -1421,8 +1469,7 @@ public class EingangsrechnungFacBean extends Facade implements
 	}
 
 	private EingangsrechnungDto[] getEingangsrechnungen(
-			TheClientDto theClientDto, String sKriteriumDatum,
-			String sKriteriumJahr, GregorianCalendar gcVon,
+			TheClientDto theClientDto, String sKriteriumDatum, GregorianCalendar gcVon,
 			GregorianCalendar gcBis) {
 
 		EingangsrechnungDto[] erDtos = null;
@@ -1524,7 +1571,7 @@ public class EingangsrechnungFacBean extends Facade implements
 	 *            EingangsrechnungDto
 	 */
 	private void pruefeBetraege(EingangsrechnungDto erDto) {
-		BigDecimal bdZero = new BigDecimal(0);
+		BigDecimal bdZero = BigDecimal.ZERO;
 		if (erDto.getEingangsrechnungartCNr().equals(
 				EingangsrechnungFac.EINGANGSRECHNUNGART_GUTSCHRIFT)) {
 			if (erDto.getNBetrag().compareTo(bdZero) >= 0) {
@@ -2141,7 +2188,7 @@ public class EingangsrechnungFacBean extends Facade implements
 
 	public BigDecimal getBezahltBetrag(Integer eingangsrechnungIId,
 			Integer kontierungIId) throws EJBExceptionLP {
-		BigDecimal wert = new BigDecimal(0);
+		BigDecimal wert = BigDecimal.ZERO;
 
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = factory.openSession();
@@ -2153,7 +2200,7 @@ public class EingangsrechnungFacBean extends Facade implements
 
 		List<?> resultList = queryErz.list();
 
-		Iterator resultListIterator = resultList.iterator();
+		Iterator<?> resultListIterator = resultList.iterator();
 
 		while (resultListIterator.hasNext()) {
 			FLREingangsrechnungzahlung zahlung = (FLREingangsrechnungzahlung) resultListIterator
@@ -2175,7 +2222,7 @@ public class EingangsrechnungFacBean extends Facade implements
 			EingangsrechnungKontierungDto[] erkDtos = assembleEingangsrechnungKontierungDtos(eingangsrechnungKontierungDtos);
 
 			if (erkDtos.length > 1 && bdGesmtwert.doubleValue() != 0) {
-				BigDecimal werteBisher = new BigDecimal(0);
+				BigDecimal werteBisher = BigDecimal.ZERO;
 				for (int i = 0; i < erkDtos.length; i++) {
 					BigDecimal wertKontierung = wert.divide(bdGesmtwert, 4,
 							BigDecimal.ROUND_HALF_EVEN).multiply(
@@ -2200,7 +2247,7 @@ public class EingangsrechnungFacBean extends Facade implements
 
 	public BigDecimal getBezahltBetragUst(Integer eingangsrechnungIId,
 			Integer zahlungIIdAusgenommen) throws EJBExceptionLP {
-		BigDecimal wert = new BigDecimal(0);
+		BigDecimal wert = BigDecimal.ZERO;
 
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = factory.openSession();
@@ -2212,7 +2259,7 @@ public class EingangsrechnungFacBean extends Facade implements
 
 		List<?> resultList = queryErz.list();
 
-		Iterator resultListIterator = resultList.iterator();
+		Iterator<?> resultListIterator = resultList.iterator();
 
 		while (resultListIterator.hasNext()) {
 			FLREingangsrechnungzahlung zahlung = (FLREingangsrechnungzahlung) resultListIterator
@@ -2236,7 +2283,7 @@ public class EingangsrechnungFacBean extends Facade implements
 
 	public BigDecimal getBezahltBetragFwKontierung(Integer eingangsrechnungIId,
 			Integer kontierungIId) throws EJBExceptionLP {
-		BigDecimal wert = new BigDecimal(0);
+		BigDecimal wert = BigDecimal.ZERO;
 		EingangsrechnungzahlungDto[] erzDtos = eingangsrechnungzahlungFindByEingangsrechnungIId(eingangsrechnungIId);
 		for (int i = 0; i < erzDtos.length; i++) {
 
@@ -2257,7 +2304,7 @@ public class EingangsrechnungFacBean extends Facade implements
 			EingangsrechnungKontierungDto[] erkDtos = assembleEingangsrechnungKontierungDtos(eingangsrechnungKontierungDtos);
 
 			if (erkDtos.length > 1 && bdGesmtwert.doubleValue() != 0) {
-				BigDecimal werteBisher = new BigDecimal(0);
+				BigDecimal werteBisher = BigDecimal.ZERO;
 				for (int i = 0; i < erkDtos.length; i++) {
 					BigDecimal wertKontierung = wert.divide(bdGesmtwert, 4,
 							BigDecimal.ROUND_HALF_EVEN).multiply(
@@ -2282,21 +2329,12 @@ public class EingangsrechnungFacBean extends Facade implements
 
 	public BigDecimal getBezahltBetragUstFw(Integer eingangsrechnungIId,
 			Integer zahlungIIdAusgenommen) throws EJBExceptionLP {
-		BigDecimal wert = new BigDecimal(0);
+		BigDecimal wert = BigDecimal.ZERO;
 		EingangsrechnungzahlungDto[] erzDtos = eingangsrechnungzahlungFindByEingangsrechnungIId(eingangsrechnungIId);
 		for (int i = 0; i < erzDtos.length; i++) {
-
-			if (zahlungIIdAusgenommen != null
-					&& zahlungIIdAusgenommen.equals(erzDtos[i].getIId())) {
+			if (erzDtos[i].getIId().equals(zahlungIIdAusgenommen))
 				break;
-			}
-
-			if (zahlungIIdAusgenommen == null
-					|| !zahlungIIdAusgenommen.equals(erzDtos[i].getIId())) {
-
-				wert = wert.add(erzDtos[i].getNBetragustfw());
-
-			}
+			wert = wert.add(erzDtos[i].getNBetragustfw());
 		}
 		return wert;
 	}
@@ -2384,7 +2422,7 @@ public class EingangsrechnungFacBean extends Facade implements
 
 	public BigDecimal berechneAnzahlungswertVonBestellungInMandantWaehrung(
 			Integer bestellungIId) {
-		BigDecimal bdWert = new BigDecimal(0);
+		BigDecimal bdWert = BigDecimal.ZERO;
 		EingangsrechnungDto[] erDtos = eingangsrechnungFindByBestellungIId(bestellungIId);
 		for (int i = 0; i < erDtos.length; i++) {
 			bdWert = bdWert.add(erDtos[i].getNBetrag());
@@ -2482,8 +2520,8 @@ public class EingangsrechnungFacBean extends Facade implements
 	private void updateKontierung(Integer eingangsrechnungIId)
 			throws EJBExceptionLP {
 		EingangsrechnungKontierungDto[] dtos = eingangsrechnungKontierungFindByEingangsrechnungIId(eingangsrechnungIId);
-		BigDecimal bdMwstSumme = new BigDecimal(0);
-		BigDecimal bdMwstSummeUST = new BigDecimal(0);
+		BigDecimal bdMwstSumme = BigDecimal.ZERO;
+		BigDecimal bdMwstSummeUST = BigDecimal.ZERO;
 		for (int i = 0; i < dtos.length; i++) {
 			bdMwstSumme = bdMwstSumme.add(dtos[i].getNBetragUst());
 		}
@@ -2640,8 +2678,6 @@ public class EingangsrechnungFacBean extends Facade implements
 	 * 
 	 * @param eingangsrechnungIId
 	 *            Integer
-	 * @param cNrUserI
-	 *            String
 	 * @throws EJBExceptionLP
 	 */
 	private void pruefeZugeordneteKontenAufGleichesFinanzamt(
@@ -3016,7 +3052,7 @@ public class EingangsrechnungFacBean extends Facade implements
 	public BigDecimal getBezahltBetragFw(Integer eingangsrechnungIId,
 			Integer zahlungIIdAusgenommen) throws EJBExceptionLP,
 			RemoteException {
-		BigDecimal wert = new BigDecimal(0);
+		BigDecimal wert = BigDecimal.ZERO;
 		EingangsrechnungzahlungDto[] erzDtos = eingangsrechnungzahlungFindByEingangsrechnungIId(eingangsrechnungIId);
 		for (int i = 0; i < erzDtos.length; i++) {
 
@@ -3038,7 +3074,7 @@ public class EingangsrechnungFacBean extends Facade implements
 	public BigDecimal getBezahltKursdifferenzBetrag(
 			Integer eingangsrechnungIId, BigDecimal kursRechnung)
 			throws EJBExceptionLP, RemoteException {
-		BigDecimal wert = new BigDecimal(0);
+		BigDecimal wert = BigDecimal.ZERO;
 		// bei der ER ist der Kurs verkehrt gespeichert!
 		// BigDecimal kursRechnungInv =
 		// Helper.rundeKaufmaennisch(Helper.getKehrwert(kursRechnung),
@@ -3054,9 +3090,11 @@ public class EingangsrechnungFacBean extends Facade implements
 		return wert;
 	}
 
-	public BigDecimal getAnzahlungenZuSchlussrechnungFw(Integer erIId) {
+	//TODO (rk) alle diese getAnzahlungen... Methoden kann man schoen zusammenfassen
+	// die machen ja fast immer das selbe
+	public BigDecimal getAnzahlungenGestelltZuSchlussrechnungFw(Integer erIId) {
 		// berechnet die Summe der gestellten Anzahlungen! nicht der bezahlten
-		BigDecimal anzahlungen = new BigDecimal(0);
+		BigDecimal anzahlungen = BigDecimal.ZERO;
 		try {
 			EingangsrechnungDto[] anzRechnungen = getAnzahlungsrechnungenZuSchlussrechnung(erIId);
 			for (int i = 0; i < anzRechnungen.length; i++) {
@@ -3074,9 +3112,9 @@ public class EingangsrechnungFacBean extends Facade implements
 		return anzahlungen;
 	}
 
-	public BigDecimal getAnzahlungenZuSchlussrechnung(Integer erIId) {
+	public BigDecimal getAnzahlungenGestelltZuSchlussrechnung(Integer erIId) {
 		// berechnet die Summe der gestellten Anzahlungen! nicht der bezahlten
-		BigDecimal anzahlungen = new BigDecimal(0);
+		BigDecimal anzahlungen = BigDecimal.ZERO;
 		try {
 			EingangsrechnungDto[] anzRechnungen = getAnzahlungsrechnungenZuSchlussrechnung(erIId);
 			for (int i = 0; i < anzRechnungen.length; i++) {
@@ -3094,8 +3132,8 @@ public class EingangsrechnungFacBean extends Facade implements
 		return anzahlungen;
 	}
 
-	public BigDecimal getAnzahlungenZuSchlussrechnungUstFw(Integer erIId) {
-		BigDecimal anzahlungen = new BigDecimal(0);
+	public BigDecimal getAnzahlungenGestelltZuSchlussrechnungUstFw(Integer erIId) {
+		BigDecimal anzahlungen = BigDecimal.ZERO;
 		try {
 			EingangsrechnungDto[] anzRechnungen = getAnzahlungsrechnungenZuSchlussrechnung(erIId);
 			for (int i = 0; i < anzRechnungen.length; i++) {
@@ -3104,6 +3142,40 @@ public class EingangsrechnungFacBean extends Facade implements
 						&& anzRechnungen[i].getNUstBetragfw() != null) {
 					anzahlungen = anzahlungen.add(anzRechnungen[i]
 							.getNUstBetragfw());
+				}
+			}
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		return anzahlungen;
+	}
+
+	public BigDecimal getAnzahlungenBezahltZuSchlussrechnungFw(Integer erIId) {
+		BigDecimal anzahlungen = BigDecimal.ZERO;
+		try {
+			EingangsrechnungDto[] anzRechnungen = getAnzahlungsrechnungenZuSchlussrechnung(erIId);
+			for (EingangsrechnungDto anzRech : anzRechnungen) {
+				if (anzRech.getEingangsrechnungartCNr().equals(
+						EingangsrechnungFac.EINGANGSRECHNUNGART_ANZAHLUNG)) {
+					anzahlungen = anzahlungen.add(getBezahltBetragFw(anzRech.getIId(), null));
+				}
+			}
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		return anzahlungen;
+	}
+
+	public BigDecimal getAnzahlungenBezahltZuSchlussrechnungUstFw(Integer erIId) {
+		BigDecimal anzahlungen = BigDecimal.ZERO;
+		try {
+			EingangsrechnungDto[] anzRechnungen = getAnzahlungsrechnungenZuSchlussrechnung(erIId);
+			for (EingangsrechnungDto anzRech : anzRechnungen) {
+				if (anzRech.getEingangsrechnungartCNr().equals(
+						EingangsrechnungFac.EINGANGSRECHNUNGART_ANZAHLUNG)) {
+					anzahlungen = anzahlungen.add(getBezahltBetragUstFw(anzRech.getIId(), null));
 				}
 			}
 		} catch (RemoteException e) {

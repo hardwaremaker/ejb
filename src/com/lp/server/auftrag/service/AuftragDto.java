@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -107,7 +107,6 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 	private BigDecimal nMaterialwertInMandantenwaehrung;
 	private BigDecimal nRohdeckungInMandantenwaehrung;
 	private BigDecimal nRohdeckungaltInMandantenwaehrung;
-	private String auftragstatusCNr;
 	
 	private Timestamp tGedruckt;
 	private Integer personalIIdStorniert;
@@ -471,14 +470,6 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		this.nMaterialwertInMandantenwaehrung = nMaterialwertInMandantenwaehrung;
 	}
 
-	public String getAuftragstatusCNr() {
-		return auftragstatusCNr;
-	}
-
-	public void setAuftragstatusCNr(String auftragstatusCNr) {
-		this.auftragstatusCNr = auftragstatusCNr;
-	}
-
 	public Timestamp getTGedruckt() {
 		return tGedruckt;
 	}
@@ -816,8 +807,8 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 						.equals(this.nMaterialwertInMandantenwaehrung))) {
 			return false;
 		}
-		if (!(that.auftragstatusCNr == null ? this.auftragstatusCNr == null
-				: that.auftragstatusCNr.equals(this.auftragstatusCNr))) {
+		if (!(that.statusCNr == null ? this.statusCNr == null
+				: that.statusCNr.equals(this.statusCNr))) {
 			return false;
 		}
 		if (!(that.tBelegdatum == null ? this.tBelegdatum == null
@@ -922,7 +913,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 				+ this.nGesamtauftragswertInAuftragswaehrung.hashCode();
 		result = 37 * result + this.nRohdeckungInMandantenwaehrung.hashCode();
 		result = 37 * result + this.nMaterialwertInMandantenwaehrung.hashCode();
-		result = 37 * result + this.auftragstatusCNr.hashCode();
+		result = 37 * result + this.statusCNr.hashCode();
 		result = 37 * result + this.tBelegdatum.hashCode();
 		result = 37 * result + this.tGedruckt.hashCode();
 		result = 37 * result + this.personalIIdStorniert.hashCode();
@@ -976,7 +967,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		returnString += ", " + nGesamtauftragswertInAuftragswaehrung;
 		returnString += ", " + nRohdeckungInMandantenwaehrung;
 		returnString += ", " + nMaterialwertInMandantenwaehrung;
-		returnString += ", " + auftragstatusCNr;
+		returnString += ", " + statusCNr;
 		returnString += ", " + tBelegdatum;
 		returnString += ", " + tGedruckt;
 		returnString += ", " + personalIIdStorniert;
@@ -1030,7 +1021,7 @@ public class AuftragDto extends BelegVerkaufDto implements Serializable,
 		auftragDto.zahlungszielIId = this.zahlungszielIId;
 		auftragDto.spediteurIId = this.spediteurIId;
 		auftragDto.iGarantie = this.iGarantie;
-		auftragDto.auftragstatusCNr = AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT; // initial
+		auftragDto.statusCNr = AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT; // initial
 		// ist
 		// der
 		// Auftrag

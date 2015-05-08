@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -123,6 +123,8 @@ public class FLRAngebotposition implements Serializable {
 	private Integer zwsbisposition_i_id;
 
 	private BigDecimal n_zwsnettosumme;
+	
+	private Short b_zwspositionspreiszeigen ;
  
     /** full constructor */
     public FLRAngebotposition(Integer i_sort, String positionart_c_nr, BigDecimal n_menge, String einheit_c_nr, String c_bez, String c_zbez, BigDecimal n_nettoeinzelpreisplusversteckteraufschlag, BigDecimal n_nettogesamtpreisplusversteckteraufschlag, BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatte, BigDecimal n_nettogesamtpreis, String x_textinhalt, Integer agstkl_i_id, Short b_alternative, Integer angebot_i_id, Integer position_i_id, String typ_c_nr, Integer position_i_id_artikelset, com.lp.server.angebot.fastlanereader.generated.FLRAngebot flrangebot, FLRVerleih flrverleih, FLRArtikel flrartikel, FLRMediastandard flrmediastandard, FLRAgstkl flragstkl) {
@@ -362,7 +364,15 @@ public class FLRAngebotposition implements Serializable {
 		this.n_zwsnettosumme = n_zwsnettosumme;
 	}
 	
-    public String toString() {
+    public Short getB_zwspositionspreiszeigen() {
+		return b_zwspositionspreiszeigen;
+	}
+
+	public void setB_zwspositionspreiszeigen(Short b_zwspositionspreiszeigen) {
+		this.b_zwspositionspreiszeigen = b_zwspositionspreiszeigen;
+	}
+
+	public String toString() {
         return new ToStringBuilder(this)
             .append("i_id", getI_id())
             .toString();

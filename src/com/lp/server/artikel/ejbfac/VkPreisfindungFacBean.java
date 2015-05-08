@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -48,6 +48,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import javax.ejb.Stateless;
+import javax.ejb.TransactionAttribute;
+import javax.ejb.TransactionAttributeType;
 import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
@@ -188,6 +190,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 	}
 
+	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public void pflegeRabattsaetzeNachpflegen(Integer preislisteIId,
 			Date tPreisgueltigab, TheClientDto theClientDto) {
 
@@ -216,13 +219,15 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 
 				FLRArtikel a = (FLRArtikel) resultListIterator.next();
 
-				Query query = em
-						.createNamedQuery("VkPreisfindungPreislistefindByArtikelIIdVkpfartikelpreislisteIId");
-				query.setParameter(1, a.getI_id());
-				query.setParameter(2, preislisteIId);
+				Session session2 = FLRSessionFactory.getFactory().openSession();
+				String queryString2 = "SELECT p FROM FLRVkpfartikelpreis p WHERE p.artikel_i_id="
+						+ a.getI_id()
+						+ " AND p.vkpfartikelpreisliste_i_id="
+						+ preislisteIId;
+				org.hibernate.Query q2 = session2.createQuery(queryString2);
+				List<?> resultList2 = q2.list();
 
-				Collection c = query.getResultList();
-				if (c.size() < 1) {
+				if (resultList2.size() < 1) {
 
 					VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto = new VkPreisfindungPreislisteDto();
 					vkPreisfindungPreislisteDto
@@ -239,10 +244,15 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 					vkPreisfindungPreislisteDto
 							.setTPreisgueltigab(tPreisgueltigab);
 
-					createVkPreisfindungPreisliste(vkPreisfindungPreislisteDto,
-							theClientDto);
+					try {
+						getVkPreisfindungFac().createVkPreisfindungPreisliste(
+								vkPreisfindungPreislisteDto, theClientDto);
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+					}
 				}
 
+				session2.close();
 			}
 		}
 	}
@@ -263,7 +273,8 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			throw new NullPointerException("PARAMTER NULL");
 		}
 
-		VkPreisfindungPreisliste vkPfPl = em.find(VkPreisfindungPreisliste.class, iId);
+		VkPreisfindungPreisliste vkPfPl = em.find(
+				VkPreisfindungPreisliste.class, iId);
 		em.remove(vkPfPl);
 		em.flush();
 	}
@@ -2979,6 +2990,51 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 		return assembleVkpfMengenstaffelDtos(query.getResultList(), null);
 	}
 
+	public VkpfMengenstaffelDto[] vkpfMengenstaffelFindByArtikelIIdFuerVKPreisentwicklung(
+			Integer iIdArtikelI, TheClientDto theClientDto) {
+		if (iIdArtikelI == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
+					new Exception("iIdArtikelI == null"));
+		}
+
+		Query query = em.createNamedQuery("VkpfMengenstaffelfindByArtikelIId");
+		query.setParameter(1, iIdArtikelI);
+		Collection<?> vkpfMengenstaffels = query.getResultList();
+
+		List<VkpfMengenstaffelDto> vkpreisbasisPreisliste = new ArrayList<VkpfMengenstaffelDto>();
+		if (vkpfMengenstaffels != null) {
+			ArrayList<BigDecimal> aVerwendeteStaffelmengenPreisliste = new ArrayList<BigDecimal>();
+			Iterator<?> iterator = vkpfMengenstaffels.iterator();
+			while (iterator.hasNext()) {
+				Vkpfmengenstaffel vkpfMengenstaffel = (Vkpfmengenstaffel) iterator
+						.next();
+				// Pro Menge nur letztgueltige Mengenstaffel, Werte sind
+				// bereits
+				// nach Menge ASC und Gueltig ab DESC sortiert
+				if (vkpfMengenstaffel.getNMenge() != null) {
+					// nur hinzufuegen, wenn diese Menge noch nicht
+					// vorhanden
+					// ist
+					if (!aVerwendeteStaffelmengenPreisliste
+							.contains(vkpfMengenstaffel.getNMenge())) {
+
+						aVerwendeteStaffelmengenPreisliste
+								.add(vkpfMengenstaffel.getNMenge());
+						vkpreisbasisPreisliste
+								.add(assembleVkpfMengenstaffelDto(vkpfMengenstaffel));
+
+					}
+				}
+
+			}
+		}
+		VkpfMengenstaffelDto[] returnArray = new VkpfMengenstaffelDto[vkpreisbasisPreisliste
+				.size()];
+		return (VkpfMengenstaffelDto[]) vkpreisbasisPreisliste
+				.toArray(returnArray);
+
+	}
+
 	/**
 	 * Preisbasis als Bezugsgroesse fuer die Ermittlung von Preisen aufgrund
 	 * eines Rabattsatzes. <br>
@@ -3022,7 +3078,7 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 				// Schritt 2: Preis vom Artikellieferanten
 				ArtikellieferantDto alDto = getArtikelFac()
 						.getArtikelEinkaufspreis(iIdArtikelI, null,
-								new BigDecimal(1),
+								new BigDecimal(0),
 								theClientDto.getSMandantenwaehrung(),
 								datGueltigkeitsdatumVkbasisII, theClientDto);
 
@@ -3963,7 +4019,9 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			VerkaufspreisDto vkpfDto = berechneVerkaufspreis(nPreisbasis,
 					vkpfmengenstaffel.getFArtikelstandardrabattsatz());
 
-			nBerechneterPreis = vkpfDto.nettopreis;
+			if (vkpfDto != null) {
+				nBerechneterPreis = vkpfDto.nettopreis;
+			}
 		}
 
 		return nBerechneterPreis;
@@ -4297,6 +4355,13 @@ public class VkPreisfindungFacBean extends Facade implements VkPreisfindungFac {
 			KundesokoDto kundesokoDto = getKundesokoFac()
 					.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
 							iIdKundeI, iIdArtikelI, tGueltigkeitsdatumI);
+
+			// PJ18867
+			if (kundesokoDto != null
+					&& Helper.short2boolean(kundesokoDto
+							.getBWirktNichtFuerPreisfindung()) == true) {
+				return null;
+			}
 
 			if (kundesokoDto != null) {
 				mengenstaffelDto = ermittleMengenstaffelAusKundesoko(

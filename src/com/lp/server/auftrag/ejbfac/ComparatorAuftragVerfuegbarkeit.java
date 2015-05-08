@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -58,8 +58,75 @@ import com.lp.server.auftrag.service.ReportAuftragVerfuegbarkeitDto;
  * @version not attributable Date $Date: 2008/08/07 12:57:17 $
  */
 public class ComparatorAuftragVerfuegbarkeit implements Comparator<Object> {
-
+	/**
+	 * Tatsaechliche Wiederbeschaffungszeit ermitteln</br>
+	 * <p>wbz = dto.Wbzeit + dto.Durchlaufzeit
+	 * @param dto
+	 * @return die tats&auml;chliche Wiederbeschaffungszeit bzw. null wenn sowohl die
+	 *   Wiederbeschaffungszeit als auch die Durchlaufzeit null sind.
+	 */
+	private BigDecimal getWbz(ReportAuftragVerfuegbarkeitDto dto) {
+		if(dto.getArtikellieferantDto() == null) return null ;
+		
+		if(dto.getArtikellieferantDto().getIWiederbeschaffungszeit() == null) {
+			return null ;
+		}
+		
+		return new BigDecimal(dto.getArtikellieferantDto().getIWiederbeschaffungszeit()) ;
+	}
+	
+	
+	private int compareDz(ReportAuftragVerfuegbarkeitDto a, ReportAuftragVerfuegbarkeitDto b) {
+		BigDecimal dzA = a.getBdDefaultdurchlaufzeit() ;
+		BigDecimal dzB = b.getBdDefaultdurchlaufzeit() ;
+		if(dzA == null && dzB == null) {
+			return 0 ;
+		}
+		if(dzA == null) return -1 ;
+		if(dzB == null) return 1 ;
+		return dzB.compareTo(dzA) ;
+	}
+	
+	/**
+	 * Wiederbeschaffungszeit sortieren
+	 * 
+	 * @param a ist die Wbz A
+	 * @param b ist die Wbz B
+	 * @return 0 wenn sowohl a als auch b null sind (oder a.compareTo(b)), 
+	 *   ansonsten wird eine WBZ == null als "sehr gro&szlig;" betrachtet.  
+	 */
+	private int compareWbz(ReportAuftragVerfuegbarkeitDto a, ReportAuftragVerfuegbarkeitDto b) {
+		BigDecimal wbzA = getWbz(a) ;
+		BigDecimal wbzB = getWbz(b) ;
+		if(wbzA == null && wbzB == null) {
+			return compareDz(a, b) ;
+		}
+		if(wbzA == null) return -1 ;
+		if(wbzB == null) return 1 ;
+		int result = wbzB.compareTo(wbzA);
+		if(result == 0) {
+			result = compareDz(a, b) ;
+		}
+		return result ;
+	}
+	
 	public int compare(Object a, Object b) {
+		ReportAuftragVerfuegbarkeitDto avDto1 = (ReportAuftragVerfuegbarkeitDto) a;
+		ReportAuftragVerfuegbarkeitDto avDto2 = (ReportAuftragVerfuegbarkeitDto) b;		
+		
+		if(avDto1.isBLagernd() && avDto2.isBLagernd()) {
+			return compareWbz(avDto1, avDto2) ;
+		}
+
+		if(!avDto1.isBLagernd() && !avDto2.isBLagernd()) {
+			return compareWbz(avDto1, avDto2) ;			
+		}
+
+		if(avDto1.isBLagernd()) return 1 ;
+		return -1 ;
+ 	}
+	
+	public int compareOld(Object a, Object b) {
 		ReportAuftragVerfuegbarkeitDto avDto1 = (ReportAuftragVerfuegbarkeitDto) a;
 		ReportAuftragVerfuegbarkeitDto avDto2 = (ReportAuftragVerfuegbarkeitDto) b;
 		BigDecimal iWiederbeschaffungszeitTats1 = null;

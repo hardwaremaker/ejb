@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -39,9 +39,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.ejb.Remote;
+import javax.ejb.TransactionAttribute;
+import javax.ejb.TransactionAttributeType;
 
+import com.lp.server.system.service.PaneldatenDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.report.JasperPrintLP;
 import com.lp.util.EJBExceptionLP;
@@ -186,9 +190,6 @@ public interface LagerFac {
 	public LagerDto[] lagerFindByMandantCNrOrderByILoslagersort(String sMandantI)
 			throws EJBExceptionLP;
 
-	public String getNaechsteSeriennummer(Integer artikelIId, Integer lagerIId,
-			TheClientDto theClientDto);
-
 	public ArtikellagerplaetzeDto artikellagerplaetzeFindByArtikelIIdLagerplatzIId(
 			Integer artikelIId, Integer lagerIId, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -247,6 +248,8 @@ public interface LagerFac {
 	public LagerDto lagerFindByCNrByMandantCNr(String cNr, String mandantCNr)
 			throws EJBExceptionLP, RemoteException;
 
+	LagerDto lagerFindByCNrByMandantCNrOhneExc(String cnr, String mandantCnr);
+
 	public BigDecimal getGemittelterEinstandspreisAllerLagerndenArtikel(
 			Integer artikelIId, Integer lagerIId, TheClientDto theClientDto)
 			throws RemoteException;
@@ -295,6 +298,9 @@ public interface LagerFac {
 			String cSeriennrchargennr) throws EJBExceptionLP, RemoteException;
 
 	public LagerabgangursprungDto[] lagerabgangursprungFindByLagerbewegungIIdBuchung(
+			Integer iIdBuchung) throws EJBExceptionLP, RemoteException;
+
+	public LagerabgangursprungDto[] lagerabgangursprungFindByLagerbewegungIIdBuchungsursprung(
 			Integer iIdBuchung) throws EJBExceptionLP, RemoteException;
 
 	public Map<?, ?> getAllSprLagerArten(String spracheCNr)
@@ -373,7 +379,8 @@ public interface LagerFac {
 
 	public int aendereEinzelneSerienChargennummerEinesArtikel(
 			Integer artikelIId, String snrChnr_Alt, String snrChnr_Neu,
-			TheClientDto theClientDto) throws RemoteException;
+			String version_Alt, String version_Neu, TheClientDto theClientDto)
+			throws RemoteException;
 
 	public BigDecimal getMengeAufLager(Integer artikelIId, Integer lagerIId,
 			String cSeriennrchargennr, TheClientDto theClientDto)
@@ -411,6 +418,7 @@ public interface LagerFac {
 			BigDecimal fMengeAbsolut, BigDecimal nEinstansdpreis,
 			Integer lagerIId, String cSeriennrchargennr, Timestamp tBelegdatum,
 			TheClientDto theClientDto, ArrayList<GeraetesnrDto> alGeraetesnr,
+			PaneldatenDto[] paneldatenDtos,
 			boolean gestehungspreisNeuKalkulieren) throws EJBExceptionLP,
 			RemoteException;
 
@@ -438,11 +446,12 @@ public interface LagerFac {
 	public void bucheZu(String belegartCNr, Integer belegartIId,
 			Integer belegartpositionIId, Integer artikelIId,
 			BigDecimal fMengeAbsolut, BigDecimal nEinstandspreis,
-			Integer lagerIId, String cSeriennrchargennr, Timestamp tBelegdatum,
-			TheClientDto theClientDto, String belegartCNrUrsprung,
-			Integer belegartpositionIIdUrsprung,
+			Integer lagerIId, String cSeriennrchargennr, String cVersion,
+			Timestamp tBelegdatum, TheClientDto theClientDto,
+			String belegartCNrUrsprung, Integer belegartpositionIIdUrsprung,
 			String cSeriennrchargennrUrsprung,
 			ArrayList<GeraetesnrDto> alGeraetesnr,
+			PaneldatenDto[] paneldatenDtos,
 			boolean gestehungspreisNeuKalkulieren);
 
 	public void bucheZu(String belegartCNr, Integer belegartIId,
@@ -478,6 +487,11 @@ public interface LagerFac {
 
 	public LagerDto[] lagerFindByMandantCNr(String sMandantI)
 			throws EJBExceptionLP, RemoteException;
+
+	public LagerDto[] lagerFindAll();
+
+	public BigDecimal getLagerstandAllerLagerAllerMandanten(Integer artikelIId,
+			boolean bMitKonsignationslager, TheClientDto theClientDto);
 
 	public LagerDto lagerFindByMandantCNrLagerartCNrOhneExc(String sMandantI,
 			String sLagerartI) throws RemoteException;
@@ -525,9 +539,6 @@ public interface LagerFac {
 	public void updateTBelegdatumEinesBelegesImLager(String belegartCNr,
 			Integer belegartIId, Timestamp tBelegdatumNeu,
 			TheClientDto theClientDto) throws RemoteException;
-
-	public List<SeriennrChargennrMitMengeDto> getAllSeriennrchargennrEinerBelegartposition(
-			String belegartCNr, Integer belegartpositionIId);
 
 	public List<SeriennrChargennrMitMengeDto> getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 			String belegartCNr, Integer belegartpositionIId);
@@ -599,7 +610,8 @@ public interface LagerFac {
 	public JasperPrintLP printSeriennummern(Integer lagerIId,
 			Integer artikelIId, String[] snrs, String snrWildcard,
 			Boolean bSortNachIdent, boolean bMitGeraeteseriennummern,
-			TheClientDto theClientDto) throws RemoteException;
+			String versionWildcard, TheClientDto theClientDto)
+			throws RemoteException;
 
 	public BigDecimal getLagerstandAllerLagerEinesMandanten(Integer artikelIId,
 			TheClientDto theClientDto) throws RemoteException;
@@ -621,7 +633,7 @@ public interface LagerFac {
 
 	public BigDecimal getLagerstandsVeraenderungOhneInventurbuchungen(
 			Integer artikelIId, Integer lagerIId, Timestamp tVon,
-			Timestamp tBis, TheClientDto theClientDto) throws RemoteException;
+			Timestamp tBis, String cSnrChnr, TheClientDto theClientDto) throws RemoteException;
 
 	public BigDecimal getArtikelSollBestand(ArtikelDto artikelDto)
 			throws RemoteException, EJBExceptionLP;
@@ -641,6 +653,11 @@ public interface LagerFac {
 	public String getAllSerienChargennrAufLagerInfo(Integer artikelIId,
 			Integer lagerIId, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
+
+	public SeriennrChargennrAufLagerDto[] getAllSerienChargennrAufLagerInfoDtos(
+			Integer artikelIId, Integer lagerIId, String cSeriennrChargennr,
+			boolean bSortiertNachSerienChargennummer,
+			java.sql.Timestamp tStichtag, TheClientDto theClientDto);
 
 	public SeriennrChargennrAufLagerDto[] getAllSerienChargennrAufLagerInfoDtos(
 			Integer artikelIId, Integer lagerIId,
@@ -702,4 +719,30 @@ public interface LagerFac {
 			TheClientDto theClientDto);
 
 	public Integer getLetzteWEP_IID(Integer artikelIId);
+
+	public String getNaechsteSeriennummer(Integer artikelIId,
+			String uebersteuerteSeriennummer, TheClientDto theClientDto);
+
+	public void versionPerEntityManagerUpdaten(Integer lagerbewegungIId,
+			String cSnr, String cVersion);
+
+	public void pruefeSeriennummernMitVersion(TheClientDto theClientDto);
+
+	public List<SeriennrChargennrMitMengeDto> getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
+			String belegartCNr, Integer belegartpositionIId);
+
+	public void gestehungspreiseImportieren(ArrayList<Object[]> alDaten,
+			Integer lagerIId, TheClientDto theClientDto);
+
+	public String getNaechsteChargennummer(Integer artikelIId,
+			TheClientDto theClientDto);
+
+	public LPDatenSubreport getSubreportEnthaltenesLosIstMaterial(
+			String artikelnummer, String chargennummer,
+			TheClientDto theClientDto);
+
+	public LagerDto getHauptlagerEinesMandanten(String mandantCNr);
+	
+	public BigDecimal getEinstandsWertEinesBeleges(String belegartCNr,
+			Integer belegartIId, String sArtikelartI, TheClientDto theClientDto);
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -81,18 +81,18 @@ import com.lp.server.angebot.service.ReportAngebotpositionJournalDto;
 import com.lp.server.angebot.service.ReportAngebotsstatistikDto;
 import com.lp.server.angebot.service.ReportAngebotsstatistikKriterienDto;
 import com.lp.server.angebotstkl.service.AgstklDto;
+import com.lp.server.angebotstkl.service.AgstklarbeitsplanDto;
 import com.lp.server.angebotstkl.service.AgstklpositionDto;
+import com.lp.server.angebotstkl.service.AngebotstklFac;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikellieferantDto;
 import com.lp.server.artikel.service.LagerDto;
 import com.lp.server.artikel.service.MaterialDto;
-import com.lp.server.artikel.service.MaterialzuschlagDto;
 import com.lp.server.artikel.service.VerkaufspreisDto;
 import com.lp.server.artikel.service.VkpreisfindungDto;
 import com.lp.server.auftrag.service.AuftragDto;
-import com.lp.server.bestellung.service.BestellungReportFac;
 import com.lp.server.partner.service.AnsprechpartnerDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.KundeFac;
@@ -109,13 +109,13 @@ import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.stueckliste.service.StuecklisteMitStrukturDto;
 import com.lp.server.stueckliste.service.StuecklistearbeitsplanDto;
 import com.lp.server.stueckliste.service.StuecklistepositionDto;
-import com.lp.server.system.ejb.Mwstsatz;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.pkgenerator.format.LpBelegnummerFormat;
 import com.lp.server.system.service.BelegartDto;
 import com.lp.server.system.service.KostenstelleDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.MediaFac;
 import com.lp.server.system.service.MediastandardDto;
 import com.lp.server.system.service.MwstsatzDto;
@@ -290,6 +290,10 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 				value = data[index][REPORT_ANGEBOT_ZWSTEXT];
 			} else if ("F_LV_POSITION".equals(fieldName)) {
 				value = data[index][AngebotReportFac.REPORT_ANGEBOT_LVPOSITION];
+			} else if ("F_ZWSPOSPREISDRUCKEN".equals(fieldName)) {
+				value = data[index][AngebotReportFac.REPORT_ANGEBOT_ZWSPOSPREISDRUCKEN];
+			} else if ("F_AGSTKL_SUBREPORT_MENGENSTAFFEL".equals(fieldName)) {
+				value = data[index][AngebotReportFac.REPORT_ANGEBOT_AGSTKL_SUBREPORT_MENGENSTAFFEL];
 			}
 		} else if (cAktuellerReport
 				.equals(AngebotReportFac.REPORT_ANGEBOT_JOURNAL_ALLE)
@@ -456,9 +460,18 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 				value = data[index][AngebotReportFac.REPORT_VORKALKULATION_MATERIALZUSCHLAG];
 			} else if ("F_MATERIAL".equals(fieldName)) {
 				value = data[index][AngebotReportFac.REPORT_VORKALKULATION_MATERIAL];
-			}else if ("F_SETARTIKEL_TYP".equals(fieldName)) {
+			} else if ("F_SETARTIKEL_TYP".equals(fieldName)) {
 				value = data[index][AngebotReportFac.REPORT_VORKALKULATION_SETARTIKEL_TYP];
+			} else if ("F_EK_PREIS".equals(fieldName)) {
+				value = data[index][AngebotReportFac.REPORT_VORKALKULATION_EK_PREIS];
+			} else if ("F_LIEFERANT_AUS_POSITION".equals(fieldName)) {
+				value = data[index][AngebotReportFac.REPORT_VORKALKULATION_LIEFERANT_AUS_POSITION];
+			} else if ("F_TEXTEINGABE".equals(fieldName)) {
+				value = data[index][AngebotReportFac.REPORT_VORKALKULATION_TEXTEINGABE];
+			} else if ("F_ARTIKEL_IST_ARBEITSZEIT".equals(fieldName)) {
+				value = data[index][AngebotReportFac.REPORT_VORKALKULATION_ARTIKEL_IST_ARBEITSZEIT];
 			}
+
 		} else if (cAktuellerReport
 				.equals(AngebotReportFac.REPORT_ANGEBOT_ADRESSETIKETT)) {
 			if ("F_ABSENDER_NAME".equals(fieldName)) {
@@ -622,7 +635,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 			// fuer den Druck gesammelt
 			String positionsartCNr = null;
 			String typCNr = null;
-			
+
 			boolean pauschalkorrekturHinzugefuegt = false;
 
 			for (int i = 0; i < aFLRAngebotposition.length; i++) {
@@ -848,10 +861,12 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 						dataList.add(befuelleZeileAGMitIntelligenterZwischensumme(
 								aFLRAngebotposition[i], kundeDto, mwstMap,
 								bbSeitenumbruch, locDruck, theClientDto));
-						updateZwischensummenData(
-								dataList,
-								aFLRAngebotposition[i].getZwsvonposition_i_id(),
-								aFLRAngebotposition[i].getC_bez());
+						// updateZwischensummenData(
+						// dataList,
+						// aFLRAngebotposition[i].getZwsvonposition_i_id(),
+						// aFLRAngebotposition[i].getC_bez());
+						updateZwischensummenData(dataList,
+								aFLRAngebotposition[i]);
 					}
 
 					// endsumme: 3 Die Positionsart Endsumme schliesst das
@@ -868,10 +883,12 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 							.equals(AngebotServiceFac.ANGEBOTPOSITIONART_ENDSUMME)) {
 						// SP1581 -> Pauschalkorrektur hinzufuegen
 						if (angebotDto.getNKorrekturbetrag() != null
-								&& angebotDto.getNKorrekturbetrag().doubleValue() != 0) {
+								&& angebotDto.getNKorrekturbetrag()
+										.doubleValue() != 0) {
 							dataList.add(befuelleZeileAGMitPauschalkorrektur(
-									angebotDto.getNKorrekturbetrag(), bbSeitenumbruch,
-									kundeDto, mwstMap, locDruck, theClientDto));
+									angebotDto.getNKorrekturbetrag(),
+									bbSeitenumbruch, kundeDto, mwstMap,
+									locDruck, theClientDto));
 							pauschalkorrekturHinzugefuegt = true;
 						}
 						dataList.add(befuelleZeileAGMitPositionsartEndsumme(
@@ -1026,7 +1043,8 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 
 			}
 			// SP1581 -> Pauschalkorrektur hinzufuegen
-			if (!pauschalkorrekturHinzugefuegt && angebotDto.getNKorrekturbetrag() != null
+			if (!pauschalkorrekturHinzugefuegt
+					&& angebotDto.getNKorrekturbetrag() != null
 					&& angebotDto.getNKorrekturbetrag().doubleValue() != 0) {
 				dataList.add(befuelleZeileAGMitPauschalkorrektur(
 						angebotDto.getNKorrekturbetrag(), bbSeitenumbruch,
@@ -1098,6 +1116,14 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 										ansprechpartnerDto.getPartnerDto(),
 										locDruck, null));
 			}
+
+			// PJ18870
+			parameter.put(
+					"P_SUBREPORT_PARTNERKOMMENTAR",
+					getPartnerServicesFac()
+							.getSubreportAllerMitzudruckendenPartnerkommentare(
+									kundeDto.getPartnerDto().getIId(), true,
+									LocaleFac.BELEGART_ANGEBOT, theClientDto));
 
 			parameter.put("Kundeuid", kundeDto.getPartnerDto().getCUid());
 			parameter.put("KundeEori", kundeDto.getPartnerDto().getCEori());
@@ -1196,13 +1222,13 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 							.getAngebotkennung(iIdAngebotI, theClientDto));
 
 			parameter.put("Projekt", angebotDto.getCBez());
-			
+
 			if (angebotDto.getProjektIId() != null) {
 				ProjektDto pjDto = getProjektFac().projektFindByPrimaryKey(
 						angebotDto.getProjektIId());
 				parameter.put("P_PROJEKTNUMMER", pjDto.getCNr());
 			}
-			
+
 			parameter.put("Kundenanfrage", angebotDto.getCKundenanfrage());
 
 			String cBriefanrede = "";
@@ -1297,8 +1323,8 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 			 * mwstsatzReportDto.getNSummeMwstbetrag() .doubleValue() > 0.0) {
 			 * MwstsatzDto mwstsatzDto = getMandantFac()
 			 * .mwstsatzFindByPrimaryKey(key, theClientDto); // MR: FIX, statt
-			 * festverdrahtetem UST verwende // Localeabh&auml;ngigen Wert lp.ust
-			 * sbMwstsatz.append(getTextRespectUISpr("lp.ust",
+			 * festverdrahtetem UST verwende // Localeabh&auml;ngigen Wert
+			 * lp.ust sbMwstsatz.append(getTextRespectUISpr("lp.ust",
 			 * theClientDto.getMandant(), locDruck)); sbMwstsatz.append(": ");
 			 * sbMwstsatz.append(Helper.formatZahl(mwstsatzDto .getFMwstsatz(),
 			 * 2, locDruck)); sbMwstsatz.append(" % "); sbMwstsatz.append(
@@ -2810,6 +2836,9 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 			boolean bGestpreisberechnungHauptlager = ((Boolean) parameterGestpreisBerechnung
 					.getCWertAsObject()).booleanValue();
 
+			LagerDto hauptlager = getLagerFac().getHauptlagerDesMandanten(
+					theClientDto);
+
 			int iStuecklisteaufloesungTiefe = ((Integer) parametermandantDto
 					.getCWertAsObject()).intValue();
 
@@ -2855,16 +2884,19 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 				if (flrangebotposition.getAngebotpositionart_c_nr().equals(
 						AngebotServiceFac.ANGEBOTPOSITIONART_IDENT)) {
 
-					boolean bSetArtikel=false;
+					boolean bSetArtikel = false;
 					StuecklisteDto stuecklisteDto = getStuecklisteFac()
-							.stuecklisteFindByMandantCNrArtikelIIdOhneExc(flrangebotposition.getArtikel_i_id(),
+							.stuecklisteFindByMandantCNrArtikelIIdOhneExc(
+									flrangebotposition.getArtikel_i_id(),
 									theClientDto);
 
 					// wenn die aktuelle Artikelposition eine Stueckliste ist
-					if (stuecklisteDto != null && stuecklisteDto.getStuecklisteartCNr().equals(StuecklisteFac.STUECKLISTEART_SETARTIKEL)) {
-						bSetArtikel=true;
+					if (stuecklisteDto != null
+							&& stuecklisteDto.getStuecklisteartCNr().equals(
+									StuecklisteFac.STUECKLISTEART_SETARTIKEL)) {
+						bSetArtikel = true;
 					}
-					
+
 					// PJ15141
 
 					// zum Befuellen der Preisinformationen muss bekannt sein,
@@ -2892,7 +2924,9 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 									false, // Fremdfertigung nicht aufloesen
 									theClientDto);
 
-					if (bSetArtikel == false && stuecklisteInfoDto.getIiAnzahlPositionen().intValue() > 0
+					if (bSetArtikel == false
+							&& stuecklisteInfoDto.getIiAnzahlPositionen()
+									.intValue() > 0
 							&& (!Helper.short2boolean(stuecklisteInfoDto
 									.getBIstFremdfertigung()) || iStuecklisteaufloesungTiefe != 0)) {
 						alDaten.add(befuelleZeileVKMitIdentMitSTKLAusAngebotposition(
@@ -2908,7 +2942,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 
 							while (it.hasNext()) {
 								alDaten.add(befuelleZeileVorkalkulationMitStuecklistenposition(
-										flrangebotposition.getArtikel_i_id(), // eine
+										flrangebotposition.getI_id(), // eine
 										// Zwischensumme
 										// fuer den
 										// uebergeordneten
@@ -2968,7 +3002,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 									.getBNurmaschinenzeit())) {
 
 								alDaten.add(befuelleZeileVorkalkulationMitStuecklistearbeitsplan(
-										flrangebotposition.getArtikel_i_id(), // eine
+										flrangebotposition.getI_id(), // eine
 										// Zwischensumme
 										// fuer den
 										// uebergeordneten
@@ -2989,7 +3023,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 							if (stuecklistearbeitsplanDto.getMaschineIId() != null) {
 
 								alDaten.add(befuelleZeileVorkalkulationMitStuecklistearbeitsplan(
-										flrangebotposition.getArtikel_i_id(), // eine
+										flrangebotposition.getI_id(), // eine
 										// Zwischensumme
 										// fuer den
 										// uebergeordneten
@@ -3029,6 +3063,13 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 							.agstklpositionFindByAgstklIIdOhneExc(
 									flrangebotposition.getAgstkl_i_id(),
 									theClientDto);
+					AgstklDto agstklDto = getAngebotstklFac()
+							.agstklFindByPrimaryKey(
+									flrangebotposition.getAgstkl_i_id());
+
+					Integer indexGruppe = new Integer(
+							flrangebotposition.getAgstkl_i_id()
+									+ flrangebotposition.getI_id());
 
 					// Einrueckungsebene gegenueber der AGSTKL
 					String cEinrueckung = "    ";
@@ -3046,7 +3087,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 								ArtikelFac.ARTIKELART_HANDARTIKEL)) {
 
 							alDaten.add(befuelleZeileVKMitHandAusAGSTKLPosition(
-									aAgstklpositionDto[j],
+									indexGruppe, aAgstklpositionDto[j],
 									flrangebotposition.getN_menge(),
 									flrangebotposition.getEinheit_c_nr(),
 									theClientDto, cEinrueckung));
@@ -3086,7 +3127,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 											.short2boolean(stuecklisteInfoDto
 													.getBIstFremdfertigung()) || iStuecklisteaufloesungTiefe != 0)) {
 								alDaten.add(befuelleZeileVKMitIdentMitSTKLAusAGSTKLPosition(
-										aAgstklpositionDto[j],
+										indexGruppe, aAgstklpositionDto[j],
 										flrangebotposition.getN_menge(),
 										flrangebotposition.getEinheit_c_nr(),
 										angebotDto.getTRealisierungstermin(),
@@ -3101,7 +3142,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 											.next();
 
 									alDaten.add(befuelleZeileVorkalkulationMitStuecklistenposition(
-											flrangebotposition.getAgstkl_i_id(),
+											indexGruppe,
 											cEinrueckung,
 											stuktDto,
 											flrangebotposition
@@ -3119,13 +3160,76 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 
 							} else {
 								alDaten.add(befuelleZeileVKMitIdentOhneSTKLAusAGSTKLPosition(
+										indexGruppe,
 										aAgstklpositionDto[j],
 										flrangebotposition.getN_menge(),
 										flrangebotposition.getEinheit_c_nr(),
 										theClientDto,
 										angebotDto.getTRealisierungstermin(),
-										cEinrueckung));
+										cEinrueckung,
+										hauptlager,
+										bGestpreisberechnungHauptlager,
+										flrangebotposition
+												.getFlrangebot()
+												.getWaehrung_c_nr_angebotswaehrung(),
+										agstklDto));
 							}
+						}
+					}
+					if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+							MandantFac.ZUSATZFUNKTION_AGSTKL_ARBEITSPLAN,
+							theClientDto)) {
+						// PJ18725
+						AgstklarbeitsplanDto[] aAgstklarbeitsplanDto = getAngebotstklFac()
+								.agstklarbeitsplanFindByAgstklIId(
+										flrangebotposition.getAgstkl_i_id(),
+										theClientDto);
+
+						for (int j = 0; j < aAgstklarbeitsplanDto.length; j++) {
+							if (!Helper.short2boolean(aAgstklarbeitsplanDto[j]
+									.getBNurmaschinenzeit())) {
+
+								alDaten.add(befuelleZeileVorkalkulationMitAgstklarbeitsplan(
+										indexGruppe, // eine
+										// Zwischensumme
+										// fuer den
+										// uebergeordneten
+										// Artikel
+										// bilden
+										"",
+										aAgstklarbeitsplanDto[j],
+										flrangebotposition
+												.getFlrangebot()
+												.getWaehrung_c_nr_angebotswaehrung(),
+										flrangebotposition.getN_menge(),
+										flrangebotposition.getEinheit_c_nr(),
+										iStuecklisteaufloesungTiefe,
+										bGestpreisberechnungHauptlager,
+										angebotDto.getTRealisierungstermin(),
+										theClientDto, false));
+							}
+							if (aAgstklarbeitsplanDto[j].getMaschineIId() != null) {
+
+								alDaten.add(befuelleZeileVorkalkulationMitAgstklarbeitsplan(
+										indexGruppe, // eine
+										// Zwischensumme
+										// fuer den
+										// uebergeordneten
+										// Artikel
+										// bilden
+										"",
+										aAgstklarbeitsplanDto[j],
+										flrangebotposition
+												.getFlrangebot()
+												.getWaehrung_c_nr_angebotswaehrung(),
+										flrangebotposition.getN_menge(),
+										flrangebotposition.getEinheit_c_nr(),
+										iStuecklisteaufloesungTiefe,
+										bGestpreisberechnungHauptlager,
+										angebotDto.getTRealisierungstermin(),
+										theClientDto, true));
+							}
+
 						}
 					}
 
@@ -3334,6 +3438,13 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 			aDataI[AngebotReportFac.REPORT_VORKALKULATION_IDENT] = cPraefixArtikelCNrI
 					+ artikelDtoI.getCNr();
 
+			if (artikelDtoI.getArtikelartCNr().equals(
+					ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
+				aDataI[AngebotReportFac.REPORT_VORKALKULATION_ARTIKEL_IST_ARBEITSZEIT] = Boolean.TRUE;
+			} else {
+				aDataI[AngebotReportFac.REPORT_VORKALKULATION_ARTIKEL_IST_ARBEITSZEIT] = Boolean.FALSE;
+			}
+
 			// das Andrucken der Bezeichnungen erfolgt in getrennten Feldern:
 			// - wenn die Bezeichnung uebersteuert wurde, dann die uebersteuerte
 			// Bezeichnung
@@ -3481,30 +3592,13 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 
 					// Grundlage ist der Gestehungspreis des Artikels am
 					// Hauptlager des Mandanten
-					// CK 23.06.2006: ODER Gemittelter Gestpreis aller Laeger (je
+					// CK 23.06.2006: ODER Gemittelter Gestpreis aller Laeger
+					// (je
 					// nach Mandanteparameter
 					// GESTPREISBERECHNUNG_HAUPTLAGER)
-					BigDecimal gestehungspreisInMandantenwaehrung = null;
-					if (bHauptlager == true) {
-						gestehungspreisInMandantenwaehrung = getLagerFac()
-								.getGemittelterGestehungspreisEinesLagers(
-										stuecklistepositionDto.getArtikelIId(),
-										hauptlager.getIId(), theClientDto);
-					} else {
-						gestehungspreisInMandantenwaehrung = getLagerFac()
-								.getGemittelterGestehungspreisAllerLaegerEinesMandanten(
-										stuecklistepositionDto.getArtikelIId(),
-										theClientDto);
-
-					}
-					// Umrechnen in Belegwaehrung
-					BigDecimal gestehungspreisInBelegwaehrung = getLocaleFac()
-							.rechneUmInAndereWaehrungZuDatum(
-									gestehungspreisInMandantenwaehrung,
-									theClientDto.getSMandantenwaehrung(),
-									waehrungCNrI,
-									new Date(System.currentTimeMillis()),
-									theClientDto);
+					BigDecimal gestehungspreisInBelegwaehrung = getGestehungspreisInBelegwaehrungUndParameterGESTPREISBERECHNUNG_HAUPTLAGER(
+							waehrungCNrI, bHauptlager, theClientDto,
+							stuecklistepositionDto.getArtikelIId(), hauptlager);
 
 					if (stuecklisteInfoDto.getIiAnzahlPositionen().intValue() == 0
 							|| stuecklisteMitStrukturDtoI.isBFremdfertigung()
@@ -3558,6 +3652,221 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 									.getArtikelEinkaufspreis(
 											artikelDto.getIId(),
 											stuecklistepositionDto.getNMenge(),
+											waehrungCNrI, theClientDto);
+							if (artikellieferantDto != null
+									&& artikellieferantDto.getLief1Preis() != null) {
+								aDataI[REPORT_VORKALKULATION_LIEF1PREISSTAFFEL] = artikellieferantDto
+										.getLief1Preis();
+
+							}
+
+						}
+
+					}
+
+				} catch (RemoteException ex1) {
+					throwEJBExceptionLPRespectOld(ex1);
+				}
+
+			}
+
+			aDataI[AngebotReportFac.REPORT_VORKALKULATION_INDEX_GRUPPE] = indexGruppeIIdI; // fuer
+			// die
+			// Bildung
+			// der
+			// Zwischensumme
+			// !
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
+		}
+		return aDataI;
+	}
+
+	public BigDecimal getGestehungspreisInBelegwaehrungUndParameterGESTPREISBERECHNUNG_HAUPTLAGER(
+			String waehrungCNrI, boolean bHauptlager,
+			TheClientDto theClientDto, Integer artikelIId, LagerDto hauptlager)
+			throws RemoteException {
+		BigDecimal gestehungspreisInMandantenwaehrung = null;
+		if (bHauptlager == true) {
+			gestehungspreisInMandantenwaehrung = getLagerFac()
+					.getGemittelterGestehungspreisEinesLagers(artikelIId,
+							hauptlager.getIId(), theClientDto);
+		} else {
+			gestehungspreisInMandantenwaehrung = getLagerFac()
+					.getGemittelterGestehungspreisAllerLaegerEinesMandanten(
+							artikelIId, theClientDto);
+
+		}
+		// Umrechnen in Belegwaehrung
+		BigDecimal gestehungspreisInBelegwaehrung = getLocaleFac()
+				.rechneUmInAndereWaehrungZuDatum(
+						gestehungspreisInMandantenwaehrung,
+						theClientDto.getSMandantenwaehrung(), waehrungCNrI,
+						new Date(System.currentTimeMillis()), theClientDto);
+		return gestehungspreisInBelegwaehrung;
+	}
+
+	private Object[] befuelleZeileVorkalkulationMitAgstklarbeitsplan(
+			Integer indexGruppeIIdI, String cPraefixArtikelCNrI,
+			AgstklarbeitsplanDto agstklarbeitsplanDto, String waehrungCNrI,
+			BigDecimal nUebergeordneteMengeI, String cNrUebergeordneteEinheitI,
+			int iStuecklistenAufloesungTiefeI, boolean bHauptlager,
+			Timestamp tRealisierungstermin, TheClientDto theClientDto,
+			boolean bMaschine) throws EJBExceptionLP {
+
+		Object[] aDataI = new Object[AngebotReportFac.REPORT_VORKALKULATION_ANZAHL_SPALTEN];
+		try {
+
+			// Pro Position eine kuenstliche Zeile zum Andrucken erzeugen,
+			aDataI[AngebotReportFac.REPORT_VORKALKULATION_POSITIONSART] = AngebotServiceFac.ANGEBOTPOSITIONART_STUECKLISTENPOSITION;
+
+			ArtikelDto artikelDto = getArtikelFac()
+					.artikelFindByPrimaryKeySmall(
+							agstklarbeitsplanDto.getArtikelIId(), theClientDto);
+
+			if (bMaschine == true
+					&& agstklarbeitsplanDto.getMaschineIId() != null) {
+
+				MaschineDto maschineDto = getZeiterfassungFac()
+						.maschineFindByPrimaryKey(
+								agstklarbeitsplanDto.getMaschineIId());
+				if (artikelDto.getArtikelsprDto() != null) {
+					artikelDto.getArtikelsprDto()
+							.setCBez(maschineDto.getCBez());
+				}
+				artikelDto.setCNr("M:" + maschineDto.getCInventarnummer());
+			}
+
+			cPraefixArtikelCNrI += "    ";
+			aDataI = befuelleZeileVorkalkulationMitArtikelCNrCBezCZBez(aDataI,
+					artikelDto, cPraefixArtikelCNrI, null, // keine
+					// Uebersteuerung
+					// der cBez
+					// des
+					// Artikels
+					theClientDto);
+
+			// es wurde die Gesamtmenge der Unterpositionen in der STKL
+			// berechnet
+			aDataI[AngebotReportFac.REPORT_VORKALKULATION_MENGE] = agstklarbeitsplanDto
+					.getNMenge();
+			if (artikelDto.getArtikelartCNr().equals(
+					ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
+				aDataI[AngebotReportFac.REPORT_VORKALKULATION_ARTIKEL_IST_ARBEITSZEIT] = Boolean.TRUE;
+			} else {
+				aDataI[AngebotReportFac.REPORT_VORKALKULATION_ARTIKEL_IST_ARBEITSZEIT] = Boolean.FALSE;
+			}
+			aDataI[AngebotReportFac.REPORT_VORKALKULATION_EINHEIT] = agstklarbeitsplanDto
+					.getEinheitCNr();
+			aDataI[AngebotReportFac.REPORT_VORKALKULATION_MENGE_UEBERGEORDNET] = nUebergeordneteMengeI;
+			aDataI[AngebotReportFac.REPORT_VORKALKULATION_EINHEIT_UEBERGEORDNET] = cNrUebergeordneteEinheitI;
+			if (tRealisierungstermin != null) {
+				aDataI[AngebotReportFac.REPORT_VORKALKULATION_FIKTIVER_LAGERSTAND] = getInternebestellungFac()
+						.getFiktivenLagerstandZuZeitpunkt(artikelDto,
+								theClientDto, tRealisierungstermin);
+			} else {
+				aDataI[AngebotReportFac.REPORT_VORKALKULATION_FIKTIVER_LAGERSTAND] = null;
+			}
+
+			// die Gestehungspreise duerfen nur in der ersten Ebene nach der
+			// STKL angedruckt werden,
+			// sonst werden Unterpositionen mehrfach bewertet!!!
+			// if (stuecklisteMitStrukturDtoI.getIEbene() == 0) {}
+
+			if (artikelDto.getArtikelartCNr().equals(
+					ArtikelFac.ARTIKELART_HANDARTIKEL)) {
+				// WH xx.03.06 Handeingaben in STKL haben keinen Gestehungspreis
+				aDataI[AngebotReportFac.REPORT_VORKALKULATION_GESTEHUNGSPREIS] = new BigDecimal(
+						0);
+				aDataI[AngebotReportFac.REPORT_VORKALKULATION_GESTEHUNGSWERT] = new BigDecimal(
+						0);
+			} else {
+
+				// das Hauptlager des Mandanten bestimmen
+				LagerDto hauptlager = getLagerFac().getHauptlagerDesMandanten(
+						theClientDto);
+
+				// Grundlage ist der Gestehungspreis des Artikels am
+				// Hauptlager des Mandanten
+				// CK 23.06.2006: ODER Gemittelter Gestpreis aller Laeger (je
+				// nach Mandanteparameter
+				// GESTPREISBERECHNUNG_HAUPTLAGER)
+				BigDecimal gestehungspreisInBelegwaehrung = null;
+				if (bMaschine == true
+						&& agstklarbeitsplanDto.getMaschineIId() != null) {
+					BigDecimal gestehungspreisInMandantenwaehrung = getZeiterfassungFac()
+							.getMaschinenKostenZumZeitpunkt(
+									agstklarbeitsplanDto.getMaschineIId(),
+									new java.sql.Timestamp(System
+											.currentTimeMillis()));
+					// Umrechnen in Belegwaehrung
+					gestehungspreisInBelegwaehrung = getLocaleFac()
+							.rechneUmInAndereWaehrungZuDatum(
+									gestehungspreisInMandantenwaehrung,
+									theClientDto.getSMandantenwaehrung(),
+									waehrungCNrI,
+									new Date(System.currentTimeMillis()),
+									theClientDto);
+				} else {
+					gestehungspreisInBelegwaehrung = getGestehungspreisInBelegwaehrungUndParameterGESTPREISBERECHNUNG_HAUPTLAGER(
+							waehrungCNrI, bHauptlager, theClientDto,
+							agstklarbeitsplanDto.getArtikelIId(), hauptlager);
+				}
+
+				BigDecimal bdGesamtzeitInStunden = Helper
+						.berechneGesamtzeitInStunden(
+								agstklarbeitsplanDto.getLRuestzeit(),
+								agstklarbeitsplanDto.getLStueckzeit(),
+								nUebergeordneteMengeI, null,
+								agstklarbeitsplanDto.getIAufspannung());
+				aDataI[AngebotReportFac.REPORT_VORKALKULATION_MENGE] = bdGesamtzeitInStunden;
+				aDataI[AngebotReportFac.REPORT_VORKALKULATION_GESTEHUNGSPREIS] = gestehungspreisInBelegwaehrung;
+				aDataI[AngebotReportFac.REPORT_VORKALKULATION_GESTEHUNGSWERT] = gestehungspreisInBelegwaehrung
+						.multiply(bdGesamtzeitInStunden);
+
+				try {
+					ArtikellieferantDto artikellieferantDto = getArtikelFac()
+							.getArtikelEinkaufspreis(artikelDto.getIId(),
+									new BigDecimal(1), waehrungCNrI,
+									theClientDto);
+
+					if (artikellieferantDto != null) {
+
+						if (artikellieferantDto.getLieferantIId() != null) {
+							LieferantDto liefDto = getLieferantFac()
+									.lieferantFindByPrimaryKey(
+											artikellieferantDto
+													.getLieferantIId(),
+											theClientDto);
+
+							aDataI[REPORT_VORKALKULATION_LIEFERANT] = liefDto
+									.getPartnerDto().formatFixName1Name2();
+
+							if (liefDto.getNTransportkostenprolieferung() != null) {
+								aDataI[REPORT_VORKALKULATION_TPKOSTENLIEFERUNG] = getLocaleFac()
+										.rechneUmInAndereWaehrungZuDatumOhneExc(
+												liefDto.getNTransportkostenprolieferung(),
+												liefDto.getWaehrungCNr(),
+												waehrungCNrI,
+												new Date(System
+														.currentTimeMillis()),
+												theClientDto);
+							}
+
+							if (artikellieferantDto != null
+									&& artikellieferantDto.getLief1Preis() != null) {
+
+								aDataI[REPORT_VORKALKULATION_LIEF1PREIS] = artikellieferantDto
+										.getLief1Preis();
+								aDataI[REPORT_VORKALKULATION_LIEF1PREISGUELTIGBIS] = artikellieferantDto
+										.getTPreisgueltigbis();
+
+							}
+
+							artikellieferantDto = getArtikelFac()
+									.getArtikelEinkaufspreis(
+											artikelDto.getIId(),
+											bdGesamtzeitInStunden,
 											waehrungCNrI, theClientDto);
 							if (artikellieferantDto != null
 									&& artikellieferantDto.getLief1Preis() != null) {
@@ -3669,38 +3978,28 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 				// CK 23.06.2006: ODER Gemittelter Gestpreis aller Laeger (je
 				// nach Mandanteparameter
 				// GESTPREISBERECHNUNG_HAUPTLAGER)
-				BigDecimal gestehungspreisInMandantenwaehrung = null;
+				BigDecimal gestehungspreisInBelegwaehrung = null;
 				if (bMaschine == true
 						&& stuecklistearbeitsplanDto.getMaschineIId() != null) {
-					gestehungspreisInMandantenwaehrung = getZeiterfassungFac()
+					BigDecimal gestehungspreisInMandantenwaehrung = getZeiterfassungFac()
 							.getMaschinenKostenZumZeitpunkt(
 									stuecklistearbeitsplanDto.getMaschineIId(),
 									new java.sql.Timestamp(System
 											.currentTimeMillis()));
+					// Umrechnen in Belegwaehrung
+					gestehungspreisInBelegwaehrung = getLocaleFac()
+							.rechneUmInAndereWaehrungZuDatum(
+									gestehungspreisInMandantenwaehrung,
+									theClientDto.getSMandantenwaehrung(),
+									waehrungCNrI,
+									new Date(System.currentTimeMillis()),
+									theClientDto);
 				} else {
-					if (bHauptlager == true) {
-						gestehungspreisInMandantenwaehrung = getLagerFac()
-								.getGemittelterGestehungspreisEinesLagers(
-										stuecklistearbeitsplanDto
-												.getArtikelIId(),
-										hauptlager.getIId(), theClientDto);
-					} else {
-						gestehungspreisInMandantenwaehrung = getLagerFac()
-								.getGemittelterGestehungspreisAllerLaegerEinesMandanten(
-										stuecklistearbeitsplanDto
-												.getArtikelIId(),
-										theClientDto);
-
-					}
+					gestehungspreisInBelegwaehrung = getGestehungspreisInBelegwaehrungUndParameterGESTPREISBERECHNUNG_HAUPTLAGER(
+							waehrungCNrI, bHauptlager, theClientDto,
+							stuecklistearbeitsplanDto.getArtikelIId(),
+							hauptlager);
 				}
-				// Umrechnen in Belegwaehrung
-				BigDecimal gestehungspreisInBelegwaehrung = getLocaleFac()
-						.rechneUmInAndereWaehrungZuDatum(
-								gestehungspreisInMandantenwaehrung,
-								theClientDto.getSMandantenwaehrung(),
-								waehrungCNrI,
-								new Date(System.currentTimeMillis()),
-								theClientDto);
 
 				BigDecimal bdGesamtzeitInStunden = Helper
 						.berechneGesamtzeitInStunden(
@@ -3807,7 +4106,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 	 * @throws EJBExceptionLP
 	 */
 	private Object[] befuelleZeileVKMitHandAusAGSTKLPosition(
-			AgstklpositionDto agstklpositionDtoI,
+			Integer indexGruppe, AgstklpositionDto agstklpositionDtoI,
 			BigDecimal nUebergeordneteMengeI, String cNrUebergeordneteEinheitI,
 			TheClientDto theClientDto, String cPraefixArtikelCNrI)
 			throws EJBExceptionLP {
@@ -3825,6 +4124,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_IDENT] = cPraefixArtikelCNrI
 				+ AngebotReportFac.REPORT_VORKALKULATION_ZEICHEN_FUER_HANDEINGABE;
+		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_ARTIKEL_IST_ARBEITSZEIT] = Boolean.FALSE;
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_BEZEICHNUNG] = artikelDto
 				.getArtikelsprDto().getCBez();
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_ZUSATZBEZEICHNUNG] = artikelDto
@@ -3841,8 +4141,11 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 				.multiply(agstklpositionDtoI.getNMenge());
 		// in einer AGSTKL gilt der Verkaufswert der AGSTKL
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_POSITIONSART] = AngebotServiceFac.ANGEBOTPOSITIONART_HANDEINGABE;
-		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_INDEX_GRUPPE] = agstklpositionDtoI
-				.getAgstklIId(); // fuer die Bildung der Zwischensumme!
+		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_INDEX_GRUPPE] = indexGruppe; // fuer
+																					// die
+																					// Bildung
+																					// der
+																					// Zwischensumme!
 
 		return aaDataI;
 	}
@@ -3869,10 +4172,12 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 	 * @throws EJBExceptionLP
 	 */
 	private Object[] befuelleZeileVKMitIdentOhneSTKLAusAGSTKLPosition(
-			AgstklpositionDto agstklpositionDtoI,
+			Integer indexGruppe, AgstklpositionDto agstklpositionDtoI,
 			BigDecimal nUebergeordneteMengeI, String cNrUebergeordneteEinheitI,
 			TheClientDto theClientDto, Timestamp tRealisierungstermin,
-			String cPraefixArtikelCNrI) throws EJBExceptionLP {
+			String cPraefixArtikelCNrI, LagerDto hauptlager,
+			boolean bHauptlager, String waehrungCNrI, AgstklDto agstklDto)
+			throws RemoteException {
 		Object[] aaDataI = new Object[AngebotReportFac.REPORT_VORKALKULATION_ANZAHL_SPALTEN];
 
 		ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKeySmall(
@@ -3881,6 +4186,12 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 		BigDecimal nAnzudruckendeMenge = agstklpositionDtoI.getNMenge()
 				.multiply(nUebergeordneteMengeI);
 
+		if (artikelDto.getArtikelartCNr().equals(
+				ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
+			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_ARTIKEL_IST_ARBEITSZEIT] = Boolean.TRUE;
+		} else {
+			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_ARTIKEL_IST_ARBEITSZEIT] = Boolean.FALSE;
+		}
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_IDENT] = cPraefixArtikelCNrI
 				+ artikelDto.getCNr();
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_BEZEICHNUNG] = artikelDto
@@ -3894,19 +4205,46 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_MENGE_UEBERGEORDNET] = nUebergeordneteMengeI;
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_EINHEIT_UEBERGEORDNET] = cNrUebergeordneteEinheitI;
 		// in einer AGSTKL gilt der Verkaufswert der AGSTKL
-		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_GESTEHUNGSPREIS] = agstklpositionDtoI
-				.getNGestehungspreis();
-		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_GESTEHUNGSWERT] = agstklpositionDtoI
-				.getNGestehungspreis().multiply(nAnzudruckendeMenge);
+		BigDecimal gestehungspreis = getGestehungspreisInBelegwaehrungUndParameterGESTPREISBERECHNUNG_HAUPTLAGER(
+				waehrungCNrI, bHauptlager, theClientDto,
+				agstklpositionDtoI.getArtikelIId(), hauptlager);
+		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_GESTEHUNGSPREIS] = gestehungspreis;
+		if (gestehungspreis != null) {
+			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_GESTEHUNGSWERT] = gestehungspreis
+					.multiply(nAnzudruckendeMenge);
+		}
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_POSITIONSART] = AngebotServiceFac.ANGEBOTPOSITIONART_IDENT;
-		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_INDEX_GRUPPE] = agstklpositionDtoI
-				.getAgstklIId(); // fuer die Bildung der Zwischensumme!
+		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_INDEX_GRUPPE] = indexGruppe; // fuer
+																					// die
+																					// Bildung
+																					// der
+																					// Zwischensumme!
 		if (tRealisierungstermin != null) {
 			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_FIKTIVER_LAGERSTAND] = getInternebestellungFac()
 					.getFiktivenLagerstandZuZeitpunkt(artikelDto, theClientDto,
 							tRealisierungstermin);
 		} else {
 			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_FIKTIVER_LAGERSTAND] = null;
+		}
+
+		if (agstklDto.getIEkpreisbasis().intValue() == AngebotstklFac.EK_PREISBASIS_LIEF1PREIS) {
+
+			ArtikellieferantDto alDto = getArtikelFac()
+					.getArtikelEinkaufspreis(
+							agstklpositionDtoI.getArtikelIId(),
+
+							nAnzudruckendeMenge, waehrungCNrI, theClientDto);
+			if (alDto != null) {
+				aaDataI[AngebotReportFac.REPORT_VORKALKULATION_LIEF1PREIS] = alDto
+						.getNNettopreis();
+				aaDataI[AngebotReportFac.REPORT_VORKALKULATION_LIEF1PREISSTAFFEL] = alDto
+						.getNNettopreis();
+			}
+		} else {
+			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_LIEF1PREIS] = agstklpositionDtoI
+					.getNNettogesamtpreis();
+			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_LIEF1PREISSTAFFEL] = agstklpositionDtoI
+					.getNNettogesamtpreis();
 		}
 
 		return aaDataI;
@@ -3933,7 +4271,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 	 * @throws EJBExceptionLP
 	 */
 	private Object[] befuelleZeileVKMitIdentMitSTKLAusAGSTKLPosition(
-			AgstklpositionDto agstklpositionDtoI,
+			Integer indexGruppe, AgstklpositionDto agstklpositionDtoI,
 			BigDecimal nUebergeordneteMengeI, String cNrUebergeordneteEinheitI,
 			Timestamp tRealisierungstermin, TheClientDto theClientDto,
 			String cPraefixArtikelCNrI) throws EJBExceptionLP {
@@ -3946,6 +4284,12 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 				.multiply(nUebergeordneteMengeI);
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_IDENT] = cPraefixArtikelCNrI
 				+ artikelDto.getCNr();
+		if (artikelDto.getArtikelartCNr().equals(
+				ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
+			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_ARTIKEL_IST_ARBEITSZEIT] = Boolean.TRUE;
+		} else {
+			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_ARTIKEL_IST_ARBEITSZEIT] = Boolean.FALSE;
+		}
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_BEZEICHNUNG] = artikelDto
 				.getArtikelsprDto().getCBez();
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_ZUSATZBEZEICHNUNG] = artikelDto
@@ -3961,8 +4305,11 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_GESTEHUNGSWERT_MANUELL] = formatBigDecimalAsInfo(agstklpositionDtoI
 				.getNGestehungspreis().multiply(nAnzudruckendeMenge));
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_POSITIONSART] = AngebotServiceFac.ANGEBOTPOSITIONART_IDENT;
-		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_INDEX_GRUPPE] = agstklpositionDtoI
-				.getAgstklIId(); // fuer die Bildung der Zwischensumme!
+		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_INDEX_GRUPPE] = indexGruppe; // fuer
+																					// die
+																					// Bildung
+																					// der
+																					// Zwischensumme!
 		if (tRealisierungstermin != null) {
 			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_FIKTIVER_LAGERSTAND] = getInternebestellungFac()
 					.getFiktivenLagerstandZuZeitpunkt(artikelDto, theClientDto,
@@ -4012,6 +4359,9 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_IDENT] = belegartDto
 					.getCKurzbezeichnung() + agstklDto.getCNr(); // die
 			// Belegnummer
+
+			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_ARTIKEL_IST_ARBEITSZEIT] = Boolean.FALSE;
+
 			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_BEZEICHNUNG] = angebotpositionDtoI
 					.getC_bez();
 			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_MENGE] = angebotpositionDtoI
@@ -4026,7 +4376,11 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 					.multiply(angebotpositionDtoI.getN_menge());
 			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_POSITIONSART] = AngebotServiceFac.ANGEBOTPOSITIONART_AGSTUECKLISTE;
 			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_INDEX_GRUPPE] = angebotpositionDtoI
-					.getAgstkl_i_id(); // fuer die Bildung der Zwischensumme!
+					.getAgstkl_i_id() + angebotpositionDtoI.getI_id(); // fuer
+																		// die
+																		// Bildung
+																		// der
+																		// Zwischensumme!
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
@@ -4116,8 +4470,21 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 
 			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_IDENT] = artikelDto
 					.getCNr();
-			
-			
+
+			aaDataI[REPORT_VORKALKULATION_EK_PREIS] = angebotpositionDtoI
+					.getN_einkaufpreis();
+			aaDataI[REPORT_VORKALKULATION_TEXTEINGABE] = angebotpositionDtoI
+					.getX_textinhalt();
+			if (angebotpositionDtoI.getLieferant_i_id() != null) {
+				LieferantDto liefDto = getLieferantFac()
+						.lieferantFindByPrimaryKey(
+								angebotpositionDtoI.getLieferant_i_id(),
+								theClientDto);
+
+				aaDataI[REPORT_VORKALKULATION_LIEFERANT_AUS_POSITION] = liefDto
+						.getPartnerDto().formatFixName1Name2();
+			}
+
 			// Typ, wenn Setartikel
 
 			if (angebotpositionDtoI.getPosition_i_id_artikelset() != null) {
@@ -4142,7 +4509,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 				session.close();
 
 			}
-			
+
 			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_BEZEICHNUNG] = artikelDto
 					.getArtikelsprDto().getCBez();
 			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_ZUSATZBEZEICHNUNG] = artikelDto
@@ -4269,7 +4636,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_IDENT] = artikelDto
 				.getCNr();
-		
+
 		// Typ, wenn Setartikel
 
 		if (angebotpositionDtoI.getPosition_i_id_artikelset() != null) {
@@ -4281,8 +4648,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 			Session session = null;
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			session = factory.openSession();
-			Criteria crit = session
-					.createCriteria(FLRAngebotposition.class);
+			Criteria crit = session.createCriteria(FLRAngebotposition.class);
 			crit.add(Restrictions.eq("position_i_id_artikelset",
 					angebotpositionDtoI.getI_id()));
 
@@ -4294,7 +4660,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 			session.close();
 
 		}
-		
+
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_BEZEICHNUNG] = artikelDto
 				.getArtikelsprDto().getCBez();
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_ZUSATZBEZEICHNUNG] = artikelDto
@@ -4329,8 +4695,8 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 				.getN_nettogesamtpreisplusversteckteraufschlagminusrabatte()
 				.multiply(angebotpositionDtoI.getN_menge());
 		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_POSITIONSART] = AngebotServiceFac.ANGEBOTPOSITIONART_IDENT;
-		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_INDEX_GRUPPE] = artikelDto
-				.getIId();
+		aaDataI[AngebotReportFac.REPORT_VORKALKULATION_INDEX_GRUPPE] = angebotpositionDtoI
+				.getI_id();
 		if (tRealisierungstermin != null) {
 			aaDataI[AngebotReportFac.REPORT_VORKALKULATION_FIKTIVER_LAGERSTAND] = getInternebestellungFac()
 					.getFiktivenLagerstandZuZeitpunkt(artikelDto, theClientDto,
@@ -4345,8 +4711,8 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 	/**
 	 * Ueber Hibernate alle berechnungsrelevanten Positionen eines Angebots
 	 * holen. <br>
-	 * Diese Methode mu&szlig; innerhalb einer offenen Hibernate Session aufgerufen
-	 * werden. <br>
+	 * Diese Methode mu&szlig; innerhalb einer offenen Hibernate Session
+	 * aufgerufen werden. <br>
 	 * 
 	 * @todo diese Methode muesste eigentlich in der AngebotpositionFac
 	 *       sitzen... PJ 3799
@@ -4499,6 +4865,16 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 				cBezeichnung = agstklDto.getCBez(); // WH: 15.12.05 Wenn es
 				// keine Bezeichnung gibt,
 				// dann steht da nichts
+
+				if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+						MandantFac.ZUSATZFUNKTION_AGSTKL_ARBEITSPLAN,
+						theClientDto)) {
+
+					dataRow[AngebotReportFac.REPORT_ANGEBOT_AGSTKL_SUBREPORT_MENGENSTAFFEL] = getAngebotstklFac()
+							.getSubreportAgstklMengenstaffel(
+									agstklDto.getIId(), theClientDto);
+				}
+
 			} else { // Ident und Handeingabe
 
 				ArtikelDto oArtikelDto = getArtikelFac()
@@ -4554,6 +4930,8 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 					dataRow[AngebotReportFac.REPORT_ANGEBOT_ARTIKEL_WERBEABGABEPFLICHTIG] = Helper
 							.short2Boolean(oArtikelDto
 									.getBWerbeabgabepflichtig());
+					dataRow[AngebotReportFac.REPORT_ANGEBOT_FREIERTEXT] = flrangebotpositionI
+							.getX_textinhalt();
 
 					// Typ, wenn Setartikel
 
@@ -4604,7 +4982,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 						MaterialDto materialDto = getMaterialFac()
 								.materialFindByPrimaryKey(
 										oArtikelDto.getMaterialIId(),
-										theClientDto);
+										localeCNrI, theClientDto);
 						if (materialDto.getMaterialsprDto() != null) {
 							/**
 							 * @todo MR->MR richtige Mehrsprachigkeit: Material
@@ -4616,22 +4994,17 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 							dataRow[AngebotReportFac.REPORT_ANGEBOT_ARTIKEL_MATERIAL] = materialDto
 									.getCNr();
 						}
-						
-						MaterialzuschlagDto mzDto=getMaterialFac()
-								.getKursMaterialzuschlagDtoInZielwaehrung(
-									oArtikelDto.getMaterialIId(),
-									flrangebotpositionI.getFlrangebot().getT_belegdatum(),
-									flrangebotpositionI.getFlrangebot().getWaehrung_c_nr_angebotswaehrung(),
-									theClientDto);
-						
-						dataRow[AngebotReportFac.REPORT_ANGEBOT_ARTIKEL_KURS_MATERIALZUSCHLAG] =mzDto.getNZuschlag();
-						dataRow[AngebotReportFac.REPORT_ANGEBOT_ARTIKEL_DATUM_MATERIALZUSCHLAG] =mzDto.getTGueltigab();
-						
+
+						dataRow[AngebotReportFac.REPORT_ANGEBOT_ARTIKEL_KURS_MATERIALZUSCHLAG] = angebotpositionDto
+								.getNMaterialzuschlagKurs();
+						dataRow[AngebotReportFac.REPORT_ANGEBOT_ARTIKEL_DATUM_MATERIALZUSCHLAG] = angebotpositionDto
+								.getTMaterialzuschlagDatum();
+
 					}
-					
+
 					dataRow[AngebotReportFac.REPORT_ANGEBOT_ARTIKEL_MATERIALGEWICHT] = oArtikelDto
 							.getFMaterialgewicht();
-					
+
 					if (oArtikelDto.getGeometrieDto() != null) {
 						dataRow[AngebotReportFac.REPORT_ANGEBOT_ARTIKEL_BREITE] = oArtikelDto
 								.getGeometrieDto().getFBreite();
@@ -4676,7 +5049,8 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 				dataRow[AngebotReportFac.REPORT_ANGEBOT_EINZELPREIS] = angebotpositionDto
 						.getNReportNettoeinzelpreisplusversteckteraufschlag();
 				dataRow[AngebotReportFac.REPORT_ANGEBOT_RABATT] = new Double(0);
-				dataRow[AngebotReportFac.REPORT_ANGEBOT_ZUSATZRABATTSATZ] = new Double(0);
+				dataRow[AngebotReportFac.REPORT_ANGEBOT_ZUSATZRABATTSATZ] = new Double(
+						0);
 			}
 			// UW 22.03.06 Alternative Positionen haben im Druck keinen
 			// Gesamtwert.
@@ -4695,7 +5069,7 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 							.add(angebotpositionDto.getNReportGesamtpreis()));
 				}
 			}
-			
+
 			dataRow[AngebotReportFac.REPORT_ANGEBOT_MWSTSATZ] = angebotpositionDto
 					.getDReportMwstsatz();
 			dataRow[AngebotReportFac.REPORT_ANGEBOT_MWSTBETRAG] = angebotpositionDto
@@ -4799,7 +5173,8 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 		try {
 			dataRow = new Object[AngebotReportFac.REPORT_ANGEBOT_ANZAHL_SPALTEN];
 			// Dto holen damit LPReport.printIdent verwendet werden kann
-			dataRow[AngebotReportFac.REPORT_ANGEBOT_B_ALTERNATIVE] = Helper.boolean2Short(false);
+			dataRow[AngebotReportFac.REPORT_ANGEBOT_B_ALTERNATIVE] = Helper
+					.boolean2Short(false);
 
 			PositionRpt posRpt = new PositionRpt();
 			posRpt.setBdPreis(bdKorrekturbetrag);
@@ -5392,6 +5767,52 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 		}
 	}
 
+	private void updateZwischensummenData(ArrayList<Object> theData,
+			FLRAngebotpositionReport zwsPos) {
+		Integer zwsVonPosition = zwsPos.getZwsvonposition_i_id();
+		if (zwsVonPosition == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_POSITION_ZWISCHENSUMME_UNVOLLSTAENDIG,
+					"Position '" + zwsPos.getC_bez() + "' unvollst\u00E4ndig",
+					new Object[] { zwsPos.getC_bez(), zwsPos.getI_id() });
+		}
+
+		int foundIndex = -1;
+		int lastIndex = theData.size();
+		for (int i = 0; i < lastIndex; i++) {
+			Object[] o = (Object[]) theData.get(i);
+			if (zwsVonPosition.equals(o[REPORT_ANGEBOT_INTERNAL_IID])) {
+				if (null == o[REPORT_ANGEBOT_ZWSTEXT]) {
+					o[REPORT_ANGEBOT_ZWSTEXT] = zwsPos.getC_bez();
+				} else {
+					String s = (String) o[REPORT_ANGEBOT_ZWSTEXT] + "\n"
+							+ zwsPos.getC_bez();
+					o[REPORT_ANGEBOT_ZWSTEXT] = s;
+				}
+
+				o[REPORT_ANGEBOT_ZWSNETTOSUMME] = zwsPos.getZwsnettosumme();
+				foundIndex = i;
+				break;
+			}
+		}
+
+		if (foundIndex == -1) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_POSITION_ZWISCHENSUMME_UNVOLLSTAENDIG,
+					"Position '" + zwsPos.getC_bez() + "' unvollst\u00E4ndig",
+					new Object[] { zwsPos.getC_bez(), zwsPos.getI_id() });
+		}
+		
+		Integer zwsBisPosition = zwsPos.getZwsbisposition_i_id();
+		for (int i = foundIndex; i < lastIndex; i++) {
+			Object[] o = (Object[]) theData.get(i);
+			o[REPORT_ANGEBOT_ZWSPOSPREISDRUCKEN] = zwsPos
+					.getB_zwspositionspreiszeigen();
+			if (zwsBisPosition.equals(o[REPORT_ANGEBOT_INTERNAL_IID]))
+				break;
+		}
+	}
+
 	private Object[] befuelleZeileAGMitIntelligenterZwischensumme(
 			FLRAngebotpositionReport flrangebotpositionI, KundeDto kundeDto,
 			LinkedHashMap<Integer, MwstsatzReportDto> mwstMapI,
@@ -5408,7 +5829,8 @@ public class AngebotReportFacBean extends LPReport implements AngebotReportFac,
 				.getPositionNummer(flrangebotpositionI.getZwsbisposition_i_id());
 		dataRow[REPORT_ANGEBOT_ZWSNETTOSUMME] = flrangebotpositionI
 				.getZwsnettosumme();
-
+		dataRow[REPORT_ANGEBOT_ZWSPOSPREISDRUCKEN] = flrangebotpositionI
+				.getB_zwspositionspreiszeigen();
 		dataRow[REPORT_ANGEBOT_SEITENUMBRUCH] = bbSeitenumbruchI;
 
 		Integer posnr = getAngebotpositionFac().getPositionNummer(

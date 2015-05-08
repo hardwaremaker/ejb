@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -50,6 +50,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -102,7 +103,7 @@ public class LostechnikerHandler extends UseCaseHandler {
 			Object[][] rows = new Object[resultList.size()][colCount];
 			int row = 0;
 			int col = 0;
-			Locale locUI = theClientDto.getLocUi();
+//			Locale locUI = theClientDto.getLocUi();
 			while (resultListIterator.hasNext()) {
 				FLRLostechniker losab = (FLRLostechniker) resultListIterator
 						.next();
@@ -329,6 +330,14 @@ public class LostechnikerHandler extends UseCaseHandler {
 							getTextRespectUISpr("lp.vorname", mandantCNr, locUI),
 							getTextRespectUISpr("pers.kurzzeichen", mandantCNr,
 									locUI), },
+
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
 					new String[] {
 							"i_id",
 							FertigungFac.FLR_LOSTECHNIKER_FLRPERSONAL + "."

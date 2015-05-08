@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -33,6 +33,7 @@
 package com.lp.server.fertigung.fastlanereader;
 
 import java.math.BigDecimal;
+import java.rmi.RemoteException;
 import java.sql.Timestamp;
 import java.util.Iterator;
 import java.util.List;
@@ -48,13 +49,17 @@ import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosablieferung;
 import com.lp.server.fertigung.service.FertigungFac;
+import com.lp.server.fertigung.service.FertigungReportFac;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.fertigung.service.LosablieferungDto;
 import com.lp.server.stueckliste.service.StuecklisteDto;
+import com.lp.server.system.jcr.service.DokumentnichtarchiviertDto;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeLosAblieferung;
 import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -129,14 +134,21 @@ public class LosablieferungHandler extends UseCaseHandler {
 								LocaleFac.BELEGART_LOSABLIEFERUNG,
 								losab.getI_id());
 
-				String snrchnr = null;
+				String snrchnr = "";
 
 				if (l.size() > 0) {
-					snrchnr = l.get(0).getCSeriennrChargennr();
 
-					if (l.size() > 1) {
-						snrchnr += ",...";
+					for (int i = 0; i < l.size(); i++) {
+						if (l.get(i).getCSeriennrChargennr() != null) {
+							snrchnr += l.get(i).getCSeriennrChargennr();
+
+							if (i != l.size() - 1) {
+								snrchnr += ",";
+							}
+						}
+
 					}
+
 				}
 				rows[row][col++] = snrchnr;
 				row++;
@@ -301,31 +313,41 @@ public class LosablieferungHandler extends UseCaseHandler {
 			// Nicht gefunden
 		}
 
-		if (losDto.getStuecklisteIId() != null) {
+		// wg. PJ 18453 -> Button anzeigen, wenn
 
-			StuecklisteDto stklDto = getStuecklisteFac()
-					.stuecklisteFindByPrimaryKey(losDto.getStuecklisteIId(),
-							theClientDto);
+		DokumentnichtarchiviertDto docNichtArchivDto = getJCRDocFac()
+				.dokumentnichtarchiviertfindbyMandantCReportname(
+						theClientDto.getMandant(),
+						FertigungReportFac.REPORT_ABLIEFERETIKETT);
+		if (docNichtArchivDto == null) {
+			DocPath docPath = new DocPath(new DocNodeLosAblieferung(
+					losabieferungDto, losDto));
 
-			ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
-					stklDto.getArtikelIId(), theClientDto);
+			return new PrintInfoDto(docPath, null, getSTable());
+		} else {
 
-			if (Helper.short2boolean(aDto.getBDokumentenpflicht())) {
-//				String sPath = JCRDocFac.HELIUMV_NODE + "/"
-//						+ theClientDto.getMandant() + "/"
-//						+ LocaleFac.BELEGART_LOS.trim() + "/"
-//						+ LocaleFac.BELEGART_LOS.trim() + "/"
-//						+ losDto.getCNr().replace("/", ".") + "/"
-//						+ "Ablieferungen/" + losabieferungDto.getIId();
-				DocPath docPath = new DocPath(new DocNodeLosAblieferung(losabieferungDto, losDto));
+			if (losDto.getStuecklisteIId() != null) {
 
-				return new PrintInfoDto(docPath, null, getSTable());
+				StuecklisteDto stklDto = getStuecklisteFac()
+						.stuecklisteFindByPrimaryKey(
+								losDto.getStuecklisteIId(), theClientDto);
+
+				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
+						stklDto.getArtikelIId(), theClientDto);
+
+				if (Helper.short2boolean(aDto.getBDokumentenpflicht())) {
+
+					DocPath docPath = new DocPath(new DocNodeLosAblieferung(
+							losabieferungDto, losDto));
+
+					return new PrintInfoDto(docPath, null, getSTable());
+				} else {
+					return null;
+				}
+
 			} else {
 				return null;
 			}
-
-		} else {
-			return null;
 		}
 
 	}
@@ -400,9 +422,11 @@ public class LosablieferungHandler extends UseCaseHandler {
 									locUI) },
 
 					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XM,QueryParameters.FLR_BREITE_XM,QueryParameters.FLR_BREITE_XM,QueryParameters.FLR_BREITE_SHARE_WITH_REST },
-							new String[] {
-							FertigungFac.FLR_LOSABLIEFERUNG_I_ID,
+							QueryParameters.FLR_BREITE_XM,
+							QueryParameters.FLR_BREITE_XM,
+							QueryParameters.FLR_BREITE_XM,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+					new String[] { FertigungFac.FLR_LOSABLIEFERUNG_I_ID,
 							FertigungFac.FLR_LOSABLIEFERUNG_T_AENDERN,
 							FertigungFac.FLR_LOSABLIEFERUNG_N_MENGE,
 							FertigungFac.FLR_LOSABLIEFERUNG_N_GESTEHUNGSPREIS,

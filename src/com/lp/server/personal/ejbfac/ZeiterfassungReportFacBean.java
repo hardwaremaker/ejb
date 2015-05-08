@@ -1,33 +1,33 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.personal.ejbfac;
@@ -35,6 +35,7 @@ package com.lp.server.personal.ejbfac;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.text.DateFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -57,10 +58,6 @@ import javax.interceptor.Interceptors;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
-import net.sf.jasperreports.engine.JRDataSource;
-import net.sf.jasperreports.engine.JRException;
-import net.sf.jasperreports.engine.JRField;
-
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -80,12 +77,14 @@ import com.lp.server.fertigung.service.LossollarbeitsplanDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerFac;
+import com.lp.server.personal.ejb.ReisekostenDiaetenScript;
 import com.lp.server.personal.fastlanereader.ZeitdatenHandler;
 import com.lp.server.personal.fastlanereader.generated.FLRMaschine;
 import com.lp.server.personal.fastlanereader.generated.FLRMaschinenzeitdaten;
 import com.lp.server.personal.fastlanereader.generated.FLRReise;
 import com.lp.server.personal.fastlanereader.generated.FLRSonderzeiten;
 import com.lp.server.personal.fastlanereader.generated.FLRTelefonzeiten;
+import com.lp.server.personal.fastlanereader.generated.FLRZeitabschluss;
 import com.lp.server.personal.fastlanereader.generated.FLRZeitdaten;
 import com.lp.server.personal.fastlanereader.generated.FLRZeitdatenLos;
 import com.lp.server.personal.service.ArbeitszeitstatistikDto;
@@ -109,15 +108,19 @@ import com.lp.server.personal.service.ZeiterfassungFacAll;
 import com.lp.server.personal.service.ZeiterfassungReportFac;
 import com.lp.server.personal.service.ZeitmodelltagDto;
 import com.lp.server.personal.service.ZeitstiftDto;
+import com.lp.server.projekt.service.ProjektDto;
 import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.system.ejb.Belegart;
+import com.lp.server.system.fastlanereader.generated.FLREntitylog;
+import com.lp.server.system.service.HvDtoLogClass;
 import com.lp.server.system.service.KostenstelleDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.DatumsfilterVonBis;
 import com.lp.server.util.HelperServer;
 import com.lp.server.util.LPReport;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
@@ -126,6 +129,10 @@ import com.lp.server.util.report.TimingInterceptor;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 import com.lp.util.LPDatenSubreport;
+
+import net.sf.jasperreports.engine.JRDataSource;
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JRField;
 
 @Stateless
 @Interceptors(TimingInterceptor.class)
@@ -193,9 +200,16 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 	private static int REPORT_REISEZEITEN_STUNDENSATZ = 14;
 	private static int REPORT_REISEZEITEN_MINDESTSATZ = 15;
 	private static int REPORT_REISEZEITEN_ABSTUNDEN = 16;
-	private static int REPORT_REISEZEITEN_FAHRZEUG = 17;
-	private static int REPORT_REISEZEITEN_KENNZEICHEN = 18;
-	private static int REPORT_REISEZEITEN_ANZAHL_SPALTEN = 19;
+	private static int REPORT_REISEZEITEN_FAHRZEUG_PRIVAT = 17;
+	private static int REPORT_REISEZEITEN_FAHRZEUG_FIRMA = 18;
+	private static int REPORT_REISEZEITEN_FAHRZEUG_FIRMA_KENNZEICHEN = 19;
+	private static int REPORT_REISEZEITEN_FAHRZEUG_FIRMA_KMKOSTEN = 20;
+	private static int REPORT_REISEZEITEN_BELEGART = 21;
+	private static int REPORT_REISEZEITEN_BELEGNUMMER = 22;
+	private static int REPORT_REISEZEITEN_DIAETEN_AUS_SCRIPT = 23;
+	private static int REPORT_REISEZEITEN_LKZ = 24;
+	private static int REPORT_REISEZEITEN_SCRIPTNAME_INTERNAL = 25 ;
+	private static int REPORT_REISEZEITEN_ANZAHL_SPALTEN = 26;
 
 	private static int REPORT_FAHRTENBUCH_TAG = 0;
 	private static int REPORT_FAHRTENBUCH_DATUM = 1;
@@ -277,29 +291,6 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 	private static int REPORT_MITARBEITERUEBERSICHT_KALK_JAHRESISTSTUNDEN = 33;
 	private static int REPORT_MITARBEITERUEBERSICHT_ANZAHL_SPALTEN = 34;
 
-	private static int REPORT_ZEITDATEN_PERSONALNR = 0;
-	private static int REPORT_ZEITDATEN_NAME = 1;
-	private static int REPORT_ZEITDATEN_ZEIT = 2;
-	private static int REPORT_ZEITDATEN_TAETIGKEIT = 3;
-	private static int REPORT_ZEITDATEN_AUFTRAG = 4;
-	private static int REPORT_ZEITDATEN_PROJEKTBEZEICHNUNG = 5;
-	private static int REPORT_ZEITDATEN_TAGESSUMME = 6;
-	private static int REPORT_ZEITDATEN_MASCHINE = 7;
-	private static int REPORT_ZEITDATEN_POSITION = 8;
-	private static int REPORT_ZEITDATEN_BUCHUNGSART = 9;
-	private static int REPORT_ZEITDATEN_BEMERKUNG = 10;
-	private static int REPORT_ZEITDATEN_GUTSTK = 11;
-	private static int REPORT_ZEITDATEN_SCHLECHTSTK = 12;
-	private static int REPORT_ZEITDATEN_KUNDE = 13;
-	private static int REPORT_ZEITDATEN_DAUER = 14;
-	private static int REPORT_ZEITDATEN_KOMMENTAR = 15;
-	private static int REPORT_ZEITDATEN_QUELLE = 16;
-	private static int REPORT_ZEITDATEN_TAETIGKEIT_SONDERZEIT = 17;
-	private static int REPORT_ZEITDATEN_DAUER_SONDERZEIT = 18;
-	private static int REPORT_ZEITDATEN_DATUM_SONDERZEIT = 19;
-	private static int REPORT_ZEITDATEN_ARTIKELBEZEICHNUNG = 20;
-	private static int REPORT_ZEITDATEN_SOLLZEIT = 21;
-
 	private static int REPORT_TELEFONLISTE_PERSON = 0;
 	private static int REPORT_TELEFONLISTE_VON = 1;
 	private static int REPORT_TELEFONLISTE_BIS = 2;
@@ -309,7 +300,9 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 	private static int REPORT_TELEFONLISTE_KOMMENTARINTERN = 6;
 	private static int REPORT_TELEFONLISTE_DAUER = 7;
 	private static int REPORT_TELEFONLISTE_LKZ_PARTNER = 8;
-	private static int REPORT_TELEFONLISTE_GRUPPIERUNG = 9;
+	private static int REPORT_TELEFONLISTE_PROJEKT = 9;
+	private static int REPORT_TELEFONLISTE_GRUPPIERUNG = 10;
+	private static int REPORT_TELEFONLISTE_ANZAHL_SPALTEN = 11;
 
 	private static int REPORT_MASCHINENBELEGUNG_INVENTARNUMMER = 0;
 	private static int REPORT_MASCHINENBELEGUNG_IDENTIFIKATIONSNUMMER = 1;
@@ -407,7 +400,27 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 	private static int REPORT_PRODUKTIVITAETSTAGESSTATISTIK_UNTERARBEITSGANG = 22;
 	private static int REPORT_PRODUKTIVITAETSTAGESSTATISTIK_RUESTEN_MITRECHNEN = 23;
 	private static int REPORT_PRODUKTIVITAETSTAGESSTATISTIK_LEISTUNGSFAKTOR = 24;
-	private static int REPORT_PRODUKTIVITAETSTAGESSTATISTIK_ANZAHL_SPALTEN = 25;
+	private static int REPORT_PRODUKTIVITAETSTAGESSTATISTIK_ANWESENHEITSZEIT_MONATSBETRACHTUNG = 25;
+	private static int REPORT_PRODUKTIVITAETSTAGESSTATISTIK_ANZAHL_SPALTEN = 26;
+
+	private static int REPORT_ZEITABSCHLUSS_NAME = 0;
+	private static int REPORT_ZEITABSCHLUSS_VORNAME = 1;
+	private static int REPORT_ZEITABSCHLUSS_TITEL = 2;
+	private static int REPORT_ZEITABSCHLUSS_ZEITEN_ABGESCHLOSSEN_BIS = 3;
+	private static int REPORT_ZEITABSCHLUSS_PERSONALNR = 4;
+	private static int REPORT_ZEITABSCHLUSS_ANZAHL_SPALTEN = 5;
+
+	private static int REPORT_URLAUBSANTRAG_VON = 0;
+	private static int REPORT_URLAUBSANTRAG_BIS = 1;
+	private static int REPORT_URLAUBSANTRAG_ZUSATZ = 2;
+	private static int REPORT_URLAUBSANTRAG_ANZAHL_SPALTEN = 3;
+
+	private static int REPORT_ZEITERFASSUNG_AENDERUNGEN_FELDNAME = 0;
+	private static int REPORT_ZEITERFASSUNG_AENDERUNGEN_AENDERUNGSZEITPUNKT = 1;
+	private static int REPORT_ZEITERFASSUNG_AENDERUNGEN_GEAENDERT_VON = 2;
+	private static int REPORT_ZEITERFASSUNG_AENDERUNGEN_GEAENDERT_NACH = 3;
+	private static int REPORT_ZEITERFASSUNG_AENDERUNGEN_OPERATION = 4;
+	private static int REPORT_ZEITERFASSUNG_AENDERUNGEN_ANZAHL_SPALTEN = 5;
 
 	public JasperPrintLP printMaschinenproduktivitaet(Integer maschineIId,
 			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
@@ -495,6 +508,10 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 											auftragDto
 													.getKundeIIdAuftragsadresse(),
 											theClientDto);
+
+							if (auftragDto.getCNr().equals("14/00338")) {
+								int u = 0;
+							}
 
 							data[row][REPORT_MASCHINENPRODUKTIVITAET_KUNDE] = kundeDto
 									.getPartnerDto().formatTitelAnrede();
@@ -601,8 +618,21 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 					.getC_identifikationsnr();
 			data[row][REPORT_MASCHINENLISTE_KAUFDATUM] = flrmaschine
 					.getT_kaufdatum();
-			data[row][REPORT_MASCHINENLISTE_VERFUEGBARKEIT] = flrmaschine
-					.getF_verfuegbarkeitinprozent();
+
+			if (tStichtag != null) {
+				data[row][REPORT_MASCHINENLISTE_VERFUEGBARKEIT] = getMaschineFac()
+						.getVerfuegbarkeitInStundenZuDatum(
+								flrmaschine.getI_id(),
+								new java.sql.Date(tStichtag.getTime()),
+								theClientDto).doubleValue();
+			} else {
+				data[row][REPORT_MASCHINENLISTE_VERFUEGBARKEIT] = getMaschineFac()
+						.getVerfuegbarkeitInStundenZuDatum(
+								flrmaschine.getI_id(),
+								new java.sql.Date(System.currentTimeMillis()),
+								theClientDto).doubleValue();
+			}
+
 			data[row][REPORT_MASCHINENLISTE_AUTOENDE] = new Boolean(
 					Helper.short2Boolean(flrmaschine.getB_autoendebeigeht()));
 
@@ -669,6 +699,8 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 						.getTime()))
 				+ "' AND l.flrlos.status_c_nr IN ('"
 				+ LocaleFac.STATUS_ANGELEGT
+				+ "','"
+				+ LocaleFac.STATUS_AUSGEGEBEN
 				+ "','"
 				+ LocaleFac.STATUS_IN_PRODUKTION
 				+ "','"
@@ -759,8 +791,10 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 						.getCInventarnummer();
 				oZeileTag[REPORT_MASCHINENBELEGUNG_VERSTECKT] = Helper
 						.short2Boolean(maschineDto.getBVersteckt());
-				oZeileTag[REPORT_MASCHINENBELEGUNG_VERFUEGBARKEIT] = maschineDto
-						.getFVerfuegbarkeitinprozent();
+				oZeileTag[REPORT_MASCHINENBELEGUNG_VERFUEGBARKEIT] = getMaschineFac()
+						.getVerfuegbarkeitInStundenZuDatum(maschineIId,
+								new java.sql.Date(c.getTimeInMillis()),
+								theClientDto).doubleValue();
 				if (maschinengruppeDto != null) {
 					oZeileTag[REPORT_MASCHINENBELEGUNG_MASCHINENGRUPPE] = maschinengruppeDto
 							.getCBez();
@@ -787,8 +821,11 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 					FLRLossollarbeitsplan flrlossollarbeitsplan = (FLRLossollarbeitsplan) resultListIterator
 							.next();
 
-					oZeileTag[REPORT_MASCHINENBELEGUNG_VERFUEGBARKEIT] = maschineDto
-							.getFVerfuegbarkeitinprozent();
+					oZeileTag[REPORT_MASCHINENBELEGUNG_VERFUEGBARKEIT] = getMaschineFac()
+							.getVerfuegbarkeitInStundenZuDatum(
+									maschineDto.getIId(),
+									new java.sql.Date(c.getTimeInMillis()),
+									theClientDto).doubleValue();
 
 					if (maschinengruppeDto != null) {
 						oZeileTag[REPORT_MASCHINENBELEGUNG_MASCHINENGRUPPE] = maschinengruppeDto
@@ -1073,6 +1110,66 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 
 		initJRDS(parameter, ZeiterfassungReportFac.REPORT_MODUL,
 				ZeiterfassungReportFac.REPORT_MASCHINENBELEGUNG,
+				theClientDto.getMandant(), theClientDto.getLocUi(),
+				theClientDto);
+		return getReportPrint();
+	}
+
+	public JasperPrintLP printAbgeschlosseneZeitbuchungen(
+			boolean bMitVersteckten, TheClientDto theClientDto) {
+
+		sAktuellerReport = ZeiterfassungReportFac.REPORT_ABGESCHLOSSENE_ZEITBUCHUNGEN;
+		HashMap<String, Object> parameter = new HashMap<String, Object>();
+		parameter.put("P_MITVERSTECKTEN", new Boolean(bMitVersteckten));
+		try {
+			PersonalDto[] pDtos = getPersonalFac().personalFindByMandantCNr(
+					theClientDto.getMandant(), bMitVersteckten);
+
+			data = new Object[pDtos.length][REPORT_ZEITABSCHLUSS_ANZAHL_SPALTEN];
+
+			for (int i = 0; i < pDtos.length; i++) {
+				PartnerDto partnerDto = getPartnerFac()
+						.partnerFindByPrimaryKey(pDtos[i].getPartnerIId(),
+								theClientDto);
+
+				data[i][REPORT_ZEITABSCHLUSS_NAME] = partnerDto
+						.getCName1nachnamefirmazeile1();
+				data[i][REPORT_ZEITABSCHLUSS_VORNAME] = partnerDto
+						.getCName2vornamefirmazeile2();
+				data[i][REPORT_ZEITABSCHLUSS_TITEL] = partnerDto.getCTitel();
+
+				data[i][REPORT_ZEITABSCHLUSS_PERSONALNR] = pDtos[i]
+						.getCPersonalnr();
+
+				Session session = FLRSessionFactory.getFactory().openSession();
+				String sQuery = "SELECT za FROM FLRZeitabschluss za WHERE za.personal_i_id="
+						+ pDtos[i].getIId()
+						+ " ORDER BY t_abgeschlossen_bis DESC";
+
+				Query query = session.createQuery(sQuery);
+				query.setMaxResults(1);
+				List<?> resultList = query.list();
+
+				Iterator<?> resultListIterator = resultList.iterator();
+
+				if (resultListIterator.hasNext()) {
+					FLRZeitabschluss flrZeitabschluss = (FLRZeitabschluss) resultListIterator
+							.next();
+
+					data[i][REPORT_ZEITABSCHLUSS_ZEITEN_ABGESCHLOSSEN_BIS] = flrZeitabschluss
+							.getT_abgeschlossen_bis();
+
+				}
+
+				session.close();
+
+			}
+		} catch (RemoteException e2) {
+			throwEJBExceptionLPRespectOld(e2);
+		}
+
+		initJRDS(parameter, ZeiterfassungReportFac.REPORT_MODUL,
+				ZeiterfassungReportFac.REPORT_ABGESCHLOSSENE_ZEITBUCHUNGEN,
 				theClientDto.getMandant(), theClientDto.getLocUi(),
 				theClientDto);
 		return getReportPrint();
@@ -1538,14 +1635,18 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 
 	}
 
-	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printZeitdatenjournal(Integer personalIId,
+	public Object[][] erstelleZeitdatenjournal(Integer personalIId,
 			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
 			TheClientDto theClientDto) {
-		sAktuellerReport = ZeiterfassungReportFac.REPORT_ZEITDATEN;
-		HashMap<String, Object> parameter = new HashMap<String, Object>();
 		ArrayList<Object[]> daten = new ArrayList<Object[]>();
 		try {
+
+			ParametermandantDto parameterVonBis = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_VON_BIS_ERFASSUNG);
+			boolean bVonBisErfassung = (Boolean) parameterVonBis
+					.getCWertAsObject();
 
 			PersonalDto[] personalDtos = null;
 
@@ -1620,8 +1721,10 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 
 					Iterator<?> resultListIterator = resultList.iterator();
 
+					boolean bEnde = false;
+					String sLetzteTaetigkeit = null;
 					while (resultListIterator.hasNext()) {
-						Object[] zeile = new Object[22];
+						Object[] zeile = new Object[REPORT_ZEITDATEN_ANZAHL_SPALTEN];
 						FLRZeitdaten flrzeitdaten = (FLRZeitdaten) resultListIterator
 								.next();
 
@@ -1629,6 +1732,56 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 								.getFlrpersonal().getC_personalnummer();
 						zeile[REPORT_ZEITDATEN_ZEIT] = new Timestamp(
 								flrzeitdaten.getT_zeit().getTime());
+
+						// PJ18440
+						if (bVonBisErfassung == true) {
+							ZeitdatenDto zDto = getZeiterfassungFac()
+									.zeitdatenFindByPrimaryKey(
+											flrzeitdaten.getI_id(),
+											theClientDto);
+							zeile[REPORT_ZEITDATEN_ZEIT_BIS] = zDto
+									.gettZeit_Bis();
+						}
+
+						// PJ18562
+
+						String sZusatz = null;
+
+						if (bEnde == false) {
+
+							if (sLetzteTaetigkeit != null
+									&& flrzeitdaten.getFlrtaetigkeit() != null) {
+								if (sLetzteTaetigkeit.equals(flrzeitdaten
+										.getFlrtaetigkeit().getC_nr())
+										&& flrzeitdaten
+												.getFlrtaetigkeit()
+												.getTaetigkeitart_c_nr()
+												.equals(ZeiterfassungFac.TAETIGKEITART_SONDERTAETIGKEIT)) {
+									if (flrzeitdaten
+											.getFlrtaetigkeit()
+											.getC_nr()
+											.equals(ZeiterfassungFac.TAETIGKEIT_KOMMT)
+											|| flrzeitdaten
+													.getFlrtaetigkeit()
+													.getC_nr()
+													.equals(ZeiterfassungFac.TAETIGKEIT_GEHT)
+											|| flrzeitdaten
+													.getFlrtaetigkeit()
+													.getC_nr()
+													.equals(ZeiterfassungFac.TAETIGKEIT_ENDE)) {
+									} else {
+										sZusatz = "Ende";
+										((Object[]) daten.get(daten.size() - 1))[REPORT_ZEITDATEN_ZUSATZ] = "Beginn";
+										bEnde = true;
+
+									}
+								}
+
+							}
+						} else {
+							bEnde = false;
+						}
+						zeile[REPORT_ZEITDATEN_ZUSATZ] = sZusatz;
 
 						zeile[REPORT_ZEITDATEN_SOLLZEIT] = getZeiterfassungFac()
 								.getSollzeitEinerPersonUndEinesTages(
@@ -1862,6 +2015,14 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 						} catch (RemoteException ex1) {
 							throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex1);
 						}
+
+						if (flrzeitdaten.getFlrtaetigkeit() != null) {
+							sLetzteTaetigkeit = flrzeitdaten.getFlrtaetigkeit()
+									.getC_nr();
+						} else {
+							sLetzteTaetigkeit = null;
+						}
+
 						daten.add(zeile);
 					}
 					SonderzeitenDto[] dtos = null;
@@ -1877,7 +2038,7 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 									.taetigkeitFindByPrimaryKey(
 											dtos[j].getTaetigkeitIId(),
 											theClientDto);
-							Object[] neueZeile = new Object[22];
+							Object[] neueZeile = new Object[REPORT_ZEITDATEN_ANZAHL_SPALTEN];
 							neueZeile[REPORT_ZEITDATEN_TAETIGKEIT_SONDERZEIT] = taeitgkeitDto
 									.getBezeichnung();
 							neueZeile[REPORT_ZEITDATEN_PERSONALNR] = personalDto
@@ -1971,6 +2132,25 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 		} catch (RemoteException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
+
+		Object[] x = daten.toArray();
+		Object[][] dataLocal = new Object[x.length][22];
+		for (int i = 0; i < x.length; i++) {
+			dataLocal[i] = (Object[]) x[i];
+		}
+
+		return dataLocal;
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printZeitdatenjournal(Integer personalIId,
+			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
+			TheClientDto theClientDto) {
+		sAktuellerReport = ZeiterfassungReportFac.REPORT_ZEITDATEN;
+		HashMap<String, Object> parameter = new HashMap<String, Object>();
+
+		data = erstelleZeitdatenjournal(personalIId, tVon, tBis, theClientDto);
+
 		if (tVon != null) {
 			parameter.put("P_VON", tVon);
 		}
@@ -1978,10 +2158,16 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 			parameter.put("P_BIS", tBis);
 		}
 
-		Object[] x = daten.toArray();
-		data = new Object[x.length][22];
-		for (int i = 0; i < x.length; i++) {
-			data[i] = (Object[]) x[i];
+		try {
+			ParametermandantDto parameterVonBis = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_VON_BIS_ERFASSUNG);
+			parameter.put("P_VON_BIS_ERFASSUNG",
+					((Boolean) parameterVonBis.getCWertAsObject()));
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
 
 		initJRDS(parameter, ZeiterfassungFac.REPORT_MODUL,
@@ -2087,7 +2273,13 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 							.getTime()))
 					+ "' AND t.t_bis<='"
 					+ Helper.formatDateWithSlashes(new java.sql.Date(tBis
-							.getTime())) + "'" + " ORDER BY p."
+							.getTime())) + "' ";
+
+			if (partnerIId != null) {
+				sQuery += " AND t.partner_i_id=" + partnerIId + " ";
+			}
+
+			sQuery += " ORDER BY p."
 					+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1;
 
 			Query inventurliste = session.createQuery(sQuery);
@@ -2183,7 +2375,7 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 		crit.addOrder(Order.asc(ZeiterfassungFac.FLR_TELEFONZEITEN_T_VON));
 		List<?> list = crit.list();
 		Iterator<?> iterator = list.iterator();
-		data = new Object[list.size()][10];
+		data = new Object[list.size()][REPORT_TELEFONLISTE_ANZAHL_SPALTEN];
 		int row = 0;
 		while (iterator.hasNext()) {
 			FLRTelefonzeiten flrTelefonzeiten = (FLRTelefonzeiten) iterator
@@ -2197,6 +2389,17 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 				sNachname = sVorname + " " + sNachname;
 			}
 			data[row][REPORT_TELEFONLISTE_PERSON] = sNachname;
+
+			if (flrTelefonzeiten.getProjekt_i_id() != null) {
+				try {
+					data[row][REPORT_TELEFONLISTE_PROJEKT] = getProjektFac()
+							.projektFindByPrimaryKey(
+									flrTelefonzeiten.getProjekt_i_id())
+							.getCNr();
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+			}
 
 			if (flrTelefonzeiten.getFlransprechpartner() != null) {
 				sVorname = flrTelefonzeiten.getFlransprechpartner()
@@ -2360,9 +2563,9 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 
 		/*
 		 * try {
-		 * 
+		 *
 		 * //Nun alle Reisen durchgehen
-		 * 
+		 *
 		 * Integer landIIdHeimat = null; Integer partnerMandant =
 		 * getMandantFac().mandantFindByPrimaryKey( theClientDto.getMandant(),
 		 * theClientDto).getPartnerIId(); PartnerDto partnerDto =
@@ -2382,9 +2585,9 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 		 * o[REPORT_REISEZEITEN_PARTNER]; // data[k][REPORT_FAHRZEUGE_KOSTEN] =
 		 * // o[REPORT_REISEZEITEN_SPESEN]; data[k][REPORT_FAHRZEUGE_STRECKE] =
 		 * o[REPORT_REISEZEITEN_ENTFERNUNG];
-		 * 
+		 *
 		 * }
-		 * 
+		 *
 		 * } catch (RemoteException e) { throwEJBExceptionLPRespectOld(e); }
 		 */
 
@@ -2404,9 +2607,215 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 		return getReportPrint();
 	}
 
+	public JasperPrintLP printUrlaubsantrag(Integer personalIId,
+			Integer[] integerIIds, boolean bGenehmigt, String cVorraussetzung,
+			TheClientDto theClientDto) {
+
+		sAktuellerReport = ZeiterfassungReportFac.REPORT_URLAUBSANTRAG;
+		HashMap<String, Object> parameter = new HashMap<String, Object>();
+
+		PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(
+				personalIId, theClientDto);
+
+		parameter.put("P_PERSON", personalDto.getPartnerDto()
+				.formatFixTitelName1Name2());
+
+		if (personalDto.getKostenstelleIIdAbteilung() != null) {
+
+			KostenstelleDto abtDto = getSystemFac()
+					.kostenstelleFindByPrimaryKey(
+							personalDto.getKostenstelleIIdAbteilung());
+			parameter.put("P_ABTEILUNG",
+					abtDto.formatKostenstellenbezeichnung());
+
+		}
+
+		PersonalDto pDto_Vorgsestzter = getPersonalFac()
+				.getPersonalDto_Vorgesetzter(personalIId, theClientDto);
+
+		if (pDto_Vorgsestzter != null) {
+			parameter.put("P_PERSON_VORGESETZTER", pDto_Vorgsestzter
+					.getPartnerDto().formatFixTitelName1Name2());
+		}
+
+		parameter.put("P_GENEHMIGT", new Boolean(bGenehmigt));
+		parameter.put("P_VORAUSSETZUNG", cVorraussetzung);
+
+		TreeMap<Timestamp, String> tmZeitraum = new TreeMap<Timestamp, String>();
+
+		// Zuerst alle Urlaubsantraege holen
+
+		TaetigkeitDto taetigkeitDto_Urlaubsantrag = getZeiterfassungFac()
+				.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_URLAUBSANTRAG,
+						theClientDto);
+
+		TaetigkeitDto taetigkeitDto_Urlaub = getZeiterfassungFac()
+				.taetigkeitFindByCNr(ZeiterfassungFac.TAETIGKEIT_URLAUB,
+						theClientDto);
+
+		for (int i = 0; i < integerIIds.length; i++) {
+
+			try {
+				SonderzeitenDto szDto = getZeiterfassungFac()
+						.sonderzeitenFindByPrimaryKey(integerIIds[i],
+								theClientDto);
+				if (szDto.getTaetigkeitIId().equals(
+						taetigkeitDto_Urlaubsantrag.getIId())
+						|| szDto.getTaetigkeitIId().equals(
+								taetigkeitDto_Urlaub.getIId())) {
+					tmZeitraum.put(Helper.cutTimestamp(szDto.getTDatum()), "");
+
+				}
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+
+		}
+
+		ArrayList alZeitraeume = new ArrayList();
+
+		Iterator<Timestamp> it = tmZeitraum.keySet().iterator();
+
+		Timestamp tVon = it.next();
+		Calendar cVon = Calendar.getInstance();
+		cVon.setTimeInMillis(tVon.getTime());
+
+		if (it.hasNext()) {
+			while (it.hasNext()) {
+				Timestamp tZeile = it.next();
+
+				Calendar cZeile = Calendar.getInstance();
+				cZeile.setTimeInMillis(tZeile.getTime());
+
+				cVon.add(Calendar.DAY_OF_MONTH, 1);
+
+				if (cVon.get(Calendar.DAY_OF_YEAR) == cZeile
+						.get(Calendar.DAY_OF_YEAR)
+						&& cVon.get(Calendar.YEAR) == cZeile.get(Calendar.YEAR)) {
+					// Dann ist das get naechste Tag, also eins weiter
+
+					if (it.hasNext()) {
+						continue;
+					} else {
+						Object[] oZeile = new Object[REPORT_URLAUBSANTRAG_ANZAHL_SPALTEN];
+						oZeile[REPORT_URLAUBSANTRAG_VON] = tVon;
+						oZeile[REPORT_URLAUBSANTRAG_BIS] = tZeile;
+
+						alZeitraeume.add(oZeile);
+
+					}
+
+				} else {
+					Object[] oZeile = new Object[REPORT_URLAUBSANTRAG_ANZAHL_SPALTEN];
+					oZeile[REPORT_URLAUBSANTRAG_VON] = tVon;
+					oZeile[REPORT_URLAUBSANTRAG_BIS] = tmZeitraum
+							.lowerKey(tZeile);
+					tVon = tZeile;
+					cVon.setTimeInMillis(tZeile.getTime());
+					alZeitraeume.add(oZeile);
+				}
+
+			}
+
+		} else {
+			// Wenn nur ein einziger Eintrag
+			Object[] oZeile = new Object[REPORT_URLAUBSANTRAG_ANZAHL_SPALTEN];
+			oZeile[REPORT_URLAUBSANTRAG_VON] = tVon;
+			oZeile[REPORT_URLAUBSANTRAG_BIS] = tVon;
+
+			alZeitraeume.add(oZeile);
+		}
+
+		Timestamp tErster = tmZeitraum.firstKey();
+		Timestamp tLetzter = tmZeitraum.lastKey();
+
+		Timestamp tAktuell = tErster;
+
+		while (tAktuell.before(tLetzter)) {
+
+			// Nun noch die Feiertage einsortieren
+
+			String sBezeichnung = null;
+
+			Integer religionIId = personalDto.getReligionIId();
+
+			if (religionIId != null) {
+				try {
+					BetriebskalenderDto dtoTemp = getPersonalFac()
+							.betriebskalenderFindByMandantCNrDDatumReligionIId(
+									tAktuell, personalDto.getMandantCNr(),
+									religionIId);
+					if (dtoTemp != null) {
+						sBezeichnung = dtoTemp.getCBez();
+					}
+				} catch (RemoteException ex) {
+					// keiner da
+				}
+			} else {
+
+				BetriebskalenderDto dtoTemp = getPersonalFac()
+						.betriebskalenderFindByMandantCNrDDatum(tAktuell,
+								personalDto.getMandantCNr(), theClientDto);
+				if (dtoTemp != null) {
+					sBezeichnung = dtoTemp.getCBez();
+				}
+
+			}
+
+			// Wenns einen gibt, dann in TreeMap hinzufuegen
+			if (sBezeichnung != null) {
+
+				// Wenn nur ein einziger Eintrag
+				Object[] oZeile = new Object[REPORT_URLAUBSANTRAG_ANZAHL_SPALTEN];
+				oZeile[REPORT_URLAUBSANTRAG_VON] = new Timestamp(
+						tAktuell.getTime() + 10);
+				oZeile[REPORT_URLAUBSANTRAG_BIS] = new Timestamp(
+						tAktuell.getTime() + 10);
+				oZeile[REPORT_URLAUBSANTRAG_ZUSATZ] = sBezeichnung;
+
+				alZeitraeume.add(oZeile);
+
+			}
+
+			tAktuell = new Timestamp(tAktuell.getTime() + 24 * 3600000);
+
+		}
+
+		// Nun noch nach Datum sortieren damit die Feiertage richtig einsortiert
+		// sind
+
+		for (int m = alZeitraeume.size() - 1; m > 0; --m) {
+			for (int n = 0; n < m; ++n) {
+				Object[] o1 = (Object[]) alZeitraeume.get(n);
+				Object[] o2 = (Object[]) alZeitraeume.get(n + 1);
+
+				Timestamp tVon1 = (Timestamp) o1[REPORT_URLAUBSANTRAG_VON];
+				Timestamp tVon2 = (Timestamp) o2[REPORT_URLAUBSANTRAG_VON];
+
+				if (tVon1.after(tVon2)) {
+					alZeitraeume.set(n, o2);
+					alZeitraeume.set(n + 1, o1);
+
+				}
+			}
+		}
+
+		data = new Object[alZeitraeume.size()][REPORT_URLAUBSANTRAG_ANZAHL_SPALTEN];
+		data = (Object[][]) alZeitraeume.toArray(data);
+
+		initJRDS(parameter, ZeiterfassungReportFac.REPORT_MODUL,
+				ZeiterfassungReportFac.REPORT_URLAUBSANTRAG,
+				theClientDto.getMandant(), theClientDto.getLocUi(),
+				theClientDto);
+
+		return getReportPrint();
+
+	}
+
 	public JasperPrintLP printReisezeiten(Integer personalIId,
 			java.sql.Timestamp tVon, java.sql.Timestamp tBis, Integer iOption,
-			boolean bPlusVersteckte, TheClientDto theClientDto) {
+			boolean bPlusVersteckte, boolean bNurAnwesende,
+			TheClientDto theClientDto) {
 		if (tVon == null || tBis == null || personalIId.equals(iOption)) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
@@ -2467,9 +2876,18 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
 						"OPTION NICHT VERFUEGBAR"));
 			}
+
+			if (bNurAnwesende) {
+				personalDtos = getZeiterfassungFac()
+						.entferneNichtAnwesendePersonen(tVon, tBis,
+								personalDtos, theClientDto);
+			}
+
 		} catch (RemoteException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
+
+		ReisekostenScript script = new ReisekostenScript(getSystemFac(), theClientDto);
 
 		for (int i = 0; i < personalDtos.length; i++) {
 			PersonalDto personalDto = personalDtos[i];
@@ -2530,16 +2948,28 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 			BigDecimal summeDiaetenAusland = new BigDecimal(0).setScale(2);
 			// summeDiaetenAusland.setScale(2);
 
+			BigDecimal reisekostenDiaetenAusScript = null;
+			BigDecimal summeDiaetenAusScript = null;
+
 			HashMap<Timestamp, String> hmReisetage = new HashMap<Timestamp, String>();
 
 			int iZaehler = 1;
+
+			long temp1;
+			long temp2;
+			long temp3;
+			long temp4;
 
 			for (int k = 0; k < alReiseeintraege.size(); k++) {
 				Object[] o = (Object[]) alReiseeintraege.get(k);
 				data[k][REPORT_REISEZEITEN_BEGINN] = o[REPORT_REISEZEITEN_BEGINN];
 				data[k][REPORT_REISEZEITEN_ENDE] = o[REPORT_REISEZEITEN_ENDE];
-				data[k][REPORT_REISEZEITEN_FAHRZEUG] = o[REPORT_REISEZEITEN_FAHRZEUG];
-				data[k][REPORT_REISEZEITEN_KENNZEICHEN] = o[REPORT_REISEZEITEN_KENNZEICHEN];
+				data[k][REPORT_REISEZEITEN_FAHRZEUG_FIRMA] = o[REPORT_REISEZEITEN_FAHRZEUG_FIRMA];
+				data[k][REPORT_REISEZEITEN_FAHRZEUG_PRIVAT] = o[REPORT_REISEZEITEN_FAHRZEUG_PRIVAT];
+				data[k][REPORT_REISEZEITEN_FAHRZEUG_FIRMA_KENNZEICHEN] = o[REPORT_REISEZEITEN_FAHRZEUG_FIRMA_KENNZEICHEN];
+				data[k][REPORT_REISEZEITEN_FAHRZEUG_FIRMA_KMKOSTEN] = o[REPORT_REISEZEITEN_FAHRZEUG_FIRMA_KMKOSTEN];
+				data[k][REPORT_REISEZEITEN_BELEGART] = o[REPORT_REISEZEITEN_BELEGART];
+				data[k][REPORT_REISEZEITEN_BELEGNUMMER] = o[REPORT_REISEZEITEN_BELEGNUMMER];
 
 				if (o[REPORT_REISEZEITEN_BEGINN] != null
 						&& o[REPORT_REISEZEITEN_ENDE] != null) {
@@ -2551,6 +2981,36 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 					Calendar cBis = Calendar.getInstance();
 					cBis.setTimeInMillis(((Timestamp) o[REPORT_REISEZEITEN_ENDE])
 							.getTime());
+
+					////////////////////////
+
+					// Daten fuer JRuby Script
+
+					Timestamp beginn = (Timestamp) o[REPORT_REISEZEITEN_BEGINN];
+					Timestamp ende = (Timestamp) o[REPORT_REISEZEITEN_ENDE];
+//					String land = ((String)o[REPORT_REISEZEITEN_LAND]).trim();
+					String lkz = ((String)o[REPORT_REISEZEITEN_LKZ]);
+					String personalart = personalDto.getPersonalartCNr().trim();
+
+					int beginnYear = getYear(beginn);
+					int endYear = getYear(ende);
+
+					if(o[REPORT_REISEZEITEN_SCRIPTNAME_INTERNAL] != null) {
+						ReisekostenDiaetenScript reisekostenDiaetenScript = new ReisekostenDiaetenScript(
+								beginn,
+								ende,
+								lkz,
+								personalart,
+								beginnYear,
+								endYear
+								) ;
+
+						reisekostenDiaetenAusScript = script.getValue(reisekostenDiaetenScript, o[REPORT_REISEZEITEN_SCRIPTNAME_INTERNAL].toString()) ;
+					} else {
+						reisekostenDiaetenAusScript = null ;
+					}
+
+					////////////////////////
 
 					while (cVon.get(Calendar.DAY_OF_YEAR) <= cBis
 							.get(Calendar.DAY_OF_YEAR)) {
@@ -2603,11 +3063,27 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 							.add((BigDecimal) o[REPORT_REISEZEITEN_DIAETEN]);
 				}
 
+				////////////////////////
+
+				data[k][REPORT_REISEZEITEN_DIAETEN_AUS_SCRIPT] = reisekostenDiaetenAusScript;
+				if (reisekostenDiaetenAusScript != null) {
+					if(summeDiaetenAusScript == null) {
+						summeDiaetenAusScript = BigDecimal.ZERO.setScale(2) ;
+					}
+					summeDiaetenAusScript = summeDiaetenAusScript
+							.add(reisekostenDiaetenAusScript);
+				}
+
+				////////////////////////
+
 			}
 			parameter.put("P_SUMMESPESEN", summeSpesen);
 			parameter.put("P_SUMMEDIAETEN", summeDiaeten);
 			parameter.put("P_SUMMEDIAETENAUSLAND", summeDiaetenAusland);
+			parameter.put("P_SUMMEDIAETENAUSSCRIPT", summeDiaetenAusScript);
 			parameter.put("P_SUMMEREISETAGE", hmReisetage.size());
+
+			parameter.put("P_NUR_ANWESENDE", new Boolean(bNurAnwesende));
 
 			initJRDS(parameter, ZeiterfassungReportFac.REPORT_MODUL,
 					ZeiterfassungReportFac.REPORT_REISEZEITEN,
@@ -2623,6 +3099,14 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 			}
 		}
 		return print;
+	}
+
+	private int getYear(Timestamp ts) {
+		long time = ts.getTime();
+		Calendar cal = Calendar.getInstance();
+		cal.setTimeInMillis(time);
+		int year = cal.get(Calendar.YEAR);
+		return year;
 	}
 
 	private ArrayList<Object> erstelleEinzelneReiseeintraege(
@@ -2783,6 +3267,7 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 		if (Helper.short2boolean(flrBeginn.getB_beginn()) == true) {
 			oZeile[REPORT_REISEZEITEN_LAND] = flrBeginn.getFlrdiaeten()
 					.getC_bez();
+			oZeile[REPORT_REISEZEITEN_LKZ] = flrBeginn.getFlrdiaeten().getFlrland().getC_lkz() ;
 		}
 		int iEntfernung = 0;
 		if (flrEnde.getI_kmbeginn() != null && flrEnde.getI_kmende() != null) {
@@ -2831,6 +3316,7 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 				oZeile[REPORT_REISEZEITEN_ABSTUNDEN] = dtos[0].getIAbstunden();
 				oZeile[REPORT_REISEZEITEN_MINDESTSATZ] = dtos[0]
 						.getNMindestsatz();
+				oZeile[REPORT_REISEZEITEN_SCRIPTNAME_INTERNAL] = dtos[0].getCFilenameScript() ;
 			}
 
 		} catch (RemoteException ex1) {
@@ -2843,12 +3329,41 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 		}
 
 		if (flrEnde.getFlrfahrzeug() != null) {
-			oZeile[REPORT_REISEZEITEN_FAHRZEUG] = flrEnde.getFlrfahrzeug()
-					.getC_bez();
-			oZeile[REPORT_REISEZEITEN_KENNZEICHEN] = flrEnde.getFlrfahrzeug()
-					.getC_kennzeichen();
-		} else {
-			oZeile[REPORT_REISEZEITEN_FAHRZEUG] = flrEnde.getC_fahrzeug();
+			oZeile[REPORT_REISEZEITEN_FAHRZEUG_FIRMA] = flrEnde
+					.getFlrfahrzeug().getC_bez();
+			oZeile[REPORT_REISEZEITEN_FAHRZEUG_FIRMA_KENNZEICHEN] = flrEnde
+					.getFlrfahrzeug().getC_kennzeichen();
+
+			oZeile[REPORT_REISEZEITEN_FAHRZEUG_FIRMA_KMKOSTEN] = getPersonalFac()
+					.getKMKostenInZielwaehrung(
+							flrEnde.getFlrfahrzeug().getI_id(),
+							flrEnde.getT_zeit(),
+							theClientDto.getSMandantenwaehrung(), theClientDto);
+
+		}
+		oZeile[REPORT_REISEZEITEN_FAHRZEUG_PRIVAT] = flrEnde.getC_fahrzeug();
+
+		//
+		oZeile[REPORT_REISEZEITEN_BELEGART] = flrBeginn.getBelegart_c_nr();
+
+		if (flrBeginn.getBelegart_c_nr() != null
+				&& flrBeginn.getI_belegartid() != null) {
+			if (flrBeginn.getBelegart_c_nr().equals(LocaleFac.BELEGART_AUFTRAG)) {
+				AuftragDto aDto = getAuftragFac()
+						.auftragFindByPrimaryKeyOhneExc(
+								flrBeginn.getI_belegartid());
+				if (aDto != null) {
+					oZeile[REPORT_REISEZEITEN_BELEGNUMMER] = aDto.getCNr();
+				}
+			} else if (flrBeginn.getBelegart_c_nr().equals(
+					LocaleFac.BELEGART_PROJEKT)) {
+				ProjektDto pDto = getProjektFac()
+						.projektFindByPrimaryKeyOhneExc(
+								flrBeginn.getI_belegartid());
+				if (pDto != null) {
+					oZeile[REPORT_REISEZEITEN_BELEGNUMMER] = pDto.getCNr();
+				}
+			}
 		}
 
 		if (flrBeginn.getFlrdiaeten().getFlrland().getI_id()
@@ -2859,6 +3374,102 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 		}
 
 		return oZeile;
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printAenderungen(Integer personalIId,
+			DatumsfilterVonBis datumsfilter, boolean mitInserts,
+			boolean mitUpdates, boolean mitDeletes, TheClientDto theClientDto) {
+		sAktuellerReport = ZeiterfassungReportFac.REPORT_ZEITERFASSUNG_AENDERUNGEN;
+
+		HashMap<String, Object> parameter = new HashMap<String, Object>();
+
+		PersonalDto personalDto = getPersonalFac().personalFindByPrimaryKey(
+				personalIId, theClientDto);
+		parameter.put("P_PERSON", personalDto.getPartnerDto()
+				.formatFixTitelName1Name2());
+
+		parameter.put("P_VON", datumsfilter.getTimestampVon());
+		parameter.put("P_BIS", datumsfilter.getTimestampBisUnveraendert());
+
+		parameter.put("P_MIT_INSERTS", new Boolean(mitInserts));
+		parameter.put("P_MIT_UPDATES", new Boolean(mitUpdates));
+		parameter.put("P_MIT_DELETES", new Boolean(mitDeletes));
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		org.hibernate.Criteria crit = session
+				.createCriteria(FLREntitylog.class);
+
+		crit.add(Restrictions.eq("c_filter_key", HvDtoLogClass.ZEITDATEN));
+		crit.add(Restrictions.eq("filter_i_id", personalIId + ""));
+
+		crit.add(Restrictions.eq("c_key", "TZeit"));
+
+		ArrayList<String> operationen = new ArrayList<String>();
+
+		if (mitInserts == true || mitUpdates == true || mitDeletes == true) {
+			if (mitInserts == true) {
+				operationen.add("INSERT");
+			}
+			if (mitUpdates == true) {
+				operationen.add("UPDATE");
+			}
+			if (mitDeletes == true) {
+				operationen.add("DELETE");
+			}
+
+			crit.add(Restrictions.in("c_operation", operationen));
+		} else {
+
+			crit.add(Restrictions.eq("c_operation", "NIX"));
+
+		}
+
+		DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+
+		crit.add(Restrictions.ge("c_von",
+				formatter.format(datumsfilter.getTimestampVon())));
+		crit.add(Restrictions.lt("c_von",
+				formatter.format(datumsfilter.getTimestampBis())));
+
+		crit.addOrder(Order.asc("c_von"));
+		List<?> results = crit.list();
+		Iterator<?> resultListIterator = results.iterator();
+
+		ArrayList alDaten = new ArrayList();
+
+		while (resultListIterator.hasNext()) {
+			FLREntitylog flrEntitylog = (FLREntitylog) resultListIterator
+					.next();
+
+			Object[] zeile = new Object[REPORT_ZEITERFASSUNG_AENDERUNGEN_ANZAHL_SPALTEN];
+
+			zeile[REPORT_ZEITERFASSUNG_AENDERUNGEN_FELDNAME] = flrEntitylog
+					.getC_key();
+
+			zeile[REPORT_ZEITERFASSUNG_AENDERUNGEN_GEAENDERT_NACH] = flrEntitylog
+					.getC_nach();
+			zeile[REPORT_ZEITERFASSUNG_AENDERUNGEN_OPERATION] = flrEntitylog
+					.getC_operation();
+
+			zeile[REPORT_ZEITERFASSUNG_AENDERUNGEN_GEAENDERT_VON] = flrEntitylog
+					.getC_von();
+			zeile[REPORT_ZEITERFASSUNG_AENDERUNGEN_AENDERUNGSZEITPUNKT] = flrEntitylog
+					.getT_aendern();
+
+			alDaten.add(zeile);
+		}
+
+		Object[][] dataTemp = new Object[alDaten.size()][REPORT_ZEITERFASSUNG_AENDERUNGEN_ANZAHL_SPALTEN];
+		data = (Object[][]) alDaten.toArray(dataTemp);
+
+		initJRDS(parameter, ZeiterfassungReportFac.REPORT_MODUL,
+				ZeiterfassungReportFac.REPORT_ZEITERFASSUNG_AENDERUNGEN,
+				theClientDto.getMandant(), theClientDto.getLocUi(),
+				theClientDto);
+		return getReportPrint();
+
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
@@ -2962,7 +3573,7 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 												new java.sql.Date(tVon
 														.getTime()),
 												new java.sql.Date(tBis
-														.getTime()),
+														.getTime()), true,
 												theClientDto);
 
 								if (dGesamt != null) {
@@ -3042,7 +3653,7 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 												new java.sql.Date(tVon
 														.getTime()),
 												new java.sql.Date(tBis
-														.getTime()),
+														.getTime()), true,
 												theClientDto);
 
 								if (dGesamt != null) {
@@ -3120,7 +3731,7 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 												new java.sql.Date(tVon
 														.getTime()),
 												new java.sql.Date(tBis
-														.getTime()),
+														.getTime()), true,
 												theClientDto);
 
 								if (dGesamt != null) {
@@ -3407,6 +4018,13 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 									"pers.arbeitszeitstatistik.sortierung.belegpersonal",
 									theClientDto.getMandant(),
 									theClientDto.getLocUi()));
+		} else if (iOptionSortierung == ZeiterfassungReportFac.REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_KUNDE_BELEG_PERSONAL) {
+			parameter
+					.put("P_SORTIERUNG",
+							getTextRespectUISpr(
+									"pers.arbeitszeitstatistik.sortierung.kundebelegpersonal",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()));
 		} else if (iOptionSortierung == ZeiterfassungReportFac.REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_PERSONAL) {
 			parameter
 					.put("P_SORTIERUNG",
@@ -3653,19 +4271,392 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 									arbeitszeitstatistikDto);
 						} else if (iOptionSortierung == ZeiterfassungReportFac.REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_AUFTRAG) {
 							arbeitszeitstatistikDto
-									.setSGruppierung(arbeitszeitstatistikDto
-											.getSbeleg());
+									.setSGruppierung(Helper.fitString2Length(
+											arbeitszeitstatistikDto.getSbeleg(),
+											15, ' ')
+											+ arbeitszeitstatistikDto
+													.getAuftragzeitenDto()
+													.getSPersonalMaschinenname());
+
 							alleDaten.put(arbeitszeitstatistikDto.getSbeleg()
 									+ arbeitszeitstatistikDto
 											.getAuftragzeitenDto()
 											.getSPersonalMaschinenname()
 									+ dtos[i].getTsBeginn() + sort,
 									arbeitszeitstatistikDto);
+						} else if (iOptionSortierung == ZeiterfassungReportFac.REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_KUNDE_BELEG_PERSONAL) {
+
+							arbeitszeitstatistikDto
+									.setSGruppierung(Helper.fitString2Length(
+											arbeitszeitstatistikDto.getSKunde(),
+											60, ' ')
+											+ Helper.fitString2Length(
+													arbeitszeitstatistikDto
+															.getSbeleg(), 15,
+													' ')
+											+ arbeitszeitstatistikDto
+													.getAuftragzeitenDto()
+													.getSPersonalMaschinenname());
+
+							alleDaten
+									.put(Helper.fitString2Length(
+											arbeitszeitstatistikDto.getSKunde(),
+											80, ' ')
+											+ arbeitszeitstatistikDto
+													.getSbeleg()
+											+ Helper.fitString2Length(
+													arbeitszeitstatistikDto
+															.getAuftragzeitenDto()
+															.getSPersonalMaschinenname(),
+													80, ' ')
+											+ dtos[i].getTsBeginn() + sort,
+											arbeitszeitstatistikDto);
 						}
 						sort++;
 					}
 				} catch (RemoteException ex) {
 					throwEJBExceptionLPRespectOld(ex);
+				}
+			}
+		}
+
+		// Telefonzeiten hinzufuegen
+
+		int iOption = 0;
+
+		try {
+			ParametermandantDto parameterOption = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_PERSONAL,
+							ParameterFac.PARAMETER_PERSONALKOSTEN_QUELLE);
+
+			iOption = ((Integer) parameterOption.getCWertAsObject()).intValue();
+
+		} catch (RemoteException ex5) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex5);
+		}
+
+		if (belegartCNr == null
+				|| belegartCNr.equals(LocaleFac.BELEGART_PROJEKT)) {
+			ArtikelDto artikelDto_DefaultAZ = getZeiterfassungFac()
+					.getDefaultArbeitszeitartikel(theClientDto);
+
+			if (artikelIId == null
+					|| artikelIId.equals(artikelDto_DefaultAZ.getIId())) {
+
+				if (artikelgruppeIId == null
+						|| artikelgruppeIId.equals(artikelDto_DefaultAZ
+								.getArtgruIId())) {
+
+					if (artikelklasseIId == null
+							|| artikelklasseIId.equals(artikelDto_DefaultAZ
+									.getArtklaIId())) {
+
+						Session sessionTel = FLRSessionFactory.getFactory()
+								.openSession();
+
+						String sQuery = "SELECT t FROM FLRTelefonzeiten as t "
+
+								+ " WHERE t.t_von>='"
+								+ Helper.formatDateWithSlashes(new java.sql.Date(
+										tVon.getTime()))
+								+ "' AND t.t_bis<'"
+								+ Helper.formatDateWithSlashes(new java.sql.Date(
+										tBis.getTime())) + "' ";
+
+						if (partnerIId != null) {
+							sQuery += " AND t.partner_i_id=" + partnerIId + " ";
+						}
+
+						if (personalIId != null) {
+							sQuery += " AND t.personal_i_id=" + personalIId
+									+ " ";
+						}
+
+						Query queryTelefon = sessionTel.createQuery(sQuery);
+
+						List<?> resultListTelefon = queryTelefon.list();
+
+						Iterator<?> resultListIteratorTelefon = resultListTelefon
+								.iterator();
+
+						while (resultListIteratorTelefon.hasNext()) {
+							FLRTelefonzeiten tel = (FLRTelefonzeiten) resultListIteratorTelefon
+									.next();
+							sort++;
+
+							ArbeitszeitstatistikDto arbeitszeitstatistikDto = new ArbeitszeitstatistikDto();
+
+							AuftragzeitenDto auftragzeitenDto = new AuftragzeitenDto();
+
+							auftragzeitenDto.setTsBeginn(new Timestamp(tel
+									.getT_von().getTime()));
+							auftragzeitenDto.setTsEnde(new Timestamp(tel
+									.getT_bis().getTime()));
+
+							java.sql.Time tDauer = new java.sql.Time(tel
+									.getT_bis().getTime()
+									- tel.getT_von().getTime());
+							tDauer.setTime(tDauer.getTime() - 3600000);
+							auftragzeitenDto.setTDauer(tDauer);
+							Double dDauer = Helper.time2Double(tDauer);
+							auftragzeitenDto.setDdDauer(dDauer);
+
+							String sName = tel.getFlrpersonal().getFlrpartner()
+									.getC_name1nachnamefirmazeile1();
+							if (tel.getFlrpersonal().getFlrpartner()
+									.getC_name2vornamefirmazeile2() != null) {
+								sName = tel.getFlrpersonal().getFlrpartner()
+										.getC_name2vornamefirmazeile2()
+										+ " " + sName;
+							}
+
+							auftragzeitenDto.setSPersonalnummer(tel
+									.getFlrpersonal().getC_personalnummer());
+
+							auftragzeitenDto.setSPersonalMaschinenname(sName);
+							auftragzeitenDto
+									.setSArtikelcnr(artikelDto_DefaultAZ
+											.getCNr());
+
+							if (artikelDto_DefaultAZ.getArtikelsprDto() != null) {
+								auftragzeitenDto
+										.setSArtikelbezeichnung(artikelDto_DefaultAZ
+												.getArtikelsprDto().getCBez());
+							}
+
+							auftragzeitenDto.setSZeitbuchungtext(tel
+									.getX_kommentarext());
+
+							BigDecimal bdKosten = getZeiterfassungFac()
+									.getPersonalKostenProStunde(
+											theClientDto,
+											null,
+											iOption,
+											artikelDto_DefaultAZ.getIId(),
+											tel.getPersonal_i_id(),
+											new Timestamp(tel.getT_von()
+													.getTime()));
+
+							auftragzeitenDto.setBdKosten(bdKosten
+									.multiply(new BigDecimal(dDauer)));
+
+							arbeitszeitstatistikDto
+									.setAuftragzeitenDto(auftragzeitenDto);
+							arbeitszeitstatistikDto.setPartnerIId(tel
+									.getPartner_i_id());
+							arbeitszeitstatistikDto.setsFertigungsgruppe("");
+							arbeitszeitstatistikDto.setSVertreter("");
+
+							// Je nachdem ob ein Projekt hinterlegt ist oder
+							// nicht, sieht die Projektnummer anders aus
+							Integer partnerIIdTelefon = null;
+
+							if (tel.getProjekt_i_id() != null) {
+								ProjektDto pjDto = getProjektFac()
+										.projektFindByPrimaryKey(
+												tel.getProjekt_i_id());
+								partnerIIdTelefon = pjDto.getPartnerIId();
+								arbeitszeitstatistikDto.setSbeleg(hmBelegarten
+										.get(LocaleFac.BELEGART_PROJEKT)
+										+ pjDto.getCNr() + "TZ");
+
+								arbeitszeitstatistikDto
+										.setSBelegbezeichnung(pjDto.getCTitel());
+
+							} else {
+								arbeitszeitstatistikDto.setSbeleg("TZ"
+										+ Helper.formatDatum(tel.getT_von(),
+												theClientDto.getLocUi()));
+								partnerIIdTelefon = tel.getPartner_i_id();
+							}
+
+							if (partnerIIdTelefon != null) {
+
+								PartnerDto partnerDto_Telefon = getPartnerFac()
+										.partnerFindByPrimaryKey(
+												partnerIIdTelefon, theClientDto);
+
+								arbeitszeitstatistikDto
+										.setSKunde(partnerDto_Telefon
+												.formatFixName1Name2());
+							} else {
+								arbeitszeitstatistikDto.setSKunde("");
+							}
+
+							if (!kostenstellen.containsKey(tel
+									.getPersonal_i_id())) {
+
+								PersonalDto personalDto = getPersonalFac()
+										.personalFindByPrimaryKey(
+												tel.getPersonal_i_id(),
+												theClientDto);
+
+								if (personalDto.getKostenstelleDto_Stamm() != null) {
+									kostenstellen.put(tel.getPersonal_i_id(),
+											personalDto
+													.getKostenstelleDto_Stamm()
+													.getCNr());
+								} else {
+									kostenstellen.put(tel.getPersonal_i_id(),
+											"");
+								}
+
+							}
+
+							arbeitszeitstatistikDto
+									.setSKostenstelle((String) kostenstellen
+											.get(tel.getPersonal_i_id()));
+
+							if (artikelDto_DefaultAZ.getArtgruIId() != null) {
+								arbeitszeitstatistikDto
+										.setSArtikelgruppe(getArtikelFac()
+												.artgruFindByPrimaryKey(
+														artikelDto_DefaultAZ
+																.getArtgruIId(),
+														theClientDto)
+												.getBezeichnung());
+							}
+							if (artikelDto_DefaultAZ.getArtklaIId() != null) {
+								arbeitszeitstatistikDto
+										.setSArtikelklasse(getArtikelFac()
+												.artklaFindByPrimaryKey(
+														artikelDto_DefaultAZ
+																.getArtklaIId(),
+														theClientDto)
+												.getBezeichnung());
+							}
+
+							if (iOptionSortierung == ZeiterfassungReportFac.REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_ARTIKELGRUPPE) {
+								arbeitszeitstatistikDto
+										.setSGruppierung(arbeitszeitstatistikDto
+												.getSArtikelgruppe());
+								alleDaten.put(
+										arbeitszeitstatistikDto
+												.getSArtikelgruppe()
+												+ new Timestamp(tel.getT_von()
+														.getTime()) + sort,
+										arbeitszeitstatistikDto);
+							} else if (iOptionSortierung == ZeiterfassungReportFac.REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_ARTIKELKLASSE) {
+								arbeitszeitstatistikDto
+										.setSGruppierung(arbeitszeitstatistikDto
+												.getSArtikelklasse());
+								alleDaten.put(
+										arbeitszeitstatistikDto
+												.getSArtikelklasse()
+												+ new Timestamp(tel.getT_von()
+														.getTime()) + sort,
+										arbeitszeitstatistikDto);
+							} else if (iOptionSortierung == ZeiterfassungReportFac.REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_ADRESSE) {
+								arbeitszeitstatistikDto
+										.setSGruppierung(arbeitszeitstatistikDto
+												.getSKunde() + "");
+								alleDaten
+										.put(Helper.fitString2Length(
+												arbeitszeitstatistikDto
+														.getSKunde(), 80, ' ')
+												+ Helper.fitString2Length(
+														arbeitszeitstatistikDto
+																.getAuftragzeitenDto()
+																.getSPersonalMaschinenname(),
+														80, ' ')
+												+ new Timestamp(tel.getT_von()
+														.getTime()) + sort,
+												arbeitszeitstatistikDto);
+							} else if (iOptionSortierung == ZeiterfassungReportFac.REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_ARTIKEL) {
+								arbeitszeitstatistikDto
+										.setSGruppierung(arbeitszeitstatistikDto
+												.getAuftragzeitenDto()
+												.getSArtikelcnr());
+								alleDaten.put(arbeitszeitstatistikDto
+										.getAuftragzeitenDto().getSArtikelcnr()
+										+ new Timestamp(tel.getT_von()
+												.getTime()) + sort,
+										arbeitszeitstatistikDto);
+							} else if (iOptionSortierung == ZeiterfassungReportFac.REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_KOSTENSTELLE) {
+								arbeitszeitstatistikDto
+										.setSGruppierung(arbeitszeitstatistikDto
+												.getSKostenstelle());
+								alleDaten
+										.put(arbeitszeitstatistikDto
+												.getSKostenstelle()
+												+ arbeitszeitstatistikDto
+														.getAuftragzeitenDto()
+														.getSPersonalMaschinenname()
+												+ new Timestamp(tel.getT_von()
+														.getTime()) + sort,
+												arbeitszeitstatistikDto);
+							} else if (iOptionSortierung == ZeiterfassungReportFac.REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_PERSONAL) {
+								arbeitszeitstatistikDto
+										.setSGruppierung(arbeitszeitstatistikDto
+												.getAuftragzeitenDto()
+												.getSPersonalnummer());
+								alleDaten.put(arbeitszeitstatistikDto
+										.getAuftragzeitenDto()
+										.getSPersonalMaschinenname()
+										+ new Timestamp(tel.getT_von()
+												.getTime()) + sort,
+										arbeitszeitstatistikDto);
+							} else if (iOptionSortierung == ZeiterfassungReportFac.REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_AUFTRAG) {
+
+								String sBeleg = arbeitszeitstatistikDto
+										.getSbeleg();
+
+								if (sBeleg.endsWith("TZ")) {
+									sBeleg = sBeleg.substring(0,
+											sBeleg.length() - 2);
+								}
+								arbeitszeitstatistikDto.setSGruppierung(Helper
+										.fitString2Length(sBeleg, 15, ' ')
+										+ arbeitszeitstatistikDto
+												.getAuftragzeitenDto()
+												.getSPersonalMaschinenname());
+								alleDaten.put(sBeleg
+										+ arbeitszeitstatistikDto
+												.getAuftragzeitenDto()
+												.getSPersonalMaschinenname()
+										+ new Timestamp(tel.getT_von()
+												.getTime()) + sort,
+										arbeitszeitstatistikDto);
+							} else if (iOptionSortierung == ZeiterfassungReportFac.REPORT_ARBEITSZEITSTATISTIK_OPTION_SORTIERUNG_KUNDE_BELEG_PERSONAL) {
+
+								String sBeleg = arbeitszeitstatistikDto
+										.getSbeleg();
+
+								if (sBeleg.endsWith("TZ")) {
+									sBeleg = sBeleg.substring(0,
+											sBeleg.length() - 2);
+								}
+
+								arbeitszeitstatistikDto.setSGruppierung(Helper
+										.fitString2Length(
+												arbeitszeitstatistikDto
+														.getSKunde(), 60, ' ')
+										+ Helper.fitString2Length(sBeleg, 15,
+												' ')
+										+ arbeitszeitstatistikDto
+												.getAuftragzeitenDto()
+												.getSPersonalMaschinenname());
+								alleDaten
+										.put(Helper.fitString2Length(
+												arbeitszeitstatistikDto
+														.getSKunde(), 80, ' ')
+												+ arbeitszeitstatistikDto
+														.getSbeleg()
+												+ Helper.fitString2Length(
+														arbeitszeitstatistikDto
+																.getAuftragzeitenDto()
+																.getSPersonalMaschinenname(),
+														80, ' ')
+												+ new Timestamp(tel.getT_von()
+														.getTime()) + sort,
+												arbeitszeitstatistikDto);
+							}
+
+						}
+
+						sessionTel.close();
+					}
 				}
 			}
 		}
@@ -3682,9 +4673,6 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 
 		Collections.sort(tempAlleDaten,
 				getSortGruppierungBeginnzeitComparator());
-
-		// Iterator<?> it = alleDaten.keySet().iterator();
-
 		Iterator<?> it = tempAlleDaten.iterator();
 		int iRow = 0;
 		while (it.hasNext()) {
@@ -3740,6 +4728,11 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 					.getSArtikelklasse();
 			data[iRow][REPORT_ARBEITSZEITSTATISTIK_GRUPPIERUNG] = dto
 					.getSGruppierung();
+
+			if (dto.getSGruppierung() == null) {
+				int u = 0;
+			}
+
 			iRow++;
 
 		}
@@ -3756,8 +4749,8 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 	public JasperPrintLP printProduktivitaetstagesstatistik(
 			Integer personalIId, java.sql.Timestamp tVon,
 			java.sql.Timestamp tBis, Integer iOption, boolean bMitVersteckten,
-			boolean bMonatsbetrachtung, Integer personalgruppeIId,
-			TheClientDto theClientDto) {
+			boolean bNurAnwesende, boolean bMonatsbetrachtung,
+			Integer personalgruppeIId, TheClientDto theClientDto) {
 
 		sAktuellerReport = ZeiterfassungReportFac.REPORT_PRODUKTIVITAETSTAGESSTATISTIK;
 
@@ -3845,6 +4838,13 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
 						"OPTION NICHT VERFUEGBAR"));
 			}
+
+			if (bNurAnwesende) {
+				personalDtos = getZeiterfassungFac()
+						.entferneNichtAnwesendePersonen(tVon, tBis,
+								personalDtos, theClientDto);
+			}
+
 		} catch (RemoteException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
@@ -3865,6 +4865,7 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 			}
 
 			LinkedHashMap<String, Object[]> hmSubreportMaschinenerfolg = new LinkedHashMap<String, Object[]>();
+			LinkedHashMap<String, BigDecimal> hmAnwesenheitszeitMonat = new LinkedHashMap<String, BigDecimal>();
 
 			Timestamp tBeginn = new Timestamp(tVon.getTime());
 
@@ -4051,7 +5052,14 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 									hmSubreportMaschinenerfolg.put(
 											keySubreport, zeileSub);
 
+									hmAnwesenheitszeitMonat.put(keySubreport,
+											anwesenheit);
+
 								}
+
+								oZeile[REPORT_PRODUKTIVITAETSTAGESSTATISTIK_ANWESENHEITSZEIT_MONATSBETRACHTUNG] = hmAnwesenheitszeitMonat
+										.get(keySubreport);
+
 							}
 
 						} catch (RemoteException ex1) {
@@ -4266,7 +5274,7 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 
 		parameter.put("P_VON", tVon);
 		parameter.put("P_BIS", new Timestamp(tBis.getTime() - 24 * 3600000));
-
+		parameter.put("P_NUR_ANWESENDE", new Boolean(bNurAnwesende));
 		parameter.put("P_MONATSBETRACHTUNG", new Boolean(bMonatsbetrachtung));
 
 		parameter.put("P_PERSONEN", sParameter_Personen);
@@ -4295,7 +5303,8 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 	public JasperPrintLP printMitarbeiteruebersicht(Integer personalIId,
 			Integer iJahrVon, Integer iMonatVon, Integer iJahrBis,
 			Integer iMonatBis, Integer iOption, Integer iOptionSortierung,
-			boolean bPlusVersteckte, TheClientDto theClientDto) {
+			boolean bPlusVersteckte, boolean bNurAnwesende,
+			TheClientDto theClientDto) {
 
 		sAktuellerReport = ZeiterfassungReportFac.REPORT_MITARBEITERUEBERSICHT;
 		JasperPrintLP print = null;
@@ -4337,6 +5346,12 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 			} else {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
 						"OPTION NICHT VERFUEGBAR"));
+			}
+
+			if (bNurAnwesende) {
+				personalDtos = getZeiterfassungFac()
+						.entferneNichtAnwesendePersonen(iJahrVon, iMonatVon,
+								iJahrBis, iMonatBis, personalDtos, theClientDto);
 			}
 
 			// PJ 16763
@@ -4577,6 +5592,15 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 								.next();
 						taetigkeiten = flrzeitdaten.getFlrtaetigkeit()
 								.getC_nr().substring(0, 2);
+
+						// lt. WH: Wenn Urlaubsantrag, dann UA
+						if (flrzeitdaten
+								.getFlrtaetigkeit()
+								.getC_nr()
+								.equals(ZeiterfassungFac.TAETIGKEIT_URLAUBSANTRAG)) {
+							taetigkeiten = "UA";
+						}
+
 					}
 					try {
 						Double d = getZeiterfassungFac()
@@ -4619,6 +5643,8 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 					getZeiterfassungFac()
 							.getParameterSortierungZeitauswertungen(
 									iOptionSortierung, theClientDto));
+
+			parameter.put("P_NUR_ANWESENDE", new Boolean(bNurAnwesende));
 
 			initJRDS(parameter, ZeiterfassungReportFac.REPORT_MODUL,
 					ZeiterfassungReportFac.REPORT_MITARBEITERUEBERSICHT,
@@ -5081,7 +6107,8 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 
 	public JasperPrintLP printFahrtenbuch(Integer personalIId,
 			java.sql.Timestamp tVon, java.sql.Timestamp tBis, Integer iOption,
-			boolean bPlusVersteckte, TheClientDto theClientDto) {
+			boolean bPlusVersteckte, boolean bNurAnwesende,
+			TheClientDto theClientDto) {
 		if (tVon == null || tBis == null || personalIId.equals(iOption)) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
@@ -5138,6 +6165,13 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
 						"OPTION NICHT VERFUEGBAR"));
 			}
+
+			if (bNurAnwesende) {
+				personalDtos = getZeiterfassungFac()
+						.entferneNichtAnwesendePersonen(tVon, tBis,
+								personalDtos, theClientDto);
+			}
+
 		} catch (RemoteException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
@@ -5247,6 +6281,8 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 
 			parameter.put("P_VON", tVon);
 
+			parameter.put("P_NUR_ANWESENDE", new Boolean(bNurAnwesende));
+
 			Calendar c = Calendar.getInstance();
 			c.setTimeInMillis(tBis.getTime());
 			c.set(Calendar.DATE, c.get(Calendar.DATE) - 1);
@@ -5295,6 +6331,41 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 				value = data[index][REPORT_ZESTIFTE_MEHRFACHSTIFT];
 			} else if ("Personal".equals(fieldName)) {
 				value = data[index][REPORT_ZESTIFTE_PERSONAL];
+			}
+		} else if (sAktuellerReport
+				.equals(ZeiterfassungReportFac.REPORT_URLAUBSANTRAG)) {
+			if ("Von".equals(fieldName)) {
+				value = data[index][REPORT_URLAUBSANTRAG_VON];
+			} else if ("Bis".equals(fieldName)) {
+				value = data[index][REPORT_URLAUBSANTRAG_BIS];
+			} else if ("Zusatz".equals(fieldName)) {
+				value = data[index][REPORT_URLAUBSANTRAG_ZUSATZ];
+			}
+		} else if (sAktuellerReport
+				.equals(ZeiterfassungReportFac.REPORT_ZEITERFASSUNG_AENDERUNGEN)) {
+			if ("Feldname".equals(fieldName)) {
+				value = data[index][REPORT_ZEITERFASSUNG_AENDERUNGEN_FELDNAME];
+			} else if ("Aenderungszeitpunkt".equals(fieldName)) {
+				value = data[index][REPORT_ZEITERFASSUNG_AENDERUNGEN_AENDERUNGSZEITPUNKT];
+			} else if ("GeaendertVon".equals(fieldName)) {
+				value = data[index][REPORT_ZEITERFASSUNG_AENDERUNGEN_GEAENDERT_VON];
+			} else if ("GeaendertNach".equals(fieldName)) {
+				value = data[index][REPORT_ZEITERFASSUNG_AENDERUNGEN_GEAENDERT_NACH];
+			} else if ("Operation".equals(fieldName)) {
+				value = data[index][REPORT_ZEITERFASSUNG_AENDERUNGEN_OPERATION];
+			}
+		} else if (sAktuellerReport
+				.equals(ZeiterfassungReportFac.REPORT_ABGESCHLOSSENE_ZEITBUCHUNGEN)) {
+			if ("Personalnummer".equals(fieldName)) {
+				value = data[index][REPORT_ZEITABSCHLUSS_PERSONALNR];
+			} else if ("Name".equals(fieldName)) {
+				value = data[index][REPORT_ZEITABSCHLUSS_NAME];
+			} else if ("Vorname".equals(fieldName)) {
+				value = data[index][REPORT_ZEITABSCHLUSS_VORNAME];
+			} else if ("Titel".equals(fieldName)) {
+				value = data[index][REPORT_ZEITABSCHLUSS_TITEL];
+			} else if ("ZeitenAbgeschlossenBis".equals(fieldName)) {
+				value = data[index][REPORT_ZEITABSCHLUSS_ZEITEN_ABGESCHLOSSEN_BIS];
 			}
 		} else if (sAktuellerReport
 				.equals(ZeiterfassungReportFac.REPORT_PRODUKTIVITAETSTAGESSTATISTIK)) {
@@ -5349,6 +6420,8 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 				value = data[index][REPORT_PRODUKTIVITAETSTAGESSTATISTIK_MASCHINE_INVENTATNUMMER];
 			} else if ("LosRuestenMitrechnen".equals(fieldName)) {
 				value = data[index][REPORT_PRODUKTIVITAETSTAGESSTATISTIK_RUESTEN_MITRECHNEN];
+			} else if ("AnwesenheitszeitMonatsbetrachtung".equals(fieldName)) {
+				value = data[index][REPORT_PRODUKTIVITAETSTAGESSTATISTIK_ANWESENHEITSZEIT_MONATSBETRACHTUNG];
 			}
 
 		} else if (sAktuellerReport
@@ -5359,6 +6432,8 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 				value = data[index][REPORT_ZEITDATEN_NAME];
 			} else if ("Zeit".equals(fieldName)) {
 				value = data[index][REPORT_ZEITDATEN_ZEIT];
+			} else if ("Zeit_Bis".equals(fieldName)) {
+				value = data[index][REPORT_ZEITDATEN_ZEIT_BIS];
 			} else if ("Taetigkeit".equals(fieldName)) {
 				value = data[index][REPORT_ZEITDATEN_TAETIGKEIT];
 			} else if ("Artikelbezeichnung".equals(fieldName)) {
@@ -5400,6 +6475,8 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 				value = data[index][REPORT_ZEITDATEN_DAUER_SONDERZEIT];
 			} else if ("DatumSonderzeit".equals(fieldName)) {
 				value = data[index][REPORT_ZEITDATEN_DATUM_SONDERZEIT];
+			} else if ("Zusatz".equals(fieldName)) {
+				value = data[index][REPORT_ZEITDATEN_ZUSATZ];
 			}
 
 		} else if (sAktuellerReport
@@ -5513,6 +6590,8 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 				value = data[index][REPORT_TELEFONLISTE_VON];
 			} else if ("Bis".equals(fieldName)) {
 				value = data[index][REPORT_TELEFONLISTE_BIS];
+			} else if ("Projekt".equals(fieldName)) {
+				value = data[index][REPORT_TELEFONLISTE_PROJEKT];
 			} else if ("Partner".equals(fieldName)) {
 				value = data[index][REPORT_TELEFONLISTE_PARTNER];
 			} else if ("LKZ_Partner".equals(fieldName)) {
@@ -5670,10 +6749,20 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 				value = data[index][REPORT_REISEZEITEN_STUNDENSATZ];
 			} else if ("Tagessatz".equals(fieldName)) {
 				value = data[index][REPORT_REISEZEITEN_TAGESSATZ];
-			} else if ("Fahrzeug".equals(fieldName)) {
-				value = data[index][REPORT_REISEZEITEN_FAHRZEUG];
-			} else if ("Kennzeichen".equals(fieldName)) {
-				value = data[index][REPORT_REISEZEITEN_KENNZEICHEN];
+			} else if ("FahrzeugPrivat".equals(fieldName)) {
+				value = data[index][REPORT_REISEZEITEN_FAHRZEUG_PRIVAT];
+			} else if ("FahrzeugFirma".equals(fieldName)) {
+				value = data[index][REPORT_REISEZEITEN_FAHRZEUG_FIRMA];
+			} else if ("FahrzeugFirmaKennzeichen".equals(fieldName)) {
+				value = data[index][REPORT_REISEZEITEN_FAHRZEUG_FIRMA_KENNZEICHEN];
+			} else if ("FahrzeugFirmaKMKosten".equals(fieldName)) {
+				value = data[index][REPORT_REISEZEITEN_FAHRZEUG_FIRMA_KMKOSTEN];
+			} else if ("Belegart".equals(fieldName)) {
+				value = data[index][REPORT_REISEZEITEN_BELEGART];
+			} else if ("Belegnummer".equals(fieldName)) {
+				value = data[index][REPORT_REISEZEITEN_BELEGNUMMER];
+			} else if ("DiaetenAusScript".equals(fieldName)) {
+				value = data[index][REPORT_REISEZEITEN_DIAETEN_AUS_SCRIPT] ;
 			}
 		} else if (sAktuellerReport
 				.equals(ZeiterfassungReportFac.REPORT_MASCHINENPRODUKTIVITAET)) {
@@ -5840,8 +6929,17 @@ public class ZeiterfassungReportFacBean extends LPReport implements
 			public int compare(
 					com.lp.server.personal.service.ArbeitszeitstatistikDto o1,
 					com.lp.server.personal.service.ArbeitszeitstatistikDto o2) {
-				int value = o1.getSGruppierung()
-						.compareTo(o2.getSGruppierung());
+
+				String s1 = o1.getSGruppierung();
+				if (s1 == null) {
+					s1 = "";
+				}
+				String s2 = o2.getSGruppierung();
+				if (s2 == null) {
+					s2 = "";
+				}
+
+				int value = s1.compareTo(s2);
 				if (value == 0) {
 					value = o1.getAuftragzeitenDto().getTsBeginn()
 							.compareTo(o2.getAuftragzeitenDto().getTsBeginn());

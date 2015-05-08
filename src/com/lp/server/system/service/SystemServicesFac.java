@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -43,6 +43,9 @@ import com.lp.util.EJBExceptionLP;
 public interface SystemServicesFac {
 	public final static String KEYVALUE_MECSTERMINAL = "MECSTERMINAL";
 	public final static String KEYVALUE_ARTIKEL_KOPIEREN = "ARTIKEL_KOPIEREN";
+	public final static String KEYVALUE_STKL_IMPORT_SPEZ = "STKL_IMPORT_SPEZ";
+	public final static String KEYVALUE_AGSTKL_IMPORT_SPEZ = "AGSTKL_IMPORT_SPEZ";
+	public final static String KEYVALUE_EINKAUFSAGSTKL_IMPORT_SPEZ = "EINKAUFSAGSTKL_IMPORT_SPEZ";
 
 	public void createKeyvalue(KeyvalueDto keyvalueDto) throws RemoteException,
 			EJBExceptionLP;
@@ -66,5 +69,4 @@ public interface SystemServicesFac {
 	
 	public String getPrinterNameForReport(String modulI, String filenameI,
 			Locale spracheI, String cSubdirectory, TheClientDto theClientDto);
-
 }

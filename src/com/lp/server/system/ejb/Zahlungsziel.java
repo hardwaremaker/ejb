@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -42,7 +42,7 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( {
+@NamedQueries({
 		@NamedQuery(name = "ZahlungszielfindAllByMandant", query = "SELECT OBJECT (o) FROM Zahlungsziel o WHERE o.mandantCNr = ?1"),
 		@NamedQuery(name = "ZahlungszielfindByCBezMandantCNr", query = "SELECT OBJECT (o) FROM Zahlungsziel o WHERE o.mandantCNr = ?1 AND o.cBez = ?2") })
 @Entity
@@ -73,6 +73,61 @@ public class Zahlungsziel implements Serializable {
 	@Column(name = "B_VERSTECKT")
 	private Short bVersteckt;
 
+	@Column(name = "B_INZAHLUNGSVORSCHLAGBERUECKSICHTIGEN")
+	private Short bInzahlungsvorschlagberuecksichtigen;
+
+	@Column(name = "B_STICHTAG")
+	private Short bStichtag;
+
+	@Column(name = "B_STICHTAG_MONATSLETZTER")
+	private Short bStichtagMonatsletzter;
+
+	@Column(name = "I_STICHTAG")
+	private Integer iStichtag;
+	@Column(name = "I_FOLGEMONAT")
+	private Integer iFolgemonat;
+
+	public Short getBStichtag() {
+		return bStichtag;
+	}
+
+	public void setBStichtag(Short bStichtag) {
+		this.bStichtag = bStichtag;
+	}
+
+	public Short getBStichtagMonatsletzter() {
+		return bStichtagMonatsletzter;
+	}
+
+	public void setBStichtagMonatsletzter(Short bStichtagMonatsletzter) {
+		this.bStichtagMonatsletzter = bStichtagMonatsletzter;
+	}
+
+	public Integer getIStichtag() {
+		return iStichtag;
+	}
+
+	public void setIStichtag(Integer iStichtag) {
+		this.iStichtag = iStichtag;
+	}
+
+	public Integer getIFolgemonat() {
+		return iFolgemonat;
+	}
+
+	public void setIFolgemonat(Integer iFolgemonat) {
+		this.iFolgemonat = iFolgemonat;
+	}
+
+	public Short getBInzahlungsvorschlagberuecksichtigen() {
+		return bInzahlungsvorschlagberuecksichtigen;
+	}
+
+	public void setBInzahlungsvorschlagberuecksichtigen(
+			Short bInzahlungsvorschlagberuecksichtigen) {
+		this.bInzahlungsvorschlagberuecksichtigen = bInzahlungsvorschlagberuecksichtigen;
+	}
+
 	@Column(name = "MANDANT_C_NR")
 	private String mandantCNr;
 
@@ -83,12 +138,17 @@ public class Zahlungsziel implements Serializable {
 	}
 
 	public Zahlungsziel(Integer idZahlungszielO, String mandantCNr, String bez,
-			Short versteckt, Integer iAnzahlzieltagefuernetto) {
+			Short versteckt, Integer iAnzahlzieltagefuernetto,
+			Short bInzahlungsvorschlagberuecksichtigen, Short bStichtag,
+			Short bStichtagMonatsletzter) {
 		setIId(idZahlungszielO);
 		setMandantCNr(mandantCNr);
 		setCBez(bez);
 		setBVersteckt(versteckt);
 		setIAnzahlzieltagefuernetto(iAnzahlzieltagefuernetto);
+		setBInzahlungsvorschlagberuecksichtigen(bInzahlungsvorschlagberuecksichtigen);
+		setBStichtag(bStichtag);
+		setBStichtagMonatsletzter(bStichtagMonatsletzter);
 	}
 
 	public Integer getIId() {

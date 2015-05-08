@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,6 +32,8 @@
  ******************************************************************************/
 package com.lp.server.system.ejbfac;
 
+import java.rmi.RemoteException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -45,11 +47,17 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 
+import org.hibernate.Criteria;
 import org.hibernate.Session;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
 
+import com.lp.server.partner.ejb.HvTypedQuery;
 import com.lp.server.system.ejb.Installer;
+import com.lp.server.system.ejb.LpUserCount;
 import com.lp.server.system.ejb.Theclient;
 import com.lp.server.system.fastlanereader.generated.FLRInstaller;
+import com.lp.server.system.fastlanereader.generated.FLRTheClient;
 import com.lp.server.system.service.InstallerDto;
 import com.lp.server.system.service.InstallerDtoAssembler;
 import com.lp.server.system.service.TheClientDto;
@@ -85,10 +93,11 @@ public class TheClientFacBean extends Facade implements TheClientFac {
 					theClientDto.getLocUiAsString(),
 					theClientDto.getLocMandantAsString(),
 					theClientDto.getLocKonzernAsString(),
-					theClientDto.getDLoggedin());
+					theClientDto.getDLoggedin(), theClientDto.getSystemrolleIId());
 			em.persist(theClient);
 			em.flush();
 			setTheClientFromTheClientDto(theClient, theClientDto);
+			updateUserCount(theClientDto.getSystemrolleIId());
 		}
 
 		catch (EntityExistsException ex) {
@@ -120,40 +129,43 @@ public class TheClientFacBean extends Facade implements TheClientFac {
 				if (theClient == null) {
 					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, "");
 				}
+				Integer systemrolleIId = theClient.getSystemrolleIId();
 				em.remove(theClient);
+				
+				updateUserCount(systemrolleIId);
 			}
-			// }
-			// catch (FinderException ex) {
-			// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, ex);
 		} catch (Exception ex) {
 			throw new EJBExceptionLP(ex);
 		}
 	}
 
-	public void removeTheClient(String cNr) throws EJBExceptionLP {
-		Theclient toRemove = em.find(Theclient.class, cNr);
-		if (toRemove == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
-		}
-		try {
-			em.remove(toRemove);
-			em.flush();
-		} catch (EntityExistsException er) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
-		}
-	}
+//	public void removeTheClient(String cNr) throws EJBExceptionLP, RemoteException {
+//		Theclient toRemove = em.find(Theclient.class, cNr);
+//		if (toRemove == null) {
+//			throw new EJBExceptionLP(
+//					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+//		}
+//		try {
+//			Integer systemrolleIId = toRemove.getSystemrolleIId();
+//			em.remove(toRemove);
+//			em.flush();
+//			updateUserCount(systemrolleIId);
+//		} catch (EntityExistsException er) {
+//			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+//		}
+//	}
 
-	public void removeTheClient(TheClientDto theClientDto)
-			throws EJBExceptionLP {
-		if (theClientDto != null) {
-			String cNr = theClientDto.getIDUser();
-			removeTheClient(cNr);
-		}
-	}
+//	public void removeTheClient(TheClientDto theClientDto)
+//			throws EJBExceptionLP, RemoteException {
+//		if (theClientDto != null) {
+//			String cNr = theClientDto.getIDUser();
+//			removeTheClient(cNr);
+//			updateUserCount(theClientDto.getSystemrolleIId());
+//		}
+//	}
 
 	public void updateTheClient(TheClientDto theClientDto)
-			throws EJBExceptionLP {
+			throws EJBExceptionLP, RemoteException {
 		if (theClientDto != null) {
 			String cNr = theClientDto.getIDUser();
 			Theclient theClient = em.find(Theclient.class, cNr);
@@ -162,11 +174,66 @@ public class TheClientFacBean extends Facade implements TheClientFac {
 						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			setTheClientFromTheClientDto(theClient, theClientDto);
+			updateUserCount(theClientDto.getSystemrolleIId());
 		}
+	}
+	
+	protected void updateUserCount(Integer systemrolleIId) throws EJBExceptionLP, RemoteException {
+		/*
+		 * Beim Uebergang vom alten auf das neue Benutzerzaehlersystem
+		 * kann es vorkommen, dass keine systemrolle gesetzt ist. Deshalb
+		 * wird in einem solchen Fall kein Benutzerzaehler abgeaendert.
+		 */
+		if(systemrolleIId == null) return ;
+		
+		Integer maxUsers = getBenutzerFac().systemrolleFindByPrimaryKey(systemrolleIId).getIMaxUsers();
+		LpUserCount userCount = new LpUserCount();
+		Integer anzahl = (maxUsers == null ? getUserCountMandant() : getUserCountRolle(systemrolleIId));
+		userCount.setIAnzahl(anzahl);
+		userCount.setSystemrolleIId(systemrolleIId);
+		userCount.setTZeitpunkt(getTimestamp());
+		em.persist(userCount);
+		em.flush();
+	}
+	
+
+	/**
+	 * Z&auml;hlt die angemeldeten Benutzer in einer Systemrolle am heutigen Tag ab 00:00 Uhr.
+	 * Ob diese Rolle auch einen eigenen UserCounter hat, wird hier nicht gepr&uuml;ft.
+	 * @param systemrolleIId
+	 * @return die Anzahl der angemeldeten Benutzer
+	 */
+	protected Integer getUserCountRolle(Integer systemrolleIId) {
+		Session session = FLRSessionFactory.getFactory().openSession();
+		java.sql.Timestamp today = Helper.cutTimestamp(getTimestamp());
+		Criteria c = session.createCriteria(FLRTheClient.class);
+		c.createCriteria("flrsystemrolle").add(Restrictions.eq("i_id", systemrolleIId));
+		c.add(Restrictions.isNull("t_loggedout"))
+			.add(Restrictions.ge("t_loggedin", today))
+			.add(Restrictions.not(Restrictions.like("c_benutzername", "lpwebappzemecs|%")))
+			.setProjection(Projections.countDistinct("c_benutzername"));;
+		return (Integer) c.list().get(0);
+	}
+	
+	/**
+	 * Z&auml;hlt die angemeldeten Benutzer am heutigen Tag ab 00:00 Uhr, welche nicht eine Systemrolle mit eigenem UserCounter
+	 * haben.
+	 * @return die Anzahl der angemeldeten Benutzer.
+	 */
+	protected Integer getUserCountMandant() {
+		
+		Session session = FLRSessionFactory.getFactory().openSession();
+		java.sql.Timestamp today = Helper.cutTimestamp(getTimestamp());
+		Criteria c = session.createCriteria(FLRTheClient.class);
+		c.createCriteria("flrsystemrolle").add(Restrictions.isNull("i_max_users"));
+		c.add(Restrictions.isNull("t_loggedout"))
+			.add(Restrictions.ge("t_loggedin", today))
+			.setProjection(Projections.countDistinct("c_benutzername"));
+		return (Integer) c.list().get(0);
 	}
 
 	public void updateTheClients(TheClientDto[] theClientDtos)
-			throws EJBExceptionLP {
+			throws EJBExceptionLP, RemoteException {
 		if (theClientDtos != null) {
 			for (int i = 0; i < theClientDtos.length; i++) {
 				updateTheClient(theClientDtos[i]);
@@ -176,12 +243,16 @@ public class TheClientFacBean extends Facade implements TheClientFac {
 
 	public TheClientDto theClientFindByPrimaryKey(String cNrUserI)
 			throws EJBExceptionLP {
-		Theclient client = em.find(Theclient.class, cNrUserI);
-		if (client == null) {
+		TheClientDto theClient = theClientFindByPrimaryKeyOhneExc(cNrUserI);
+		if(theClient == null)
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, "");
-		}
-		
-		return loadClientDto(client) ;
+		return theClient;
+	}
+
+	public TheClientDto theClientFindByPrimaryKeyOhneExc(String cNrUserI)
+			throws EJBExceptionLP {
+		Theclient client = em.find(Theclient.class, cNrUserI);
+		return client == null ? null : loadClientDto(client) ;
 	}
 
 	private TheClientDto loadClientDto(Theclient theClient) {
@@ -225,8 +296,7 @@ public class TheClientFacBean extends Facade implements TheClientFac {
 			Query query = em
 					.createNamedQuery("TheClientfindByCBenutzernameLoggedIn");
 			query.setParameter(1, cBenutzername);
-			query.setParameter(2, Helper.cutTimestamp(new java.sql.Timestamp(
-					System.currentTimeMillis())));
+			query.setParameter(2, Helper.cutTimestamp(getTimestamp()));
 			query.setMaxResults(1);
 			theclient = (Theclient) query.getSingleResult();
 		} catch (NoResultException e) {
@@ -250,6 +320,7 @@ public class TheClientFacBean extends Facade implements TheClientFac {
 		theclient.setTLoggedout(theClientDto.getTsLoggedout());
 		theclient.setCMandantwaehrung(theClientDto.getSMandantenwaehrung());
 		theclient.setIStatus(theClientDto.getIStatus());
+		theclient.setSystemrolleIId(theClientDto.getSystemrolleIId());
 		em.merge(theclient);
 		em.flush();
 	}
@@ -401,4 +472,37 @@ public class TheClientFacBean extends Facade implements TheClientFac {
 		return (InstallerDto[]) list.toArray(returnArray);
 	}
 
+
+	@Override
+	public int logoutAllClients(boolean remove) throws EJBExceptionLP {
+		int removedSessions = 0 ;
+		
+		myLogger.warn("Beginne alle noch angemeldeten Benutzer abzumelden") ;
+		try {
+			HvTypedQuery<Theclient> currentUsers = new HvTypedQuery<Theclient>(
+					em.createNamedQuery("TheClientfindLoggedIn")) ;
+			List<Theclient> users = currentUsers.getResultList() ;
+
+			myLogger.warn("Es gibt " + users.size() + " angemeldete Benutzer") ;
+			
+			Timestamp logoutTimestamp = getTimestamp() ;
+			for (Theclient theclient : users) {
+				Integer rolleId = theclient.getSystemrolleIId();
+				if(remove) {
+					em.remove(theclient);
+				} else {
+					theclient.setTLoggedout(logoutTimestamp);
+					em.merge(theclient) ;
+				}
+				updateUserCount(rolleId);
+				++removedSessions ;
+			}
+			
+			myLogger.warn("Ende alle noch angemeldeten Benutzer abzumelden") ;
+			
+			return removedSessions ;
+		} catch(Exception e) {
+			throw new EJBExceptionLP(e) ;
+		}
+	}
 }

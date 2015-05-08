@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -109,6 +109,16 @@ public class Anfrage implements Serializable {
 	@Column(name = "ANFRAGE_I_ID_LIEFERGRUPPENANFRAGE")
 	private Integer anfrageIIdLiefergruppenanfrage;
 
+	@Column(name = "ANFRAGEERLEDIGUNGSGRUND_I_ID")
+	private Integer anfrageerledigungsgrundIId;
+	
+	public Integer getAnfrageerledigungsgrundIId() {
+		return anfrageerledigungsgrundIId;
+	}
+
+	public void setAnfrageerledigungsgrundIId(Integer anfrageerledigungsgrundIId) {
+		this.anfrageerledigungsgrundIId = anfrageerledigungsgrundIId;
+	}
 	@Column(name = "ANFRAGEART_C_NR")
 	private String anfrageartCNr;
 

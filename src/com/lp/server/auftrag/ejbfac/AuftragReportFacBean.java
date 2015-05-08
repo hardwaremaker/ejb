@@ -1,33 +1,33 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.auftrag.ejbfac;
@@ -54,6 +54,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
@@ -87,11 +88,12 @@ import com.lp.server.artikel.service.ArtikelkommentarDto;
 import com.lp.server.artikel.service.ArtikellieferantDto;
 import com.lp.server.artikel.service.ArtikelsprDto;
 import com.lp.server.artikel.service.ArtklaDto;
+import com.lp.server.artikel.service.HandlagerbewegungDto;
 import com.lp.server.artikel.service.LagerDto;
 import com.lp.server.artikel.service.LagerFac;
 import com.lp.server.artikel.service.LagerabgangursprungDto;
+import com.lp.server.artikel.service.LagerbewegungDto;
 import com.lp.server.artikel.service.MaterialDto;
-import com.lp.server.artikel.service.MaterialzuschlagDto;
 import com.lp.server.artikel.service.VerkaufspreisDto;
 import com.lp.server.artikel.service.VerleihDto;
 import com.lp.server.artikel.service.VkpreisfindungDto;
@@ -103,6 +105,9 @@ import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragpositionOD;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragpositionOP;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragpositionReport;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragseriennrn;
+import com.lp.server.auftrag.fastlanereader.generated.FLRZahlungsplan;
+import com.lp.server.auftrag.fastlanereader.generated.FLRZahlungsplanmeilenstein;
+import com.lp.server.auftrag.fastlanereader.generated.FLRZeitplan;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragFac;
 import com.lp.server.auftrag.service.AuftragNachkalkulationDto;
@@ -122,9 +127,11 @@ import com.lp.server.auftrag.service.ReportAuftragVerfuegbarkeitDto;
 import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungAuftragszuordnungDto;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosReport;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.fertigung.service.LosablieferungDto;
+import com.lp.server.fertigung.service.LosistmaterialDto;
 import com.lp.server.fertigung.service.LossollarbeitsplanDto;
 import com.lp.server.fertigung.service.LossollmaterialDto;
 import com.lp.server.fertigung.service.ReportLosnachkalkulationDto;
@@ -147,10 +154,13 @@ import com.lp.server.personal.service.MaschineDto;
 import com.lp.server.personal.service.PersonalDto;
 import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.personal.service.PersonalgehaltDto;
+import com.lp.server.personal.service.ReiseDto;
+import com.lp.server.personal.service.ReiseKomplettDto;
 import com.lp.server.projekt.service.ProjektDto;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungDtoAssembler;
 import com.lp.server.rechnung.service.RechnungFac;
+import com.lp.server.rechnung.service.RechnungPositionDto;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklisteeigenschaft;
 import com.lp.server.stueckliste.service.FertigungsgruppeDto;
 import com.lp.server.stueckliste.service.StuecklisteDto;
@@ -218,6 +228,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 		if (cAktuellerReport.equals(AuftragReportFac.REPORT_AUFTRAG_OFFENE)) {
 			if ("Auftragcnr".equals(fieldName)) {
 				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_AUFTRAGCNR];
+			} else if ("F_AUFTRAGSART".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_AUFTRAGSART];
 			} else if ("F_KUNDE".equals(fieldName)) {
 				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_AUFTRAGKUNDE];
 			} else if ("F_VERTRETER".equals(fieldName)) {
@@ -375,6 +387,46 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				value = data[index][AuftragReportFac.REPORT_TAETIGKEITSSTATISTIK_WEITERE_ARTIKELNUMMERN];
 			}
 		} else if (cAktuellerReport
+				.equals(AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT)) {
+			if ("Arbeitszeit".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_ARBEITSZEIT];
+			} else if ("Artikelnummer".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_ARTIKELNUMMER];
+			} else if ("AZBis".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_AZ_BIS];
+			} else if ("AZDauer".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_AZ_DAUER];
+			} else if ("AZPerson".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_AZ_PERSON];
+			} else if ("AZVon".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_AZ_VON];
+			} else if ("Artikelbezeichnung".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_BEZEICHNUNG];
+			} else if ("Einheit".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_EINHEIT];
+			} else if ("Istmenge".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_ISTMENGE];
+			} else if ("Lieferschein".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_LIEFERSCHEIN];
+			} else if ("Nettopreis".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_NETTOPREIS];
+			} else if ("NichtZugeordnet".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_NICHT_ZUGEORDNET];
+			} else if ("Rechnung".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_RECHNUNG];
+			} else if ("Sollmenge".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_SOLLMENGE];
+			} else if ("Artikelzusatzbezeichnung".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_ZUSATZBEZEICHNUNG];
+			} else if ("AZPersonKurzzeichen".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_AZ_PERSON_KURZZEICHEN];
+			} else if ("Liefertermin".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_LIEFERTERMIN];
+			} else if ("Belegdatum".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_BELEGDATM];
+			}
+
+		} else if (cAktuellerReport
 				.equals(AuftragReportFac.REPORT_RAHMENUEBERSICHT)) {
 			if ("Artikelnummer".equals(fieldName)) {
 				value = data[index][AuftragReportFac.REPORT_RAHMENUEBERSICHT_ARTIKELNUMMER];
@@ -400,6 +452,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				value = data[index][AuftragReportFac.REPORT_RAHMENUEBERSICHT_PREIS];
 			} else if ("Rechnung".equals(fieldName)) {
 				value = data[index][AuftragReportFac.REPORT_RAHMENUEBERSICHT_RECHNUNG];
+			} else if ("Storniert".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_RAHMENUEBERSICHT_STORNIERT];
 			}
 		} else if (cAktuellerReport
 				.equals(AuftragReportFac.REPORT_AUFTRAGSTATISTIK)) {
@@ -499,6 +553,32 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				value = data[index][AuftragReportFac.REPORT_STATISTIK_RECHNUNGSNUMMER_LS_VERRECHNET];
 			} else if ("Rechnungsart".equals(fieldName)) {
 				value = data[index][AuftragReportFac.REPORT_STATISTIK_RECHNUNGSART];
+			} else if ("ReisePartner".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_STATISTIK_REISE_PARTNER];
+			} else if ("ReiseKommentar".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_STATISTIK_REISE_KOMMENTAR];
+			} else if ("ReiseMitarbeiter".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_STATISTIK_REISE_MITARBEITER];
+			} else if ("ReiseVon".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_STATISTIK_REISE_VON];
+			} else if ("ReiseBis".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_STATISTIK_REISE_BIS];
+			} else if ("ErEingangsrechnungsart".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_STATISTIK_ER_EINGANGSRECHNUNGSART];
+			} else if ("ErAuftragszuordnungKeineAuftragswertung"
+					.equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_STATISTIK_ER_AUFTRAGSZUORDNUNG_KEINE_AUFTRAGSWERTUNG];
+			} else if ("LosnummerLiQuelle".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_STATISTIK_LOSNUMMER_LI_QUELLE];
+			} else if ("Zahlbetrag".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_STATISTIK_ZAHLBETRAG];
+			} else if ("Belegstatus".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_STATISTIK_BELEGSTATUS];
+			} else if ("ErSchlussrechnungNr".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_STATISTIK_ER_SCHLUSSRECHNUNG_NR];
+				// } else if ("DiaetenAusScript".equals(fieldName)) {
+				// value =
+				// data[index][AuftragReportFac.REPORT_STATISTIK_DIAETENAUSSCRIPT];
 			}
 
 		}
@@ -554,6 +634,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_DETAILS_EXTERNERKOMMENTAR];
 			} else if ("F_POSITIONSTERMIN".equals(fieldName)) {
 				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_DETAILS_POSITIONSTERMIN];
+			} else if ("F_POSITIONSTERMIN_OHNE_LIEFERDAUER".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_DETAILS_POSITIONSTERMIN_OHNE_LIEFERDAUER];
 			} else if ("F_ARTIKELLAGERSTAND".equals(fieldName)) {
 				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_DETAILS_ARTIKELLAGERSTAND];
 			} else if ("F_KUNDEAUFTRAGADRESSE".equals(fieldName)) {
@@ -840,7 +922,16 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				value = data[index][REPORT_AUFTRAGBESTAETIGUNG_ZWSNETTOSUMME];
 			} else if ("F_ZWSTEXT".equals(fieldName)) {
 				value = data[index][REPORT_AUFTRAGBESTAETIGUNG_ZWSTEXT];
+			} else if ("F_ZWSPOSPREISDRUCKEN".equals(fieldName)) {
+				value = data[index][REPORT_AUFTRAGBESTAETIGUNG_ZWSPOSPREISDRUCKEN];
+			} else if ("F_RAHMENMENGE".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_RAHMENMENGE];
+			} else if ("F_ABGERUFENE_MENGE".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_ABGERUFENE_MENGE];
+			} else if ("F_LETZTER_ABRUF".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_LETZTER_ABRUF];
 			}
+
 		} else if (cAktuellerReport
 				.equals(AuftragReportFac.REPORT_AUFTRAG_PACKLISTE)
 				|| cAktuellerReport
@@ -917,6 +1008,10 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				value = data[index][AuftragReportFac.REPORT_PACKLISTE_VERPACKUNGSMENGE];
 			} else if ("F_ARBEITSGAENGE".equals(fieldName)) {
 				value = data[index][AuftragReportFac.REPORT_PACKLISTE_ARBEITSGAENGE];
+			} else if ("F_MENGENTEILER".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_PACKLISTE_MENGENTEILER];
+			} else if ("F_POSITIONSSTATUS".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_PACKLISTE_POSITIONSSTATUS];
 			} else if ("F_SUBREPORT_DATA".equals(fieldName)) {
 				value = data[index][AuftragReportFac.REPORT_PACKLISTE_SUBREPORT_DATA];
 			}
@@ -958,6 +1053,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				.equals(AuftragReportFac.REPORT_AUFTRAG_OFFENE_OHNE_DETAILS)) {
 			if ("F_AUFTRAGSNUMMER".equals(fieldName)) {
 				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_AUFTRAGSNUMMER];
+			} else if ("F_AUFTRAGSART".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_AUFTRAGSART];
 			} else if ("F_KUNDE".equals(fieldName)) {
 				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_KUNDE];
 			} else if ("F_INTERNERKOMMENTAR".equals(fieldName)) {
@@ -988,7 +1085,12 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_ZEIT_VERRECHENBAR];
 			} else if ("F_PERSON_VERRECHENBAR".equals(fieldName)) {
 				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_PERSON_VERRECHENBAR];
+			} else if ("F_RAHMENWERTOFFEN".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_RAHMENWERTOFFEN];
+			} else if ("F_RAHMENAUFTRAG".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_RAHMENAUFTRAG];
 			}
+
 		} else if (cAktuellerReport
 				.equals(AuftragReportFac.REPORT_AUFTRAG_TEIL_LIEFERBAR)) {
 			if ("F_AUFTRAGSNUMMER".equals(fieldName)) {
@@ -1050,6 +1152,10 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				value = data[index][AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_SUMME_SOLLZEITEN];
 			} else if ("F_SETARTIKEL_TYP".equals(fieldName)) {
 				value = data[index][AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_SETARTIKEL_TYP];
+			} else if ("F_STKL_EBENE".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_STKL_EBENE];
+			} else if ("F_GESAMT_WIEDERBESCHAFFUNGSZEIT".equals(fieldName)) {
+				value = data[index][AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_GESAMT_WIEDERBESCHAFFUNGSZEIT];
 			}
 		} else if (cAktuellerReport
 				.equals(AuftragReportFac.REPORT_AUFTRAG_ROLLIERENDEPLANUNG)) {
@@ -1310,6 +1416,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				value = data[index][AuftragReportFac.REPORT_ERLEDIGT_BESTELLNUMMER];
 			}
 		}
+
 		return value;
 	}
 
@@ -1427,6 +1534,13 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 					.getDLiefertermin();
 			oZeile[AuftragReportFac.REPORT_RAHMENUEBERSICHT_MENGE] = auftragpositionDto
 					.getNMenge();
+
+			Boolean bStorniert = false;
+			if (auftragDto.getStatusCNr().equals(LocaleFac.STATUS_STORNIERT)) {
+				bStorniert = true;
+			}
+			oZeile[AuftragReportFac.REPORT_RAHMENUEBERSICHT_STORNIERT] = bStorniert;
+
 			oZeile[AuftragReportFac.REPORT_RAHMENUEBERSICHT_PREIS] = auftragpositionDto
 					.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte();
 
@@ -1479,12 +1593,19 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 
 					oZeile[AuftragReportFac.REPORT_RAHMENUEBERSICHT_MENGE] = lsPosDto
 							.getNMenge();
+
 					oZeile[AuftragReportFac.REPORT_RAHMENUEBERSICHT_PREIS] = lsPosDto
 							.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte();
 
 					LieferscheinDto lsDto = getLieferscheinFac()
 							.lieferscheinFindByPrimaryKey(
 									lsPosDto.getLieferscheinIId());
+
+					Boolean bStorniertLS = false;
+					if (lsDto.getStatusCNr().equals(LocaleFac.STATUS_STORNIERT)) {
+						bStorniertLS = true;
+					}
+					oZeile[AuftragReportFac.REPORT_RAHMENUEBERSICHT_STORNIERT] = bStorniertLS;
 
 					oZeile[AuftragReportFac.REPORT_RAHMENUEBERSICHT_LIEFERSCHEIN] = lsDto
 							.getCNr();
@@ -1526,10 +1647,14 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 	public JasperPrintLP printAuftragOffene(ReportJournalKriterienDto krit,
 			Date dStichtag, Boolean bSortierungNachLiefertermin,
 			Boolean bInternenKommentarDrucken, Integer iArt,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			Integer iArtUnverbindlich, boolean bMitAngelegten,
+			boolean bStichtagGreiftBeiLiefertermin, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		JasperPrintLP oPrintO = null;
 		cAktuellerReport = AuftragReportFac.REPORT_AUFTRAG_OFFENE;
+		// die Parameter dem Report uebergeben
+		HashMap<String, Object> mapParameter = new HashMap<String, Object>();
 
 		Locale locDruck = null;
 
@@ -1539,6 +1664,15 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 		dStichtag = Helper.cutDate(dStichtag);
 
 		try {
+
+			ParametermandantDto parametermandantDto = getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ANGEBOT,
+							ParameterFac.PARAMETER_LIEFERANT_ANGEBEN);
+
+			boolean bLieferantAngeben = (Boolean) parametermandantDto
+					.getCWertAsObject();
+
 			session = factory.openSession();
 			// Hiberante Criteria fuer alle Tabellen ausgehend von meiner
 			// Haupttabelle anlegen,
@@ -1554,16 +1688,46 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 					"a." + AuftragFac.FLR_AUFTRAG_MANDANT_C_NR,
 					theClientDto.getMandant()));
 			// Einschraenkung nach Auftragart
-			// Collection<String> cArt = null;
+
 			if (iArt != null) {
 				if (iArt == 1) {
 					crit.add(Restrictions.ne("a."
 							+ AuftragFac.FLR_AUFTRAG_AUFTRAGART_C_NR,
 							AuftragServiceFac.AUFTRAGART_RAHMEN));
+					mapParameter.put(
+							"P_ART_RAHMENAUFTRAEGE",
+							getTextRespectUISpr(
+									"auft.journal.ohnerahmenauftraege",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()));
 				} else if (iArt == 2) {
 					crit.add(Restrictions.eq("a."
 							+ AuftragFac.FLR_AUFTRAG_AUFTRAGART_C_NR,
 							AuftragServiceFac.AUFTRAGART_RAHMEN));
+					mapParameter.put(
+							"P_ART_RAHMENAUFTRAEGE",
+							getTextRespectUISpr(
+									"auft.journal.nurrahmenauftraege",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()));
+				}
+			}
+
+			mapParameter.put("P_ART_UNVERBINDLICH", iArtUnverbindlich);
+
+			if (iArtUnverbindlich != AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTUNVERBINDLICH_ALLE) {
+				if (iArtUnverbindlich == AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTUNVERBINDLICH_NUR_UNVERBINDLICHE) {
+					crit.add(Restrictions
+							.eq("a."
+									+ AuftragFac.FLR_AUFTRAG_B_LIEFERTERMINUNVERBINDLICH,
+									Helper.boolean2Short(true)));
+
+				} else if (iArtUnverbindlich == AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTUNVERBINDLICH_OHNE_UNVERBINDLICHE) {
+					crit.add(Restrictions
+							.eq("a."
+									+ AuftragFac.FLR_AUFTRAG_B_LIEFERTERMINUNVERBINDLICH,
+									Helper.boolean2Short(false)));
+
 				}
 			}
 
@@ -1579,7 +1743,11 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			// Einschraenkung nach Status Offen, Teilerledigt, Erledigt
 			Collection<String> cStati = new LinkedList<String>();
 			cStati.add(AuftragServiceFac.AUFTRAGSTATUS_OFFEN);
-			// cStati.add(AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT);
+
+			if (bMitAngelegten == true) {
+				cStati.add(AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT);
+			}
+
 			cStati.add(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
 			crit.add(Restrictions.in("a."
 					+ AuftragFac.FLR_AUFTRAG_AUFTRAGSTATUS_C_NR, cStati));
@@ -1587,17 +1755,45 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			// Das Belegdatum muss vor dem Stichtag liegen
 			crit.add(Restrictions.le(
 					"a." + AuftragFac.FLR_AUFTRAG_D_BELEGDATUM, dStichtag));
+			mapParameter.put("P_STICHTAG", dStichtag);
 
-			// Der Auftrag darf zum Stichtag noch nicht erledigt worden sein
-			crit.add(Restrictions.or(Restrictions.isNull("a."
-					+ AuftragFac.FLR_AUFTRAG_T_ERLEDIGT), Restrictions.gt("a."
-					+ AuftragFac.FLR_AUFTRAG_T_ERLEDIGT, dStichtag)));
+			if (bStichtagGreiftBeiLiefertermin) {
+				crit.add(Restrictions.or(
+						Restrictions
+								.isNull(AuftragpositionFac.FLR_AUFTRAGPOSITION_T_UEBERSTEUERTERLIEFERTERMIN),
+						Restrictions
+								.le(AuftragpositionFac.FLR_AUFTRAGPOSITION_T_UEBERSTEUERTERLIEFERTERMIN,
+										dStichtag)));
+				mapParameter.put(
+						"P_STICHTAG_ART",
+						getTextRespectUISpr(
+								"auft.report.offene.stichtag.liefertermin",
+								theClientDto.getMandant(),
+								theClientDto.getLocUi()));
+			} else {
+				// Der Auftrag darf zum Stichtag noch nicht erledigt worden sein
+				crit.add(Restrictions.or(
+						Restrictions.isNull("a."
+								+ AuftragFac.FLR_AUFTRAG_T_ERLEDIGT),
+						Restrictions.gt("a."
+								+ AuftragFac.FLR_AUFTRAG_T_ERLEDIGT, dStichtag)));
+
+				mapParameter.put(
+						"P_STICHTAG_ART",
+						getTextRespectUISpr(
+								"auft.report.offene.stichtag.erledigungsdatum",
+								theClientDto.getMandant(),
+								theClientDto.getLocUi()));
+			}
 
 			// Einschraenkung nach einer bestimmten Kostenstelle
 			if (krit.kostenstelleIId != null) {
 				crit.add(Restrictions.eq("a."
 						+ AuftragFac.FLR_AUFTRAG_KOSTENSTELLE_I_ID,
 						krit.kostenstelleIId));
+				mapParameter.put("P_KOSTENSTELLE", getSystemFac()
+						.kostenstelleFindByPrimaryKey(krit.kostenstelleIId)
+						.getCNr());
 			}
 
 			// Einschraenkung nach einem bestimmten Kunden
@@ -1605,12 +1801,22 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				crit.add(Restrictions.eq("a."
 						+ AuftragFac.FLR_AUFTRAG_KUNDE_I_ID_AUFTRAGSADRESSE,
 						krit.kundeIId));
+				mapParameter.put("P_KUNDE", getKundeFac()
+						.kundeFindByPrimaryKey(krit.kundeIId, theClientDto)
+						.getPartnerDto().getCName1nachnamefirmazeile1());
 			}
 			// Einschraenkung nach einem bestimmten Vertreter
 			if (krit.vertreterIId != null) {
 				crit.add(Restrictions.eq("a."
 						+ AuftragFac.FLR_AUFTRAG_VERTRETER_I_ID,
 						krit.vertreterIId));
+				mapParameter.put(
+						"P_VERTRETER",
+						getPersonalFac()
+								.personalFindByPrimaryKey(krit.vertreterIId,
+										theClientDto).getPartnerDto()
+								.getCName1nachnamefirmazeile1());
+
 			}
 			// Einschraenkung nach Belegdatum von - bis
 			String sVon = null;
@@ -1698,7 +1904,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 
 				data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_AUFTRAGCNR] = flrauftrag
 						.getC_nr();
-
+				data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_AUFTRAGSART] = flrauftrag
+						.getAuftragart_c_nr();
 				data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ZEIT_VERRECHENBAR] = flrauftrag
 						.getT_verrechenbar();
 				if (flrauftrag.getFlrpersonalverrechenbar() != null) {
@@ -1879,6 +2086,27 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 						.getGemittelterGestehungspreisDesHauptlagers(
 								item.getArtikel_i_id(), theClientDto);
 
+				if (bLieferantAngeben == true) {
+					if (item.getN_einkaufpreis() != null) {
+						bdGestehungspreis = item.getN_einkaufpreis();
+					} else {
+						ArtikellieferantDto alDto = getArtikelFac()
+								.getArtikelEinkaufspreis(
+										item.getArtikel_i_id(),
+										null,
+										item.getN_menge(),
+										theClientDto.getSMandantenwaehrung(),
+										new java.sql.Date(item.getFlrauftrag()
+												.getT_belegdatum().getTime()),
+										theClientDto);
+
+						if (alDto != null && alDto.getNNettopreis() != null) {
+							bdGestehungspreis = alDto.getNNettopreis();
+						}
+					}
+
+				}
+
 				if (darfVerkaufspreisSehen) {
 					data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTIKELGESTEHUNGSPREIS] = bdGestehungspreis;
 					data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_EINKAUFSPREIS] = item
@@ -1904,16 +2132,15 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 
 			}
 
-			// die Parameter dem Report uebergeben
-			HashMap<String, Object> mapParameter = new HashMap<String, Object>();
+			mapParameter.put("P_STICHTAG", dStichtag);
 
-			
-			mapParameter.put("P_STICHTAG",dStichtag);
-			
+			mapParameter.put("P_MIT_ANGELEGTEN", new Boolean(bMitAngelegten));
+
 			mapParameter.put(LPReport.P_SORTIERUNG,
 					buildSortierungAuftragOffene(krit, theClientDto));
 			mapParameter.put(LPReport.P_FILTER,
 					buildFilterAuftragOffene(krit, theClientDto));
+
 			mapParameter.put(LPReport.P_SORTIERENACHKOSTENSTELLE, new Boolean(
 					krit.bSortiereNachKostenstelle));
 			mapParameter
@@ -1947,277 +2174,216 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 		return oPrintO;
 	}
 
-	/**
-	 * Alle offenen Auftraege fuer einen bestimmten Mandanten drucken.
-	 * 
-	 * @param reportJournalKriterienDtoI
-	 *            die Filter- und Sortierkriterien
-	 * @param dStichtag
-	 *            Date
-	 * @param bSortierungNachLiefertermin
-	 *            Boolean
-	 * @param bInternenKommentarDrucken
-	 *            Boolean
-	 * @param theClientDto
-	 *            der aktuelle Benutzer
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
-	 * @return JasperPrint der Druck
-	 */
-	public JasperPrintLP printAuftragTeilLieferbar(
-			ReportJournalKriterienDto reportJournalKriterienDtoI,
-			Date dStichtag, Boolean bSortierungNachLiefertermin,
-			Boolean bInternenKommentarDrucken, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	// SP2709
+	private ArrayList<AuftragNachkalkulationDto> addZeileLI(
+			ArrayList<AuftragNachkalkulationDto> alDaten, LosDto losDto,
+			AuftragDto auftragDto, LossollmaterialDto[] lossollmaterialDtos,
+			java.sql.Timestamp tStichtag, TheClientDto theClientDto) {
 
-		if (reportJournalKriterienDtoI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("reportJournalKriterienDtoI == null"));
-		}
+		for (int k = 0; k < lossollmaterialDtos.length; k++) {
+			LossollmaterialDto lossollmaterialDto = lossollmaterialDtos[k];
 
-		if (dStichtag == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("dStichtag == null"));
-		}
+			if (lossollmaterialDto.getArtikelIId() != null) {
 
-		JasperPrintLP oPrintO = null;
-		cAktuellerReport = AuftragReportFac.REPORT_AUFTRAG_TEIL_LIEFERBAR;
+				StuecklisteDto stklDto = getStuecklisteFac()
+						.stuecklisteFindByMandantCNrArtikelIIdOhneExc(
+								lossollmaterialDto.getArtikelIId(),
+								theClientDto);
 
-		try {
-			// die Liste aller offenen Auftraege entsprechend den Kriterien
-			// zusammenstellen
-			ReportAuftragOffeneDto[] aReportAuftragOffeneDto = getListeReportAuftragTeilLieferbar(
-					reportJournalKriterienDtoI, dStichtag,
-					bSortierungNachLiefertermin, theClientDto);
+				if (stklDto != null) {
 
-			// wieviele Zeilen wird der Report haben?
-			int iAnzahlZeilen = 0;
+					try {
+						LosistmaterialDto[] istmatDtos = getFertigungFac()
+								.losistmaterialFindByLossollmaterialIId(
+										lossollmaterialDto.getIId());
 
-			for (int i = 0; i < aReportAuftragOffeneDto.length; i++) {
-				iAnzahlZeilen++; // plus 1 Zeile pro Auftrag fuer die Kopfdaten
+						for (int i = 0; i < istmatDtos.length; i++) {
 
-				// plus 1..n Zeilen pro Auftrag fuer die Auftragpositionen
-				iAnzahlZeilen += getAuftragpositionFac()
-						.auftragpositionFindByAuftragOffeneMenge(
-								aReportAuftragOffeneDto[i].getIIdAuftrag()).length;
-			}
+							LosistmaterialDto istmatDto = istmatDtos[i];
 
-			data = new Object[iAnzahlZeilen][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ANZAHL_SPALTEN];
+							if (istmatDto.getNMenge().doubleValue() != 0) {
 
-			AuftragDto oAuftragDto = null; // der aktuelle Auftrag
-			KostenstelleDto kostenstelleDto = null;
-			KundeDto kundeDto = null;
-			AuftragpositionDto[] aPositionDtos = null; // die Positionen zu dem
-			// aktuellen Auftrag
+								// Ursprung holen
 
-			int indexCurrentAuftrag = 0;
+								Session session = FLRSessionFactory
+										.getFactory().openSession();
 
-			// die Datenmatrix pro Auftrag befuellen; alle Felder, die nicht
-			// explizit besetzt werden, sind null
-			for (int i = 0; i < iAnzahlZeilen; i++) {
+								String sQuery = "select distinct lagerbewegung.i_id_buchung from FLRLagerbewegung lagerbewegung WHERE lagerbewegung.c_belegartnr='Los' AND lagerbewegung.i_belegartpositionid="
+										+ istmatDto.getIId();
 
-				if (oAuftragDto == null) {
-					oAuftragDto = getAuftragFac().auftragFindByPrimaryKey(
-							aReportAuftragOffeneDto[indexCurrentAuftrag]
-									.getIIdAuftrag());
-					indexCurrentAuftrag++;
+								// SP2943
+								if (tStichtag != null) {
+									sQuery += " AND lagerbewegung.t_buchungszeit<='"
+											+ Helper.formatTimestampWithSlashes(tStichtag)
+											+ "'";
+								}
 
-					kostenstelleDto = getSystemFac()
-							.kostenstelleFindByPrimaryKey(
-									oAuftragDto.getKostIId());
+								Query inventurliste = session
+										.createQuery(sQuery);
+								List<?> resultList = inventurliste.list();
+								Iterator<?> resultListIterator = resultList
+										.iterator();
+								while (resultListIterator.hasNext()) {
+									Integer o = (Integer) resultListIterator
+											.next();
 
-					kundeDto = getKundeFac().kundeFindByPrimaryKey(
-							oAuftragDto.getKundeIIdAuftragsadresse(),
-							theClientDto);
+									alDaten.addAll(holeUrsprungslose(losDto,
+											auftragDto, theClientDto, o));
+								}
+								session.close();
 
-					aPositionDtos = getAuftragpositionFac()
-							.auftragpositionFindByAuftragOffeneMenge(
-									oAuftragDto.getIId());
-
-					data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_AUFTRAGCNR] = oAuftragDto
-							.getCNr();
-					data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_AUFTRAGKUNDE] = kundeDto
-							.getPartnerDto().getCName1nachnamefirmazeile1();
-					data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_KOSTENSTELLECNR] = kostenstelleDto
-							.getCNr();
-					data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_AUFTRAGLIEFERTERMIN] = Helper
-							.formatDatum(Helper.extractDate(oAuftragDto
-									.getDLiefertermin()), theClientDto
-									.getLocUi());
-					data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_AUFTRAGFINALTERMIN] = Helper
-							.formatDatum(Helper.extractDate(oAuftragDto
-									.getDFinaltermin()), theClientDto
-									.getLocUi());
-
-					// Zahlungsziel zum Andrucken
-					String sZahlungsziel = null;
-
-					if (oAuftragDto.getZahlungszielIId() != null) {
-						if (sZahlungsziel == null) {
-							ZahlungszielDto oDto = getMandantFac()
-									.zahlungszielFindByPrimaryKey(
-											oAuftragDto.getZahlungszielIId(),
-											theClientDto);
-
-							sZahlungsziel = oDto.getCBez();
+							}
 						}
+
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
 					}
 
-					data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_AUFTRAGZAHLUNGSZIEL] = sZahlungsziel;
-					data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_AUFTRAGPROJEKTBEZEICHNUNG] = oAuftragDto
-							.getCBezProjektbezeichnung();
-					if (bInternenKommentarDrucken.booleanValue()) {
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_INTERNERKOMMENTAR] = oAuftragDto
-								.getXInternerkommentar();
-					} else {
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_INTERNERKOMMENTAR] = "";
-					}
-					i++; // in die naechste Zeile vorruecken
 				}
 
-				// jetzt die Positionen in das Array fuellen
-				for (int j = 0; j < aPositionDtos.length; j++) {
-					AuftragpositionDto oPositionDto = aPositionDtos[j];
+			}
 
-					// nur mengenbehaftete Positionen beruecksichtigen
-					if (oPositionDto.getNMenge() != null) {
-						ArtikelDto oArtikelDto = getArtikelFac()
-								.artikelFindByPrimaryKey(
-										aPositionDtos[j].getArtikelIId(),
-										theClientDto);
+		}
 
-						String artikelCNr;
+		return alDaten;
+	}
 
-						/**
-						 * @todo boeser Workaround ... PJ 3779
-						 */
-						if (oArtikelDto.getCNr().startsWith("~")) {
-							artikelCNr = AngebotReportFac.REPORT_VORKALKULATION_ZEICHEN_FUER_HANDEINGABE;
-						} else {
-							artikelCNr = oArtikelDto.getCNr();
+	private ArrayList<AuftragNachkalkulationDto> holeUrsprungslose(
+			LosDto losDto, AuftragDto auftragDto, TheClientDto theClientDto,
+			Integer o) throws RemoteException {
+		LagerabgangursprungDto[] dtos = getLagerFac()
+				.lagerabgangursprungFindByLagerbewegungIIdBuchung(o);
+
+		ArrayList<AuftragNachkalkulationDto> alDaten = new ArrayList<AuftragNachkalkulationDto>();
+
+		// Fuer jeden Lagerabgangs- Ursprung, der
+		// aus einem
+		// Los
+		// kommt, einen zusaetzlichen eintrag
+		// anlegen
+		for (int j = 0; j < dtos.length; j++) {
+			// aber nur wenn verbrauchte menge
+			// grosser 0
+			LagerabgangursprungDto dto = dtos[j];
+			if (dto.getNVerbrauchtemenge().doubleValue() != 0) {
+
+				Session session2 = FLRSessionFactory.getFactory().openSession();
+				String sQuery2 = "from FLRLagerbewegung lagerbewegung WHERE lagerbewegung.i_id_buchung="
+						+ dto.getILagerbewegungidursprung()
+						+ " AND lagerbewegung.b_historie=0  order by lagerbewegung.t_buchungszeit DESC";
+				Query ursrungsbuchung = session2.createQuery(sQuery2);
+				ursrungsbuchung.setMaxResults(1);
+
+				List<?> resultList2 = ursrungsbuchung.list();
+
+				com.lp.server.artikel.fastlanereader.generated.FLRLagerbewegung lagerbewegung_ursprung = (com.lp.server.artikel.fastlanereader.generated.FLRLagerbewegung) resultList2
+						.iterator().next();
+
+				if (lagerbewegung_ursprung.getC_belegartnr().equals(
+						LocaleFac.BELEGART_HAND)) {
+					HandlagerbewegungDto handlagerbewegungDto = getLagerFac()
+							.getZugehoerigeUmbuchung(
+									lagerbewegung_ursprung
+											.getI_belegartpositionid(),
+									theClientDto);
+
+					if (handlagerbewegungDto != null
+							&& Helper.short2boolean(handlagerbewegungDto
+									.getBAbgang())) {
+
+						String cSnrChnr = null;
+
+						if (handlagerbewegungDto.getSeriennrChargennrMitMenge() != null
+								&& handlagerbewegungDto
+										.getSeriennrChargennrMitMenge().size() > 0) {
+							cSnrChnr = handlagerbewegungDto
+									.getSeriennrChargennrMitMenge().get(0)
+									.getCSeriennrChargennr();
 						}
 
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTIKELCNR] = artikelCNr;
+						LagerbewegungDto lbewDto = getLagerFac()
+								.getLetzteintrag(LocaleFac.BELEGART_HAND,
+										handlagerbewegungDto.getIId(), cSnrChnr);
 
-						String cArtikelBezeichnung = "";
+						alDaten.addAll(holeUrsprungslose(losDto, auftragDto,
+								theClientDto, lbewDto.getIIdBuchung()));
 
-						if (oPositionDto.getPositionsartCNr().equals(
-								AuftragServiceFac.AUFTRAGPOSITIONART_IDENT)
-								|| oPositionDto
-										.getPositionsartCNr()
-										.equals(AuftragServiceFac.AUFTRAGPOSITIONART_HANDEINGABE)) {
-							cArtikelBezeichnung = getArtikelFac()
-									.baueArtikelBezeichnungMehrzeiligOhneExc(
-											oArtikelDto.getIId(),
-											oPositionDto.getPositionsartCNr(),
-											oPositionDto.getCBez(),
-											oPositionDto.getCZusatzbez(),
-											false, null, theClientDto);
-							// Lagerstand
-							BigDecimal bdLagerstand = getLagerFac()
-									.getLagerstandAllerLagerEinesMandanten(
-											oArtikelDto.getIId(), theClientDto);
-							data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTIKELLAGERSTAND] = bdLagerstand;
-						}
-
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTIKELBEZEICHNUNG] = cArtikelBezeichnung;
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTIKELMENGE] = oPositionDto
-								.getNMenge();
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTIKELEINHEIT] = oPositionDto
-								.getEinheitCNr() == null ? null : oPositionDto
-								.getEinheitCNr().trim();
-
-						// Positionspreise sind in Belegwaehrung abgelegt
-						BigDecimal nPreisInBelegwaehrung = oPositionDto
-								.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte();
-
-						nPreisInBelegwaehrung = getBetragMalWechselkurs(
-								nPreisInBelegwaehrung,
-								Helper.getKehrwert(new BigDecimal(
-										oAuftragDto
-												.getFWechselkursmandantwaehrungzubelegwaehrung()
-												.doubleValue())));
-
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTIKELNETTOGESAMTPREISPLUSVERSTECKTERAUFSCHLAGMINUSRABATTE] = nPreisInBelegwaehrung;
-
-						// Grundlage ist der Gestehungspreis des Artikels am
-						// Hauptlager des Mandanten
-						BigDecimal bdGestehungspreis = getLagerFac()
-								.getGemittelterGestehungspreisDesHauptlagers(
-										oPositionDto.getArtikelIId(),
-										theClientDto);
-
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTIKELGESTEHUNGSPREIS] = bdGestehungspreis;
-
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTIKELGELIEFERTEMENGE] = oPositionDto
-								.getNMenge().subtract(
-										oPositionDto.getNOffeneMenge());
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTIKELOFFENEMENGE] = oPositionDto
-								.getNOffeneMenge();
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTIKELOFFENERWERT] = oPositionDto
-								.getNOffeneMenge().multiply(
-										nPreisInBelegwaehrung);
-
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTIKELOFFENERDB] = oPositionDto
-								.getNOffeneMenge().multiply(bdGestehungspreis);
-
-						// die Positionen brauchen alle Attribute, nach denen im
-						// Report gruppiert wird
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_AUFTRAGCNR] = oAuftragDto
-								.getCNr();
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_KOSTENSTELLECNR] = kostenstelleDto
-								.getCNr();
-						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_AUFTRAGKUNDE] = kundeDto
-								.getPartnerDto().getCName1nachnamefirmazeile1();
-
-						i++; // in die naechste Zeile vorruecken
+						continue;
 					}
+
 				}
 
-				i--; // die aeussere Schleife erhoeht selbst ...
-				oAuftragDto = null;
+				if (lagerbewegung_ursprung.getC_belegartnr().equals(
+						LocaleFac.BELEGART_LOSABLIEFERUNG)) {
+
+					LosablieferungDto losablieferungDto = getFertigungFac()
+							.losablieferungFindByPrimaryKeyOhneExc(
+									lagerbewegung_ursprung
+											.getI_belegartpositionid(),
+									true, theClientDto);
+
+					if (losablieferungDto != null
+							&& losablieferungDto.getNGestehungspreis() != null) {
+
+						// Nur wenn aus demselben
+						// Auftrag
+
+						LosDto losDto_Ursprung = getFertigungFac()
+								.losFindByPrimaryKey(
+										losablieferungDto.getLosIId());
+
+						Integer auftragIIdUrsprung = losDto_Ursprung
+								.getAuftragIId();
+
+						if (auftragIIdUrsprung == null) {
+
+							if (losDto_Ursprung.getAuftragpositionIId() != null) {
+
+								AuftragpositionDto apDtoUrsprung = getAuftragpositionFac()
+										.auftragpositionFindByPrimaryKey(
+												losDto_Ursprung
+														.getAuftragpositionIId());
+								auftragIIdUrsprung = apDtoUrsprung
+										.getBelegIId();
+
+							}
+
+						}
+
+						if (auftragIIdUrsprung != null
+								&& auftragDto.getIId().equals(
+										auftragIIdUrsprung)) {
+
+							BigDecimal bdAblieferwertAusDemselbenAuftrag = losablieferungDto
+									.getNGestehungspreis()
+									.multiply(
+											lagerbewegung_ursprung.getN_menge())
+									.multiply(new BigDecimal(-1));
+
+							AuftragNachkalkulationDto oNachkalkulationDto = new AuftragNachkalkulationDto(
+									auftragDto);
+
+							oNachkalkulationDto.setSBelegart("Li");
+							oNachkalkulationDto
+									.setSBelegnummer(losDto.getCNr());
+							oNachkalkulationDto.setSBelegstatus(losDto
+									.getStatusCNr());
+							oNachkalkulationDto
+									.setLosnummerLiQuelle(losDto_Ursprung
+											.getCNr());
+							oNachkalkulationDto
+									.setBdGestehungswertmaterialist(bdAblieferwertAusDemselbenAuftrag);
+
+							alDaten.add(oNachkalkulationDto);
+
+						}
+
+					}
+				}
+				session2.close();
 			}
-
-			// die Parameter dem Report uebergeben
-			HashMap<String, Object> parameter = new HashMap<String, Object>();
-
-			parameter.put(
-					LPReport.P_SORTIERUNG,
-					buildSortierungAuftragOffene(reportJournalKriterienDtoI,
-							theClientDto));
-			parameter.put(
-					LPReport.P_FILTER,
-					buildFilterAuftragOffene(reportJournalKriterienDtoI,
-							theClientDto));
-
-			// die Parameter zur Bildung von Zwischensummen uebergeben
-			if (reportJournalKriterienDtoI.bSortiereNachKostenstelle) {
-				parameter.put(LPReport.P_SORTIERENACHKOSTENSTELLE, new Boolean(
-						true));
-			} else {
-				parameter.put(LPReport.P_SORTIERENACHKOSTENSTELLE, new Boolean(
-						false));
-			}
-
-			if (reportJournalKriterienDtoI.iSortierung == ReportJournalKriterienDto.KRIT_SORT_NACH_PARTNER) {
-				parameter.put(LPReport.P_SORTIERENACHKUNDE, new Boolean(true));
-			} else {
-				parameter.put(LPReport.P_SORTIERENACHKUNDE, new Boolean(false));
-			}
-
-			parameter.put("P_AUFTRAGWAEHRUNG",
-					theClientDto.getSMandantenwaehrung());
-
-			initJRDS(parameter, AuftragReportFac.REPORT_MODUL,
-					AuftragReportFac.REPORT_AUFTRAG_OFFENE,
-					theClientDto.getMandant(), theClientDto.getLocUi(),
-					theClientDto);
-
-			oPrintO = getReportPrint();
-		} catch (RemoteException re) {
-			throwEJBExceptionLPRespectOld(re);
 		}
-		return oPrintO;
+		return alDaten;
 	}
 
 	private ArrayList<AuftragNachkalkulationDto> getDataAuftragNachkalkulation(
@@ -2252,6 +2418,18 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				bAlleLoseberuecksichtigen = true;
 			}
 
+			parametermandantDto = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_AUFTRAG,
+							ParameterFac.PARAMETER_AB_NACHKALKULATION_NUR_RECHNUNGS_ERLOESE);
+			boolean bNurRechnungserloese = false;
+
+			if (((java.lang.Boolean) parametermandantDto.getCWertAsObject())
+					.booleanValue() == true) {
+				bNurRechnungserloese = true;
+			}
+
 			AuftragNachkalkulationDto oNachkalkulationDto = null;
 
 			// eine Zeile pro Eingangsrechnung zu diesem Auftrag
@@ -2272,8 +2450,37 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 
 				oNachkalkulationDto.setSBelegart(oBelegartDto
 						.getCKurzbezeichnung());
+				oNachkalkulationDto
+						.setSEingangsgrechnungsart(oEingangsrechnungDto
+								.getEingangsrechnungartCNr());
+
+				// SP3281
+				if (oEingangsrechnungDto.getEingangsrechnungartCNr().equals(
+						EingangsrechnungFac.EINGANGSRECHNUNGART_ANZAHLUNG)
+						&& oEingangsrechnungDto.getBestellungIId() != null) {
+
+					EingangsrechnungDto[] erDtos = getEingangsrechnungFac()
+							.eingangsrechnungFindByBestellungIId(
+									oEingangsrechnungDto.getBestellungIId());
+					for (EingangsrechnungDto erDto : erDtos) {
+						if (!erDto.getStatusCNr().equals(
+								EingangsrechnungFac.STATUS_STORNIERT)
+								&& erDto.getEingangsrechnungartCNr()
+										.equals(EingangsrechnungFac.EINGANGSRECHNUNGART_SCHLUSSZAHLUNG)) {
+							oNachkalkulationDto.setSErSchlussrechnungNr(erDto
+									.getCNr());
+						}
+					}
+
+				}
+
+				oNachkalkulationDto.setBKeineAuftragwertung(Helper
+						.short2boolean(aEingangsrechnungDtos[i]
+								.getBKeineAuftragswertung()));
 				oNachkalkulationDto.setSBelegnummer(oEingangsrechnungDto
 						.getCNr());
+				oNachkalkulationDto.setSBelegstatus(oEingangsrechnungDto
+						.getStatusCNr());
 
 				LieferantDto oLieferantDto = getLieferantFac()
 						.lieferantFindByPrimaryKey(
@@ -2337,6 +2544,44 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 							&& !aLieferscheinDtos[i].getStatusCNr().equals(
 									LieferscheinFac.LSSTATUS_STORNIERT)) {
 
+						// SP2846
+						if (bAlleLoseberuecksichtigen) {
+							// Pruefen, ob in dem Lieferschein ev. noch ein
+							// andere Auftrag vorhanden ist, wenn ja, dann
+							// Fehler
+
+							Session sessionLspos = FLRSessionFactory
+									.getFactory().openSession();
+							String sQueryLspos = "SELECT lspos.flrpositionensichtauftrag.flrauftrag.i_id from FLRLieferscheinposition lspos WHERE lspos.flrlieferschein="
+									+ aLieferscheinDtos[i].getIId()
+									+ " AND auftragposition_i_id IS NOT NULL";
+							Query queryLspos = sessionLspos
+									.createQuery(sQueryLspos);
+
+							List<?> resultListLspos = queryLspos.list();
+
+							Iterator it = resultListLspos.iterator();
+							while (it.hasNext()) {
+								Integer auftragIIdLieferschein = (Integer) it
+										.next();
+
+								if (!auftragIIdLieferschein.equals(iIdAuftragI)) {
+									// Fehler
+									ArrayList al = new ArrayList();
+									al.add(aLieferscheinDtos[i].getCNr());
+									throw new EJBExceptionLP(
+											EJBExceptionLP.FEHLER_ALLE_LOSE_BERUECKSICHTIGEN_UND_SAMMELLIEFERSCHIEN_MEHRERE_AUFTRAEGE,
+											al,
+											new Exception(
+													"FEHLER_ALLE_LOSE_BERUECKSICHTIGEN_UND_SAMMELLIEFERSCHIEN_MEHRERE_AUFTRAEGE: "
+															+ aLieferscheinDtos[i]
+																	.getCNr()));
+
+								}
+							}
+
+						}
+
 						RechnungDto reDto = getRechnungFac()
 								.rechnungFindByPrimaryKey(
 										aLieferscheinDtos[i].getRechnungIId());
@@ -2376,6 +2621,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 							.getCKurzbezeichnung());
 					oNachkalkulationDto.setSBelegnummer(aRechnungDtos.get(i)
 							.getCNr());
+					oNachkalkulationDto.setSBelegstatus(aRechnungDtos.get(i)
+							.getStatusCNr());
 
 					KundeDto kundeDtoDto = getKundeFac().kundeFindByPrimaryKey(
 							aRechnungDtos.get(i).getKundeIId(), theClientDto);
@@ -2387,6 +2634,11 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 
 					oNachkalkulationDto.setSRechnungsart(aRechnungDtos.get(i)
 							.getRechnungartCNr());
+
+					oNachkalkulationDto.setBdZahlbetrag(getRechnungFac()
+							.getBereitsBezahltWertVonRechnung(
+									aRechnungDtos.get(i).getIId(), null,
+									tStichtag));
 
 					BigDecimal bdTmpWert = null;
 
@@ -2523,6 +2775,9 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 										oNachkalkulationDto
 												.setSBelegnummer(losDto
 														.getCNr());
+										oNachkalkulationDto
+												.setSBelegstatus(losDto
+														.getStatusCNr());
 
 										oNachkalkulationDto
 												.setSLosprojekt(losDto
@@ -2590,9 +2845,21 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 										oNachkalkulationDto
 												.setBdGestehungswertmaterialist(gestWertMaterialIst);
 
-										bdLosanteilInRechnung = bdLosanteilInRechnung
-												.add(gestWertArbeitIst).add(
-														gestWertMaterialIst);
+										if (bAlleLoseberuecksichtigen) {
+
+											if (losDto.getAuftragIId() != null
+													&& !losDto
+															.getAuftragIId()
+															.equals(iIdAuftragI)) {
+												bdLosanteilInRechnung = bdLosanteilInRechnung
+														.add(gestWertArbeitIst)
+														.add(gestWertMaterialIst);
+											}
+										} else {
+											bdLosanteilInRechnung = bdLosanteilInRechnung
+													.add(gestWertArbeitIst)
+													.add(gestWertMaterialIst);
+										}
 
 										/*
 										 * LossollmaterialDto[]
@@ -2750,6 +3017,42 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 													.setDdArbeitszeitist(arbeitszeitsoll
 															.doubleValue());
 										}
+
+										// SP2709
+										if (bAlleLoseberuecksichtigen == true) {
+											oNachkalkulationDto
+													.setBdGestehungswertmaterialist(oNachkalkulationDto
+															.getBdGestehungswertmaterialist()
+															.negate());
+											oNachkalkulationDto
+													.setBdGestehungswertarbeitist(oNachkalkulationDto
+															.getBdGestehungswertarbeitist()
+															.negate());
+											// SP2943
+											if (oNachkalkulationDto
+													.getBdGestehungswertmaterialsoll() != null) {
+												oNachkalkulationDto
+														.setBdGestehungswertmaterialsoll(oNachkalkulationDto
+																.getBdGestehungswertmaterialsoll()
+																.negate());
+											}
+											if (oNachkalkulationDto
+													.getBdGestehungswertarbeitsoll() != null) {
+												oNachkalkulationDto
+														.setBdGestehungswertarbeitsoll(oNachkalkulationDto
+																.getBdGestehungswertarbeitsoll()
+																.negate());
+											}
+											oNachkalkulationDto
+													.setDdArbeitszeitist(0D);
+											oNachkalkulationDto
+													.setDdArbeitszeitsoll(0D);
+											oNachkalkulationDto
+													.setDdMaschinenzeitist(0D);
+											oNachkalkulationDto
+													.setDdMaschinenzeitsoll(0D);
+										}
+
 										alAuftragNachkalkulationDtos
 												.add(oNachkalkulationDto);
 									}
@@ -2764,6 +3067,9 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 							losanteil.setSBelegart("ZZ");
 							losanteil.setSBelegnummer(aRechnungDtos.get(i)
 									.getCNr());
+							losanteil.setSBelegart(LocaleFac.BELEGART_RECHNUNG);
+							losanteil.setSBelegstatus(aRechnungDtos.get(i)
+									.getStatusCNr());
 
 							losanteil
 									.setBdGestehungswertmaterialist(bdLosanteilInRechnung
@@ -2801,8 +3107,27 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 									.setSBelegnummer(aGutschriftenDtos[k]
 											.getCNr());
 							oNachkalkulationDtoGS
+									.setSBelegstatus(aGutschriftenDtos[k]
+											.getStatusCNr());
+							oNachkalkulationDtoGS
 									.setBdVkwMaterialist(aGutschriftenDtos[k]
 											.getNWert().negate());
+
+							// PJ18843
+							if (aRechnungDtos.get(i).getRechnungartCNr()
+									.equals(RechnungFac.RECHNUNGART_ANZAHLUNG)) {
+								oNachkalkulationDtoGS
+										.setSRechnungsart(RechnungFac.RECHNUNGART_ANZAHLUNG);
+							}
+
+							BigDecimal bdZahlbetrag = getRechnungFac()
+									.getBereitsBezahltWertVonRechnung(
+											aGutschriftenDtos[k].getIId(),
+											null, tStichtag);
+							if (bdZahlbetrag != null) {
+								oNachkalkulationDtoGS
+										.setBdZahlbetrag(bdZahlbetrag.negate());
+							}
 
 							alAuftragNachkalkulationDtos
 									.add(oNachkalkulationDtoGS);
@@ -2831,6 +3156,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 					oNachkalkulationDto.setSBelegart(oBelegartDtoLos
 							.getCKurzbezeichnung());
 					oNachkalkulationDto.setSBelegnummer(losDtos[i].getCNr());
+					oNachkalkulationDto.setSBelegstatus(losDtos[i]
+							.getStatusCNr());
 					oNachkalkulationDto
 							.setSLosprojekt(losDtos[i].getCProjekt());
 
@@ -2972,6 +3299,10 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 								.doubleValue());
 					}
 
+					if (losDto.getIId() == 3379) {
+						int f = 0;
+					}
+
 					// Material
 					BigDecimal gestWertMaterialIst = new BigDecimal(0);
 
@@ -3020,6 +3351,12 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 
 					alAuftragNachkalkulationDtos.add(oNachkalkulationDto);
 
+					// SP2709
+
+					addZeileLI(alAuftragNachkalkulationDtos, losDto,
+							auftragDto, lossollmaterialDtos, tStichtag,
+							theClientDto);
+
 				}
 			}
 
@@ -3057,6 +3394,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 							.getCKurzbezeichnung());
 					oNachkalkulationDto.setSBelegnummer(aLieferscheinDtos[i]
 							.getCNr());
+					oNachkalkulationDto.setSBelegstatus(aLieferscheinDtos[i]
+							.getStatusCNr());
 					if (aLieferscheinDtos[i].getRechnungIId() != null) {
 
 						oNachkalkulationDto
@@ -3124,6 +3463,29 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 					checkNumberFormat(bdTmpWert);
 
 					oNachkalkulationDto.setBdVkwMaterialist(bdTmpWert);
+
+					// SP2808
+					if (Helper.short2boolean(aLieferscheinDtos[i]
+							.getBVerrechenbar()) == false) {
+						// Wenn nicht verrechenbar, dann vkwerte 0
+
+						// Aber nur, wenn er wirklich nicht verrechenet ist
+						if (aLieferscheinDtos[i].getRechnungIId() == null) {
+
+							oNachkalkulationDto
+									.setBdVkwArbeitist(BigDecimal.ZERO);
+							oNachkalkulationDto
+									.setBdVkwMaterialist(BigDecimal.ZERO);
+						}
+					}
+
+					// PJ18675
+					if (bNurRechnungserloese == true
+							&& aLieferscheinDtos[i].getRechnungIId() == null) {
+						oNachkalkulationDto.setBdVkwArbeitist(BigDecimal.ZERO);
+						oNachkalkulationDto
+								.setBdVkwMaterialist(BigDecimal.ZERO);
+					}
 
 					// Gestehungswert Material Ist in Mandantenwaehrung, daher
 					// braucht nicht umgerechnet werden
@@ -3223,6 +3585,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 													.getCKurzbezeichnung());
 									oNachkalkulationDto.setSBelegnummer(losDto
 											.getCNr());
+									oNachkalkulationDto.setSBelegstatus(losDto
+											.getStatusCNr());
 
 									oNachkalkulationDto.setSLosprojekt(losDto
 											.getCProjekt());
@@ -3286,9 +3650,23 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 									oNachkalkulationDto
 											.setBdGestehungswertmaterialist(gestWertMaterialIst);
 
-									bdLosanteilImLieferschein = bdLosanteilImLieferschein
-											.add(gestWertArbeitIst).add(
-													gestWertMaterialIst);
+									// SP2808
+									if (bAlleLoseberuecksichtigen) {
+
+										if (losDto.getAuftragIId() != null
+												&& !losDto.getAuftragIId()
+														.equals(iIdAuftragI)) {
+
+											bdLosanteilImLieferschein = bdLosanteilImLieferschein
+													.add(gestWertArbeitIst)
+													.add(gestWertMaterialIst);
+										}
+
+									} else {
+										bdLosanteilImLieferschein = bdLosanteilImLieferschein
+												.add(gestWertArbeitIst).add(
+														gestWertMaterialIst);
+									}
 
 									LossollmaterialDto[] lossollmaterialDtos = getFertigungFac()
 											.lossollmaterialFindByLosIId(
@@ -3450,6 +3828,41 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 													oNachkalkulationDto,
 													theClientDto);
 
+									// SP2709
+									if (bAlleLoseberuecksichtigen == true) {
+										oNachkalkulationDto
+												.setBdGestehungswertmaterialist(oNachkalkulationDto
+														.getBdGestehungswertmaterialist()
+														.negate());
+										oNachkalkulationDto
+												.setBdGestehungswertarbeitist(oNachkalkulationDto
+														.getBdGestehungswertarbeitist()
+														.negate());
+										// SP2943
+										if (oNachkalkulationDto
+												.getBdGestehungswertmaterialsoll() != null) {
+											oNachkalkulationDto
+													.setBdGestehungswertmaterialsoll(oNachkalkulationDto
+															.getBdGestehungswertmaterialsoll()
+															.negate());
+										}
+										if (oNachkalkulationDto
+												.getBdGestehungswertarbeitsoll() != null) {
+											oNachkalkulationDto
+													.setBdGestehungswertarbeitsoll(oNachkalkulationDto
+															.getBdGestehungswertarbeitsoll()
+															.negate());
+										}
+										oNachkalkulationDto
+												.setDdArbeitszeitist(0D);
+										oNachkalkulationDto
+												.setDdArbeitszeitsoll(0D);
+										oNachkalkulationDto
+												.setDdMaschinenzeitist(0D);
+										oNachkalkulationDto
+												.setDdMaschinenzeitsoll(0D);
+									}
+
 									alAuftragNachkalkulationDtos
 											.add(oNachkalkulationDto);
 								}
@@ -3469,6 +3882,9 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 							losanteil.setSBelegart("ZZ");
 							losanteil.setSBelegnummer(aLieferscheinDtos[i]
 									.getCNr());
+
+							losanteil.setSBelegstatus(aLieferscheinDtos[i]
+									.getStatusCNr());
 
 							losanteil
 									.setBdGestehungswertmaterialist(bdLosanteilImLieferschein
@@ -3499,6 +3915,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			oNachkalkulationDto
 					.setSBelegart(oBelegartDto.getCKurzbezeichnung());
 			oNachkalkulationDto.setSBelegnummer(auftragDto.getCNr());
+			oNachkalkulationDto.setSBelegstatus(auftragDto.getStatusCNr());
 
 			KundeDto kundeDtoDto = getKundeFac().kundeFindByPrimaryKey(
 					auftragDto.getKundeIIdAuftragsadresse(), theClientDto);
@@ -3684,9 +4101,10 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 
 						oNachkalkulationDto
 								.setDdArbeitszeitist((Double) oTemp[1]);
-						
-						oNachkalkulationDto.setBdGestehungswertarbeitist((BigDecimal) oTemp[2]);
-						
+
+						oNachkalkulationDto
+								.setBdGestehungswertarbeitist((BigDecimal) oTemp[2]);
+
 						alAuftragNachkalkulationDtos.add(oNachkalkulationDto);
 						oNachkalkulationDto = new AuftragNachkalkulationDto(
 								auftragDto);
@@ -3694,9 +4112,124 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 								.getCKurzbezeichnung());
 						oNachkalkulationDto
 								.setSBelegnummer(auftragDto.getCNr());
+						oNachkalkulationDto.setSBelegstatus(auftragDto
+								.getStatusCNr());
 					}
 				}
 			}
+
+			// PJ18286
+			ArrayList<ReiseKomplettDto> alReisen = getZeiterfassungFac()
+					.holeReisenKomplett(LocaleFac.BELEGART_AUFTRAG,
+							iIdAuftragI, null, null, theClientDto);
+
+			for (int k = 0; k < alReisen.size(); k++) {
+
+				ReiseKomplettDto rkDto = alReisen.get(k);
+
+				Iterator it = rkDto.getTmReiseBeginn().keySet().iterator();
+				ReiseDto rDtoErstesBeginn = null;
+				while (it.hasNext()) {
+					ReiseDto rDto = (ReiseDto) rkDto.getTmReiseBeginn().get(
+							it.next());
+					// Kosten
+
+					if (rDtoErstesBeginn == null) {
+						rDtoErstesBeginn = rDto;
+					}
+
+					if ((rDto.getBelegartCNr() != null && rDto.getBelegartCNr()
+							.equals(LocaleFac.BELEGART_AUFTRAG))
+							&& rDto.getIBelegartid() != null
+							&& rDto.getIBelegartid().equals(iIdAuftragI)) {
+
+						BigDecimal kmKostenKomplett = getZeiterfassungFac()
+								.getKmKostenEinerReise(rkDto, theClientDto);
+
+						Timestamp tBis = rkDto.getReiseEnde().getTZeit();
+						if (it.hasNext()) {
+
+							Iterator itNaechster = rkDto.getTmReiseBeginn()
+									.keySet().iterator();
+							while (itNaechster.hasNext()) {
+								ReiseDto rDtoNaechster = (ReiseDto) rkDto
+										.getTmReiseBeginn().get(
+												itNaechster.next());
+								if (rDtoNaechster.getIId()
+										.equals(rDto.getIId())) {
+									ReiseDto temp = (ReiseDto) rkDto
+											.getTmReiseBeginn().get(
+													itNaechster.next());
+									tBis = temp.getTZeit();
+								}
+							}
+
+						}
+
+						// ///////////////////////////////////////////////////
+
+						// Daten fuer JRuby Script
+						String personalart = getPersonalFac()
+								.personalFindByPrimaryKey(
+										rDto.getPersonalIId(), theClientDto)
+								.getPersonalartCNr().trim();
+
+						BigDecimal bdDiaeten = getZeiterfassungFac()
+								.berechneDiaetenAusScript(rDto.getDiaetenIId(),
+										rDto.getTZeit(), tBis, theClientDto,
+										personalart);
+
+						// ///////////////////////////////////////////////////
+
+						// BigDecimal bdDiaeten = getZeiterfassungFac()
+						// .berechneDiaeten(rDto.getDiaetenIId(),
+						// rDto.getTZeit(), tBis, theClientDto);
+
+						BigDecimal kostenDesProjekts = rkDto
+								.getAnteiligeKostenEinesAbschnitts(
+										rDto.getIId(), kmKostenKomplett);
+
+						kostenDesProjekts = kostenDesProjekts.add(bdDiaeten);
+
+						// Neue Zeile einfuegen
+
+						AuftragNachkalkulationDto oNachkalkulationDtoReise = new AuftragNachkalkulationDto(
+								auftragDto);
+
+						oNachkalkulationDtoReise
+								.setBdGestehungswertmaterialist(kostenDesProjekts);
+						oNachkalkulationDtoReise.setSBelegart("DR");
+						oNachkalkulationDtoReise.setSBelegnummer("Reise");
+						oNachkalkulationDtoReise.setSReiseKommentar(rDto
+								.getCKommentar());
+
+						if (rDtoErstesBeginn.getPartnerIId() != null) {
+							oNachkalkulationDtoReise
+									.setSReisePartner(getPartnerFac()
+											.partnerFindByPrimaryKey(
+													rDtoErstesBeginn
+															.getPartnerIId(),
+													theClientDto)
+											.formatFixName1Name2());
+						}
+
+						oNachkalkulationDtoReise
+								.setSReiseMitarbeiter(getPersonalFac()
+										.personalFindByPrimaryKey(
+												rDto.getPersonalIId(),
+												theClientDto).formatAnrede());
+						oNachkalkulationDtoReise.settReiseBis(tBis);
+						oNachkalkulationDtoReise.settReiseVon(rDto.getTZeit());
+
+						alAuftragNachkalkulationDtos
+								.add(oNachkalkulationDtoReise);
+
+					}
+
+				}
+
+			}
+
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
@@ -3963,14 +4496,18 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 					FLRAuftragposition pos = (FLRAuftragposition) iter.next();
 					AuftragpositionDto apositionDto = getAuftragpositionFac()
 							.auftragpositionFindByPrimaryKey(pos.getI_id());
-					if (apositionDto.getTUebersteuerbarerLiefertermin() != null) {
-						tposLieferTermin = Helper.cutTimestamp(apositionDto
-								.getTUebersteuerbarerLiefertermin());
-						if (!(tLieferTermin.equals(tposLieferTermin))) {
-							bTermineUnterschiedlich = true;
+					if (pos.getPositionart_c_nr().equals(
+							AuftragServiceFac.AUFTRAGPOSITIONART_IDENT)
+							|| pos.getPositionart_c_nr()
+									.equals(AuftragServiceFac.AUFTRAGPOSITIONART_HANDEINGABE)) {
+						if (apositionDto.getTUebersteuerbarerLiefertermin() != null) {
+							tposLieferTermin = Helper.cutTimestamp(apositionDto
+									.getTUebersteuerbarerLiefertermin());
+							if (!(tLieferTermin.equals(tposLieferTermin))) {
+								bTermineUnterschiedlich = true;
+							}
 						}
 					}
-
 					if (pos.getPositionart_c_nr().equals(
 							AuftragServiceFac.AUFTRAGPOSITIONART_POSITION)) {
 						if (!pos.getC_zbez().equals(LocaleFac.POSITIONBEZ_ENDE)) {
@@ -4163,6 +4700,14 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 
 			}
 
+			// PJ18870
+			parameter.put(
+					"P_SUBREPORT_PARTNERKOMMENTAR",
+					getPartnerServicesFac()
+							.getSubreportAllerMitzudruckendenPartnerkommentare(
+									kundeDto.getPartnerDto().getIId(), true,
+									LocaleFac.BELEGART_AUFTRAG, theClientDto));
+
 			parameter.put(
 					"P_KUNDE_ADRESSBLOCK",
 					formatAdresseFuerAusdruck(kundeDto.getPartnerDto(),
@@ -4297,8 +4842,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			}
 
 			// Storno ?
-			if (auftragDto.getAuftragstatusCNr().equals(
-					RechnungFac.STATUS_STORNIERT)) {
+			if (auftragDto.getStatusCNr().equals(RechnungFac.STATUS_STORNIERT)) {
 				parameter.put("P_STORNIERT", new Boolean(true));
 			} else {
 				parameter.put("P_STORNIERT", new Boolean(false));
@@ -4766,6 +5310,11 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 							.getPositionForReport(LocaleFac.BELEGART_AUFTRAG,
 									aPositionDtos[i].getIId(), theClientDto);
 
+					// CK: LT CU soll die Positionsart bei allen Positionsarten
+					// angedruckt werden
+					data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_POSITIONSART] = aPositionDtos[i]
+							.getPositionsartCNr();
+
 					if (aPositionDtos[i].getPositionsartCNr().equals(
 							AuftragServiceFac.AUFTRAGPOSITIONART_IDENT)
 							|| aPositionDtos[i]
@@ -4778,8 +5327,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 								.getPositionNummer(aPositionDtos[i].getIId());
 						data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_IDENT_TEXTEINGABE] = aPositionDtos[i]
 								.getXTextinhalt();
-						data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_POSITIONSART] = aPositionDtos[i]
-								.getPositionsartCNr();
+
 						data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_LV_POSITION] = aPositionDtos[i]
 								.getCLvposition();
 						data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_SEITENUMBRUCH] = bbSeitenumbruch;
@@ -4866,6 +5414,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 											.getBWerbeabgabepflichtig());
 							data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_ARTIKEL_REVISION] = oArtikelDto
 									.getCRevision();
+							data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_FREIERTEXT] = aPositionDtos[i]
+									.getXTextinhalt();
 
 							// Typ, wenn Setartikel
 							data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_SETARTIKEL_TYP] = getArtikelsetType(aPositionDtos[i]);
@@ -4935,7 +5485,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 								MaterialDto materialDto = getMaterialFac()
 										.materialFindByPrimaryKey(
 												oArtikelDto.getMaterialIId(),
-												theClientDto);
+												locDruck, theClientDto);
 								if (materialDto.getMaterialsprDto() != null) {
 									data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_ARTIKEL_MATERIAL] = materialDto
 											.getMaterialsprDto().getCBez();
@@ -4944,18 +5494,10 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 											.getCNr();
 								}
 
-								MaterialzuschlagDto mzDto = getMaterialFac()
-										.getKursMaterialzuschlagDtoInZielwaehrung(
-												oArtikelDto.getMaterialIId(),
-												auftragDto.getTBelegdatum(),
-												auftragDto
-														.getCAuftragswaehrung(),
-												theClientDto);
-
-								data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_ARTIKEL_KURS_MATERIALZUSCHLAG] = mzDto
-										.getNZuschlag();
-								data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_ARTIKEL_DATUM_MATERIALZUSCHLAG] = mzDto
-										.getTGueltigab();
+								data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_ARTIKEL_KURS_MATERIALZUSCHLAG] = aPositionDtos[i]
+										.getNMaterialzuschlagKurs();
+								data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_ARTIKEL_DATUM_MATERIALZUSCHLAG] = aPositionDtos[i]
+										.getTMaterialzuschlagDatum();
 
 							}
 
@@ -5000,6 +5542,68 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 						data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_ZWANGSSERIENNUMMER] = sSnr;
 						data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_MENGE] = aPositionDtos[i]
 								.getNMenge();
+
+						// PJ18824
+						if (aPositionDtos[i]
+								.getAuftragpositionIIdRahmenposition() != null) {
+
+							AuftragpositionDto rahmenposDto = getAuftragpositionFac()
+									.auftragpositionFindByPrimaryKey(
+											aPositionDtos[i]
+													.getAuftragpositionIIdRahmenposition());
+
+							data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_RAHMENMENGE] = rahmenposDto
+									.getNMenge();
+
+							if (rahmenposDto.getNMenge() != null) {
+
+								BigDecimal bdAbgerufen = BigDecimal.ZERO;
+
+								AuftragpositionDto[] rahmenposDtos = getAuftragpositionFac()
+										.auftragpositionFindByAuftragpositionIIdRahmenpositionOhneExc(
+												aPositionDtos[i]
+														.getAuftragpositionIIdRahmenposition(),
+												theClientDto);
+								Timestamp tLetzteLieferung = null;
+								for (int j = 0; j < rahmenposDtos.length; j++) {
+
+									AuftragDto abrufauftragDto = getAuftragFac()
+											.auftragFindByPrimaryKey(
+													rahmenposDtos[j]
+															.getBelegIId());
+
+									if (Helper.cutTimestamp(
+											abrufauftragDto.getTBelegdatum())
+											.before(Helper
+													.cutTimestamp(auftragDto
+															.getTBelegdatum()))
+											|| Helper
+													.cutTimestamp(
+															abrufauftragDto
+																	.getTBelegdatum())
+													.equals(Helper
+															.cutTimestamp(auftragDto
+																	.getTBelegdatum()))
+											&& abrufauftragDto.getIId() <= auftragDto
+													.getIId()) {
+
+										bdAbgerufen = bdAbgerufen
+												.add(rahmenposDtos[j]
+														.getNMenge());
+										if (abrufauftragDto.getIId() != auftragDto
+												.getIId()) {
+
+											tLetzteLieferung = abrufauftragDto
+													.getTBelegdatum();
+										}
+									}
+
+								}
+								data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_ABGERUFENE_MENGE] = bdAbgerufen;
+								data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_LETZTER_ABRUF] = tLetzteLieferung;
+							}
+
+						}
 
 						if (aPositionDtos[i].getNOffeneMenge() != null
 								&& aPositionDtos[i].getNMenge() != null) {
@@ -5354,9 +5958,11 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 								auftragDto, aPositionDtos[i], mwstMap,
 								bbSeitenumbruch, kundeDtoRechnungsadresse,
 								locDruck, theClientDto);
-						updateZwischensummenData(index,
-								aPositionDtos[i].getZwsVonPosition(),
-								aPositionDtos[i].getCBez());
+						// updateZwischensummenData(index,
+						// aPositionDtos[i].getZwsVonPosition(),
+						// aPositionDtos[i].getCBez(),
+						// aPositionDtos[i].getZwsNettoSumme());
+						updateZwischensummenData(index, aPositionDtos[i]);
 						++index;
 					}
 
@@ -5373,7 +5979,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 							AngebotServiceFac.ANGEBOTPOSITIONART_ENDSUMME)) {
 						// SP1581
 						if (auftragDto.getNKorrekturbetrag() != null
-								&& auftragDto.getNKorrekturbetrag().doubleValue() != 0) {
+								&& auftragDto.getNKorrekturbetrag()
+										.doubleValue() != 0) {
 							// Handeingabe hinzufuegen
 							data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_POSITIONSART] = AuftragServiceFac.AUFTRAGPOSITIONART_HANDEINGABE;
 							data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_IDENTNUMMER] = "Pauschalkorrektur";
@@ -5391,18 +5998,23 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 
 							MwstsatzDto mwstsatzDto = getMandantFac()
 									.mwstsatzFindByMwstsatzbezIIdAktuellster(
-											kundeDto.getMwstsatzbezIId(), theClientDto);
+											kundeDto.getMwstsatzbezIId(),
+											theClientDto);
 
-							BigDecimal ust = auftragDto.getNKorrekturbetrag().multiply(
-									new BigDecimal(mwstsatzDto.getFMwstsatz())
-											.movePointLeft(2));
+							BigDecimal ust = auftragDto.getNKorrekturbetrag()
+									.multiply(
+											new BigDecimal(mwstsatzDto
+													.getFMwstsatz())
+													.movePointLeft(2));
 
 							MwstsatzReportDto m = ((MwstsatzReportDto) mwstMap
 									.get(mwstsatzDto.getIId()));
-							m.setNSummeMwstbetrag(m.getNSummeMwstbetrag().add(ust));
-							m.setNSummePositionsbetrag(m.getNSummePositionsbetrag().add(
-									auftragDto.getNKorrekturbetrag()));
-							index ++;
+							m.setNSummeMwstbetrag(m.getNSummeMwstbetrag().add(
+									ust));
+							m.setNSummePositionsbetrag(m
+									.getNSummePositionsbetrag().add(
+											auftragDto.getNKorrekturbetrag()));
+							index++;
 
 						}
 						korrekturbetragHinzugefuegt = true;
@@ -5425,7 +6037,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 
 			}
 			// SP1581
-			if (!korrekturbetragHinzugefuegt && auftragDto.getNKorrekturbetrag() != null
+			if (!korrekturbetragHinzugefuegt
+					&& auftragDto.getNKorrekturbetrag() != null
 					&& auftragDto.getNKorrekturbetrag().doubleValue() != 0) {
 				// Handeingabe hinzufuegen
 				data[index][AuftragReportFac.REPORT_AUFTRAGBESTAETIGUNG_POSITIONSART] = AuftragServiceFac.AUFTRAGPOSITIONART_HANDEINGABE;
@@ -5642,6 +6255,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				.getPositionNummer(aPositionDto.getZwsBisPosition());
 		data[index][REPORT_AUFTRAGBESTAETIGUNG_ZWSNETTOSUMME] = aPositionDto
 				.getZwsNettoSumme();
+		data[index][REPORT_AUFTRAGBESTAETIGUNG_ZWSPOSPREISDRUCKEN] = aPositionDto
+				.getBZwsPositionspreisZeigen();
 		data[index][REPORT_AUFTRAGBESTAETIGUNG_BEZEICHNUNG] = aPositionDto
 				.getCBez();
 
@@ -5696,9 +6311,12 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 	 * @param zwsBisPosition
 	 *            ist die IId der Bis-Position
 	 * @param cBez
+	 *            die Bezeichnung der Zwischensumme
+	 * @param nettoSumme
+	 *            die Summe der Zwischensummenpositionen
 	 */
 	private void updateZwischensummenData(int lastIndex,
-			Integer zwsVonPosition, String cBez) {
+			Integer zwsVonPosition, String cBez, BigDecimal nettoSumme) {
 		for (int i = 0; i < lastIndex; i++) {
 			Object[] o = (Object[]) data[i];
 			if (zwsVonPosition
@@ -5711,9 +6329,279 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 					o[REPORT_AUFTRAGBESTAETIGUNG_ZWSTEXT] = s;
 				}
 
+				o[REPORT_AUFTRAGBESTAETIGUNG_ZWSNETTOSUMME] = nettoSumme;
 				return;
 			}
 		}
+	}
+
+	private void updateZwischensummenData(int lastIndex,
+			AuftragpositionDto zwsPos) {
+		Integer zwsVonPosition = zwsPos.getZwsVonPosition();
+		if (zwsVonPosition == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_POSITION_ZWISCHENSUMME_UNVOLLSTAENDIG,
+					"Position '" + zwsPos.getCBez() + "' unvollst\u00E4ndig",
+					new Object[] { zwsPos.getCBez(), zwsPos.getIId() });
+		}
+
+		int foundIndex = -1;
+		for (int i = 0; i < lastIndex; i++) {
+			Object[] o = (Object[]) data[i];
+			if (zwsVonPosition
+					.equals(o[REPORT_AUFTRAGBESTAETIGUNG_INTERNAL_IID])) {
+				if (null == o[REPORT_AUFTRAGBESTAETIGUNG_ZWSTEXT]) {
+					o[REPORT_AUFTRAGBESTAETIGUNG_ZWSTEXT] = zwsPos.getCBez();
+				} else {
+					String s = (String) o[REPORT_AUFTRAGBESTAETIGUNG_ZWSTEXT]
+							+ "\n" + zwsPos.getCBez();
+					o[REPORT_AUFTRAGBESTAETIGUNG_ZWSTEXT] = s;
+				}
+
+				o[REPORT_AUFTRAGBESTAETIGUNG_ZWSNETTOSUMME] = zwsPos
+						.getZwsNettoSumme();
+				foundIndex = i;
+				break;
+			}
+		}
+
+		if (foundIndex == -1) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_POSITION_ZWISCHENSUMME_UNVOLLSTAENDIG,
+					"Position '" + zwsPos.getCBez() + "' unvollst\u00E4ndig",
+					new Object[] { zwsPos.getCBez(), zwsPos.getIId() });
+		}
+
+		for (int i = foundIndex; i < lastIndex; i++) {
+			Object[] o = (Object[]) data[i];
+			o[REPORT_AUFTRAGBESTAETIGUNG_ZWSPOSPREISDRUCKEN] = zwsPos
+					.getBZwsPositionspreisZeigen();
+		}
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printProjektblatt(Integer auftragIId,
+			TheClientDto theClientDto) {
+
+		cAktuellerReport = AuftragReportFac.REPORT_AUFTRAG_PROJEKTBLATT;
+		HashMap<String, Object> parameter = new HashMap<String, Object>();
+
+		try {
+
+			// Auftragskopfdaten
+
+			// die Parameter dem Report uebergeben
+
+			AuftragDto auftragDto = getAuftragFac().auftragFindByPrimaryKey(
+					auftragIId);
+
+			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
+					auftragDto.getKundeIIdAuftragsadresse(), theClientDto);
+
+			AnsprechpartnerDto ansprechpartnerDto = null;
+
+			if (auftragDto.getAnsprechparnterIId() != null) {
+				ansprechpartnerDto = getAnsprechpartnerFac()
+						.ansprechpartnerFindByPrimaryKey(
+								auftragDto.getAnsprechparnterIId(),
+								theClientDto);
+			}
+
+			MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(
+					theClientDto.getMandant(), theClientDto);
+
+			Locale clientLocale = theClientDto.getLocUi();
+
+			parameter.put(
+					"P_ADRESSE_FUER_AUSDRUCK",
+					formatAdresseFuerAusdruck(kundeDto.getPartnerDto(),
+							ansprechpartnerDto, mandantDto, clientLocale,
+							LocaleFac.BELEGART_AUFTRAG));
+
+			if (ansprechpartnerDto != null) {
+				parameter.put(
+						"P_ANSPRECHPARTNER_ADRESSBLOCK",
+						getPartnerFac()
+								.formatFixAnredeTitelName2Name1FuerAdresskopf(
+										ansprechpartnerDto.getPartnerDto(),
+										clientLocale, null));
+			}
+
+			SpediteurDto spediteurDto = getMandantFac()
+					.spediteurFindByPrimaryKey(auftragDto.getSpediteurIId());
+			parameter.put("P_SPEDITEUR", spediteurDto.getCNamedesspediteurs());
+
+			if (spediteurDto.getPartnerIId() != null) {
+				PartnerDto partnerDto = getPartnerFac()
+						.partnerFindByPrimaryKey(spediteurDto.getPartnerIId(),
+								theClientDto);
+
+				AnsprechpartnerDto ansprechpartnerDtoSpediteur = null;
+
+				if (spediteurDto.getAnsprechpartnerIId() != null) {
+					ansprechpartnerDtoSpediteur = getAnsprechpartnerFac()
+							.ansprechpartnerFindByPrimaryKey(
+									spediteurDto.getAnsprechpartnerIId(),
+									theClientDto);
+				}
+
+				parameter.put(
+						"P_SPEDITEUR_ADRESSBLOCK",
+						formatAdresseFuerAusdruck(partnerDto,
+								ansprechpartnerDtoSpediteur, mandantDto,
+								theClientDto.getLocUi()));
+			}
+
+			// die Lieferart
+			parameter.put(
+					"P_LIEFERART",
+					getLocaleFac().lieferartFindByIIdLocaleOhneExc(
+							auftragDto.getLieferartIId(), clientLocale,
+							theClientDto));
+
+			parameter.put("P_LIEFERTERMIN", auftragDto.getDLiefertermin());
+			parameter.put("P_FINALTERMIN", auftragDto.getDFinaltermin());
+			parameter.put("P_BESTELLDATUM", auftragDto.getDBestelldatum());
+			parameter.put("P_AUFTRAGSNUMMER", auftragDto.getCNr());
+			parameter
+					.put("P_ROHS", Helper.short2Boolean(auftragDto.getBRoHs()));
+			parameter.put("P_BESTELLNUMMER", auftragDto.getCBestellnummer());
+
+			parameter.put("P_PROJEKTBEZEICHNUNG",
+					auftragDto.getCBezProjektbezeichnung()); // ());
+
+			if (auftragDto.getKostIId() != null) {
+				KostenstelleDto kostenstelleDto = getSystemFac()
+						.kostenstelleFindByPrimaryKey(auftragDto.getKostIId());
+				parameter.put(LPReport.P_KOSTENSTELLE,
+						kostenstelleDto.formatKostenstellenbezeichnung());
+			}
+
+			KundeDto kundeDtoLieferadresse = getKundeFac()
+					.kundeFindByPrimaryKey(
+							auftragDto.getKundeIIdLieferadresse(), theClientDto);
+			parameter.put(
+					"P_LIEFERADRESSE",
+					formatAdresseFuerAusdruck(
+							kundeDtoLieferadresse.getPartnerDto(),
+							ansprechpartnerDto, mandantDto, clientLocale));
+			parameter.put("P_LIEFERDAUER",
+					kundeDtoLieferadresse.getILieferdauer());
+
+			// Subreport Zeitplan
+
+			Session session = FLRSessionFactory.getFactory().openSession();
+
+			String queryString = "SELECT zp FROM FLRZeitplan zp WHERE zp.flrauftrag.i_id= "
+					+ auftragIId +" ORDER BY zp.i_termin_vor_liefertermin DESC";
+
+			org.hibernate.Query query = session.createQuery(queryString);
+			List<?> resultList = query.list();
+
+			Iterator<?> resultListIterator = resultList.iterator();
+
+			String[] fieldnamesZeitplan = new String[] { "Termin", "Material",
+					"Dauer", "Kommentar", "KommentarLang" };
+
+			ArrayList<Object[]> alZeitplan = new ArrayList<Object[]>();
+
+			while (resultListIterator.hasNext()) {
+				FLRZeitplan zp = (FLRZeitplan) resultListIterator.next();
+
+				Object[] oZeile = new Object[5];
+				oZeile[0] = Helper.addiereTageZuDatum(
+						auftragDto.getDLiefertermin(),
+						-zp.getI_termin_vor_liefertermin());
+				oZeile[1] = zp.getN_material();
+				oZeile[2] = zp.getN_dauer();
+				oZeile[3] = zp.getC_kommentar();
+				oZeile[4] = zp.getX_text();
+				alZeitplan.add(oZeile);
+
+			}
+			session.close();
+			Object[][] dataSub = new Object[alZeitplan.size()][fieldnamesZeitplan.length];
+			dataSub = (Object[][]) alZeitplan.toArray(dataSub);
+
+			parameter.put("P_SUBREPORT_ZEITPLAN", new LPDatenSubreport(dataSub,
+					fieldnamesZeitplan));
+
+			session = FLRSessionFactory.getFactory().openSession();
+
+			queryString = "SELECT zp FROM FLRZahlungsplan zp WHERE zp.flrauftrag.i_id= "
+					+ auftragIId +" ORDER BY zp.i_tage_vor_liefertermin DESC";;
+
+			query = session.createQuery(queryString);
+			resultList = query.list();
+
+			resultListIterator = resultList.iterator();
+
+			String[] fieldnames = new String[] { "Termin", "Betrag",
+					"SubreportMeilenstein", };
+
+			ArrayList<Object[]> alZeichnung = new ArrayList<Object[]>();
+
+			while (resultListIterator.hasNext()) {
+				FLRZahlungsplan zp = (FLRZahlungsplan) resultListIterator
+						.next();
+
+				Object[] oZeile = new Object[3];
+				oZeile[0] = Helper.addiereTageZuDatum(
+						auftragDto.getDLiefertermin(),
+						-zp.getI_tage_vor_liefertermin());
+				oZeile[1] = zp.getN_betrag();
+
+				if (zp.getFlrzahlungsplanmeilenstein().size() > 0) {
+					String[] fieldnamesMeilenstein = new String[] {
+							"Meilenstein", "Kommentar", "KommentarLang" };
+					ArrayList<Object[]> alMeilensteine = new ArrayList<Object[]>();
+					Iterator it = zp.getFlrzahlungsplanmeilenstein().iterator();
+					while (it.hasNext()) {
+						FLRZahlungsplanmeilenstein zpm = (FLRZahlungsplanmeilenstein) it
+								.next();
+						zpm.getFlrmeilenstein().getC_nr();
+						Object[] oZeileMeilsentein = new Object[3];
+
+						oZeileMeilsentein[0] = zpm.getFlrmeilenstein()
+								.getC_nr();
+
+						oZeileMeilsentein[1] = zpm.getC_kommentar();
+						oZeileMeilsentein[2] = zpm.getX_text();
+
+						alMeilensteine.add(oZeileMeilsentein);
+
+					}
+
+					Object[][] dataSubMeilenstein = new Object[alMeilensteine
+							.size()][fieldnamesMeilenstein.length];
+					dataSubMeilenstein = (Object[][]) alMeilensteine
+							.toArray(dataSubMeilenstein);
+					oZeile[2] = new LPDatenSubreport(dataSubMeilenstein,
+							fieldnamesMeilenstein);
+
+				}
+
+				alZeichnung.add(oZeile);
+
+			}
+			session.close();
+			dataSub = new Object[alZeichnung.size()][fieldnames.length];
+			dataSub = (Object[][]) alZeichnung.toArray(dataSub);
+
+			parameter.put("P_SUBREPORT_ZAHLUNGSPLAN", new LPDatenSubreport(
+					dataSub, fieldnames));
+			// Subreport Zahlungsplan
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
+		}
+		data = new Object[0][0];
+
+		initJRDS(parameter, AuftragReportFac.REPORT_MODUL, cAktuellerReport,
+				theClientDto.getMandant(), theClientDto.getLocUi(),
+				theClientDto);
+
+		return getReportPrint();
+
 	}
 
 	/*
@@ -6898,7 +7786,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 					ArtikelkommentarDto[] aKommentarDto = getArtikelkommentarFac()
 							.artikelkommentardruckFindByArtikelIIdBelegartCNr(
 									aPositionDtos[i].getArtikelIId(),
-									LocaleFac.BELEGART_LOS,
+									LocaleFac.BELEGART_AUFTRAG,
 									theClientDto.getLocUiAsString(),
 									theClientDto);
 
@@ -7156,6 +8044,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 							clientLocale));
 					posDto.setPositionsTerminTimestamp(aPositionDtos[i]
 							.getTUebersteuerbarerLiefertermin());
+					posDto.setPositionsStatus(aPositionDtos[i]
+							.getAuftragpositionstatusCNr());
 					BigDecimal bdFiktiverLagerstand = Helper
 							.getBigDecimalNull();
 					ArtikelDto artikelDto = getArtikelFac()
@@ -7298,39 +8188,67 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			}
 
 			if (auftragSNR) {
-				List<AuftragPacklistePositionDto> listSNR = new ArrayList<AuftragPacklistePositionDto>();
-				List<AuftragPacklistePositionDto> listPos = new ArrayList<AuftragPacklistePositionDto>();
+				List<List<AuftragPacklistePositionDto>> allPosPerSnr = splitBySnr(dataList);
 
-				for (AuftragPacklistePositionDto pos : dataList) {
-					if (pos.getSerienChargenNr() != null) {
-						String snrAlle = pos.getSerienChargenNr();
-						for (String snr : snrAlle.split(",")) {
-							AuftragPacklistePositionDto newPos;
-							newPos = (AuftragPacklistePositionDto) pos.clone();
-							newPos.setSerienChargenNr(snr);
-							newPos.setGesamtMenge(BigDecimal.ONE);
-							listSNR.add(newPos);
-						}
+				// jede der innere Liste kommt auf eine eigene Seite
+				List<List<AuftragPacklistePositionDto>> snrGetrennt = new ArrayList<List<AuftragPacklistePositionDto>>();
+
+				for (List<AuftragPacklistePositionDto> posPerSnr : allPosPerSnr) {
+					// wenn die erste Position ohne SNR ist, kommt
+					if (posPerSnr.get(0).getSerienChargenNr() == null) {
+						snrGetrennt.add(posPerSnr);
 					} else {
-						listPos.add(pos);
+						// hier trennen wir die seriennummern der Position
+						String[] sNrs = posPerSnr.get(0).getSerienChargenNr()
+								.split(",");
+
+						List<AuftragPacklistePositionDto> temp;
+						// fuer jede seriennummer ...
+						for (String snr : sNrs) {
+							// ...gibt es eine eigene Seite mit den Positionen
+							// welche in der Liste temp sind
+							temp = new ArrayList<AuftragPacklistePositionDto>();
+							// fast alle Eigentschaften sind gleich wie bei der
+							// urspruenglichen Position
+							AuftragPacklistePositionDto newPosSNR = (AuftragPacklistePositionDto) posPerSnr
+									.get(0).clone();
+							// auszer die SNR, welche jetzt nur noch eine der in
+							// der urspruenglichen Position
+							// zusammengefassten SNRs ist.
+							newPosSNR.setSerienChargenNr(snr);
+							// die Menge ist 1, wir haben ja nur noch eine SNR
+							newPosSNR.setGesamtMenge(BigDecimal.ONE);
+							newPosSNR.setMengenTeiler(sNrs.length);
+
+							temp.add(newPosSNR);
+							// jetzt alle weiteren Positionen ohne Seriennummer,
+							// welche darauf folgen einfuegen
+							for (int i = 1; i < posPerSnr.size(); i++) {
+								AuftragPacklistePositionDto newPos = (AuftragPacklistePositionDto) posPerSnr
+										.get(i).clone();
+								// die weitern Positionen sind jetzt auf n
+								// Seiten vorhanden. (n=anzahl der SNRs)
+								// darum ist nur 1/n der Menge der Position pro
+								// Seite noetig
+								newPos.setMengenTeiler(sNrs.length);
+								temp.add(newPos);
+							}
+							// die Positionsliste der Seite den schon
+							// generierten Listen hinzufuegen
+							snrGetrennt.add(temp);
+						}
 					}
 				}
 
-				data = new Object[listSNR.size() + (listPos.size() > 0 ? 1 : 0)][]; // fuer
-																					// snr
-																					// pos
-																					// je
-																					// ein
+				data = new Object[snrGetrennt.size()][]; // fuer
+															// snr
+															// pos
+															// je
+															// ein
 				int i = 0;
-				for (AuftragPacklistePositionDto pos : listSNR) {
+				for (List<AuftragPacklistePositionDto> posEinerSeite : snrGetrennt) {
 					data[i] = new Object[AuftragReportFac.REPORT_PACKLISTE_ANZAHL_SPALTEN];
-					List<AuftragPacklistePositionDto> l = new ArrayList<AuftragPacklistePositionDto>();
-					l.add(pos);
-					data[i++][AuftragReportFac.REPORT_PACKLISTE_SUBREPORT_DATA] = packlistePositionListToSubreportData(l);
-				}
-				if (listPos.size() > 0) {
-					data[i] = new Object[AuftragReportFac.REPORT_PACKLISTE_ANZAHL_SPALTEN];
-					data[i][AuftragReportFac.REPORT_PACKLISTE_SUBREPORT_DATA] = packlistePositionListToSubreportData(listPos);
+					data[i++][AuftragReportFac.REPORT_PACKLISTE_SUBREPORT_DATA] = packlistePositionListToSubreportData(posEinerSeite);
 				}
 			} else {
 				data = new Object[dataList.size()][];
@@ -7416,7 +8334,13 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 
 			parameter.put("P_PROJEKTBEZEICHNUNG",
 					auftragDto.getCBezProjektbezeichnung()); // ());
-			parameter.put("P_KOSTENSTELLE", auftragDto.getKostIId());
+
+			if (auftragDto.getKostIId() != null) {
+				KostenstelleDto kostenstelleDto = getSystemFac()
+						.kostenstelleFindByPrimaryKey(auftragDto.getKostIId());
+				parameter.put(LPReport.P_KOSTENSTELLE,
+						kostenstelleDto.formatKostenstellenbezeichnung());
+			}
 
 			KundeDto kundeDtoLieferadresse = getKundeFac()
 					.kundeFindByPrimaryKey(
@@ -7482,6 +8406,41 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 		return jasperPrint;
 	}
 
+	/**
+	 * Trennt die Positionen bei jeder Seriennummer in eine neue Liste. Die
+	 * Positionen mit Seriennummer(n) stehen immer an erster Stelle der inneren
+	 * Listen, gefolgt von allen folgenden Positionen welche keine Seriennummer
+	 * haben. Die n&auml;chste seriennummernbehaftete Position bildet das erste
+	 * Element der n&auml;chsten Liste. Dadurch kann die erste Liste eventuell
+	 * auch keine Position mit Serienummer haben.
+	 * 
+	 * @param positionen
+	 * @return eine Liste von Positionslisten, welche nach
+	 *         Seriennummernzugeh&ouml;rigkeit getrennt und sortiert sind.
+	 */
+	private List<List<AuftragPacklistePositionDto>> splitBySnr(
+			List<AuftragPacklistePositionDto> positionen) {
+		List<List<AuftragPacklistePositionDto>> returnList = new ArrayList<List<AuftragPacklistePositionDto>>();
+		List<AuftragPacklistePositionDto> temp = new ArrayList<AuftragPacklistePositionDto>();
+		for (AuftragPacklistePositionDto pos : positionen) {
+			// falls es eine SNR gibt und in der Liste temp schon Positionen
+			// sind...
+			if (pos.getSerienChargenNr() != null && temp.size() > 0) {
+				// ... fuege temp der Rueckgabeliste hinzu
+				returnList.add(temp);
+				// und mach aus temp eine neue Liste, denn jetzt kommen die
+				// Positionen
+				// welche zur naechsten SNR gehoeren
+				temp = new ArrayList<AuftragPacklistePositionDto>();
+			}
+			temp.add(pos);
+		}
+		// weil beim letzten Durchlauf temp nicht hinzugefuegt wird
+		if (temp.size() > 0)
+			returnList.add(temp);
+		return returnList;
+	}
+
 	private LPDatenSubreport packlistePositionListToSubreportData(
 			List<AuftragPacklistePositionDto> list) {
 		Object[][] data = new Object[list.size()][];
@@ -7510,7 +8469,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				"F_ARTIKEL_BREITE", "F_ARTIKEL_TIEFE", "F_ARTIKEL_BAUFORM",
 				"F_ARTIKEL_VERPACKUNGSART", "F_ARTIKELKOMMENTAR",
 				"F_VERKAUFSEAN", "F_VERPACKUNGSMENGE", "F_VERPACKUNGSEAN",
-				"F_ARBEITSGAENGE" });
+				"F_ARBEITSGAENGE", "F_MENGENTEILER" });
 	}
 
 	public JasperPrintLP printAuftragSrnnrnEtikett(Integer iIdAuftragI,
@@ -7964,7 +8923,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			parameter.put("P_PROJEKTBEZEICHNUNG", zeile.getC_bez());
 		}
 
-		data = new Object[iGesamtSize][49];
+		data = new Object[iGesamtSize][REPORT_STATISTIK_ANZAHL_SPALTEN];
 		int row = 0;
 
 		for (int i = 0; i < daten.size(); i++) {
@@ -8010,8 +8969,12 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 						.getSBelegart();
 				data[row][AuftragReportFac.REPORT_STATISTIK_BELEGNUMMER] = oCurrentDto
 						.getSBelegnummer();
+				data[row][AuftragReportFac.REPORT_STATISTIK_BELEGSTATUS] = oCurrentDto
+						.getSBelegstatus();
 				data[row][AuftragReportFac.REPORT_STATISTIK_RECHNUNGSART] = oCurrentDto
 						.getSRechnungsart();
+				data[row][AuftragReportFac.REPORT_STATISTIK_ZAHLBETRAG] = oCurrentDto
+						.getBdZahlbetrag();
 				data[row][AuftragReportFac.REPORT_STATISTIK_PROJEKT] = oCurrentDto
 						.getAuftragDto().getCBezProjektbezeichnung();
 				data[row][AuftragReportFac.REPORT_STATISTIK_BESTELLNUMMER] = oCurrentDto
@@ -8127,6 +9090,29 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 						.getSEingangsrechnungtext();
 				data[row][AuftragReportFac.REPORT_STATISTIK_RECHNUNGSNUMMER_LS_VERRECHNET] = oCurrentDto
 						.getSRechnungsnummerLSVerrechnet();
+
+				data[row][AuftragReportFac.REPORT_STATISTIK_REISE_KOMMENTAR] = oCurrentDto
+						.getSReiseKommentar();
+				data[row][AuftragReportFac.REPORT_STATISTIK_REISE_PARTNER] = oCurrentDto
+						.getSReisePartner();
+				data[row][AuftragReportFac.REPORT_STATISTIK_REISE_MITARBEITER] = oCurrentDto
+						.getSReiseMitarbeiter();
+				data[row][AuftragReportFac.REPORT_STATISTIK_REISE_VON] = oCurrentDto
+						.gettReiseVon();
+				data[row][AuftragReportFac.REPORT_STATISTIK_REISE_BIS] = oCurrentDto
+						.gettReiseBis();
+				data[row][AuftragReportFac.REPORT_STATISTIK_ER_AUFTRAGSZUORDNUNG_KEINE_AUFTRAGSWERTUNG] = oCurrentDto
+						.isBKeineAuftragswertung();
+				data[row][AuftragReportFac.REPORT_STATISTIK_ER_EINGANGSRECHNUNGSART] = oCurrentDto
+						.getSEingangsgrechnungsart();
+				data[row][AuftragReportFac.REPORT_STATISTIK_ER_SCHLUSSRECHNUNG_NR] = oCurrentDto
+						.getSErSchlussrechnungNr();
+				data[row][AuftragReportFac.REPORT_STATISTIK_LOSNUMMER_LI_QUELLE] = oCurrentDto
+						.getLosnummerLiQuelle();
+				// data[row][AuftragReportFac.REPORT_STATISTIK_DIAETENAUSSCRIPT]
+				// = oCurrentDto
+				// .getBdGestehungswertmaterialist();
+
 				row++;
 			}
 		}
@@ -8177,59 +9163,54 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 
 		// Mandantparameter holen
 
-		try {
-			ParametermandantDto parameterDto = (ParametermandantDto) getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.MATERIALGEMEINKOSTENFAKTOR);
+		ParametermandantDto parameterDto = (ParametermandantDto) getParameterFac()
+				.getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ALLGEMEIN,
+						ParameterFac.MATERIALGEMEINKOSTENFAKTOR, tStichtag);
 
-			Double dMaterialgemeinkostenfaktor = ((Double) parameterDto
-					.getCWertAsObject()).doubleValue();
-			parameter.put("P_MATERIALGEMEINKOSTENPROZENT",
-					dMaterialgemeinkostenfaktor);
+		Double dMaterialgemeinkostenfaktor = ((Double) parameterDto
+				.getCWertAsObject()).doubleValue();
+		parameter.put("P_MATERIALGEMEINKOSTENPROZENT",
+				dMaterialgemeinkostenfaktor);
 
-			parameterDto = (ParametermandantDto) getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.FERTIGUNGSGEMEINKOSTENFAKTOR);
+		parameterDto = (ParametermandantDto) getParameterFac()
+				.getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ALLGEMEIN,
+						ParameterFac.FERTIGUNGSGEMEINKOSTENFAKTOR, tStichtag);
 
-			Double dFertigungsgemeinkostenfaktor = ((Double) parameterDto
-					.getCWertAsObject()).doubleValue();
-			parameter.put("P_FERTIGUNGSGEMEINKOSTENPROZENT",
-					dFertigungsgemeinkostenfaktor);
+		Double dFertigungsgemeinkostenfaktor = ((Double) parameterDto
+				.getCWertAsObject()).doubleValue();
+		parameter.put("P_FERTIGUNGSGEMEINKOSTENPROZENT",
+				dFertigungsgemeinkostenfaktor);
 
-			parameterDto = (ParametermandantDto) getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.ENTWICKLUNGSGEMEINKOSTENFAKTOR);
-			Double dEntwicklungsgemeinkostenfaktor = ((Double) parameterDto
-					.getCWertAsObject()).doubleValue();
-			parameter.put("P_ENTWICKLUNGSGEMEINKOSTENPROZENT",
-					dEntwicklungsgemeinkostenfaktor);
+		parameterDto = (ParametermandantDto) getParameterFac()
+				.getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ALLGEMEIN,
+						ParameterFac.ENTWICKLUNGSGEMEINKOSTENFAKTOR, tStichtag);
+		Double dEntwicklungsgemeinkostenfaktor = ((Double) parameterDto
+				.getCWertAsObject()).doubleValue();
+		parameter.put("P_ENTWICKLUNGSGEMEINKOSTENPROZENT",
+				dEntwicklungsgemeinkostenfaktor);
 
-			parameterDto = (ParametermandantDto) getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.VERWALTUNGSGEMEINKOSTENFAKTOR);
+		parameterDto = (ParametermandantDto) getParameterFac()
+				.getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ALLGEMEIN,
+						ParameterFac.VERWALTUNGSGEMEINKOSTENFAKTOR, tStichtag);
 
-			Double dVerwaltungssgemeinkostenfaktor = ((Double) parameterDto
-					.getCWertAsObject()).doubleValue();
-			parameter.put("P_VERWALTUNGSGEMEINKOSTENPROZENT",
-					dVerwaltungssgemeinkostenfaktor);
+		Double dVerwaltungssgemeinkostenfaktor = ((Double) parameterDto
+				.getCWertAsObject()).doubleValue();
+		parameter.put("P_VERWALTUNGSGEMEINKOSTENPROZENT",
+				dVerwaltungssgemeinkostenfaktor);
 
-			parameterDto = (ParametermandantDto) getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.VERTRIEBSGEMEINKOSTENFAKTOR);
+		parameterDto = (ParametermandantDto) getParameterFac()
+				.getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ALLGEMEIN,
+						ParameterFac.VERTRIEBSGEMEINKOSTENFAKTOR, tStichtag);
 
-			Double dVertriebsgemeinkostenfaktor = ((Double) parameterDto
-					.getCWertAsObject()).doubleValue();
-			parameter.put("P_VERTRIEBSGEMEINKOSTENPROZENT",
-					dVertriebsgemeinkostenfaktor);
-
-		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
-		}
+		Double dVertriebsgemeinkostenfaktor = ((Double) parameterDto
+				.getCWertAsObject()).doubleValue();
+		parameter.put("P_VERTRIEBSGEMEINKOSTENPROZENT",
+				dVertriebsgemeinkostenfaktor);
 
 		initJRDS(parameter, AuftragReportFac.REPORT_MODUL,
 				AuftragReportFac.REPORT_AUFTRAGSTATISTIK,
@@ -8949,8 +9930,6 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			boolean bLagerstandsdetail, boolean bMitAngelegten,
 			TheClientDto theClientDto) {
 
-		boolean bAuftragmiteinkaufspreis = false;
-
 		if (krit == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("reportJournalKriterienDtoI == null"));
@@ -8971,13 +9950,13 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 		dStichtag = Helper.cutDate(dStichtag);
 		try {
 
-			ZusatzfunktionberechtigungDto zusatzfunktionberechtigungDto = getMandantFac()
-					.zusatzfunktionberechtigungFindByPrimaryKey(
-							MandantFac.ZUSATZFUNKTION_AUFTRAG_MIT_EINKAUFPREIS,
-							theClientDto.getMandant());
-			if (zusatzfunktionberechtigungDto != null) {
-				bAuftragmiteinkaufspreis = true;
-			}
+			ParametermandantDto parametermandantDto = getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ANGEBOT,
+							ParameterFac.PARAMETER_LIEFERANT_ANGEBEN);
+
+			boolean bLieferantAngeben = (Boolean) parametermandantDto
+					.getCWertAsObject();
 
 			session = factory.openSession();
 
@@ -9437,6 +10416,9 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 						zeile[AuftragReportFac.REPORT_AUFTRAG_OFFENE_DETAILS_ARTIKELMENGE] = flrauftragposition
 								.getN_menge();
 
+						zeile[AuftragReportFac.REPORT_AUFTRAG_OFFENE_DETAILS_POSITIONSTERMIN_OHNE_LIEFERDAUER] = flrauftragposition
+								.getT_uebersteuerterliefertermin();
+
 						if (flrauftragposition
 								.getT_uebersteuerterliefertermin() != null) {
 
@@ -9496,20 +10478,60 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 						}
 
 						if (darfVerkaufspreisSehen) {
-							BigDecimal bdGestehungspreis = getLagerFac()
-									.getGemittelterGestehungspreisDesHauptlagers(
-											flrauftragposition
-													.getArtikel_i_id(),
-											theClientDto);
-							BigDecimal bdEinkaufspreis = null;
-							if (bAuftragmiteinkaufspreis) {
-								if (flrauftragposition.getN_einkaufpreis() != null)
-									bdEinkaufspreis = flrauftragposition
+
+							BigDecimal bdGestehungspreis = new BigDecimal(0);
+							if (bLieferantAngeben == true) {
+								if (flrauftragposition.getN_einkaufpreis() != null) {
+									bdGestehungspreis = flrauftragposition
 											.getN_einkaufpreis();
-								else
-									bdEinkaufspreis = new BigDecimal(0);
-								zeile[AuftragReportFac.REPORT_AUFTRAG_OFFENE_DETAILS_EINKAUFSPREIS] = bdEinkaufspreis;
+								} else {
+									ArtikellieferantDto alDto = getArtikelFac()
+											.getArtikelEinkaufspreis(
+													flrauftragposition
+															.getArtikel_i_id(),
+													null,
+													flrauftragposition
+															.getN_menge(),
+													theClientDto
+															.getSMandantenwaehrung(),
+													new java.sql.Date(
+															flrauftragposition
+																	.getFlrauftrag()
+																	.getT_belegdatum()
+																	.getTime()),
+													theClientDto);
+
+									if (alDto != null
+											&& alDto.getNNettopreis() != null) {
+										bdGestehungspreis = alDto
+												.getNNettopreis();
+									} else {
+										bdGestehungspreis = getLagerFac()
+												.getGemittelterGestehungspreisDesHauptlagers(
+														flrauftragposition
+																.getArtikel_i_id(),
+														theClientDto);
+									}
+
+								}
+
+							} else {
+								bdGestehungspreis = getLagerFac()
+										.getGemittelterGestehungspreisDesHauptlagers(
+												flrauftragposition
+														.getArtikel_i_id(),
+												theClientDto);
 							}
+
+							BigDecimal bdEinkaufspreis = new BigDecimal(0);
+
+							if (flrauftragposition.getN_einkaufpreis() != null) {
+								bdEinkaufspreis = flrauftragposition
+										.getN_einkaufpreis();
+							}
+
+							zeile[AuftragReportFac.REPORT_AUFTRAG_OFFENE_DETAILS_EINKAUFSPREIS] = bdEinkaufspreis;
+
 							zeile[AuftragReportFac.REPORT_AUFTRAG_OFFENE_DETAILS_ARTIKELGESTEHUNGSPREIS] = bdGestehungspreis;
 
 							zeile[AuftragReportFac.REPORT_AUFTRAG_OFFENE_DETAILS_ARTIKELOFFENERWERT] = flrauftragposition
@@ -10042,8 +11064,6 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 	 * 
 	 * @param krit
 	 *            die Filter- und Sortierkriterien
-	 * @param dStichtag
-	 *            Date
 	 * @param bSortierungNachLiefertermin
 	 *            Boolean
 	 * @param bOhnePositionen
@@ -10060,7 +11080,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 	 */
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printAuftragOffenePositionen(
-			ReportJournalKriterienDto krit, Date dStichtag,
+			ReportJournalKriterienDto krit, Date dVon, Date dStichtagBzwBis,
 			Boolean bSortierungNachLiefertermin, Boolean bOhnePositionen,
 			Boolean bSortierungNachAbliefertermin,
 			Integer[] fertigungsgruppeIId, Integer iArt,
@@ -10072,9 +11092,9 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 					new Exception("reportJournalKriterienDtoI == null"));
 		}
 
-		if (dStichtag == null) {
+		if (dStichtagBzwBis == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("dStichtag == null"));
+					new Exception("dStichtagBzwBis == null"));
 		}
 
 		JasperPrintLP oPrintO = null;
@@ -10084,7 +11104,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = null;
 		// vom Stichtag die Uhrzeit abschneiden
-		dStichtag = Helper.cutDate(dStichtag);
+		dStichtagBzwBis = Helper.cutDate(dStichtagBzwBis);
 		try {
 			session = factory.openSession();
 			Criteria critPosition = null;
@@ -10118,17 +11138,25 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			cStati.add(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
 			critAuftrag.add(Restrictions.in(
 					AuftragFac.FLR_AUFTRAG_AUFTRAGSTATUS_C_NR, cStati));
-			// Das Belegdatum muss vor dem Stichtag liegen
+			// Der Liefertermin muss nach dem von Stichtag liegen
+			if (dVon != null) {
+				// PJ18713
+				critPosition
+						.add(Restrictions
+								.ge(AuftragpositionFac.FLR_AUFTRAGPOSITIONSICHTAUFTRAG_T_UEBERSTEUERTERLIEFERTERMIN,
+										dVon));
+			}
+			// Der Liefertermin muss vor dem Stichtag liegen
 			critPosition
 					.add(Restrictions
 							.le(AuftragpositionFac.FLR_AUFTRAGPOSITIONSICHTAUFTRAG_T_UEBERSTEUERTERLIEFERTERMIN,
-									dStichtag));
+									dStichtagBzwBis));
 			// critAuftrag.add(Restrictions.le(AuftragFac.FLR_AUFTRAG_D_BELEGDATUM
 			// , dStichtag));
 			// Der Auftrag darf zum Stichtag noch nicht erledigt worden sein
 			critAuftrag.add(Restrictions.or(Restrictions
 					.isNull(AuftragFac.FLR_AUFTRAG_T_ERLEDIGT), Restrictions
-					.gt(AuftragFac.FLR_AUFTRAG_T_ERLEDIGT, dStichtag)));
+					.gt(AuftragFac.FLR_AUFTRAG_T_ERLEDIGT, dStichtagBzwBis)));
 			// Einschraenkung nach Auftragart
 			Collection<String> cArt = null;
 			if (iArt != null) {
@@ -10480,7 +11508,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 					BigDecimal bdFiktiverLagerstand = getInternebestellungFac()
 							.getFiktivenLagerstandZuZeitpunkt(artikelDto,
 									theClientDto,
-									new Timestamp(dStichtag.getTime()));
+									new Timestamp(dStichtagBzwBis.getTime()));
 
 					zeile[AuftragReportFac.REPORT_AUFTRAG_OFFENE_POSITIONEN_FIKTIVERLAGERSTAND] = bdFiktiverLagerstand;
 
@@ -10642,7 +11670,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			HashMap<String, Object> parameter = new HashMap<String, Object>();
 			parameter.put(
 					LPReport.P_SORTIERUNG,
-					buildSortierungAuftragOffenePositionen(krit, dStichtag,
+					buildSortierungAuftragOffenePositionen(krit,
 							bSortierungNachLiefertermin,
 							bSortierungNachAbliefertermin, bOhnePositionen,
 							fertigungsgruppeIId, iArt, theClientDto));
@@ -10659,8 +11687,12 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 									krit.iSortierung == ReportJournalKriterienDto.KRIT_SORT_NACH_ART));
 			parameter.put("P_AUFTRAGWAEHRUNG",
 					theClientDto.getSMandantenwaehrung());
-			parameter.put("P_STICHTAG",
-					Helper.formatDatum(dStichtag, theClientDto.getLocUi()));
+			if (dVon != null) {
+				parameter.put("P_VON", dVon);
+			}
+			parameter.put("P_STICHTAG", Helper.formatDatum(dStichtagBzwBis,
+					theClientDto.getLocUi()));
+			parameter.put("P_BIS", dStichtagBzwBis);
 
 			String sReportToUse = AuftragReportFac.REPORT_AUFTRAG_OFFENE_POSITIONEN;
 			if (sReportname != null) {
@@ -11339,7 +12371,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 	 */
 	private String buildSortierungAuftragOffenePositionen(
 			ReportJournalKriterienDto reportJournalKriterienDtoI,
-			Date dStichtag, Boolean bSortierungNachLiefertermin,
+			Boolean bSortierungNachLiefertermin,
 			Boolean bSortierungNachAbliefertermin, Boolean bOhnePositionen,
 			Integer[] fertigungsgruppeIId, Integer iArt,
 			TheClientDto theClientDto) {
@@ -11399,6 +12431,359 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			}
 		}
 		return buff.toString();
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printAuftragsuebersicht(Integer iIdAuftragI,
+			TheClientDto theClientDto) {
+
+		cAktuellerReport = AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT;
+
+		data = getDataAuftragsuebersicht(iIdAuftragI, theClientDto);
+
+		HashMap<String, Object> parameter = new HashMap<String, Object>();
+
+		AuftragDto auftragDto = getAuftragFac().auftragFindByPrimaryKey(
+				iIdAuftragI);
+		parameter.put("P_AUFTRAG", auftragDto.getCNr());
+		parameter.put("P_PROJEKT", auftragDto.getCBezProjektbezeichnung());
+		parameter.put("P_KOMMENTARINTERN", auftragDto.getXInternerkommentar());
+		parameter.put("P_KOMMENTAREXTERN", auftragDto.getXExternerkommentar());
+
+		parameter.put("P_LIEFERTERMIN", auftragDto.getDLiefertermin());
+
+		KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
+				auftragDto.getKundeIIdAuftragsadresse(), theClientDto);
+		parameter.put("P_KUNDE_NAME1", kundeDto.getPartnerDto()
+				.getCName1nachnamefirmazeile1());
+		parameter.put("P_KUNDE_NAME2", kundeDto.getPartnerDto()
+				.getCName2vornamefirmazeile2());
+		parameter.put("P_KUNDE_NAME3", kundeDto.getPartnerDto()
+				.getCName3vorname2abteilung());
+		parameter
+				.put("P_KUNDE_STRASSE", kundeDto.getPartnerDto().getCStrasse());
+		if (kundeDto.getPartnerDto().getLandplzortDto() != null) {
+			parameter.put("P_KUNDE_ADRESSE", kundeDto.getPartnerDto()
+					.getLandplzortDto().formatLandPlzOrt());
+		}
+
+		parameter.put("P_BELEGDATUM", auftragDto.getTBelegdatum());
+
+		initJRDS(parameter, AuftragReportFac.REPORT_MODUL,
+				AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT,
+				theClientDto.getMandant(), theClientDto.getLocUi(),
+				theClientDto);
+
+		return getReportPrint();
+	}
+
+	public Object[][] getDataAuftragsuebersicht(Integer iIdAuftragI,
+			TheClientDto theClientDto) {
+		AuftragzeitenDto[] dtos = null;
+
+		dtos = getZeiterfassungFac().getAllZeitenEinesBeleges(
+				LocaleFac.BELEGART_AUFTRAG, iIdAuftragI, null, null, null,
+				null, false, false, theClientDto);
+
+		ArrayList alDatenZeit = new ArrayList();
+
+		for (int i = 0; i < dtos.length; i++) {
+
+			Object[] oZeile = new Object[REPORT_AUFTRAGSUEBERSICHT_ANZAHL_SPALTEN];
+			oZeile[AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_AZ_PERSON] = dtos[i]
+					.getsPersonNachnameVorname();
+			oZeile[AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_AZ_PERSON_KURZZEICHEN] = dtos[i]
+					.getSPersonalKurzzeichen();
+			oZeile[AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_ARTIKELNUMMER] = dtos[i]
+					.getSArtikelcnr();
+			oZeile[AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_BEZEICHNUNG] = dtos[i]
+					.getSArtikelbezeichnung();
+			oZeile[AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_ZUSATZBEZEICHNUNG] = dtos[i]
+					.getSArtikelzusatzbezeichnung();
+			oZeile[AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_AZ_VON] = dtos[i]
+					.getTsBeginn();
+			oZeile[AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_AZ_BIS] = dtos[i]
+					.getTsEnde();
+			oZeile[AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_AZ_DAUER] = dtos[i]
+					.getDdDauer();
+			oZeile[AuftragReportFac.REPORT_AUFTRAGSUEBERSICHT_ARBEITSZEIT] = Boolean.TRUE;
+
+			alDatenZeit.add(oZeile);
+		}
+
+		Set hmLieferscheine = getAlleLieferscheineEinesAuftrags(iIdAuftragI);
+
+		Set hmRechnungen = getAlleRechnungenEinesAuftrags(iIdAuftragI);
+
+		TreeMap<String, Object[]> tmPositionen = new TreeMap();
+		// LS-Pos hinzufuegen
+		Iterator itLs = hmLieferscheine.iterator();
+		while (itLs.hasNext()) {
+			Integer lieferscheinIId = (Integer) itLs.next();
+
+			LieferscheinDto lsDto = getLieferscheinFac()
+					.lieferscheinFindByPrimaryKey(lieferscheinIId);
+
+			try {
+				Collection<LieferscheinpositionDto> cl = getLieferscheinpositionFac()
+						.lieferscheinpositionFindByLieferscheinIId(
+								lieferscheinIId, theClientDto);
+				Iterator itLsPos = cl.iterator();
+
+				while (itLsPos.hasNext()) {
+					LieferscheinpositionDto lsposDto = (LieferscheinpositionDto) itLsPos
+							.next();
+
+					if (lsposDto.getArtikelIId() != null) {
+
+						Object[] oZeile = new Object[REPORT_AUFTRAGSUEBERSICHT_ANZAHL_SPALTEN];
+
+						ArtikelDto aDto = getArtikelFac()
+								.artikelFindByPrimaryKeySmall(
+										lsposDto.getArtikelIId(), theClientDto);
+
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_ARTIKELNUMMER] = aDto
+								.getCNr();
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_ARTIKELNUMMER] = aDto
+								.getCNr();
+						if (aDto.getArtikelsprDto() != null) {
+							oZeile[REPORT_AUFTRAGSUEBERSICHT_BEZEICHNUNG] = aDto
+									.getArtikelsprDto().getCBez();
+							oZeile[REPORT_AUFTRAGSUEBERSICHT_ZUSATZBEZEICHNUNG] = aDto
+									.getArtikelsprDto().getCZbez();
+						}
+
+						if (lsposDto.getAuftragpositionIId() != null) {
+							oZeile[REPORT_AUFTRAGSUEBERSICHT_NICHT_ZUGEORDNET] = Boolean.FALSE;
+
+							oZeile[REPORT_AUFTRAGSUEBERSICHT_SOLLMENGE] = getAuftragpositionFac()
+									.auftragpositionFindByPrimaryKey(
+											lsposDto.getAuftragpositionIId())
+									.getNMenge();
+
+						} else {
+							oZeile[REPORT_AUFTRAGSUEBERSICHT_NICHT_ZUGEORDNET] = Boolean.TRUE;
+						}
+
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_ARBEITSZEIT] = Boolean.FALSE;
+
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_EINHEIT] = lsposDto
+								.getEinheitCNr();
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_ISTMENGE] = lsposDto
+								.getNMenge();
+
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_LIEFERSCHEIN] = lsDto
+								.getCNr();
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_BELEGDATM] = lsDto
+								.getTBelegdatum();
+
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_POS_NR] = lsposDto
+								.getISort();
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_LIEFERTERMIN] = lsDto
+								.getTLiefertermin();
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_NETTOPREIS] = lsposDto
+								.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte();
+
+						String sortString = lsDto.getCNr()
+								+ " "
+								+ Helper.fitString2LengthAlignRight(
+										lsposDto.getISort() + "", 10, ' ');
+						tmPositionen.put(sortString, oZeile);
+					}
+				}
+
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+
+		}
+		// RE-Pos hinzufuegen
+		Iterator itRe = hmRechnungen.iterator();
+		while (itRe.hasNext()) {
+			Integer rechnungIId = (Integer) itRe.next();
+
+			try {
+				RechnungDto reDto = getRechnungFac().rechnungFindByPrimaryKey(
+						rechnungIId);
+
+				RechnungPositionDto[] reposDtos = getRechnungFac()
+						.rechnungPositionFindByRechnungIId(rechnungIId);
+
+				for (int i = 0; i < reposDtos.length; i++) {
+
+					RechnungPositionDto reposDto = reposDtos[i];
+
+					if (reposDto.getArtikelIId() != null) {
+
+						Object[] oZeile = new Object[REPORT_AUFTRAGSUEBERSICHT_ANZAHL_SPALTEN];
+
+						ArtikelDto aDto = getArtikelFac()
+								.artikelFindByPrimaryKeySmall(
+										reposDto.getArtikelIId(), theClientDto);
+
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_ARTIKELNUMMER] = aDto
+								.getCNr();
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_ARTIKELNUMMER] = aDto
+								.getCNr();
+						if (aDto.getArtikelsprDto() != null) {
+							oZeile[REPORT_AUFTRAGSUEBERSICHT_BEZEICHNUNG] = aDto
+									.getArtikelsprDto().getCBez();
+							oZeile[REPORT_AUFTRAGSUEBERSICHT_ZUSATZBEZEICHNUNG] = aDto
+									.getArtikelsprDto().getCZbez();
+						}
+
+						if (reposDto.getAuftragpositionIId() != null) {
+							oZeile[REPORT_AUFTRAGSUEBERSICHT_NICHT_ZUGEORDNET] = Boolean.FALSE;
+
+							oZeile[REPORT_AUFTRAGSUEBERSICHT_SOLLMENGE] = getAuftragpositionFac()
+									.auftragpositionFindByPrimaryKey(
+											reposDto.getAuftragpositionIId())
+									.getNMenge();
+
+						} else {
+							oZeile[REPORT_AUFTRAGSUEBERSICHT_NICHT_ZUGEORDNET] = Boolean.TRUE;
+						}
+
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_ARBEITSZEIT] = Boolean.FALSE;
+
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_EINHEIT] = reposDto
+								.getEinheitCNr();
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_ISTMENGE] = reposDto
+								.getNMenge();
+
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_RECHNUNG] = reDto
+								.getCNr();
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_BELEGDATM] = reDto
+								.getTBelegdatum();
+
+						oZeile[REPORT_AUFTRAGSUEBERSICHT_NETTOPREIS] = reposDto
+								.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte();
+
+						String sortString = "XXX"
+								+ reDto.getCNr()
+								+ "  "
+								+ Helper.fitString2LengthAlignRight(
+										reposDto.getISort() + "", 10, ' ');
+						tmPositionen.put(sortString, oZeile);
+
+					}
+				}
+
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+
+		}
+
+		// Positionsdaten sortieren
+
+		ArrayList alDatenKomplett = new ArrayList();
+
+		// Nun AZ und anschliessend PosDaten hinzufuegen
+
+		for (int i = 0; i < alDatenZeit.size(); i++) {
+			alDatenKomplett.add(alDatenZeit.get(i));
+		}
+
+		Iterator itPos = tmPositionen.keySet().iterator();
+
+		while (itPos.hasNext()) {
+			alDatenKomplett.add(tmPositionen.get(itPos.next()));
+		}
+
+		Object[][] dataLocal = new Object[alDatenKomplett.size()][AuftragReportFac.REPORT_AUFTRAG_OFFENE_POSITIONEN_ANZAHL_SPALTEN];
+		dataLocal = (Object[][]) alDatenKomplett.toArray(dataLocal);
+
+		return dataLocal;
+	}
+
+	public Set getAlleRechnungenEinesAuftrags(Integer iIdAuftragI) {
+		// Alle Rechnungen holen, die einen Bezug zum Auftrag haben
+		Set hmRechnungen = new TreeSet();
+		Session sessionRepos = FLRSessionFactory.getFactory().openSession();
+		String sQueryRepos = "SELECT distinct re.i_id from FLRRechnung re WHERE re.auftrag_i_id="
+				+ iIdAuftragI;
+		Query queryRepos = sessionRepos.createQuery(sQueryRepos);
+
+		List<?> resultListrepos = queryRepos.list();
+
+		Iterator itRepos = resultListrepos.iterator();
+		while (itRepos.hasNext()) {
+			Integer rechnungIId = (Integer) itRepos.next();
+
+			if (!hmRechnungen.contains(rechnungIId)) {
+				hmRechnungen.add(rechnungIId);
+			}
+
+		}
+		sessionRepos.close();
+		// Alle Rechungspositionen holen, die einen Bezug zum Auftrag haben
+		sessionRepos = FLRSessionFactory.getFactory().openSession();
+		sQueryRepos = "SELECT distinct repos.flrrechnung.i_id from FLRRechnungPosition repos WHERE repos.flrpositionensichtauftrag.flrauftrag.i_id="
+				+ iIdAuftragI
+				+ " OR repos.flrrechnung.auftrag_i_id="
+				+ iIdAuftragI;
+		queryRepos = sessionRepos.createQuery(sQueryRepos);
+
+		resultListrepos = queryRepos.list();
+
+		itRepos = resultListrepos.iterator();
+		while (itRepos.hasNext()) {
+			Integer rechnungIId = (Integer) itRepos.next();
+
+			if (!hmRechnungen.contains(rechnungIId)) {
+				hmRechnungen.add(rechnungIId);
+			}
+
+		}
+		sessionRepos.close();
+		return hmRechnungen;
+	}
+
+	public Set getAlleLieferscheineEinesAuftrags(Integer iIdAuftragI) {
+
+		Set hmLieferscheine = new TreeSet();
+
+		// Alle Lieferscheine holen, die einen Bezug zum Auftrag haben
+		Session session = FLRSessionFactory.getFactory().openSession();
+		String sQueryLspos = "SELECT distinct ls.i_id from FLRLieferschein ls WHERE ls.auftrag_i_id="
+				+ iIdAuftragI;
+		Query queryLspos = session.createQuery(sQueryLspos);
+
+		List<?> resultListLspos = queryLspos.list();
+
+		Iterator it = resultListLspos.iterator();
+		while (it.hasNext()) {
+			Integer lieferscheinIId = (Integer) it.next();
+
+			if (!hmLieferscheine.contains(lieferscheinIId)) {
+				hmLieferscheine.add(lieferscheinIId);
+			}
+
+		}
+		session.close();
+
+		// Alle Lieferscheinpositionen holen, die einen Bezug zum Auftrag haben
+		session = FLRSessionFactory.getFactory().openSession();
+		sQueryLspos = "SELECT distinct lspos.flrlieferschein.i_id from FLRLieferscheinposition lspos WHERE lspos.flrpositionensichtauftrag.flrauftrag.i_id="
+				+ iIdAuftragI
+				+ " OR lspos.flrlieferschein.auftrag_i_id="
+				+ iIdAuftragI;
+		queryLspos = session.createQuery(sQueryLspos);
+
+		resultListLspos = queryLspos.list();
+
+		it = resultListLspos.iterator();
+		while (it.hasNext()) {
+			Integer lieferscheinIId = (Integer) it.next();
+
+			if (!hmLieferscheine.contains(lieferscheinIId)) {
+				hmLieferscheine.add(lieferscheinIId);
+			}
+
+		}
+		session.close();
+		return hmLieferscheine;
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
@@ -12225,7 +13610,9 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			ReportJournalKriterienDto krit, Date dStichtag,
 			Boolean bSortierungNachLiefertermin,
 			Boolean bInternenKommentarDrucken, Integer iArt,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			Integer iArtUnverbindlich, boolean bMitAngelegten,
+			boolean bStichtagGreiftBeiLiefertermin, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 
 		long l = System.currentTimeMillis();
 		if (krit == null) {
@@ -12259,7 +13646,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			critAuftrag.add(Restrictions.eq(
 					AuftragFac.FLR_AUFTRAG_MANDANT_C_NR,
 					theClientDto.getMandant()));
-
+			// die Parameter dem Report uebergeben
+			HashMap<String, Object> mapParameter = new HashMap<String, Object>();
 			// Einschraenkung nach Auftragart
 			Collection<String> cArt = null;
 			if (iArt != null) {
@@ -12267,16 +13655,50 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 					critAuftrag.add(Restrictions.ne(
 							AuftragFac.FLR_AUFTRAG_AUFTRAGART_C_NR,
 							AuftragServiceFac.AUFTRAGART_RAHMEN));
+					mapParameter.put(
+							"P_ART_RAHMENAUFTRAEGE",
+							getTextRespectUISpr(
+									"auft.journal.ohnerahmenauftraege",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()));
 				} else if (iArt == 2) {
 					critAuftrag.add(Restrictions.eq(
 							AuftragFac.FLR_AUFTRAG_AUFTRAGART_C_NR,
 							AuftragServiceFac.AUFTRAGART_RAHMEN));
+					mapParameter.put(
+							"P_ART_RAHMENAUFTRAEGE",
+							getTextRespectUISpr(
+									"auft.journal.nurrahmenauftraege",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()));
+				}
+			}
+
+			mapParameter.put("P_STICHTAG", dStichtag);
+
+			mapParameter.put("P_ART_UNVERBINDLICH", iArtUnverbindlich);
+
+			if (iArtUnverbindlich != AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTUNVERBINDLICH_ALLE) {
+				if (iArtUnverbindlich == AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTUNVERBINDLICH_NUR_UNVERBINDLICHE) {
+					critAuftrag.add(Restrictions.eq(
+							AuftragFac.FLR_AUFTRAG_B_LIEFERTERMINUNVERBINDLICH,
+							Helper.boolean2Short(true)));
+
+				} else if (iArtUnverbindlich == AuftragReportFac.REPORT_AUFTRAG_OFFENE_ARTUNVERBINDLICH_OHNE_UNVERBINDLICHE) {
+					critAuftrag.add(Restrictions.eq(
+							AuftragFac.FLR_AUFTRAG_B_LIEFERTERMINUNVERBINDLICH,
+							Helper.boolean2Short(false)));
+
 				}
 			}
 
 			// Einschraenkung nach Status Offen, Teilerledigt, Erledigt
 			Collection<String> cStati = new LinkedList<String>();
 			cStati.add(AuftragServiceFac.AUFTRAGSTATUS_OFFEN);
+			if (bMitAngelegten) {
+				cStati.add(AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT);
+			}
+
 			// cStati.add(AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT);
 			cStati.add(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
 			critAuftrag.add(Restrictions.in(
@@ -12286,16 +13708,43 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			critAuftrag.add(Restrictions.le(
 					AuftragFac.FLR_AUFTRAG_D_BELEGDATUM, dStichtag));
 
-			// Der Auftrag darf zum Stichtag noch nicht erledigt worden sein
-			critAuftrag.add(Restrictions.or(Restrictions
-					.isNull(AuftragFac.FLR_AUFTRAG_T_ERLEDIGT), Restrictions
-					.gt(AuftragFac.FLR_AUFTRAG_T_ERLEDIGT, dStichtag)));
+			// SP3294
+			if (bStichtagGreiftBeiLiefertermin) {
+				critAuftrag.add(Restrictions.or(Restrictions
+						.isNull(AuftragFac.FLR_AUFTRAG_T_LIEFERTERMIN),
+						Restrictions.le(AuftragFac.FLR_AUFTRAG_T_LIEFERTERMIN,
+								dStichtag)));
+				mapParameter.put(
+						"P_STICHTAG_ART",
+						getTextRespectUISpr(
+								"auft.report.offene.stichtag.liefertermin",
+								theClientDto.getMandant(),
+								theClientDto.getLocUi()));
+			} else {
+
+				// Der Auftrag darf zum Stichtag noch nicht erledigt worden sein
+				critAuftrag.add(Restrictions.or(Restrictions
+						.isNull(AuftragFac.FLR_AUFTRAG_T_ERLEDIGT),
+						Restrictions.gt(AuftragFac.FLR_AUFTRAG_T_ERLEDIGT,
+								dStichtag)));
+				mapParameter.put(
+						"P_STICHTAG_ART",
+						getTextRespectUISpr(
+								"auft.report.offene.stichtag.erledigungsdatum",
+								theClientDto.getMandant(),
+								theClientDto.getLocUi()));
+			}
 
 			// Einschraenkung nach einer bestimmten Kostenstelle
 			if (krit.kostenstelleIId != null) {
 				critAuftrag.add(Restrictions.eq(
 						AuftragFac.FLR_AUFTRAG_KOSTENSTELLE_I_ID,
 						krit.kostenstelleIId));
+
+				mapParameter.put("P_KOSTENSTELLE", getSystemFac()
+						.kostenstelleFindByPrimaryKey(krit.kostenstelleIId)
+						.getCNr());
+
 			}
 
 			// Einschraenkung nach einem bestimmten Kunden
@@ -12303,6 +13752,11 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				critAuftrag.add(Restrictions.eq(
 						AuftragFac.FLR_AUFTRAG_KUNDE_I_ID_AUFTRAGSADRESSE,
 						krit.kundeIId));
+
+				mapParameter.put("P_KUNDE", getKundeFac()
+						.kundeFindByPrimaryKey(krit.kundeIId, theClientDto)
+						.getPartnerDto().getCName1nachnamefirmazeile1());
+
 			}
 
 			// Einschraenkung nach einem bestimmten Vertreter
@@ -12310,6 +13764,14 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				critAuftrag.add(Restrictions.eq(
 						AuftragFac.FLR_AUFTRAG_VERTRETER_I_ID,
 						krit.vertreterIId));
+
+				mapParameter.put(
+						"P_VERTRETER",
+						getPersonalFac()
+								.personalFindByPrimaryKey(krit.vertreterIId,
+										theClientDto).getPartnerDto()
+								.getCName1nachnamefirmazeile1());
+
 			}
 			// Einschraenkung nach Belegdatum von - bis
 			String sVon = null;
@@ -12427,6 +13889,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				// Daten array befuellen
 				data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_AUFTRAGSNUMMER] = flrauftrag
 						.getC_nr();
+				data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_AUFTRAGSART] = flrauftrag
+						.getAuftragart_c_nr();
 				data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_ZEIT_VERRECHENBAR] = flrauftrag
 						.getT_verrechenbar();
 				if (flrauftrag.getFlrpersonalverrechenbar() != null) {
@@ -12508,10 +13972,16 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 					wechselkursMandantWaehrungZuAuftragswaehrung = new BigDecimal(
 							1);
 				}
-				BigDecimal auftragGesamtWert = flrauftrag
-						.getN_gesamtauftragswertinauftragswaehrung().divide(
-								wechselkursMandantWaehrungZuAuftragswaehrung,
-								2, BigDecimal.ROUND_HALF_EVEN);
+
+				// wg. PJ18770 -> Wenn Auftrag angelegt, dann ist der Wert 0
+				BigDecimal auftragGesamtWert = BigDecimal.ZERO;
+
+				if (flrauftrag.getN_gesamtauftragswertinauftragswaehrung() != null) {
+					auftragGesamtWert = flrauftrag
+							.getN_gesamtauftragswertinauftragswaehrung()
+							.divide(wechselkursMandantWaehrungZuAuftragswaehrung,
+									2, BigDecimal.ROUND_HALF_EVEN);
+				}
 
 				boolean darfVerkaufspreisSehen = getTheJudgeFac().hatRecht(
 						RechteFac.RECHT_LP_DARF_PREISE_SEHEN_VERKAUF,
@@ -12522,73 +13992,145 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				} else {
 					data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_WERT] = null;
 				}
-				// den offenen wert zum stichtag berechnen
-				BigDecimal bdOffenerWert = auftragGesamtWert;
-				// Lieferscheinpositionen per hibernate holen
-				session = factory.openSession();
-				Criteria crit = session
-						.createCriteria(FLRLieferscheinposition.class);
-				// nur auftragsbezogene.
-				crit.add(Restrictions
-						.isNotNull(LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_FLRPOSITIONENSICHTAUFTRAG));
-				// und nur die, die sich auf den aktuellen Auftrag beziehen.
-				crit.createCriteria(
-						LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_FLRPOSITIONENSICHTAUFTRAG)
-						.add(Restrictions
-								.eq(AuftragpositionFac.FLR_AUFTRAGPOSITIONSICHTAUFTRAG_AUFTRAG_I_ID,
-										flrauftrag.getI_id()));
 
-				List<?> resultList = crit.list();
+				if (darfVerkaufspreisSehen) {
+					// den offenen wert zum stichtag berechnen
+					BigDecimal bdOffenerWert = auftragGesamtWert;
+					// Lieferscheinpositionen per hibernate holen
+					session = factory.openSession();
+					Criteria crit = session
+							.createCriteria(FLRLieferscheinposition.class);
+					// nur auftragsbezogene.
+					crit.add(Restrictions
+							.isNotNull(LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_FLRPOSITIONENSICHTAUFTRAG));
+					// und nur die, die sich auf den aktuellen Auftrag beziehen.
+					crit.createCriteria(
+							LieferscheinpositionFac.FLR_LIEFERSCHEINPOSITION_FLRPOSITIONENSICHTAUFTRAG)
+							.add(Restrictions
+									.eq(AuftragpositionFac.FLR_AUFTRAGPOSITIONSICHTAUFTRAG_AUFTRAG_I_ID,
+											flrauftrag.getI_id()));
 
-				for (Iterator<?> iter = resultList.iterator(); iter.hasNext();) {
-					FLRLieferscheinposition item = (FLRLieferscheinposition) iter
-							.next();
-					// Den LS brauchen wir auch, wegen stichtag und der
-					// eventuellen waehrungsumrechnung
-					FLRLieferschein lieferschein = item.getFlrlieferschein();
-					// stichtag pruefen
-					if (!lieferschein.getD_belegdatum().after(dStichtag)) {
-						// preis- und mengenbehaftet?
-						if (item.getN_menge() != null
-								&& item.getN_nettogesamtpreisplusversteckteraufschlagminusrabatt() != null) {
-							BigDecimal posWert = item
-									.getN_menge()
-									.multiply(
-											item.getN_nettogesamtpreisplusversteckteraufschlagminusrabatt());
-							// wenn auftrag und lieferschein verschiedene
-							// waehrungen haben, muss umgerechnet werden
-							if (!lieferschein
-									.getWaehrung_c_nr_lieferscheinwaehrung()
-									.equals(theClientDto
-											.getSMandantenwaehrung())) {
-								posWert = getBetragMalWechselkurs(
-										posWert,
-										Helper.getKehrwert(new BigDecimal(
-												lieferschein
-														.getF_wechselkursmandantwaehrungzulieferscheinwaehrung()
-														.doubleValue())));
+					List<?> resultList = crit.list();
+
+					for (Iterator<?> iter = resultList.iterator(); iter
+							.hasNext();) {
+						FLRLieferscheinposition item = (FLRLieferscheinposition) iter
+								.next();
+						// Den LS brauchen wir auch, wegen stichtag und der
+						// eventuellen waehrungsumrechnung
+						FLRLieferschein lieferschein = item
+								.getFlrlieferschein();
+						// stichtag pruefen
+						if (!lieferschein.getD_belegdatum().after(dStichtag)) {
+							// preis- und mengenbehaftet?
+							if (item.getN_menge() != null
+									&& item.getN_nettogesamtpreisplusversteckteraufschlagminusrabatt() != null) {
+								BigDecimal posWert = item
+										.getN_menge()
+										.multiply(
+												item.getN_nettogesamtpreisplusversteckteraufschlagminusrabatt());
+								// wenn auftrag und lieferschein verschiedene
+								// waehrungen haben, muss umgerechnet werden
+								if (!lieferschein
+										.getWaehrung_c_nr_lieferscheinwaehrung()
+										.equals(theClientDto
+												.getSMandantenwaehrung())) {
+									posWert = getBetragMalWechselkurs(
+											posWert,
+											Helper.getKehrwert(new BigDecimal(
+													lieferschein
+															.getF_wechselkursmandantwaehrungzulieferscheinwaehrung()
+															.doubleValue())));
+								}
+								bdOffenerWert = bdOffenerWert.subtract(posWert);
 							}
-							bdOffenerWert = bdOffenerWert.subtract(posWert);
 						}
 					}
-				}
-				if (darfVerkaufspreisSehen) {
+
 					data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_WERTOFFEN] = bdOffenerWert;
-				} else {
-					data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_WERTOFFEN] = null;
+				}
+
+				// SP3197
+				if (flrauftrag.getAuftragart_c_nr().equals(
+						AuftragServiceFac.AUFTRAGART_ABRUF)
+						&& flrauftrag.getFlrauftrag_rahmenauftrag().getC_nr() != null) {
+					data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_RAHMENAUFTRAG] = flrauftrag
+							.getFlrauftrag_rahmenauftrag().getC_nr();
+
+				} else if (flrauftrag.getAuftragart_c_nr().equals(
+						AuftragServiceFac.AUFTRAGART_RAHMEN)) {
+					// Offener Abrufwert
+
+					if (darfVerkaufspreisSehen) {
+
+						BigDecimal bdOffenerRahmenWert = auftragGesamtWert;
+						// Lieferscheinpositionen per hibernate holen
+						session = factory.openSession();
+						Criteria crit = session
+								.createCriteria(FLRAuftragpositionOD.class);
+						// nur auftragsbezogene.
+						crit.add(Restrictions
+								.isNotNull("flrauftragpositionrahmen"));
+						// und nur die, die sich auf den aktuellen Auftrag
+						// beziehen.
+						crit.createCriteria("flrauftragpositionrahmen")
+								.createCriteria("flrauftrag")
+								.add(Restrictions.eq("i_id",
+										flrauftrag.getI_id()));
+
+						List<?> resultList = crit.list();
+
+						for (Iterator<?> iter = resultList.iterator(); iter
+								.hasNext();) {
+							FLRAuftragpositionOD item = (FLRAuftragpositionOD) iter
+									.next();
+							// Den LS brauchen wir auch, wegen stichtag und der
+							// eventuellen waehrungsumrechnung
+							FLRAuftragOD auftrag = item.getFlrauftrag();
+							// stichtag pruefen
+							if (!auftrag.getT_belegdatum().after(dStichtag)) {
+								// preis- und mengenbehaftet?
+								if (item.getN_menge() != null
+										&& item.getN_nettogesamtpreisplusversteckteraufschlagminusrabatte() != null) {
+									BigDecimal posWert = item
+											.getN_menge()
+											.multiply(
+													item.getN_nettogesamtpreisplusversteckteraufschlagminusrabatte());
+									// wenn auftrag und lieferschein
+									// verschiedene
+									// waehrungen haben, muss umgerechnet werden
+									if (!auftrag
+											.getWaehrung_c_nr_auftragswaehrung()
+											.equals(theClientDto
+													.getSMandantenwaehrung())) {
+										posWert = getBetragMalWechselkurs(
+												posWert,
+												Helper.getKehrwert(new BigDecimal(
+														auftrag.getF_wechselkursmandantwaehrungzuauftragswaehrung()
+																.doubleValue())));
+									}
+									bdOffenerRahmenWert = bdOffenerRahmenWert
+											.subtract(posWert);
+								}
+							}
+						}
+
+						data[i][AuftragReportFac.REPORT_AUFTRAG_OFFENE_OD_RAHMENWERTOFFEN] = bdOffenerRahmenWert;
+
+					}
 				}
 
 				i++;
 			}
-			// die Parameter dem Report uebergeben
-			HashMap<String, Object> mapParameter = new HashMap<String, Object>();
 
+			mapParameter.put("P_MIT_ANGELEGTEN", new Boolean(bMitAngelegten));
 			mapParameter
 					.put(LPReport.P_SORTIERUNG,
 							buildSortierungAuftragOffeneOhneDetails(krit,
 									theClientDto));
 			mapParameter.put(LPReport.P_FILTER,
 					buildFilterAuftragOffene(krit, theClientDto));
+
 			mapParameter.put("P_AUFTRAGWAEHRUNG",
 					theClientDto.getSMandantenwaehrung());
 
@@ -12689,9 +14231,9 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printWiederbeschaffung(Integer[] aIIdArtikelI,
 			BigDecimal[] aBdMenge, String[] aArtikelsetType,
-			Map<String, Object> mapReportParameterI,
-			boolean bSortiertNachLieferant, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+			Map<String, Object> mapReportParameterI, int iSortierung,
+			Double dWBZWennNichtDefiniertInTagen, Integer kundenlieferdauer,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		JasperPrintLP oPrint = null;
 		cAktuellerReport = AuftragReportFac.REPORT_AUFTRAG_WIEDERBESCHAFFUNG;
@@ -12708,6 +14250,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			if (parameterDtoWBZ.getCWert().equals(
 					ArtikelFac.WIEDERBESCHAFFUNGSZEIT_EINHEIT_KW)) {
 				iFaktor = 7;
+
 			} else if (parameterDtoWBZ.getCWert().equals(
 					ArtikelFac.WIEDERBESCHAFFUNGSZEIT_EINHEIT_TAGE)) {
 				iFaktor = 1;
@@ -12757,6 +14300,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				if (stuecklisteInfoDto.getIiAnzahlPositionen().intValue() > 0
 						&& (!Helper.short2boolean(stuecklisteInfoDto
 								.getBIstFremdfertigung()) || iStuecklisteaufloesungTiefe > 0)) {
+
 					ReportAuftragVerfuegbarkeitDto verfDto = new ReportAuftragVerfuegbarkeitDto();
 					StuecklisteDto stklDto = getStuecklisteFac()
 							.stuecklisteFindByMandantCNrArtikelIIdOhneExc(
@@ -12768,6 +14312,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 										new BigDecimal(iFaktor), 2,
 										RoundingMode.HALF_UP));
 					}
+
 					verfDto.setArtikelDto(artikelDto);
 
 					verfDto.setBdMenge(aBdMenge[i]);
@@ -12811,6 +14356,9 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 												new BigDecimal(iFaktor), 2,
 												RoundingMode.HALF_UP));
 							}
+
+							dto.setIEbene(stkDto.getIEbene() + 1);
+
 							dto.setArtikelDto(artikelDtoUnterstkl);
 							dto.setBdMenge(stkDto.getStuecklistepositionDto()
 									.getNMenge());
@@ -12827,6 +14375,13 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 							dto.setBdBedarf(stkDto.getStuecklistepositionDto()
 									.getNMenge());
 							dto.setEinheitCNr(artikelDto.getEinheitCNr());
+
+							BigDecimal dbGesamtWBZInTagen = BigDecimal.ZERO;
+							if (stkDto.getDurchlaufzeit() != null) {
+								dbGesamtWBZInTagen = dbGesamtWBZInTagen
+										.add(stkDto.getDurchlaufzeit());
+							}
+
 							if (artikelDtoUnterstkl.getIId() != null) {
 								// Wiederbeschaffungsinformationen des ersten
 								// Lieferanten.
@@ -12836,8 +14391,28 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 												theClientDto);
 								if (artLief.length > 0) {
 									dto.setArtikellieferantDto(artLief[0]);
+
+									if (artLief[0].getIWiederbeschaffungszeit() != null) {
+										dbGesamtWBZInTagen = dbGesamtWBZInTagen
+												.add(new BigDecimal(
+														artLief[0]
+																.getIWiederbeschaffungszeit()
+																* iFaktor));
+									} else {
+										dbGesamtWBZInTagen = dbGesamtWBZInTagen
+												.add(new BigDecimal(
+														dWBZWennNichtDefiniertInTagen));
+									}
+
+								} else {
+									dbGesamtWBZInTagen = dbGesamtWBZInTagen
+											.add(new BigDecimal(
+													dWBZWennNichtDefiniertInTagen));
 								}
 							}
+
+							dto.setDGesamtWBZ(dbGesamtWBZInTagen.doubleValue());
+
 							dataList.add(dto);
 						}
 					}
@@ -12913,6 +14488,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 			data = new Object[dataList.size()][AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_ANZAHL_SPALTEN];
 			int i = 0;
 			int maxWiederbeschaffungszeit = 0;
+			double maxGesamtWBZ = 0;
+
 			// DatenArrary befuellen.
 			for (Iterator<ReportAuftragVerfuegbarkeitDto> iter = dataList
 					.iterator(); iter.hasNext();) {
@@ -12927,6 +14504,30 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 						.getSKurzbezeichnung();
 				data[i][AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_IDENTNUMMER] = druckDto
 						.getSIdentnummer();
+				data[i][AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_STKL_EBENE] = item
+						.getIEbene();
+
+				if (item.isBLagernd()) {
+					data[i][AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_GESAMT_WIEDERBESCHAFFUNGSZEIT] = 0D;
+
+				} else {
+					if (item.getDGesamtWBZ() != null) {
+						data[i][AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_GESAMT_WIEDERBESCHAFFUNGSZEIT] = new BigDecimal(
+								item.getDGesamtWBZ().doubleValue()).divide(
+								new BigDecimal(iFaktor), 2,
+								RoundingMode.HALF_UP).doubleValue();
+					} else {
+						data[i][AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_GESAMT_WIEDERBESCHAFFUNGSZEIT] = new BigDecimal(
+								dWBZWennNichtDefiniertInTagen).divide(
+								new BigDecimal(iFaktor), 2,
+								RoundingMode.HALF_UP).doubleValue();
+					}
+				}
+
+				if (item.getDGesamtWBZ() != null
+						&& item.getDGesamtWBZ() > maxGesamtWBZ) {
+					maxGesamtWBZ = item.getDGesamtWBZ();
+				}
 
 				data[i][AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_EINHEIT] = item
 						.getEinheitCNr();
@@ -13032,7 +14633,7 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 				i++;
 			}
 
-			if (bSortiertNachLieferant == true) {
+			if (iSortierung == SORT_REPORT_WIEDERBESCHAFFUNG_LIEFERANT) {
 				for (int k = data.length - 1; k > 0; --k) {
 					for (int j = 0; j < k; ++j) {
 						Object[] a1 = (Object[]) data[j];
@@ -13066,6 +14667,70 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 					}
 
 				}
+			} else if (iSortierung == SORT_REPORT_WIEDERBESCHAFFUNG_GESAMT_WBZ) {
+				for (int k = data.length - 1; k > 0; --k) {
+					for (int j = 0; j < k; ++j) {
+						Object[] a1 = (Object[]) data[j];
+						Object[] a2 = (Object[]) data[j + 1];
+
+						Double d1 = (Double) a1[AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_GESAMT_WIEDERBESCHAFFUNGSZEIT];
+						Double d2 = (Double) a2[AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_GESAMT_WIEDERBESCHAFFUNGSZEIT];
+						if (d1 == null) {
+							d1 = 0D;
+						}
+						if (d2 == null) {
+							d2 = 0D;
+						}
+
+						if (d1 < d2) {
+							data[j] = a2;
+							data[j + 1] = a1;
+						} else if (d1 == d2) {
+
+							String artikel1 = (String) a1[AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_IDENTNUMMER];
+							String artikel2 = (String) a2[AuftragReportFac.REPORT_WIEDERBESCHAFFUNG_IDENTNUMMER];
+
+							if (artikel1 == null) {
+								artikel1 = "";
+							}
+							if (artikel2 == null) {
+								artikel2 = "";
+							}
+
+							if (artikel1.compareTo(artikel2) > 0) {
+
+								data[j] = a2;
+								data[j + 1] = a1;
+							}
+
+						}
+					}
+
+				}
+			}
+
+			if (iSortierung == SORT_REPORT_WIEDERBESCHAFFUNG_LIEFERANT) {
+
+				mapReportParameterI.put(
+						"P_SORTIERUNG",
+						getTextRespectUISpr("bes.lieferant",
+								theClientDto.getMandant(),
+								theClientDto.getLocUi()));
+			} else if (iSortierung == SORT_REPORT_WIEDERBESCHAFFUNG_GESAMT_WBZ) {
+
+				mapReportParameterI.put(
+						"P_SORTIERUNG",
+						getTextRespectUISpr(
+								"auft.wiederbeschaffung.sort.gesamtwbz",
+								theClientDto.getMandant(),
+								theClientDto.getLocUi()));
+			} else if (iSortierung == SORT_REPORT_WIEDERBESCHAFFUNG_AUFTRAGSPOSITION) {
+				mapReportParameterI
+						.put("P_SORTIERUNG",
+								getTextRespectUISpr(
+										"auft.report.wiederbeschaffung.sortierung.auftragsposition",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()));
 			}
 
 			// Parameter
@@ -13073,16 +14738,21 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 					theClientDto.getSMandantenwaehrung());
 			mapReportParameterI.put("P_WIEDERBESCHAFFUNGSZEIT_EINHEIT",
 					parameterDtoWBZ.getCWert());
-			// den fruehesten Liefertermin bestimmen.
-			Object oTermin = mapReportParameterI.get("P_LIEFERTERMIN");
-			if (oTermin != null) {
-				Timestamp tLiefertermin = (Timestamp) oTermin;
-				Date dLiefertermin = new Date(tLiefertermin.getTime());
+
+			// Fruehester Liefertermin = Morgen + hoechste GeamtWBZ +
+			// Kundenlieferdauer
+
+			Date dLiefertermin = Helper.cutDate(new Date(System
+					.currentTimeMillis()));
+			dLiefertermin = Helper.addiereTageZuDatum(dLiefertermin, 1);
+			dLiefertermin = Helper.addiereTageZuDatum(dLiefertermin,
+					(int) maxGesamtWBZ);
+			if (kundenlieferdauer != null) {
 				dLiefertermin = Helper.addiereTageZuDatum(dLiefertermin,
-						iFaktor * maxWiederbeschaffungszeit);
-				mapReportParameterI.put("P_FRUEHESTER_LIEFERTERMIN",
-						dLiefertermin);
+						kundenlieferdauer);
 			}
+
+			mapReportParameterI.put("P_FRUEHESTER_LIEFERTERMIN", dLiefertermin);
 
 			initJRDS(mapReportParameterI, AuftragReportFac.REPORT_MODUL,
 					AuftragReportFac.REPORT_AUFTRAG_WIEDERBESCHAFFUNG,
@@ -13492,7 +15162,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 	}
 
 	/**
-	 * Die Verfuegbarkeitspr&uuml;fung fuer alle Positionen eines Auftrags drucken. <br>
+	 * Die Verfuegbarkeitspr&uuml;fung fuer alle Positionen eines Auftrags
+	 * drucken. <br>
 	 * Beruecksichtigt werden nur mengenbehaftete Positionen.
 	 * 
 	 * @param iIdAuftragI
@@ -13505,8 +15176,8 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 	 */
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printVerfuegbarkeitspruefung(Integer iIdAuftragI,
-			boolean bSortiertNachLieferant, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+			int iSortierung, Double dWBZWennNichtDefiniert,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		JasperPrintLP oPrint = null;
 		cAktuellerReport = AuftragReportFac.REPORT_AUFTRAG_VORKALKULATION;
@@ -13576,8 +15247,10 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 							ansprechpartnerDto, mandantDto,
 							theClientDto.getLocUi()));
 			mapParameter.put("P_LIEFERTERMIN", auftragDto.getDLiefertermin());
+
 			oPrint = printWiederbeschaffung(aArtikel, aMengen, aArtikelsetTyp,
-					mapParameter, bSortiertNachLieferant, theClientDto);
+					mapParameter, iSortierung, dWBZWennNichtDefiniert,
+					kundeDto.getILieferdauer(), theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		} finally {
@@ -13716,9 +15389,10 @@ public class AuftragReportFacBean extends LPReport implements AuftragReportFac,
 
 							Object[] oZeile = new Object[AuftragReportFac.REPORT_ERFUELLUNGSJOURNAL_ANZAHL_SPALTEN];
 
-							oZeile[AuftragReportFac.REPORT_ERFUELLUNGSJOURNAL_RAHMEN_GEPLANT] = position
-									.getNZielmenge().multiply(
-											posDto.getNMenge());
+							oZeile[AuftragReportFac.REPORT_ERFUELLUNGSJOURNAL_RAHMEN_GEPLANT] = Helper
+									.rundeKaufmaennisch(
+											position.getNZielmenge().multiply(
+													posDto.getNMenge()), 4);
 
 							if (hmPositionenVerdichtet.containsKey(position
 									.getArtikelIId())) {

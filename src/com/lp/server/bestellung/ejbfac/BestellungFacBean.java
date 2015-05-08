@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -43,6 +43,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
@@ -58,6 +59,8 @@ import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
+import com.lp.server.anfrage.ejb.Anfrage;
+import com.lp.server.anfrage.ejb.Anfrageerledigungsgrund;
 import com.lp.server.anfrage.service.AnfrageDto;
 import com.lp.server.anfrage.service.AnfrageFac;
 import com.lp.server.anfrage.service.AnfrageServiceFac;
@@ -86,11 +89,12 @@ import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
 import com.lp.server.partner.ejb.Lieferant;
 import com.lp.server.partner.ejb.Partner;
 import com.lp.server.partner.service.LieferantDto;
-import com.lp.server.system.ejbfac.BelegAktivierungController;
+import com.lp.server.system.ejbfac.BelegAktivierungFac;
 import com.lp.server.system.ejbfac.IAktivierbar;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.format.LpBelegnummer;
 import com.lp.server.system.pkgenerator.format.LpBelegnummerFormat;
+import com.lp.server.system.service.BelegPruefungDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MediaFac;
 import com.lp.server.system.service.MwstsatzDto;
@@ -100,15 +104,21 @@ import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.service.BelegDto;
+import com.lp.service.BelegpositionDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.EJBExceptionLPwoRollback;
 import com.lp.util.Helper;
 
 @Stateless
-public class BestellungFacBean extends Facade implements BestellungFac, IAktivierbar {
+public class BestellungFacBean extends Facade implements BestellungFac,
+		IAktivierbar {
 	@PersistenceContext
 	private EntityManager em;
 
+	@EJB
+	private BelegAktivierungFac belegAktivierungFac ;
+	
 	/**
 	 * Ueberpruefung der BestellungDto; darf nicht null sein
 	 * 
@@ -233,13 +243,45 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 		updateBestellung(bestellung, theClientDto);
 	}
 
+	public void updateBestellungRechnungsadresse(Integer bestellungIId,
+			Integer lieferantIIdRechnungsadresseNeu, TheClientDto theClientDto) {
+
+		try {
+			WareneingangDto[] weDtos = getWareneingangFac()
+					.wareneingangFindByBestellungIId(bestellungIId);
+			for (int i = 0; i < weDtos.length; i++) {
+
+				WareneingangspositionDto[] weposDtos = getWareneingangFac()
+						.wareneingangspositionFindByWareneingangIId(
+								weDtos[i].getIId());
+				for (int j = 0; j < weposDtos.length; j++) {
+					if (weposDtos[j].getBPreiseErfasst() == true) {
+						throw new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_LIEFERADRESSE_NUR_AENDERBAR_WENN_KEINE_PREISE_ERFASST,
+								"");
+					}
+				}
+			}
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		Bestellung oBestellung = em.find(Bestellung.class, bestellungIId);
+		oBestellung
+				.setLieferantIIdRechnungsadresse(lieferantIIdRechnungsadresseNeu);
+		em.merge(oBestellung);
+		em.flush();
+
+	}
+
 	public void updateBestellung(BestellungDto bestellungDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		updateBestellung(bestellungDtoI, theClientDto, true);
 	}
-	
+
 	public void updateBestellung(BestellungDto bestellungDtoI,
-			TheClientDto theClientDto, boolean pruefeKorrekterStatus) throws EJBExceptionLP {
+			TheClientDto theClientDto, boolean pruefeKorrekterStatus)
+			throws EJBExceptionLP {
 		checkBestellungDto(bestellungDtoI, theClientDto);
 
 		// merken fuer Liefertermin setzen (siehe ende von updateBestellung)
@@ -256,9 +298,9 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
-//			bestellung.setTAendern(bestellungDtoI.getTAendern());
-//			bestellung.setPersonalIIdAendern(bestellungDtoI
-//					.getPersonalIIdAendern());
+			// bestellung.setTAendern(bestellungDtoI.getTAendern());
+			// bestellung.setPersonalIIdAendern(bestellungDtoI
+			// .getPersonalIIdAendern());
 			setBestellungFromBestellungDto(bestellung, bestellungDtoI);
 
 			BestellungDto bsDtoNew = bestellungFindByPrimaryKey(bestellungDtoI
@@ -280,7 +322,7 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 				}
 			}
 
-			if(!pruefeKorrekterStatus)
+			if (!pruefeKorrekterStatus)
 				return;
 			String sKorrekterStatus = getRichtigenBestellStatus(
 					bestellungDtoI.getIId(), false, theClientDto);
@@ -309,9 +351,11 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 		// }
 	}
 
-	public void setAuftragIIdInBestellung(BestellungDto bestellungDto, TheClientDto theClientDto) {
+	public void setAuftragIIdInBestellung(BestellungDto bestellungDto,
+			TheClientDto theClientDto) {
 		if (bestellungDto.getIId() != null) {
-			BestellungDto bestellung = bestellungFindByPrimaryKey(bestellungDto.getIId());
+			BestellungDto bestellung = bestellungFindByPrimaryKey(bestellungDto
+					.getIId());
 			bestellung.setAuftragIId(bestellungDto.getAuftragIId());
 			updateBestellung(bestellungDto, theClientDto, false);
 		}
@@ -676,37 +720,34 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 		bestellung.setTAendern(getTimestamp());
 		bestellung.setPersonalIIdAendern(theClientDto.getIDPersonal());
 	}
-	
-	
-	public void aktiviereBestellung(Integer iIdBestellungI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException {
+
+	public void aktiviereBestellung(Integer iIdBestellungI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		Validator.notNull(iIdBestellungI, "iIdBestellungI");
 		pruefeAktivierbar(iIdBestellungI, theClientDto);
-		//Wert berechnen
+		// Wert berechnen
 		berechneBeleg(iIdBestellungI, theClientDto);
-		//und Status aendern
+		// und Status aendern
 		aktiviereBeleg(iIdBestellungI, theClientDto);
 	}
-	
+
 	@Override
 	public void pruefeAktivierbar(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
-		
+
 		BestellungDto bestellung = bestellungFindByPrimaryKey(iid);
 		if (bestellung == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		// Ohne Positionen darf der Beleg nicht aktiviert werden.
-		if (getBestellpositionFac().getAnzahlBestellpositionen(
-				iid) == 0) {
+		if (getBestellpositionFac().getAnzahlBestellpositionen(iid) == 0) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BELEG_HAT_KEINE_POSITIONEN, "");
 		}
-		
+
 		BestellpositionDto[] aPositionDtos = getBestellpositionFac()
-				.bestellpositionFindByBestellung(iid,
-						theClientDto);
+				.bestellpositionFindByBestellung(iid, theClientDto);
 		boolean bHatMengenbehaftetePositionen = false;
 		for (int i = 0; i < aPositionDtos.length; i++) {
 			if (aPositionDtos[i].getNMenge() != null) {
@@ -721,28 +762,39 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 		}
 
 	}
-	
+
 	@Override
 	public void aktiviereBeleg(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
-		
-		BestellungDto bestellung = bestellungFindByPrimaryKey(iid);
-		if (BestellungFac.BESTELLSTATUS_ANGELEGT.equals(bestellung.getStatusCNr())) {
-			bestellung.setStatusCNr(BestellungFac.BESTELLSTATUS_OFFEN);
+
+		Bestellung bestellung = em.find(Bestellung.class, iid);
+		if (BestellungFac.BESTELLSTATUS_ANGELEGT.equals(bestellung
+				.getBestellungstatusCNr())) {
+
 			bestellung.setTGedruckt(getTimestamp());
-			updateBestellung(bestellung, theClientDto, false);
+			em.merge(bestellung);
+			em.flush();
+
+			BestellungDto bestellungDto = bestellungFindByPrimaryKey(iid);
+
+			// SP2415 Es muss der berechnete Bestellstatus kommen, da es
+			// eventuell schon Wareneingaenge usw. geben kann
+			bestellungDto.setStatusCNr(getRichtigenBestellStatus(iid, false,
+					theClientDto));
+
+			updateBestellung(bestellungDto, theClientDto, false);
 		}
 	}
 
 	@Override
-	public void berechneBeleg(Integer iid, TheClientDto theClientDto)
+	public Timestamp berechneBeleg(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
-		
 
 		Bestellung oBestellung = em.find(Bestellung.class, iid);
-		if(!BestellungFac.BESTELLSTATUS_ANGELEGT.equals(oBestellung
-				.getBestellungstatusCNr())) return;
-				
+		if (!BestellungFac.BESTELLSTATUS_ANGELEGT.equals(oBestellung
+				.getBestellungstatusCNr()))
+			return getTimestamp();
+
 		oBestellung.setNBestellwert(berechneNettowertGesamt(
 				oBestellung.getIId(), theClientDto)); // Berechnung in
 		// Bestellwaehrung
@@ -790,6 +842,7 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 				}
 			}
 		}
+		return getTimestamp();
 	}
 
 	public BigDecimal berechneBestellwertGesamt(Integer iIdBestellungI,
@@ -1019,7 +1072,7 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 *             Ausnahme
-	 * @throws RemoteException 
+	 * @throws RemoteException
 	 */
 	public void manuellErledigen(Integer iIdBestellungI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
@@ -1032,16 +1085,19 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-		if (Helper.isOneOf(bestellung.getStatusCNr(), BestellungFac.BESTELLSTATUS_OFFEN,
-						BestellungFac.BESTELLSTATUS_BESTAETIGT,
-						BestellungFac.BESTELLSTATUS_GELIEFERT)) {
+		if (Helper.isOneOf(bestellung.getStatusCNr(),
+				BestellungFac.BESTELLSTATUS_OFFEN,
+				BestellungFac.BESTELLSTATUS_BESTAETIGT,
+				BestellungFac.BESTELLSTATUS_GELIEFERT)) {
 			bestellung.setIPersonalIIdManuellGeliefert(theClientDto
 					.getIDPersonal());
 			bestellung.setTManuellGeliefert(getTimestamp());
 			bestellung.setStatusCNr(BestellungFac.BESTELLSTATUS_ERLEDIGT);
-			
-			BestellpositionDto[] positionen = getBestellpositionFac().bestellpositionFindByBestellung(iIdBestellungI, theClientDto);
-			for(BestellpositionDto pos : positionen) {
+
+			BestellpositionDto[] positionen = getBestellpositionFac()
+					.bestellpositionFindByBestellung(iIdBestellungI,
+							theClientDto);
+			for (BestellpositionDto pos : positionen) {
 				if (Helper.isOneOf(pos.getBestellpositionstatusCNr(),
 						BestellpositionFac.BESTELLPOSITIONSTATUS_OFFEN,
 						BestellpositionFac.BESTELLPOSITIONSTATUS_BESTAETIGT)
@@ -1124,8 +1180,7 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 
 		if (bestellung.getStatusCNr().equals(
 				BestellungFac.BESTELLSTATUS_STORNIERT)) {
-			bestellung
-					.setStatusCNr(BestellungFac.BESTELLSTATUS_ANGELEGT);
+			bestellung.setStatusCNr(BestellungFac.BESTELLSTATUS_ANGELEGT);
 			bestellung.setTStorniert(null);
 			bestellung.setPersonalIIdStorniert(null);
 			updateBestellung(bestellung, theClientDto, false);
@@ -1149,26 +1204,20 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 	 */
 	public void stornieren(Integer iIdBestellungI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
-		if (iIdBestellungI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdBestellungI == null"));
-		}
+
+		Validator.notNull(iIdBestellungI, "iIdBestellungI");
 
 		try {
 			BestellungDto bestellung = bestellungFindByPrimaryKey(iIdBestellungI);
-			if (bestellung == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
-			}
 
 			if (bestellung.getStatusCNr().equals(
 					BestellungFac.BESTELLSTATUS_ANGELEGT)) {
-				bestellung
-						.setStatusCNr(BestellungFac.BESTELLSTATUS_STORNIERT);
+				bestellung.setStatusCNr(BestellungFac.BESTELLSTATUS_STORNIERT);
 				bestellung.setTStorniert(getTimestamp());
-				bestellung.setPersonalIIdStorniert(theClientDto
-						.getIDPersonal());
+				bestellung
+						.setPersonalIIdStorniert(theClientDto.getIDPersonal());
 
+				updateBestellung(bestellung, theClientDto, false);
 				// die Bestellwerte und Positionen bleiben beim Stornieren
 				// erhalten
 				BestellpositionDto[] oBestellpositionen = getBestellpositionFac()
@@ -1198,7 +1247,6 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 					getArtikelbestelltFac().aktualisiereBestelltListe(
 							oBestellpositionen[i].getIId(), theClientDto);
 				}
-				updateBestellung(bestellung, theClientDto, false);
 			} else {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_STATUS,
 						new Exception(
@@ -1209,7 +1257,6 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 			throwEJBExceptionLPRespectOld(ex);
 		}
 	}
-
 
 	private void importiereBestellung(
 			ArrayList<ImportMonatsbestellungDto> importBestellung,
@@ -1254,13 +1301,13 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 
 		for (int i = 0; i < importBestellung.size(); i++) {
 			// Position anlegen
-			
-			//SP1768
-			if(importBestellung.get(i).getMenge() == null || importBestellung.get(i).getMenge() .doubleValue()==0){
+
+			// SP1768
+			if (importBestellung.get(i).getMenge() == null
+					|| importBestellung.get(i).getMenge().doubleValue() == 0) {
 				continue;
 			}
 
-			
 			try {
 				BestellpositionDto bspos = createBestellPositionDto(
 						bestellungIId, importBestellung.get(i)
@@ -1480,7 +1527,7 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 
 						getBestellungFac().aktiviereBestellung(bestellungIId,
 								theClientDto);
-						
+
 						getBestellpositionFac()
 								.manuellAufVollstaendigGeliefertSetzen(
 										bsPosIId, theClientDto);
@@ -1591,6 +1638,25 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 		Integer iIdBestellung = null;
 
 		try {
+
+			try {
+				//PJ18151
+				Query query = em
+						.createNamedQuery("AnfrageerledigungsgrundfindByMandantCnrCBez");
+				query.setParameter(1, theClientDto.getMandant());
+				query.setParameter(2,
+						AnfrageServiceFac.ANFRAGEERLEDIGUNGSGRUND_BESTELLT);
+				Anfrageerledigungsgrund anfrageerledigungsgrund = (Anfrageerledigungsgrund) query
+						.getSingleResult();
+
+				// Anfrageerledigungsgrund auf Bestellt setzen
+				Anfrage anfrage = em.find(Anfrage.class, iIdAnfrageI);
+				anfrage.setAnfrageerledigungsgrundIId(anfrageerledigungsgrund
+						.getIId());
+
+			} catch (NoResultException ex1) {
+			}
+
 			oAnfrageBasis = anfrageFac.anfrageFindByPrimaryKey(iIdAnfrageI,
 					theClientDto);
 
@@ -1874,7 +1940,7 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 	 * @param theClientDto
 	 *            String
 	 * @throws EJBExceptionLP
-	 * @throws RemoteException 
+	 * @throws RemoteException
 	 */
 	public void erledigenAufheben(Integer iIdBestellungI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
@@ -1910,7 +1976,7 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 		}
 		bestellung.setIPersonalIIdManuellGeliefert(null);
 		bestellung.setTManuellGeliefert(null);
-		updateBestellung(bestellung, theClientDto);
+		updateBestellung(bestellung, theClientDto, false);
 
 	}
 
@@ -2421,12 +2487,15 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 				// Daraus kann der Status bestimmt werden
 				if (iBestaetigtePositionen == 0 && iOffenePositionen == 0
 						&& iGeliefertePositionen == 0) {
-					bestellung.setStatusCNr(BestellungFac.BESTELLSTATUS_ERLEDIGT);
+					bestellung
+							.setStatusCNr(BestellungFac.BESTELLSTATUS_ERLEDIGT);
 				} else if (iOffenePositionen == 0
 						&& iBestaetigtePositionen == 0) {
-					bestellung.setStatusCNr(BestellungFac.BESTELLSTATUS_GELIEFERT);
+					bestellung
+							.setStatusCNr(BestellungFac.BESTELLSTATUS_GELIEFERT);
 				} else if (iBestaetigtePositionen != 0) {
-					bestellung.setStatusCNr(BestellungFac.BESTELLSTATUS_BESTAETIGT);
+					bestellung
+							.setStatusCNr(BestellungFac.BESTELLSTATUS_BESTAETIGT);
 				} else {
 					bestellung.setStatusCNr(BestellungFac.BESTELLSTATUS_OFFEN);
 				}
@@ -2957,39 +3026,63 @@ public class BestellungFacBean extends Facade implements BestellungFac, IAktivie
 	}
 
 	@Override
-	public void aktiviereBelegControlled(Integer iid, Timestamp t,
-			TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException {
-		new BelegAktivierungController(this).aktiviereBelegControlled(iid, t, theClientDto);
+	public BelegPruefungDto aktiviereBelegControlled(Integer iid, Timestamp t,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return belegAktivierungFac.aktiviereBelegControlled(this, iid, t, theClientDto) ;
+//		new BelegAktivierungController(this).aktiviereBelegControlled(iid, t,
+//				theClientDto);
+	}
+
+	@Override
+	public BelegPruefungDto berechneBelegControlled(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return belegAktivierungFac.berechneBelegControlled(this, iid, theClientDto) ;
+//		return new BelegAktivierungController(this).berechneBelegControlled(
+//				iid, theClientDto);
+	}
+
+	@Override
+	public List<Timestamp> getAenderungsZeitpunkte(Integer iid)
+			throws EJBExceptionLP, RemoteException {
+		BestellungDto b = bestellungFindByPrimaryKey(iid);
+		List<Timestamp> timestamps = new ArrayList<Timestamp>();
+		timestamps.add(b.getTAendern());
+		timestamps.add(b.getTManuellerledigt());
+		timestamps.add(b.getTManuellGeliefert());
+		timestamps.add(b.getTStorniert());
+		BestellpositionDto[] pos = getBestellpositionFac()
+				.bestellpositionFindByBestellung(iid, null);
+		for (BestellpositionDto p : pos) {
+			timestamps.add(p.getTAbterminAendern());
+			timestamps.add(p.getTManuellvollstaendiggeliefert());
+		}
+		return timestamps;
+	}
+
+	@Override
+	public BelegPruefungDto berechneAktiviereBelegControlled(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return belegAktivierungFac.berechneAktiviereControlled(this, iid, theClientDto) ;
+//		new BelegAktivierungController(this).berechneAktiviereControlled(iid, theClientDto);
 	}
 	
 	@Override
-	public Timestamp berechneBelegControlled(Integer iid,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		return new BelegAktivierungController(this).berechneBelegControlled(iid, theClientDto);
-	}
-
-	@Override
-	public boolean hatAenderungenNach(Integer iid, Timestamp t)
+	public BelegDto getBelegDto(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
-		
-		BestellungDto b = bestellungFindByPrimaryKey(iid);
-		if(b.getTAendern() != null && b.getTAendern().after(t))
-			return true;
-		if(b.getTManuellerledigt() != null && b.getTManuellerledigt().after(t))
-			return true;
-		if(b.getTManuellGeliefert() != null && b.getTManuellGeliefert().after(t))
-			return true;
-		if(b.getTStorniert() != null && b.getTStorniert().after(t))
-			return true;
-		BestellpositionDto[] pos = getBestellpositionFac().bestellpositionFindByBestellung(iid, null);
-		for(BestellpositionDto p : pos) {
-			if(p.getTAbterminAendern() != null && p.getTAbterminAendern().after(t))
-				return true;
-			if(p.getTManuellvollstaendiggeliefert() != null && p.getTManuellvollstaendiggeliefert().after(t))
-				return true;
-		}
-		return false;
+		BelegDto belegDto = bestellungFindByPrimaryKey(iid) ;
+		belegDto.setBelegartCNr(LocaleFac.BELEGART_BESTELLUNG);
+		return belegDto;
 	}
-
+	
+	@Override
+	public BelegpositionDto[] getBelegPositionDtos(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return getBestellpositionFac().bestellpositionFindByBestellung(iid, theClientDto); 
+	}
+	
+	@Override
+	public Integer getKundeIdDesBelegs(BelegDto belegDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return null ; // es gibt keinen Kunden
+	}
 }

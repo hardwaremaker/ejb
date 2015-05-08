@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,17 +32,14 @@
  ******************************************************************************/
 package com.lp.server.system.ejbfac;
 
-import java.util.*;
-
-import com.lp.server.artikel.service.*;
-import com.lp.server.system.ejb.*;
-import com.lp.server.system.pkgenerator.*;
-import com.lp.server.system.pkgenerator.bl.*;
-import com.lp.server.system.service.*;
-import com.lp.server.util.*;
-import com.lp.server.util.logger.HvDtoLogger;
-import com.lp.util.*;
-import com.lp.server.finanz.service.FibuExportFac;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.GregorianCalendar;
+import java.util.Iterator;
+import java.util.List;
+import java.util.TreeMap;
 
 import javax.ejb.Stateless;
 import javax.persistence.EntityExistsException;
@@ -51,6 +48,40 @@ import javax.persistence.NoResultException;
 import javax.persistence.NonUniqueResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
+
+import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.finanz.service.FibuExportFac;
+import com.lp.server.system.ejb.Arbeitsplatz;
+import com.lp.server.system.ejb.Arbeitsplatzparameter;
+import com.lp.server.system.ejb.Parameter;
+import com.lp.server.system.ejb.Parameteranwender;
+import com.lp.server.system.ejb.ParameteranwenderPK;
+import com.lp.server.system.ejb.Parametermandant;
+import com.lp.server.system.ejb.ParametermandantPK;
+import com.lp.server.system.ejb.Parametermandantgueltigab;
+import com.lp.server.system.ejb.ParametermandantgueltigabPK;
+import com.lp.server.system.pkgenerator.PKConst;
+import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
+import com.lp.server.system.service.ArbeitsplatzDto;
+import com.lp.server.system.service.ArbeitsplatzDtoAssembler;
+import com.lp.server.system.service.ArbeitsplatzparameterDto;
+import com.lp.server.system.service.ArbeitsplatzparameterDtoAssembler;
+import com.lp.server.system.service.ParameterDto;
+import com.lp.server.system.service.ParameterDtoAssembler;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParameteranwenderDto;
+import com.lp.server.system.service.ParameteranwenderDtoAssembler;
+import com.lp.server.system.service.ParametermandantDto;
+import com.lp.server.system.service.ParametermandantDtoAssembler;
+import com.lp.server.system.service.ParametermandantgueltigabDto;
+import com.lp.server.system.service.ParametermandantgueltigabDtoAssembler;
+import com.lp.server.system.service.SystemFac;
+import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.Facade;
+import com.lp.server.util.logger.HvDtoLogger;
+import com.lp.util.EJBExceptionLP;
+import com.lp.util.EJBExceptionLPwoRollback;
+import com.lp.util.Helper;
 
 @Stateless
 public class ParameterFacBean extends Facade implements ParameterFac {
@@ -98,11 +129,13 @@ public class ParameterFacBean extends Facade implements ParameterFac {
 	// MANDANTENPARAMETER
 	// Fix verdrahtete Parameter, Formatierung so belassen!
 	public static final String[][] progMandantParameter = {
-			{ ParameterFac.KATEGORIE_ALLGEMEIN,
-					ParameterFac.PARAMETER_GESCHAEFTSJAHRBEGINNMONAT, "1",
+			{
+					ParameterFac.KATEGORIE_ALLGEMEIN,
+					ParameterFac.PARAMETER_GESCHAEFTSJAHRBEGINNMONAT,
+					"1",
 					"java.lang.Integer",
-					"Monat, in dem das Gesch\u00E4ftsjahr beginnt",
-					"Monat, in dem das Gesch\u00E4ftsjahr beginnt" },
+					"Monat, in dem das Geschf\u00E4tsjahr beginnt. 0=J\u00E4nner 11=Dezember",
+					"Monat, in dem das Gesch\u00E4ftsjahr beginnt. 0=J\u00E4nner 11=Dezember" },
 
 			{
 					ParameterFac.KATEGORIE_ALLGEMEIN,
@@ -407,7 +440,7 @@ public class ParameterFacBean extends Facade implements ParameterFac {
 					"h",
 					"java.lang.String",
 					"Default Zeiteinheit f\u00FCr den St\u00FCcklisten Arbeitsplan",
-					"Legt fest, in welcher Einheit die St\u00FCckzeit und R\u00FCstzeit angezeigt werden soll. M\u00F6glich sind (h/m/s)" },
+					"Legt fest, in welcher Einheit die St\u00FCckzeit und R\u00FCstzeit angezeigt werden soll. M\u00F6glich sind (h/min/s)" },
 
 			{
 					ParameterFac.KATEGORIE_ALLGEMEIN,
@@ -1519,13 +1552,6 @@ public class ParameterFacBean extends Facade implements ParameterFac {
 					"java.lang.Boolean",
 					"Das Los ist nach der Ausgabe automatisch gestoppt.",
 					"Das Los ist nach der Ausgabe automatisch gestoppt." },
-			{
-					ParameterFac.KATEGORIE_FERTIGUNG,
-					ParameterFac.PARAMETER_SERIENNUMMERNGENERATOR,
-					"0",
-					"java.lang.Integer",
-					"Seriennummerngenerator bei Losablieferung",
-					"0= kein Seriennummerngenerator / 1 = fortlaufende Seriennummern bei Losablieferung" },
 			{ ParameterFac.KATEGORIE_FERTIGUNG,
 					ParameterFac.PARAMETER_KUNDE_IST_PFLICHTFELD, "0",
 					"java.lang.Boolean", "Kunde im Los ist Pflichtfeld",
@@ -1739,11 +1765,13 @@ public class ParameterFacBean extends Facade implements ParameterFac {
 					"java.lang.Boolean",
 					"'Ausgegeben'-Status vor 'In Produktion'.",
 					"'Ausgegeben'-Status vor 'In Produktion'." },
-			{ ParameterFac.KATEGORIE_STUECKLISTE,
-					ParameterFac.PARAMETER_STRUKTURIERTER_STKLIMPORT, "0",
+			{
+					ParameterFac.KATEGORIE_STUECKLISTE,
+					ParameterFac.PARAMETER_STRUKTURIERTER_STKLIMPORT,
+					"0",
 					"java.lang.Integer",
-					"0 = Abgeschaltet / 1 = Solid Works / 2 = Siemens NX",
-					"0 = Abgeschaltet / 1 = Solid Works / 2 = Siemens NX" },
+					"0 = Abgeschaltet / 1 = Solid Works / 2 = Siemens NX / 3 = INFRA",
+					"0 = Abgeschaltet / 1 = Solid Works / 2 = Siemens NX / 3 = INFRA" },
 			{ ParameterFac.KATEGORIE_RECHNUNG,
 					ParameterFac.PARAMETER_MAHNUNGEN_AB_GF_JAHR, "1900",
 					"java.lang.Integer", "GF-Jahr ab dem gemahnt wird.",
@@ -1961,8 +1989,8 @@ public class ParameterFacBean extends Facade implements ParameterFac {
 					ParameterFac.PARAMETER_ADRESSVORBELEGUNG,
 					"0",
 					"java.lang.Integer",
-					"M\u00F6glichkeiten: 0 / 1",
-					"0 = nach H\u00E4ufigkeit 1 = Auftragsadresse = Lieferadresse und Rechnungsadresse anhand Auftragsadresse" },
+					"M\u00F6glichkeiten: 0 / 1 / 2",
+					"0 = nach H\u00E4ufigkeit 1 = Auftragsadresse = Lieferadresse und Rechnungsadresse anhand Auftragsadresse, 2 = Lieferadresse anhand H\u00E4ufigkeit und Rechnungsadresse anhand Auftragsadresse" },
 			{
 					ParameterFac.KATEGORIE_REKLAMATION,
 					ParameterFac.PARAMETER_BESTELLUNG_UND_WARENEINGANG_SIND_PFLICHTFELDER,
@@ -2105,6 +2133,11 @@ public class ParameterFacBean extends Facade implements ParameterFac {
 					"Artikeltextsuche inklusive Artikelnummer",
 					"Artikeltextsuche inklusive Artikelnummer" },
 			{ ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_TEXTSUCHE_INKLUSIVE_INDEX_REVISION,
+					"0", "java.lang.Boolean",
+					"Artikeltextsuche inklusive Index/Revision",
+					"Artikeltextsuche inklusive Index/Revision" },
+			{ ParameterFac.KATEGORIE_ARTIKEL,
 					ParameterFac.PARAMETER_LAGER_IMMER_AUSREICHEND_VERFUEGBAR,
 					"0", "java.lang.Boolean",
 					"Lagerzubuchungsautomatik bei unzureichendem Lagerstand",
@@ -2174,6 +2207,327 @@ public class ParameterFacBean extends Facade implements ParameterFac {
 					"java.lang.Integer",
 					"Vorbesetzte Artikelnummer abschneiden.",
 					"Vorbesetzte Artikelnummer bei der Artikelauswahl um eine best. Anzahl von Stellen abschneiden." },
+			{ ParameterFac.KATEGORIE_LIEFERSCHEIN,
+					ParameterFac.PARAMETER_LS_DEFAULT_VERRECHENBAR, "1",
+					"java.lang.Boolean",
+					"Default-Wert fuer -Verrechenbar- im Lieferschein.",
+					"Default-Wert fuer -Verrechenbar- im Lieferschein." },
+			{ ParameterFac.KATEGORIE_ANGEBOT,
+					ParameterFac.PARAMETER_LIEFERANT_ANGEBEN, "0",
+					"java.lang.Boolean",
+					"Lieferant in Angebots- und Auftragsposition angebbar",
+					"Lieferant in Angebots- und Auftragsposition angebbar" },
+			{ ParameterFac.KATEGORIE_PERSONAL,
+					ParameterFac.PARAMETER_VON_BIS_ERFASSUNG, "0",
+					"java.lang.Boolean",
+					"Belege koennen mit von-bis-Zeit erfasst werden",
+					"Belege koennen mit von-bis-Zeit erfasst werden" },
+			{ ParameterFac.KATEGORIE_PROJEKT,
+					ParameterFac.PARAMETER_INTERN_ERLEDIGT_BEBUCHBAR, "1",
+					"java.lang.Boolean",
+					"Zeiterfassung auf intern erledigte Projekte moeglich",
+					"Zeiterfassung auf intern erledigte Projekte moeglich" },
+			{ ParameterFac.KATEGORIE_PERSONAL,
+					ParameterFac.PARAMETER_URLAUBSANTRAG, "0",
+					"java.lang.Boolean", "Urlaubsantrag mit Genehmigung",
+					"Urlaubsantrag mit Genehmigung" },
+			{ ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_ANZEIGEN_ZUSATZBEZ2_IN_AUSWAHLLISTE,
+					"0", "java.lang.Boolean",
+					"Zusatzbezeichnung2 in der Artikel-Auswahlliste anzeigen.",
+					"Zusatzbezeichnung2 in der Artikel-Auswahlliste anzeigen." },
+			{ ParameterFac.KATEGORIE_PROJEKT,
+					ParameterFac.PARAMETER_BUILD_ANZEIGEN, "0",
+					"java.lang.Boolean", "Build-Nummer in Kopfdaten anzeigen.",
+					"Build-Nummer in Kopfdaten anzeigen." },
+			{
+					ParameterFac.KATEGORIE_ALLGEMEIN,
+					ParameterFac.PARAMETER_PREISERABATTE_UI_NACHKOMMASTELLEN_WE,
+					"2",
+					"java.lang.Integer",
+					"Anzahl der WE-Nachkommastellen f\u00FCr Preis- und Rabattfelder im UI",
+					"Anzahl der WE-Nachkommastellen f\u00FCr Preis- und Rabattfelder im UI" },
+			{
+					ParameterFac.KATEGORIE_LIEFERSCHEIN,
+					ParameterFac.PARAMETER_POSITIONSREIHENFOLGE_AUS_AUFTRAG_ERHALTEN,
+					"0",
+					"java.lang.Boolean",
+					"Positionsreihenfolge aus Auftrag erhalten",
+					"Positionsreihenfolge aus Auftrag erhalten, wenn LS-Position aus -Sicht Auftrag- erzeugt wird" },
+			{
+					ParameterFac.KATEGORIE_BESTELLUNG,
+					ParameterFac.PARAMETER_WEP_PREIS_ZURUECKSCHREIBEN,
+					"0",
+					"java.lang.Integer",
+					"WEP-Preis automatisch in Artikellieferant zurueckschreiben.",
+					"WEP-Preis automatisch in Artikellieferant zurueckschreiben. 0 = deaktiviert, 1 = als Einzelpreis zurueckschreiben" },
+			{
+					ParameterFac.KATEGORIE_BESTELLUNG,
+					ParameterFac.PARAMETER_DEFAULT_BESTELLVORSCHLAG_UEBERLEITUNG,
+					"4",
+					"java.lang.Integer",
+					"Default-Vorschlag fuer die Ueberleitung des Bestellvorschlages",
+					"1 = fuer jeden Lieferant + gleichen Termin eine Bestellung anlegen, 2 = je Lieferant eine Bestellung anlegen, 3 = ein Lieferant und ein Termin, 4 = ein Lieferant und alle Positionen des Lieferanten in einer Bestellung, 5 = Abruf zu vorhandenen Rahmen erzeugen" },
+			{
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_GENERIERE_ARTIKELNUMMER_ZIFFERNBLOCK,
+					"0",
+					"java.lang.Boolean",
+					"Gibt an, welcher Ziffernblock beim generieren herangezogen wird",
+					"0 = der Erste, 1 = der Letzte" },
+			{ ParameterFac.KATEGORIE_PERSONAL,
+					ParameterFac.PARAMETER_URAUBSTAGE_RUNDUNG, "0",
+					"java.lang.Integer",
+					"Rundung der Urlaubstage (im Report und im Uebertrag)",
+					"0 = keine, 1 = kaufmaennisch, 2 = generell abrunden, 3 = generell aufrunden" },
+			{ ParameterFac.KATEGORIE_PARTNER,
+					ParameterFac.PARAMETER_SELEKTIONEN_MANDANTENABHAENGIG, "1",
+					"java.lang.Boolean", "Selektionen sind mandantenabhaengig",
+					"Selektionen sind mandantenabhaengig" },
+
+			{ ParameterFac.KATEGORIE_PERSONAL,
+					ParameterFac.PARAMETER_VON_BIS_ERFASSUNG_KOMMT_GEHT_BUCHEN,
+					"1", "java.lang.Boolean",
+					"KOMMT-GEHT muss bei VON-BIS Zeiterfassung gebucht werden",
+					"KOMMT-GEHT muss bei VON-BIS Zeiterfassung gebucht werden" },
+			{ ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_VERSION_BEI_SNR_MITANGEBEN, "0",
+					"java.lang.Boolean",
+					"Version bei SNR-Lagerbuchung mitangeben",
+					"Version bei SNR-Lagerbuchung mitangeben" },
+
+			{ ParameterFac.KATEGORIE_KUNDEN,
+					ParameterFac.PARAMETER_DEFAULT_KOPIEN_RECHNUNG, "",
+					"java.lang.Integer", "Default Kopien Rechnung",
+					"Default Kopien Rechnung" },
+			{ ParameterFac.KATEGORIE_KUNDEN,
+					ParameterFac.PARAMETER_DEFAULT_KOPIEN_LIEFERSCHEIN, "",
+					"java.lang.Integer", "Default Kopien Lieferschein",
+					"Default Kopien Lieferschein" },
+			{
+					ParameterFac.KATEGORIE_FERTIGUNG,
+					ParameterFac.PARAMETER_ZUSATZBEZEICHNUNG_IN_AUSWAHLLISTE,
+					"0",
+					"java.lang.Boolean",
+					"Zusatzbezeichnung in Auswahlliste",
+					"Zusatzbezeichnung in Auswahlliste (Wenn Parameter AUFTRAG_STATT_ARTIKEL_IN_AUSWAHLLISTE=0)" },
+
+			{
+					ParameterFac.KATEGORIE_PROJEKT,
+					ParameterFac.PARAMETER_PROJEKT_ANSPRECHPARTNER_VORBESETZEN,
+					"1",
+					"java.lang.Boolean",
+					"Den Ansprechpartner nach Auswahl des Partners vorbesetzen.",
+					"Den Ansprechpartner nach Auswahl des Partners vorbesetzen." },
+			{ ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_SERIENNUMMER_NUMERISCH, "0",
+					"java.lang.Boolean", "Seriennummern sind numerisch",
+					"Seriennummern sind numerisch" },
+			{
+					ParameterFac.KATEGORIE_PERSONAL,
+					ParameterFac.PARAMETER_GUTSTUNDEN_ZU_UESTD50_ADDIEREN,
+					"1",
+					"java.lang.Boolean",
+					"Gutstunden in Monatsabrechung zu Uestd50Pflichtig addieren",
+					"Gutstunden in Monatsabrechung zu Uestd50Pflichtig addieren" },
+			{ ParameterFac.KATEGORIE_FERTIGUNG,
+					ParameterFac.PARAMETER_INT_BEST_VERDICHTEN_RAHMENPRUEFUNG,
+					"0", "java.lang.Boolean",
+					"Interne Bestellung verdichten mit Rahmenpruefung",
+					"Interne Bestellung verdichten mit Rahmenpruefung" },
+
+			{
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_ANZEIGEN_REFERENZNUMMER_IN_AUSWAHLLISTE,
+					"0", "java.lang.Boolean",
+					"Referenznummer in der Artikel-Auswahlliste anzeigen.",
+					"Referenznummer in der Artikel-Auswahlliste anzeigen." },
+			{
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_LAENGE_CHARGENNUMMER_EINEINDEUTIG,
+					"0",
+					"java.lang.Integer",
+					"Eineindeutige Chargennummern werden vorgeschlagen",
+					"Wenn die Laenge > 0, dann werden in der Losablieferung eineindeutige CHNrs vorgeschlagen." },
+			{
+					ParameterFac.KATEGORIE_FERTIGUNG,
+					ParameterFac.PARAMETER_LOSABLIEFERUNG_GESAMTE_ISTZEITEN_ZAEHLEN,
+					"0",
+					"java.lang.Boolean",
+					"Fuer den Ablieferwert zaehlen nur die Zeiten bis zum Abliefzeitpunkt.",
+					"Fuer den Ablieferwert zaehlen nur die Zeiten bis zum Abliefzeitpunkt." },
+			{
+					ParameterFac.KATEGORIE_AUFTRAG,
+					ParameterFac.PARAMETER_AB_NACHKALKULATION_NUR_RECHNUNGS_ERLOESE,
+					"0", "java.lang.Boolean",
+					"Fuer AB-Nachkalkulation zaehlen nur Rechnungen.",
+					"Fuer AB-Nachkalkulation zaehlen nur Rechnungen." },
+			{
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_ARTIKELGRUPPE_NUR_VATERGRUPPEN_ANZEIGEN,
+					"0",
+					"java.lang.Integer",
+					"In Artikel-Auswahllisten nur Vatergruppen anzeigen.",
+					"In Artikel-Auswahllisten nur Vatergruppen anzeigen ( 0 - Alle Artikelgruppen anzeigen, 1 - Nur Vatergruppen anzeigen, 2 - Alle Artikelgruppen anzeigen, Kindgruppen sind eingerueckt)" },
+
+			{
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_ARTIKELGRUPPE_NACH_CBEZ_ODER_CNR_ANZEIGEN,
+					"0",
+					"java.lang.Boolean",
+					"Artikel-Auswahlliste nach Kennung sortieren.",
+					"Artikel-Auswahlliste nach Kennung sortieren (0 - Sortiert nach Bezeichnung, 1 - Sortiert nach Kennung)." },
+
+			{
+					ParameterFac.KATEGORIE_PROJEKT,
+					ParameterFac.PARAMETER_KURZZEICHEN_STATT_NAME_IN_AUSWAHLLISTE,
+					"0", "java.lang.Boolean",
+					"Kurzzeichen statt Name in Auswahlliste.",
+					"Kurzzeichen statt Name in Auswahlliste." },
+
+			{
+					ParameterFac.KATEGORIE_BESTELLUNG,
+					ParameterFac.PARAMETER_WARENEINGANG_LAGERPLATZ_NUR_DEFINIERTE,
+					"0",
+					"java.lang.Boolean",
+					"Beim Druck des WEP-Etiketts nur definierte Lagerplaetze auswaehlen.",
+					"Beim Druck des WEP-Etiketts koennen nur mehr Lagerplaetze, welche im Artikel definiert sind, ausgewaehlt werden" },
+			{ ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_ARTIKELSUCHE_MIT_HERSTELLER, "0",
+					"java.lang.Boolean", "Textsuche inkl. Hersteller",
+					"Textsuche inkl. Hersteller" },
+			{ ParameterFac.KATEGORIE_PERSONAL,
+					ParameterFac.PARAMETER_AUTOMATISCHE_PAUSEN_NUR_WARNUNG,
+					"0", "java.lang.Boolean",
+					"Automatische Pausen nur Warnung anzeigen",
+					"Automatische Pausen nur Warnung anzeigen, wenn zuwenig gebucht." },
+			{ ParameterFac.KATEGORIE_FINANZ,
+					ParameterFac.PARAMETER_FINANZ_SAMMELBUCHUNG_MANUELL, "0",
+					"java.lang.Boolean",
+					"Sammelbuchungen werden manuell durchgef\u00FChrt",
+					"Sammelbuchungen werden manuell durchgef\u00FChrt" },
+			{
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_INVENTUR_BASISPREIS,
+					"0",
+					"java.lang.Integer",
+					"Inventurbasispreis kommt aus Gestehungspreis/EK-Preis",
+					"Inventurbasispreis des Inventurstand kommt aus Gestehungspreis/EK-Preis: Gestehungspreis = 0, EK-Preis = 1" },
+			{
+					ParameterFac.KATEGORIE_AUFTRAG,
+					ParameterFac.PARAMETER_TRENNZEICHEN_ARTIKELGRUPPE_AUFTRAGSNUMMER,
+					"_",
+					"java.lang.String",
+					"Trennzeichen zwischen Artikelgruppe und Auftragsnummer",
+					"Trennzeichen zwischen Artikelgruppe und Auftragsnummer. z.B. bei Auftragsschnellanlage" },
+			{ ParameterFac.KATEGORIE_ANGEBOTSSTUECKLISTE,
+					ParameterFac.PARAMETER_EK_PREISBASIS, "1",
+					"java.lang.Integer", "0=Lief1Preis, 1=Nettopreis",
+					"0=Lief1Preis, 1=Nettopreis" },
+			{
+					ParameterFac.KATEGORIE_BESTELLUNG,
+					ParameterFac.PARAMETER_BESTELLUNG_AUS_BESTVOR_POSITIONEN_MIT_LOSZUORDNUNG,
+					"1", "java.lang.Boolean",
+					"Bestellvorschlag erzeugt Loszuordnungen",
+					"Bestellvorschlag erzeugt Loszuordnungen" },
+			{
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_LAGERSTAND_DES_ANDEREN_MANDANTEN_ANZEIGEN,
+					"0",
+					"java.lang.Boolean",
+					"Lagerstand des anderen Mandanten anzeigen (in Auswahlliste)",
+					"Lagerstand des anderen Mandanten anzeigen (in Auswahlliste)" },
+			{ ParameterFac.KATEGORIE_FERTIGUNG,
+					ParameterFac.PARAMETER_AUTOFERTIG_ABLIEFERUNG_TERMINAL,
+					"0", "java.lang.Boolean",
+					"Automatische Fertigbuchung Ablieferung per Terminal",
+					"Automatische Fertigbuchung bei vollst\u00E4ndiger Ablieferung per Terminal" },
+			{ ParameterFac.KATEGORIE_KUNDEN,
+					ParameterFac.PARAMETER_DEFAULT_BELEGDRUCK_MIT_RABATT, "0",
+					"java.lang.Boolean",
+					"Default- Einstellung der Option -Belegdrucke mit Rabatt-",
+					"Default- Einstellung der Option -Belegdrucke mit Rabatt-" },
+			{
+					ParameterFac.KATEGORIE_KUNDEN,
+					ParameterFac.PARAMETER_DEFAULT_KUNDESOKO_WIRKT_NICHT_IN_PREISFINDUNG,
+					"0",
+					"java.lang.Boolean",
+					"Default- Einstellung der Option -wirkt nicht in Preisfindung-",
+					"Default- Einstellung der Option -wirkt nicht in Preisfindung-" },
+			{
+					ParameterFac.KATEGORIE_LIEFERANT,
+					ParameterFac.PARAMETER_AUTOMATISCHE_KREDITORENNUMMER,
+					"0",
+					"java.lang.Boolean",
+					"Kreditorennummer bei Belegen anlegen, wenn nicht vorhanden.",
+					"Kreditorennummer bei Belegen automatisch anlegen, wenn nicht vorhanden" },
+
+			{ ParameterFac.KATEGORIE_ALLGEMEIN,
+					ParameterFac.PARAMETER_EDITOR_BREITE_KOMMENTAR, "210",
+					"java.lang.Integer", "Kommentarbreite",
+					"Breite des Texteditors bei Kommentaren" },
+			{ ParameterFac.KATEGORIE_ALLGEMEIN,
+					ParameterFac.PARAMETER_EDITOR_BREITE_SONSTIGE, "520",
+					"java.lang.Integer", "Standardbreite des Texteditors",
+					"Standardbreite des Texteditors" },
+			{ ParameterFac.KATEGORIE_ALLGEMEIN,
+					ParameterFac.PARAMETER_EDITOR_BREITE_TEXTEINGABE, "470",
+					"java.lang.Integer", "Standardbreite des Texteditors",
+					"Breite des Texteditors bei Positionen" },
+			{ ParameterFac.KATEGORIE_ALLGEMEIN,
+					ParameterFac.PARAMETER_EDITOR_BREITE_TEXTMODUL, "520",
+					"java.lang.Integer", "Standardbreite des Texteditors",
+					"Breite des Texteditors bei Textmodulen" },
+			{
+					ParameterFac.KATEGORIE_FINANZ,
+					ParameterFac.PARAMETER_FINANZ_DEBITORENNUMMER_FORTLAUFEND,
+					"0",
+					"java.lang.Boolean",
+					"Debitorennummer fortlaufend",
+					"0 = Anfangsbuchstabe des Partners wird f\u00fcr 2+3. Stelle verwendet 1 = fortlaufend gilt fuer Debitoren und Kreditoren" },
+			{ ParameterFac.KATEGORIE_VERSANDAUFTRAG,
+					ParameterFac.PARAMETER_IMAPSERVER, "", "java.lang.String",
+					"IMAP Server", "IMAP Server f\u00fcr Versandablage" },
+			{ ParameterFac.KATEGORIE_VERSANDAUFTRAG,
+					ParameterFac.PARAMETER_IMAPSERVER_ADMIN, "",
+					"java.lang.String", "IMAP Server Admin Konto",
+					"IMAP Server Admin Konto f\u00FCr Versandablage." },
+			{ ParameterFac.KATEGORIE_VERSANDAUFTRAG,
+					ParameterFac.PARAMETER_IMAPSERVER_ADMIN_KENNWORT, "",
+					"java.lang.String", "IMAP Server Admin Konto Kennwort",
+					"IMAP Server Kennwort des Admin Kontos f\u00FCr Versandablage." },
+			{ ParameterFac.KATEGORIE_VERSANDAUFTRAG,
+					ParameterFac.PARAMETER_IMAPSERVER_SENTFOLDER, "",
+					"java.lang.String", "IMAP Server Sent-Folder",
+					"IMAP Server Ordner f\u00FCr gesendete Objekte." },
+			{ ParameterFac.KATEGORIE_FINANZ,
+					ParameterFac.PARAMETER_FINANZ_LF_RE_NR_BUCHUNGSTEXT, "0",
+					"java.lang.Boolean",
+					"Lieferantenrechnungsnummer als Buchungstext bei ERs",
+					"0 = Name des Lieferanteranten, 1 = Lieferantrechnungsnummer als Buchungstext" },
+			{
+					ParameterFac.KATEGORIE_GUTSCHRIFT,
+					ParameterFac.PARAMETER_GUTSCHRIFT_NENNT_SICH_RECHNUNGSKORREKTUR,
+					"0", "java.lang.Boolean",
+					"Gutschrift nennt sich Rechnungskorrektur",
+					"Gutschrift nennt sich Rechnungskorrektur" },
+			{
+					ParameterFac.KATEGORIE_RECHNUNG,
+					ParameterFac.PARAMETER_MINDEST_MAHNBETRAG,
+					"5",
+					"java.lang.Double",
+					"Mindestmahnbetrag, ab der eine Sammelmahnung versendet wird.",
+					"Mindestmahnbetrag, ab der eine Sammelmahnung versendet wird." },
+			{ ParameterFac.KATEGORIE_FERTIGUNG,
+					ParameterFac.PARAMETER_BEWERTUNG_IN_AUSWAHLLISTE, "0",
+					"java.lang.Boolean",
+					"Fortschritt in Auswahlliste anzeigen.",
+					"Fortschritt in Auswahlliste anzeigen." },
+			{ ParameterFac.KATEGORIE_AUFTRAG,
+					ParameterFac.PARAMETER_AUFTRAEGE_KOENNEN_VERSTECKT_WERDEN,
+					"0", "java.lang.Boolean",
+					"Auftraege koennen versteckt werden.",
+					"Auftraege koennen versteckt werden." },
 
 	// parametermandant: 1 fix verdrahteten Wert einfuegen, Zeilensetzung wie
 	// oben, damit sie bei Formatierung nicht verloren geht...
@@ -2208,35 +2562,78 @@ public class ParameterFacBean extends Facade implements ParameterFac {
 	 */
 	public Integer getGeschaeftsjahr(String mandantCNr,
 			java.util.Date dBelegdatum) throws EJBExceptionLP {
-		int beginnMonat = 1; // Default=Jaenner
-		boolean plusEins = false;
 
-		ParametermandantDto pmBeginnMonat = null;
-		ParametermandantDto pmPlusEins = null;
+		int beginnMonat;
+		boolean plusEins;
+
 		try {
-			pmBeginnMonat = getMandantparameter(mandantCNr,
+			// -1 wegen Jaenner in DB == 1, in Calendar == 0
+			beginnMonat = getMandantparameter(mandantCNr,
 					ParameterFac.KATEGORIE_ALLGEMEIN,
-					ParameterFac.PARAMETER_GESCHAEFTSJAHRBEGINNMONAT);
-			pmPlusEins = getMandantparameter(mandantCNr,
+					ParameterFac.PARAMETER_GESCHAEFTSJAHRBEGINNMONAT)
+					.asInteger() - 1;
+			plusEins = getMandantparameter(mandantCNr,
 					ParameterFac.KATEGORIE_ALLGEMEIN,
-					ParameterFac.PARAMETER_GESCHAEFTSJAHRPLUSEINS);
+					ParameterFac.PARAMETER_GESCHAEFTSJAHRPLUSEINS).asBoolean();
+			// pmBeginnMonat = getMandantparameter(mandantCNr,
+			// ParameterFac.KATEGORIE_ALLGEMEIN,
+			// ParameterFac.PARAMETER_GESCHAEFTSJAHRBEGINNMONAT);
+			// pmPlusEins = getMandantparameter(mandantCNr,
+			// ParameterFac.KATEGORIE_ALLGEMEIN,
+			// ParameterFac.PARAMETER_GESCHAEFTSJAHRPLUSEINS);
 		} catch (EJBExceptionLP ex) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_MANDANTPARAMETER_NICHT_ANGELEGT, ex);
 		}
 
-		beginnMonat = Integer.parseInt(pmBeginnMonat.getCWert());
-		plusEins = Helper
-				.short2boolean(Short.parseShort(pmPlusEins.getCWert()));
+		// int beginnMonat = Integer.parseInt(pmBeginnMonat.getCWert());
+		// boolean plusEins = Helper
+		// .short2boolean(Short.parseShort(pmPlusEins.getCWert()));
 
-		beginnMonat = beginnMonat - 1; // wegen Jaenner = 0, Feb. = 1 etc.
+		// beginnMonat = beginnMonat - 1; // wegen Jaenner = 0, Feb. = 1 etc.
 
-		java.util.Calendar gc = new java.util.GregorianCalendar();
+		Calendar gc = new GregorianCalendar();
 		gc.setTimeInMillis(dBelegdatum.getTime());
 
-		int iYear = gc.get(gc.YEAR);
-		int iMonth = gc.get(gc.MONTH);
-		if (plusEins) {
+		return calculateGeschaeftsjahr(gc, beginnMonat, plusEins);
+		// int iYear = gc.get(Calendar.YEAR);
+		// int iMonth = gc.get(Calendar.MONTH);
+		// if (plusEins) {
+		// if (iMonth < beginnMonat) {
+		// // z.B. Oktober gehoert noch zu diesem Jahr
+		// return new Integer(iYear);
+		// } else {
+		// // z.B. November gehoert schon zum naechsten Jahr
+		// return new Integer(iYear + 1);
+		// }
+		// } else {
+		// if (iMonth < beginnMonat) {
+		// // z.B. Jaenner gehoert noch zum letzten Jahr
+		// return new Integer(iYear - 1);
+		// } else {
+		// // z.B. Februar gehoert aber zu diesem Jahr
+		// return new Integer(iYear);
+		// }
+		// }
+	}
+
+	/**
+	 * Berechne das Geschaeftsjahr aus einem Belegdatum
+	 * 
+	 * @param belegDatum
+	 *            ist das Belegdatum
+	 * @param beginnMonat
+	 *            ist der Monat (0 basierend!) in dem das neue GJ beginnt
+	 * @param plusEins
+	 *            ist true wenn es sich um ein Folgejahr handelt
+	 * @return das Geschaeftsjahr
+	 */
+	public Integer calculateGeschaeftsjahr(Calendar belegDatum,
+			int beginnMonat, boolean plusEins) {
+		int iYear = belegDatum.get(Calendar.YEAR);
+		int iMonth = belegDatum.get(Calendar.MONTH);
+		if (plusEins) { // Wir befinden uns in den Folgejahren eins
+						// Rumpf-Geschaeftsjahres
 			if (iMonth < beginnMonat) {
 				// z.B. Oktober gehoert noch zu diesem Jahr
 				return new Integer(iYear);
@@ -2244,14 +2641,14 @@ public class ParameterFacBean extends Facade implements ParameterFac {
 				// z.B. November gehoert schon zum naechsten Jahr
 				return new Integer(iYear + 1);
 			}
+		}
+
+		if (iMonth < beginnMonat) {
+			// z.B. Jaenner gehoert noch zum letzten Jahr
+			return new Integer(iYear - 1);
 		} else {
-			if (iMonth < beginnMonat) {
-				// z.B. Jaenner gehoert noch zum letzten Jahr
-				return new Integer(iYear - 1);
-			} else {
-				// z.B. Februar gehoert aber zu diesem Jahr
-				return new Integer(iYear);
-			}
+			// z.B. Februar gehoert aber zu diesem Jahr
+			return new Integer(iYear);
 		}
 	}
 
@@ -2327,6 +2724,36 @@ public class ParameterFacBean extends Facade implements ParameterFac {
 
 	}
 
+	public void removeParametermandantgueltigab(
+			ParametermandantgueltigabDto parametermandantgueltigabDto) {
+
+		ParametermandantgueltigabPK pkParametermandantgueltigab = new ParametermandantgueltigabPK();
+		pkParametermandantgueltigab.setCNr(parametermandantgueltigabDto
+				.getCNr());
+		pkParametermandantgueltigab.setMandantCNr(parametermandantgueltigabDto
+				.getMandantCNr());
+		pkParametermandantgueltigab.setCKategorie(parametermandantgueltigabDto
+				.getCKategorie());
+		pkParametermandantgueltigab.setTGueltigab(parametermandantgueltigabDto
+				.getTGueltigab());
+
+		Parametermandantgueltigab toRemove = em.find(
+				Parametermandantgueltigab.class, pkParametermandantgueltigab);
+		if (toRemove == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+
+		getBenutzerServicesFac().reloadParametermandant();
+
+	}
+
 	public void updateParametermandant(
 			ParametermandantDto parametermandantDtoI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
@@ -2360,6 +2787,47 @@ public class ParameterFacBean extends Facade implements ParameterFac {
 		getBenutzerServicesFac().reloadParametermandant();
 	}
 
+	public void updateParametermandantgueltigab(
+			ParametermandantgueltigabDto parametermandantgueltigabDtoI,
+			TheClientDto theClientDto) {
+
+		parametermandantgueltigabDtoI.setTGueltigab(Helper
+				.cutTimestamp(parametermandantgueltigabDtoI.getTGueltigab()));
+		ParametermandantgueltigabPK pkParametermandant = new ParametermandantgueltigabPK();
+		pkParametermandant.setCNr(parametermandantgueltigabDtoI.getCNr());
+		pkParametermandant.setMandantCNr(parametermandantgueltigabDtoI
+				.getMandantCNr());
+		pkParametermandant.setCKategorie(parametermandantgueltigabDtoI
+				.getCKategorie());
+		pkParametermandant.setTGueltigab(parametermandantgueltigabDtoI
+				.getTGueltigab());
+
+		Parametermandantgueltigab parametermandantgueltigab = em.find(
+				Parametermandantgueltigab.class, pkParametermandant);
+		if (parametermandantgueltigab == null) {
+			// Neu anlegen
+
+			parametermandantgueltigab = new Parametermandantgueltigab(
+					parametermandantgueltigabDtoI.getCNr(),
+					parametermandantgueltigabDtoI.getMandantCNr(),
+					parametermandantgueltigabDtoI.getCKategorie(),
+					parametermandantgueltigabDtoI.getCWert(),
+					parametermandantgueltigabDtoI.getTGueltigab());
+
+		}
+
+		// und wert setzen
+		parametermandantgueltigab.setCWert(parametermandantgueltigabDtoI
+				.getCWert());
+		em.merge(parametermandantgueltigab);
+		em.flush();
+
+		myLogger.logKritisch("Update "
+				+ parametermandantgueltigabDtoI.toString());
+
+		getBenutzerServicesFac().reloadParametermandant();
+	}
+
 	public ParametermandantDto parametermandantFindByPrimaryKey(
 			ParametermandantPK pkParametermandantI) throws EJBExceptionLP {
 		if (pkParametermandantI == null) {
@@ -2380,6 +2848,51 @@ public class ParameterFacBean extends Facade implements ParameterFac {
 		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 		// ex);
 		// }
+	}
+
+	public ParametermandantgueltigabDto parametermandantgueltigabFindByPrimaryKey(
+			ParametermandantgueltigabPK pkParametermandantI) {
+		if (pkParametermandantI == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
+					new Exception("pkParametermandantI == null"));
+		}
+		Parametermandantgueltigab parametermandant = em.find(
+				Parametermandantgueltigab.class, pkParametermandantI);
+		if (parametermandant == null) {
+			throw new EJBExceptionLPwoRollback(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		return ParametermandantgueltigabDtoAssembler
+				.createDto(parametermandant);
+
+	}
+
+	public TreeMap<Timestamp, String> parametermandantgueltigabGetWerteZumZeitpunkt(
+			String mandantCNr, String cNr, String cKategorie) {
+
+		TreeMap<Timestamp, String> tm = null;
+
+		Query query = em
+				.createNamedQuery("ParametermandantgueltigabFindByMandantCNrCNrCKategorie");
+		query.setParameter(1, mandantCNr);
+		query.setParameter(2, cNr);
+		query.setParameter(3, cKategorie);
+		Collection<?> cl = query.getResultList();
+
+		if (cl.size() > 0) {
+			tm = new TreeMap<Timestamp, String>();
+
+			Iterator it = cl.iterator();
+
+			while (it.hasNext()) {
+				Parametermandantgueltigab pmg = (Parametermandantgueltigab) it
+						.next();
+				tm.put(pmg.getPk().getTGueltigab(), pmg.getCWert());
+			}
+
+		}
+		return tm;
+
 	}
 
 	public ParametermandantDto parametermandantFindByPrimaryKey(String cNrI,
@@ -2426,6 +2939,13 @@ public class ParameterFacBean extends Facade implements ParameterFac {
 			String cKategorieI, String mandantparameter_c_nr) {
 		return getBenutzerServicesFac().getMandantparameter(mandant_c_nr,
 				cKategorieI, mandantparameter_c_nr);
+	}
+
+	public ParametermandantDto getMandantparameter(String mandant_c_nr,
+			String cKategorieI, String mandantparameter_c_nr,
+			java.sql.Timestamp tZeitpunkt) {
+		return getBenutzerServicesFac().getMandantparameter(mandant_c_nr,
+				cKategorieI, mandantparameter_c_nr, tZeitpunkt);
 	}
 
 	public void createFixverdrahteteParametermandant(TheClientDto theClientDto)

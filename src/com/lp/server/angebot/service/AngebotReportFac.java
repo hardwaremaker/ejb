@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -95,10 +95,6 @@ public interface AngebotReportFac {
 	public final static int REPORT_ANGEBOT_JOURNAL_ANSPRECHPARTNER_FAXDW = 35;
 	public final static int REPORT_ANGEBOT_JOURNAL_ANSPRECHPARTNER_EMAIL = 36;
 
-	
-	
-	
-
 	// reportflr: 3 Die Indizes der Spalten in der Ergebnisliste
 	public final static int REPORT_ANGEBOT_JOURNAL_ABGELEHNTE_ANGEBOTIID = 0;
 	public final static int REPORT_ANGEBOT_JOURNAL_ABGELEHNTE_ANGEBOTCNR = 1;
@@ -112,7 +108,7 @@ public interface AngebotReportFac {
 	public final static int REPORT_ANGEBOT_JOURNAL_ABGELEHNTE_ANGEBOTERLEDIGUNGSGRUND = 9;
 	public final static int REPORT_ANGEBOT_JOURNAL_ABGELEHNTE_EXTERNERKOMMENTAR = 10;
 	public final static int REPORT_ANGEBOT_JOURNAL_ABGELEHNTE_ERLEDIGUNGSGRUND_AB_NR = 11;
-	
+
 	public final static int REPORT_ANGEBOT_OFFENE_ANGEBOTNUMMER = 0;
 	public final static int REPORT_ANGEBOT_OFFENE_KUNDE = 1;
 	public final static int REPORT_ANGEBOT_OFFENE_KOSTENSTELLE = 2;
@@ -167,20 +163,22 @@ public interface AngebotReportFac {
 	public final static int REPORT_ANGEBOT_ARTIKEL_INDEX = 43;
 	public final static int REPORT_ANGEBOT_ARTIKEL_REVISION = 44;
 	public final static int REPORT_ANGEBOT_LVPOSITION = 45;
-	public final static int REPORT_ANGEBOT_VONPOSITION = 46 ;
-	public final static int REPORT_ANGEBOT_BISPOSITION = 47 ;
-	public final static int REPORT_ANGEBOT_ZWSNETTOSUMME = 48 ;
-	public final static int REPORT_ANGEBOT_ZWSTEXT = 49 ;
-	public final static int REPORT_ANGEBOT_INTERNAL_IID = 50 ;
+	public final static int REPORT_ANGEBOT_VONPOSITION = 46;
+	public final static int REPORT_ANGEBOT_BISPOSITION = 47;
+	public final static int REPORT_ANGEBOT_ZWSNETTOSUMME = 48;
+	public final static int REPORT_ANGEBOT_ZWSTEXT = 49;
+	public final static int REPORT_ANGEBOT_INTERNAL_IID = 50;
 	public final static int REPORT_ANGEBOT_STKLARTIKELKBEZ = 51;
 	public final static int REPORT_ANGEBOT_STKLARTIKEL_KDARTIKELNR = 52;
 	public final static int REPORT_ANGEBOT_STKLARTIKEL_KDPREIS = 53;
-	public final static int REPORT_ANGEBOT_ARTIKEL_WERBEABGABEPFLICHTIG  = 54;
+	public final static int REPORT_ANGEBOT_ARTIKEL_WERBEABGABEPFLICHTIG = 54;
 	public final static int REPORT_ANGEBOT_MATERIALZUSCHLAG = 55;
 	public final static int REPORT_ANGEBOT_ARTIKEL_MATERIALGEWICHT = 56;
 	public final static int REPORT_ANGEBOT_ARTIKEL_KURS_MATERIALZUSCHLAG = 57;
 	public final static int REPORT_ANGEBOT_ARTIKEL_DATUM_MATERIALZUSCHLAG = 58;
-	public final static int REPORT_ANGEBOT_ANZAHL_SPALTEN = 59 ;
+	public final static int REPORT_ANGEBOT_ZWSPOSPREISDRUCKEN = 59;
+	public final static int REPORT_ANGEBOT_AGSTKL_SUBREPORT_MENGENSTAFFEL = 60;
+	public final static int REPORT_ANGEBOT_ANZAHL_SPALTEN = 61;
 
 	public final static int REPORT_VORKALKULATION_IDENT = 0;
 	/** Die Bezeichnung kann auch die im AG uebersteuerte Bezeichnung sein */
@@ -233,7 +231,12 @@ public interface AngebotReportFac {
 	public final static int REPORT_VORKALKULATION_MATERIALZUSCHLAG = 22;
 	public final static int REPORT_VORKALKULATION_MATERIAL = 23;
 	public final static int REPORT_VORKALKULATION_SETARTIKEL_TYP = 24;
-	public final static int REPORT_VORKALKULATION_ANZAHL_SPALTEN = 25;
+
+	public final static int REPORT_VORKALKULATION_EK_PREIS = 25;
+	public final static int REPORT_VORKALKULATION_LIEFERANT_AUS_POSITION = 26;
+	public final static int REPORT_VORKALKULATION_TEXTEINGABE = 27;
+	public final static int REPORT_VORKALKULATION_ARTIKEL_IST_ARBEITSZEIT = 28;
+	public final static int REPORT_VORKALKULATION_ANZAHL_SPALTEN = 29;
 	/** WH 22.02.06 vorerst Punkt, damit man die Ebene erkennen kann */
 	public final static String REPORT_VORKALKULATION_ZEICHEN_FUER_HANDEINGABE = ".";
 
@@ -265,10 +268,11 @@ public interface AngebotReportFac {
 	public final static int REPORT_ANGEBOTSPOTENTIAL_BELEGDATUM = 8;
 	public final static int REPORT_ANGEBOTSPOTENTIAL_GUELTIGBIS = 9;
 	public final static int REPORT_ANGEBOTSPOTENTIAL_EKPREIS = 10;
-	
+
 	public JasperPrintLP[] printAngebot(Integer iIdAngebotI,
-			Integer iAnzahlKopienI, Boolean bMitLogo, String sReportname, String sDrucktype,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+			Integer iAnzahlKopienI, Boolean bMitLogo, String sReportname,
+			String sDrucktype, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP[] printAngebot(Integer iIdAngebotI,
 			Integer iAnzahlKopienI, Boolean bMitLogo, String sReportname,
@@ -276,13 +280,13 @@ public interface AngebotReportFac {
 
 	public JasperPrintLP printAngebotAlle(
 			ReportAngebotJournalKriterienDto kritDtoI,
-			String erledigungsgrundCNr, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+			String erledigungsgrundCNr, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printAngebotOffene(
-			ReportAngebotJournalKriterienDto kritDtoI, Boolean bKommentare,Boolean bDetails,
-			Boolean bKundenstammdaten ,TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+			ReportAngebotJournalKriterienDto kritDtoI, Boolean bKommentare,
+			Boolean bDetails, Boolean bKundenstammdaten,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printAngebotAbgelehnte(
 			ReportAngebotJournalKriterienDto kritDtoI, TheClientDto theClientDto)
@@ -292,13 +296,13 @@ public interface AngebotReportFac {
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printAdressetikett(Integer partnerIId,
-			Integer ansprechpartnerIId, TheClientDto theClientDto) throws RemoteException;
+			Integer ansprechpartnerIId, TheClientDto theClientDto)
+			throws RemoteException;
 
 	public JasperPrintLP printAngebotsstatistik(
 			ReportAngebotsstatistikKriterienDto reportAngebotsstatistikKriterienDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-	
+
 	public JasperPrintLP printAngebotspotential(TheClientDto theClientDto);
-	
 
 }

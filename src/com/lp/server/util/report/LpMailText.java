@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -73,6 +73,55 @@ public class LpMailText {
 	public LpMailText() {
 	}
 
+	protected String getReportDirImpl(String modul, String xslPrefix, String mandant, Locale sprache, TheClientDto theClientDto) {
+		return SystemServicesFacBean.getPathFromLPDir(
+				modul, xslPrefix + ".xsl", mandant, sprache, null, theClientDto);		
+	}
+
+	protected String getReportDir(String modul, String mandant, String xslFile, Locale sprache, TheClientDto theClientDto) {
+		String reportdir = getReportDirImpl(modul, 
+				xslFile.replaceAll(".jasper", ""), mandant, sprache, theClientDto);
+
+		if (reportdir == null) {
+			reportdir = getReportDirImpl(modul, "mail", mandant, sprache, theClientDto);
+		}
+
+		if (reportdir == null) {
+			// wenn kein xsl fuer modul gefunden, das allgemeine holen
+			reportdir = getReportDirImpl("allgemein", "mail", mandant, sprache, theClientDto);
+		}
+
+		if (reportdir == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_DRUCKEN_REPORT_NICHT_GEFUNDEN,
+					"Es konnte kein Reportdir gefunden werden. mandantcnr: " + mandant + " sprache " + sprache);
+		}
+		
+		return reportdir ;
+	}
+
+	public String transformText(String modul, String mandantCNr, String xslFile, Locale sprache, TheClientDto theClientDto) {
+//		String reportdir = SystemServicesFacBean.getPathFromLPDir(modul,
+//				xslFile.replaceAll(".jasper", "") + ".xsl", mandantCNr,
+//				sprache, null, theClientDto);
+//
+//		if (reportdir == null) {
+//			// wenn kein xsl fuer modul gefunden, das allgemeine holen
+//			reportdir = SystemServicesFacBean.getPathFromLPDir("allgemein",
+//					"mail.xsl", mandantCNr, sprache, null, theClientDto);
+//			if (reportdir == null) {
+//				throw new EJBExceptionLP(
+//						EJBExceptionLP.FEHLER_DRUCKEN_REPORT_NICHT_GEFUNDEN,
+//						"Es konnte kein Reportdir gefunden werden. mandantcnr: " + mandantCNr + " sprache " + sprache);
+//			}
+//		}
+		
+		String reportdir = getReportDir(modul, mandantCNr, xslFile, sprache, theClientDto) ;
+		return transformXML(reportdir);
+	}
+	
+	
+
 	public String transformText(MailtextDto mailtextDto, TheClientDto theClientDto) {
 
 		String modul = mailtextDto.getParamModul();
@@ -82,26 +131,27 @@ public class LpMailText {
 		return transformText(modul, mandantCNr, xslFile, sprache, theClientDto);
 	}
 		
-	public String transformText(String modul, String mandantCNr, String xslFile, Locale sprache, TheClientDto theClientDto) {
+//	public String transformText(String modul, String mandantCNr, String xslFile, Locale sprache, TheClientDto theClientDto) {
+//
+//		String reportdir = SystemServicesFacBean.getPathFromLPDir(modul,
+//				xslFile.replaceAll(".jasper", "") + ".xsl", mandantCNr,
+//				sprache, null, theClientDto);
+//
+//		if (reportdir == null) {
+//			// wenn kein xsl fuer modul gefunden, das allgemeine holen
+//			reportdir = SystemServicesFacBean.getPathFromLPDir("allgemein",
+//					"mail.xsl", mandantCNr, sprache, null, theClientDto);
+//			if (reportdir == null) {
+//				throw new EJBExceptionLP(
+//						EJBExceptionLP.FEHLER_DRUCKEN_REPORT_NICHT_GEFUNDEN,
+//						"Es konnte kein Reportdir gefunden werden. mandantcnr: " + mandantCNr + " sprache " + sprache);
+//			}
+//		}
+//		
+//		return transformXML(reportdir);
+//	}
+//	
 
-		String reportdir = SystemServicesFacBean.getPathFromLPDir(modul,
-				xslFile.replaceAll(".jasper", "") + ".xsl", mandantCNr,
-				sprache, null, theClientDto);
-
-		if (reportdir == null) {
-			// wenn kein xsl fuer modul gefunden, das allgemeine holen
-			reportdir = SystemServicesFacBean.getPathFromLPDir("allgemein",
-					"mail.xsl", mandantCNr, sprache, null, theClientDto);
-			if (reportdir == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_DRUCKEN_REPORT_NICHT_GEFUNDEN,
-						"Es konnte kein Reportdir gefunden werden. mandantcnr: " + mandantCNr + " sprache " + sprache);
-			}
-		}
-		
-		return transformXML(reportdir);
-	}
-	
 	public String transformBetreff(MailtextDto mailtextDto, TheClientDto theClientDto) {
 
 		String modul = mailtextDto.getParamModul();

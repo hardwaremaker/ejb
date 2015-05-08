@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -55,6 +55,7 @@ import com.lp.server.finanz.service.FinanzamtDto;
 import com.lp.server.finanz.service.KontoDto;
 import com.lp.server.finanz.service.KontolaenderartDto;
 import com.lp.server.finanz.service.KontolandDto;
+import com.lp.server.finanz.service.ReportErloeskontoDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.partner.service.PartnerDto;
@@ -72,6 +73,7 @@ import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.system.service.ZahlungszielDto;
 import com.lp.server.util.Facade;
+import com.lp.service.BelegpositionVerkaufDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
@@ -132,21 +134,45 @@ public abstract class FibuExportManager extends Facade {
 
 	protected final TheClientDto theClientDto;
 	protected final FibuExportKriterienDto exportKriterienDto;
-	protected final MandantDto mandantDto;
-	protected final Map<?, ?> mMwst;
-	protected final Map<?, ?> mZahlungsziele;
-	protected final Map<Integer, FinanzamtDto> mFinanzaemter;
+	protected  MandantDto mandantDto;
+	protected Map<?, ?> mMwst;
+	protected Map<?, ?> mZahlungsziele;
+	protected Map<Integer, FinanzamtDto> mFinanzaemter;
 
+	protected IFibuExportValidation validator ;
+	
 	FibuExportManager(FibuExportKriterienDto exportKriterienDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
-		this.theClientDto = theClientDto;
-		this.exportKriterienDto = exportKriterienDto;
-		this.mandantDto = holeMandant();
-		this.mMwst = holeMwstSaetze();
-		this.mZahlungsziele = holeZahlungsziele();
-		this.mFinanzaemter = holeFinanzaemter();
+		this(exportKriterienDto, new FibuExportValidator(theClientDto), theClientDto) ;
 	}
 
+	FibuExportManager(FibuExportKriterienDto exportKriterienDto, IFibuExportValidation validator, TheClientDto theClientDto) {
+		this.exportKriterienDto = exportKriterienDto;
+		this.validator = validator ;
+		this.theClientDto = theClientDto;
+
+		initialize() ;
+	}
+	
+	protected void initialize() {
+		mandantDto = holeMandant();
+		mMwst = holeMwstSaetze();
+		mZahlungsziele = holeZahlungsziele();
+		mFinanzaemter = holeFinanzaemter() ;						
+	}
+	
+	protected void setValidator(IFibuExportValidation validator) {
+		this.validator = validator ;
+	}
+
+	protected IFibuExportValidation getValidator() {
+		if(validator == null) {
+			validator = new FibuExportValidator(theClientDto) ;			
+		}
+		
+		return validator ;
+	}
+	
 	private MandantDto holeMandant() {
 		try {
 			return getMandantFac().mandantFindByPrimaryKey(
@@ -184,18 +210,21 @@ public abstract class FibuExportManager extends Facade {
 			// Daten der Finanzaemter werden gleich auf Vollstaendigkeit
 			// ueberprueft (nur die des mandanten)
 			FinanzamtDto fa = finanzaemter[i];
-			if (fa.getMandantCNr().equals(theClientDto.getMandant())
-					&& fa.getPartnerDto().getLandplzortDto() == null) {
-				ArrayList<Object> a = new ArrayList<Object>();
-				a.add(fa.getPartnerDto().getCName1nachnamefirmazeile1());
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FINANZ_EXPORT_FINANZAMT_NICHT_VOLLSTAENDIG_DEFINIERT,
-						a,
-						new Exception(
-								"FEHLER_FINANZ_EXPORT_FINANZAMT_NICHT_VOLLSTAENDIG_DEFINIERT "
-								+ fa.getPartnerDto()
-								.getCName1nachnamefirmazeile1()));
+			if(!getValidator().isValidFinanzamt(finanzaemter[i])){
+				return null ;
 			}
+//			if (fa.getMandantCNr().equals(theClientDto.getMandant())
+//					&& fa.getPartnerDto().getLandplzortDto() == null) {
+//				ArrayList<Object> a = new ArrayList<Object>();
+//				a.add(fa.getPartnerDto().getCName1nachnamefirmazeile1());
+//				throw new EJBExceptionLP(
+//						EJBExceptionLP.FEHLER_FINANZ_EXPORT_FINANZAMT_NICHT_VOLLSTAENDIG_DEFINIERT,
+//						a,
+//						new Exception(
+//								"FEHLER_FINANZ_EXPORT_FINANZAMT_NICHT_VOLLSTAENDIG_DEFINIERT "
+//								+ fa.getPartnerDto()
+//								.getCName1nachnamefirmazeile1()));
+//			}
 			// in die Map geben. Key ist die PartnerIId
 			map.put(fa.getPartnerIId(), fa);
 		}
@@ -210,6 +239,9 @@ public abstract class FibuExportManager extends Facade {
 
 	public abstract FibuexportDto[] getExportdatenGutschrift(
 			Integer rechnungIId, Date dStichtag) throws EJBExceptionLP;
+
+	public abstract ReportErloeskontoDto getErloeskonto(Integer rechnungId, 
+			BelegpositionVerkaufDto positionDto) throws EJBExceptionLP ; 
 
 	public final String exportiereEingangsrechnung(Integer eingangsrechnungIId, Date dStichtag)
 			throws EJBExceptionLP {
@@ -264,7 +296,7 @@ public abstract class FibuExportManager extends Facade {
 			a.addAll(getAllInfoForTheClient(erDto));
 			a.addAll(getAllInfoForTheClient(lieferantDto.getPartnerDto()));
 			ex.setAlInfoForTheClient(a);
-			throw ex;
+			throw ex ;
 		}
 		if (erDto.getCLieferantenrechnungsnummer() == null) {
 			EJBExceptionLP ex = new EJBExceptionLP(
@@ -275,7 +307,7 @@ public abstract class FibuExportManager extends Facade {
 			a.addAll(getAllInfoForTheClient(erDto));
 			a.addAll(getAllInfoForTheClient(lieferantDto.getPartnerDto()));
 			ex.setAlInfoForTheClient(a);
-			throw ex;
+			throw ex ;
 		}
 		return lieferantDto;
 
@@ -294,58 +326,73 @@ public abstract class FibuExportManager extends Facade {
 			throws EJBExceptionLP {
 		try {
 			// Ist die RE/GS noch nicht ausgedruckt?? das darf nicht sein
-			if (rechnungDto.getStatusCNr().equals(RechnungFac.STATUS_ANGELEGT)) {
-				EJBExceptionLP ex = new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FINANZ_EXPORT_BELEG_IST_NOCH_NICHT_AKTIVIERT,
-						new Exception("RE oder GS mit I_ID="
-								+ rechnungDto.getIId() + " ist nicht aktiviert"));
-				// Kunden holen
-				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-						rechnungDto.getKundeIId(), theClientDto);
-				ArrayList<Object> a = new ArrayList<Object>();
-				a.addAll(getAllInfoForTheClient(rechnungDto));
-				a.addAll(getAllInfoForTheClient(kundeDto.getPartnerDto()));
-				ex.setAlInfoForTheClient(a);
-				throw ex;
+			if(!getValidator().isValidRechnungStatus(rechnungDto)) {
+				return null ;
 			}
+			
+//			if (rechnungDto.getStatusCNr().equals(RechnungFac.STATUS_ANGELEGT)) {
+//				EJBExceptionLP ex = new EJBExceptionLP(
+//						EJBExceptionLP.FEHLER_FINANZ_EXPORT_BELEG_IST_NOCH_NICHT_AKTIVIERT,
+//						new Exception("RE oder GS mit I_ID="
+//								+ rechnungDto.getIId() + " ist nicht aktiviert"));
+//				// Kunden holen
+//				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
+//						rechnungDto.getKundeIId(), theClientDto);
+//				ArrayList<Object> a = new ArrayList<Object>();
+//				a.addAll(getAllInfoForTheClient(rechnungDto));
+//				a.addAll(getAllInfoForTheClient(kundeDto.getPartnerDto()));
+//				ex.setAlInfoForTheClient(a);
+//				throw ex;
+//			}
 			// den Kunden holen
 			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
 					rechnungDto.getKundeIId(), theClientDto);
 			// die Laenderart eines Partners muss feststellbar sein
 			pruefePartnerLaenderart(kundeDto.getPartnerIId(), rechnungDto);
 			// Pruefen, ob die RE/GS noch im gueltigen Exportzeitraum liegt
-			pruefeBelegAufGueltigenExportZeitraum(rechnungDto,
-					kundeDto.getPartnerDto());
+			if(!getValidator().isValidExportZeitraumFuerBeleg(
+					exportKriterienDto, rechnungDto, kundeDto.getPartnerDto())) {
+				return null ;
+			}
+//			pruefeBelegAufGueltigenExportZeitraum(rechnungDto,
+//					kundeDto.getPartnerDto());
 			// der Kunde muss ein debitorenkonto haben
-			if (kundeDto.getIidDebitorenkonto() == null) {
-				EJBExceptionLP ex = new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FINANZ_EXPORT_DEBITORENKONTO_NICHT_DEFINIERT,
-						new Exception(kundeDto.getIId()	+ "," + kundeDto.getPartnerDto().getCName1nachnamefirmazeile1()));
-				ArrayList<Object> a = new ArrayList<Object>();
-				a.addAll(getAllInfoForTheClient(rechnungDto));
-				a.addAll(getAllInfoForTheClient(kundeDto.getPartnerDto()));
-				ex.setAlInfoForTheClient(a);
-				throw ex;
+			if(!getValidator().isValidKundeDebitorenKonto(kundeDto, rechnungDto)) {
+				return null ;
 			}
+//			if (kundeDto.getIidDebitorenkonto() == null) {
+//				EJBExceptionLP ex = new EJBExceptionLP(
+//						EJBExceptionLP.FEHLER_FINANZ_EXPORT_DEBITORENKONTO_NICHT_DEFINIERT,
+//						new Exception(kundeDto.getIId()	+ "," + kundeDto.getPartnerDto().getCName1nachnamefirmazeile1()));
+//				ArrayList<Object> a = new ArrayList<Object>();
+//				a.addAll(getAllInfoForTheClient(rechnungDto));
+//				a.addAll(getAllInfoForTheClient(kundeDto.getPartnerDto()));
+//				ex.setAlInfoForTheClient(a);
+//				throw ex;
+//			}
 			// pruefen, ob die Rechnung vollstaendig kontiert ist
-			BigDecimal bdKontiert = getRechnungFac().getProzentsatzKontiert(
-					rechnungDto.getIId(), theClientDto);
-			if (bdKontiert.compareTo(new BigDecimal(0)) != 0
-					&& bdKontiert.compareTo(new BigDecimal(100)) != 0) {
-				EJBExceptionLP ex = new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FINANZ_EXPORT_AUSGANGSRECHNUNG_NICHT_VOLLSTAENDIG_KONTIERT,
-						new Exception("Debitorenkonto fuer Kunde "
-								+ kundeDto.getIId()
-								+ ","
-								+ kundeDto.getPartnerDto()
-										.getCName1nachnamefirmazeile1()
-								+ " ist nicht definiert"));
-				ArrayList<Object> a = new ArrayList<Object>();
-				a.addAll(getAllInfoForTheClient(rechnungDto));
-				a.addAll(getAllInfoForTheClient(kundeDto.getPartnerDto()));
-				ex.setAlInfoForTheClient(a);
-				throw ex;
+			if(!getValidator().isRechnungVollstaendigKontiert(rechnungDto, kundeDto)) {
+				return null ;
 			}
+			
+//			BigDecimal bdKontiert = getRechnungFac().getProzentsatzKontiert(
+//					rechnungDto.getIId(), theClientDto);
+//			if (bdKontiert.compareTo(new BigDecimal(0)) != 0
+//					&& bdKontiert.compareTo(new BigDecimal(100)) != 0) {
+//				EJBExceptionLP ex = new EJBExceptionLP(
+//						EJBExceptionLP.FEHLER_FINANZ_EXPORT_AUSGANGSRECHNUNG_NICHT_VOLLSTAENDIG_KONTIERT,
+//						new Exception("Debitorenkonto fuer Kunde "
+//								+ kundeDto.getIId()
+//								+ ","
+//								+ kundeDto.getPartnerDto()
+//										.getCName1nachnamefirmazeile1()
+//								+ " ist nicht definiert"));
+//				ArrayList<Object> a = new ArrayList<Object>();
+//				a.addAll(getAllInfoForTheClient(rechnungDto));
+//				a.addAll(getAllInfoForTheClient(kundeDto.getPartnerDto()));
+//				ex.setAlInfoForTheClient(a);
+//				throw ex;
+//			}
 			return kundeDto;
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -528,36 +575,42 @@ public abstract class FibuExportManager extends Facade {
 					KontolaenderartDto kontolaenderartDto = getFinanzFac()
 							.kontolaenderartFindByPrimaryKeyOhneExc(kontoIId,
 									laenderartCNr, finanzamtIId, mandantCNr);
+					if(!getValidator().isValidKontolaenderart(kontolaenderartDto,
+							kontoIId, laenderartCNr, finanzamtIId, oBelegDto, meinFinanzamtIId)) {
+						return null ;						
+					}
+					kontoDto = getFinanzFac().kontoFindByPrimaryKey(
+							kontolaenderartDto.getKontoIIdUebersetzt());
+					
 					// wenn eine hinterlegt ist
-					if (kontolaenderartDto != null) {
-						kontoDto = getFinanzFac().kontoFindByPrimaryKey(
-								kontolaenderartDto.getKontoIIdUebersetzt());
-					}
-					// ansonsten entsprechende Fehlermeldung
-					else {
-						KontoDto kontoDtoHelp = getFinanzFac()
-								.kontoFindByPrimaryKey(kontoIId);
-						EJBExceptionLP ex = new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_FINANZ_EXPORT_KONTOLAENDERART_NICHT_DEFINIERT,
-								new Exception("Kontolaenderart fuer konto i_id"
-										+ kontoDtoHelp.getIId() + ","
-										+ kontoDtoHelp.getCNr() + " "
-										+ kontoDtoHelp.getCBez() + ", "
-										+ laenderartCNr
-										+ " ist nicht definiert"));
-						ArrayList<Object> a = new ArrayList<Object>();
-						a.add(kontoDtoHelp.getCNr() + " "
-								+ kontoDtoHelp.getCBez() + ", " + laenderartCNr);
-						a.add("Finanzamt Mandant I_ID='" + (meinFinanzamtIId == null ? "" : meinFinanzamtIId.toString()) + "'") ;
-						a.add("Finanzamt I_ID='" + (finanzamtIId == null ? "" : finanzamtIId.toString()) + "'");
-						if (oBelegDto instanceof RechnungDto) {
-							a.addAll(getAllInfoForTheClient((RechnungDto) oBelegDto));
-						} else if (oBelegDto instanceof EingangsrechnungDto) {
-							a.addAll(getAllInfoForTheClient((EingangsrechnungDto) oBelegDto));
-						}
-						ex.setAlInfoForTheClient(a);
-						throw ex;
-					}
+//					if (kontolaenderartDto != null) {
+//						kontoDto = getFinanzFac().kontoFindByPrimaryKey(
+//								kontolaenderartDto.getKontoIIdUebersetzt());
+//					} else {
+//						// ansonsten entsprechende Fehlermeldung
+//						KontoDto kontoDtoHelp = getFinanzFac()
+//								.kontoFindByPrimaryKey(kontoIId);
+//						EJBExceptionLP ex = new EJBExceptionLP(
+//								EJBExceptionLP.FEHLER_FINANZ_EXPORT_KONTOLAENDERART_NICHT_DEFINIERT,
+//								new Exception("Kontolaenderart fuer konto i_id"
+//										+ kontoDtoHelp.getIId() + ","
+//										+ kontoDtoHelp.getCNr() + " "
+//										+ kontoDtoHelp.getCBez() + ", "
+//										+ laenderartCNr
+//										+ " ist nicht definiert"));
+//						ArrayList<Object> a = new ArrayList<Object>();
+//						a.add(kontoDtoHelp.getCNr() + " "
+//								+ kontoDtoHelp.getCBez() + ", " + laenderartCNr);
+//						a.add("Finanzamt Mandant I_ID='" + (meinFinanzamtIId == null ? "" : meinFinanzamtIId.toString()) + "'") ;
+//						a.add("Finanzamt I_ID='" + (finanzamtIId == null ? "" : finanzamtIId.toString()) + "'");
+//						if (oBelegDto instanceof RechnungDto) {
+//							a.addAll(getAllInfoForTheClient((RechnungDto) oBelegDto));
+//						} else if (oBelegDto instanceof EingangsrechnungDto) {
+//							a.addAll(getAllInfoForTheClient((EingangsrechnungDto) oBelegDto));
+//						}
+//						ex.setAlInfoForTheClient(a);
+//						throw ex;
+//					}
 				}
 			}
 		} catch (RemoteException ex) {
@@ -619,27 +672,31 @@ public abstract class FibuExportManager extends Facade {
 		try {
 			laenderartCNr = getFinanzServiceFac().getLaenderartZuPartner(
 					partnerIId, theClientDto);
-			if (laenderartCNr == null) {
-				PartnerDto partnerDto = getPartnerFac()
-						.partnerFindByPrimaryKey(partnerIId, theClientDto);
-				EJBExceptionLP ex = new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_FINANZ_EXPORT_LAENDERART_NICHT_FESTSTELLBAR_FUER_PARTNER,
-						new Exception(
-								"Laenderart nicht feststellbar partner i_id"
-										+ partnerDto.getIId()
-										+ ","
-										+ partnerDto
-												.getCName1nachnamefirmazeile1()));
-				ArrayList<Object> a = new ArrayList<Object>();
-				if (oBelegDto instanceof RechnungDto) {
-					a.addAll(getAllInfoForTheClient((RechnungDto) oBelegDto));
-				} else if (oBelegDto instanceof EingangsrechnungDto) {
-					a.addAll(getAllInfoForTheClient((EingangsrechnungDto) oBelegDto));
-				}
-				a.addAll(getAllInfoForTheClient(partnerDto));
-				ex.setAlInfoForTheClient(a);
-				throw ex;
+			if(getValidator().isValidLaenderartCnr(laenderartCNr, partnerIId, oBelegDto)) {
+				return null ;
 			}
+			
+//			if (laenderartCNr == null) {
+//				PartnerDto partnerDto = getPartnerFac()
+//						.partnerFindByPrimaryKey(partnerIId, theClientDto);
+//				EJBExceptionLP ex = new EJBExceptionLP(
+//						EJBExceptionLP.FEHLER_FINANZ_EXPORT_LAENDERART_NICHT_FESTSTELLBAR_FUER_PARTNER,
+//						new Exception(
+//								"Laenderart nicht feststellbar partner i_id"
+//										+ partnerDto.getIId()
+//										+ ","
+//										+ partnerDto
+//												.getCName1nachnamefirmazeile1()));
+//				ArrayList<Object> a = new ArrayList<Object>();
+//				if (oBelegDto instanceof RechnungDto) {
+//					a.addAll(getAllInfoForTheClient((RechnungDto) oBelegDto));
+//				} else if (oBelegDto instanceof EingangsrechnungDto) {
+//					a.addAll(getAllInfoForTheClient((EingangsrechnungDto) oBelegDto));
+//				}
+//				a.addAll(getAllInfoForTheClient(partnerDto));
+//				ex.setAlInfoForTheClient(a);
+//				throw ex;
+//			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}

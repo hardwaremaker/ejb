@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,8 @@ package com.lp.server.system.service;
 
 import java.io.Serializable;
 import java.util.BitSet;
+
+import com.lp.util.Helper;
 
 public class LandplzortDto implements Serializable {
 
@@ -182,12 +184,19 @@ public class LandplzortDto implements Serializable {
 	// Formater
 	// ******************************************************************
 	public String formatLandPlzOrt() {
-		return landDto.getCLkz() + " " + getCPlz() + " "
-				+ getOrtDto().getCName();
+			return landDto.getCLkz() + " " + getCPlz() + " "
+					+ getOrtDto().getCName();
 	}
 
 	public String formatPlzOrt() {
-		return getCPlz() + " " + getOrtDto().getCName();
+
+		if (getLandDto() != null
+				&& Helper.short2boolean(getLandDto().getBPlznachort())) {
+			return getOrtDto().getCName() + " " + getCPlz();
+		} else {
+			return getCPlz() + " " + getOrtDto().getCName();
+		}
+
 	}
 
 }

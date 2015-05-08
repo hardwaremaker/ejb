@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.artikel.fastlanereader;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -47,6 +48,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -54,8 +56,8 @@ import com.lp.util.EJBExceptionLP;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Artikelgruppen implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Artikelgruppen
+ * implementiert. Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -115,7 +117,8 @@ public class ArtikellagerplaetzeHandler extends UseCaseHandler {
 						.next();
 				rows[row][col++] = lager.getI_id();
 				rows[row][col++] = lager.getFlrlagerplatz().getC_lagerplatz();
-				rows[row++][col++] = lager.getFlrlagerplatz().getFlrlager().getC_nr();
+				rows[row++][col++] = lager.getFlrlagerplatz().getFlrlager()
+						.getC_nr();
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
@@ -256,6 +259,10 @@ public class ArtikellagerplaetzeHandler extends UseCaseHandler {
 	 */
 	private String getFromClause() {
 		return "from FLRArtikellagerplaetze artikellagerplaetze ";
+		// return "from FLRArtikellagerplaetze artikellagerplaetze " +
+		// " LEFT OUTER JOIN artikellagerplaetze.flrlagerplatz AS flrlagerplatz "
+		// +
+		// " LEFT OUTER JOIN flrlagerplatz.flrlager as flrlager ";
 	}
 
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
@@ -314,18 +321,52 @@ public class ArtikellagerplaetzeHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class }, new String[] {
-					"Id",
-					getTextRespectUISpr("lp.lagerplatz",
-							theClientDto.getMandant(), theClientDto.getLocUi()),
-					getTextRespectUISpr("lp.lager", theClientDto.getMandant(),
-							theClientDto.getLocUi()) }, new String[] {
-					"i_id",
-					LagerFac.FLR_LAGERPLAETZE_FLRLAGERPLATZ + "."
-							+ LagerFac.FLR_LAGERPLATZ_C_LAGERPLATZ,
-					LagerFac.FLR_LAGERPLAETZE_FLRLAGER + ".c_nr" }));
+			String mandantCNr = theClientDto.getMandant();
+			Locale locUI = theClientDto.getLocUi();
+			setTableInfo(new TableInfo(
+					new Class[] {
+							Integer.class,
+							String.class,
+							String.class
+					},
+					
+					new String[] {
+						"Id",
+						getTextRespectUISpr("lp.lagerplatz", mandantCNr, locUI),
+						getTextRespectUISpr("lp.lager", mandantCNr, locUI)
+					},
+					
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST
+					},
+									
+					new String[] {
+							"i_id",
+							LagerFac.FLR_LAGERPLAETZE_FLRLAGERPLATZ + "."
+									+ LagerFac.FLR_LAGERPLATZ_C_LAGERPLATZ,
+							LagerFac.FLR_LAGERPLAETZE_FLRLAGERPLATZ + "."
+									+ LagerFac.FLR_LAGERPLAETZE_FLRLAGER
+									+ ".c_nr"
+					})
+			);
 		}
 		return super.getTableInfo();
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

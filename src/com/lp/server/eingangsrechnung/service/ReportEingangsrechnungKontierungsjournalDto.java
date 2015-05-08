@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -63,6 +63,37 @@ public class ReportEingangsrechnungKontierungsjournalDto {
 	private String sEingangsrechnungsnummer = null;
 	private java.util.Date dEingangsrechnungsdatum = null;
 	private String sLieferant = null;
+	private String sPartnerartLieferant = null;
+	private String sArt;
+	public String getSPartnerartLieferant() {
+		return sPartnerartLieferant;
+	}
+
+	public void setSPartnerartLieferant(String sPartnerartLieferant) {
+		this.sPartnerartLieferant = sPartnerartLieferant;
+	}
+
+	private String sSteuerkategorie = null;
+	
+	public String getSSteuerkategorie() {
+		return sSteuerkategorie;
+	}
+
+	public void setSSteuerkategorie(String sSteuerkategorie) {
+		this.sSteuerkategorie = sSteuerkategorie;
+	}
+
+	private String sUVAArt = null;
+	
+	public String getSUVAArt() {
+		return sUVAArt;
+	}
+
+	public void setSUVAArt(String sUVAArt) {
+		this.sUVAArt = sUVAArt;
+	}
+
+
 	private String sEingangsrechnungText = null;
 	private String sEingangsrechnungWeartikel = null;
 	
@@ -277,7 +308,14 @@ public class ReportEingangsrechnungKontierungsjournalDto {
 	public void setSKreditorennummer(String sKreditorennummer) {
 		this.sKreditorennummer = sKreditorennummer;
 	}
-	
+
+	public String getSArt() {
+		return sArt;
+	}
+
+	public void setSArt(String sArt) {
+		this.sArt = sArt;
+	}
 	
 
 }

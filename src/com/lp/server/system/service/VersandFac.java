@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.system.service;
 
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Locale;
 
 import javax.ejb.Remote;
@@ -63,6 +64,7 @@ public interface VersandFac {
 	public final static String MAIL_PARAMETER_BEARBEITER_VORNAME = "bearbeiter_vorname";
 	public final static String MAIL_PARAMETER_BEARBEITER_NACHNAME = "bearbeiter_nachname";
 	public final static String MAIL_PARAMETER_BEARBEITER_TITEL = "bearbeiter_titel";
+	public final static String MAIL_PARAMETER_BEARBEITER_NTITEL = "bearbeiter_ntitel";
 	public final static String MAIL_PARAMETER_BEARBEITER_TELEFONFIRMA = "bearbeiter_telefonfirma";
 	public final static String MAIL_PARAMETER_BEARBEITER_TELEFONDWFIRMA = "bearbeiter_telefondwfirma";
 	public final static String MAIL_PARAMETER_BEARBEITER_EMAIL = "bearbeiter_email";
@@ -77,6 +79,7 @@ public interface VersandFac {
 	public final static String MAIL_PARAMETER_VERTRETER_VORNAME = "vertreter_vorname";
 	public final static String MAIL_PARAMETER_VERTRETER_NACHNAME = "vertreter_nachname";
 	public final static String MAIL_PARAMETER_VERTRETER_TITEL = "vertreter_titel";
+	public final static String MAIL_PARAMETER_VERTRETER_NTITEL = "vertreter_ntitel";
 	public final static String MAIL_PARAMETER_VERTRETER_TELEFONFIRMA = "vertreter_telefonfirma";
 	public final static String MAIL_PARAMETER_VERTRETER_TELEFONDWFIRMA = "vertreter_telefondwfirma";
 	public final static String MAIL_PARAMETER_VERTRETER_EMAIL = "vertreter_email";
@@ -108,7 +111,7 @@ public interface VersandFac {
 	public final static String MAIL_PARAMETER_FIRMA_ORT = "firma_ort";	
 	public final static String MAIL_PARAMETER_FIRMA_STRASSE = "firma_strasse";	
 
-	
+	// TODO: Wo werden diese falschen Pfade verwendet? (ghp)
 	public final static String LOGO_IMAGE = "c:/jboss-4.0.1/server/helium/report/allgemein/logo.png";
 	public final static String LOGO_SUBREPORT = "c:/jboss-4.0.1/server/helium/report/allgemein/logo.jasper";
 	public final static String FUSSZEILEN = "c:/jboss-4.0.1/server/helium/report/allgemein/fusszeilen.jasper";
@@ -151,9 +154,12 @@ public interface VersandFac {
 			Integer iIdBeleg, Locale locSprache, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public String getDefaultTextForBelegEmail(MailtextDto mailtextDto,
+	String getDefaultTextForBelegEmail(MailtextDto mailtextDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
+	String getDefaultTextForBelegHtmlEmail(MailtextDto mailtextDto,
+			TheClientDto theClientDto) throws EJBExceptionLP ;
+	
 	public String getDefaultDateinameForBelegEmail(String belegartCNr,
 			Integer iIdBeleg, Locale locSprache, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -200,8 +206,7 @@ public interface VersandFac {
 			RemoteException;
 
 	public VersandanhangDto createVersandanhang(
-			VersandanhangDto versandanhangDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+			VersandanhangDto versandanhangDto, TheClientDto theClientDto);
 
 	public VersandanhangDto[] VersandanhangFindByVersandauftragIID(
 			Integer versandauftragIID) throws EJBExceptionLP, RemoteException;
@@ -211,4 +216,6 @@ public interface VersandFac {
 	public VersandauftragDto versandauftragFindNextNotInDoc();
 	
 	public VersandanhangDto updateVersandanhang(VersandanhangDto versandanhangDto);
+	public void createVersandanhaenge(ArrayList<VersandanhangDto> alAnhaenge,
+			TheClientDto theClientDto);
 }

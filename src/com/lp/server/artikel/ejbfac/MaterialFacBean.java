@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,16 +35,28 @@ package com.lp.server.artikel.ejbfac;
 import java.rmi.RemoteException;
 import java.sql.Date;
 import java.util.*;
+
+import com.lp.server.angebot.ejb.Angebotposition;
+import com.lp.server.angebot.fastlanereader.generated.FLRAngebotposition;
 import com.lp.server.artikel.ejb.*;
 import com.lp.server.artikel.service.*;
+import com.lp.server.auftrag.ejb.Auftragposition;
+import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragposition;
+import com.lp.server.lieferschein.ejb.Lieferscheinposition;
+import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition;
 import com.lp.server.partner.service.LieferantDto;
+import com.lp.server.rechnung.ejb.Rechnungposition;
+import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition;
 import com.lp.server.system.pkgenerator.*;
 import com.lp.server.system.pkgenerator.bl.*;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.*;
+import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.util.*;
+
 import java.math.BigDecimal;
 
 /**
@@ -63,15 +75,19 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
+import org.hibernate.Session;
+
 @Stateless
 public class MaterialFacBean extends Facade implements MaterialFac {
 	@PersistenceContext
 	private EntityManager em;
 
 	/**
-	 * Liefert die IId des Materials welches &uuml;ber seine Kennung gesucht wird
+	 * Liefert die IId des Materials welches &uuml;ber seine Kennung gesucht
+	 * wird
 	 * 
-	 * @param materialCNr die Kennung des Materials
+	 * @param materialCNr
+	 *            die Kennung des Materials
 	 * @return Id des Materials
 	 * @throws EJBExceptionLP
 	 */
@@ -85,6 +101,160 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 			return null;
 		}
 
+	}
+
+	public void pflegeMaterialzuschlagsKursUndDatumNachtragen(
+			TheClientDto theClientDto) {
+		// Angebot
+		Session session = FLRSessionFactory.getFactory().openSession();
+		String queryString = "SELECT a FROM FLRAngebotposition AS a WHERE a.flrartikel.flrmaterial.i_id IS NOT NULL";
+		org.hibernate.Query query = session.createQuery(queryString);
+		List<?> resultList = query.list();
+
+		Iterator<?> resultListIterator = resultList.iterator();
+
+		while (resultListIterator.hasNext()) {
+			FLRAngebotposition a = (FLRAngebotposition) resultListIterator
+					.next();
+
+			// Nun Kurs zum Belegdatum holen
+
+			MaterialzuschlagDto mDto = getKursMaterialzuschlagDtoInZielwaehrung(
+					a.getFlrartikel().getFlrmaterial().getI_id(), a
+							.getFlrangebot().getT_belegdatum(), a
+							.getFlrangebot()
+							.getWaehrung_c_nr_angebotswaehrung(), theClientDto);
+
+			if (mDto != null) {
+				Angebotposition ap = em
+						.find(Angebotposition.class, a.getI_id());
+				ap.setNMaterialzuschlagKurs(mDto.getNZuschlag());
+				ap.setTMaterialzuschlagDatum(mDto.getTGueltigab());
+				em.merge(ap);
+				em.flush();
+			}
+		}
+
+		session.close();
+
+		// Auftrag
+
+		session = FLRSessionFactory.getFactory().openSession();
+		queryString = "SELECT a FROM FLRAuftragposition AS a WHERE a.flrartikel.flrmaterial.i_id IS NOT NULL";
+		query = session.createQuery(queryString);
+		resultList = query.list();
+
+		resultListIterator = resultList.iterator();
+
+		while (resultListIterator.hasNext()) {
+			FLRAuftragposition a = (FLRAuftragposition) resultListIterator
+					.next();
+
+			// Nun Kurs zum Belegdatum holen
+
+			MaterialzuschlagDto mDto = getKursMaterialzuschlagDtoInZielwaehrung(
+					a.getFlrartikel().getFlrmaterial().getI_id(), a
+							.getFlrauftrag().getT_belegdatum(), a
+							.getFlrauftrag()
+							.getWaehrung_c_nr_auftragswaehrung(), theClientDto);
+
+			if (mDto != null) {
+				Auftragposition ap = em
+						.find(Auftragposition.class, a.getI_id());
+				ap.setNMaterialzuschlagKurs(mDto.getNZuschlag());
+				ap.setTMaterialzuschlagDatum(mDto.getTGueltigab());
+				em.merge(ap);
+				em.flush();
+			}
+		}
+
+		// Lieferschein
+		session = FLRSessionFactory.getFactory().openSession();
+		queryString = "SELECT l FROM FLRLieferscheinposition AS l WHERE l.flrartikel.flrmaterial.i_id IS NOT NULL";
+		query = session.createQuery(queryString);
+		resultList = query.list();
+
+		resultListIterator = resultList.iterator();
+
+		while (resultListIterator.hasNext()) {
+			FLRLieferscheinposition l = (FLRLieferscheinposition) resultListIterator
+					.next();
+
+			if (l.getAuftragposition_i_id() != null) {
+				Auftragposition ap = em.find(Auftragposition.class,
+						l.getAuftragposition_i_id());
+
+				Lieferscheinposition lp = em.find(Lieferscheinposition.class,
+						l.getI_id());
+				lp.setNMaterialzuschlagKurs(ap.getNMaterialzuschlagKurs());
+				lp.setTMaterialzuschlagDatum(ap.getTMaterialzuschlagDatum());
+				em.merge(lp);
+				em.flush();
+
+			} else {
+				// Nun Kurs zum Belegdatum holen
+
+				MaterialzuschlagDto mDto = getKursMaterialzuschlagDtoInZielwaehrung(
+						l.getFlrartikel().getFlrmaterial().getI_id(), l
+								.getFlrlieferschein().getD_belegdatum(), l
+								.getFlrlieferschein()
+								.getWaehrung_c_nr_lieferscheinwaehrung(),
+						theClientDto);
+
+				if (mDto != null) {
+					Lieferscheinposition lp = em.find(
+							Lieferscheinposition.class, l.getI_id());
+					lp.setNMaterialzuschlagKurs(mDto.getNZuschlag());
+					lp.setTMaterialzuschlagDatum(mDto.getTGueltigab());
+					em.merge(lp);
+					em.flush();
+				}
+			}
+
+		}
+		// Rechnung
+		session = FLRSessionFactory.getFactory().openSession();
+		queryString = "SELECT r FROM FLRRechnungPosition AS r WHERE r.flrartikel.flrmaterial.i_id IS NOT NULL";
+		query = session.createQuery(queryString);
+		resultList = query.list();
+
+		resultListIterator = resultList.iterator();
+
+		while (resultListIterator.hasNext()) {
+			FLRRechnungPosition r = (FLRRechnungPosition) resultListIterator
+					.next();
+
+			if (r.getAuftragposition_i_id() != null) {
+				Auftragposition ap = em.find(Auftragposition.class,
+						r.getAuftragposition_i_id());
+
+				Rechnungposition rp = em.find(Rechnungposition.class,
+						r.getI_id());
+				rp.setNMaterialzuschlagKurs(ap.getNMaterialzuschlagKurs());
+				rp.setTMaterialzuschlagDatum(ap.getTMaterialzuschlagDatum());
+				em.merge(rp);
+				em.flush();
+
+			} else {
+				// Nun Kurs zum Belegdatum holen
+
+				MaterialzuschlagDto mDto = getKursMaterialzuschlagDtoInZielwaehrung(
+						r.getFlrartikel().getFlrmaterial().getI_id(), r
+								.getFlrrechnung().getD_belegdatum(), r
+								.getFlrrechnung().getWaehrung_c_nr(),
+						theClientDto);
+
+				if (mDto != null) {
+					Rechnungposition rp = em.find(Rechnungposition.class,
+							r.getI_id());
+					rp.setNMaterialzuschlagKurs(mDto.getNZuschlag());
+					rp.setTMaterialzuschlagDatum(mDto.getTGueltigab());
+					em.merge(rp);
+					em.flush();
+				}
+			}
+
+		}
 	}
 
 	public Integer createMaterial(MaterialDto materialDto,
@@ -399,31 +569,35 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		return zuschlagGesamt;
 	}
 
-	public MaterialzuschlagDto getKursMaterialzuschlagDtoInZielwaehrung(Integer materialIId,
-			java.util.Date datGueltigkeitsdatumI, String waehrungCNrZielwaehrung,
-			TheClientDto theClientDto) {
-		
+	public MaterialzuschlagDto getKursMaterialzuschlagDtoInZielwaehrung(
+			Integer materialIId, java.util.Date datGueltigkeitsdatumI,
+			String waehrungCNrZielwaehrung, TheClientDto theClientDto) {
+
 		Query query = em
 				.createNamedQuery("MaterialzuschlagfindAktuellenZuschlag");
 		query.setParameter(1, materialIId);
 		query.setParameter(2, theClientDto.getMandant());
-		query.setParameter(3, new java.sql.Date(datGueltigkeitsdatumI.getTime()));
+		query.setParameter(3,
+				new java.sql.Date(datGueltigkeitsdatumI.getTime()));
 		query.setMaxResults(1);
 		Collection<?> cl = query.getResultList();
 
 		MaterialzuschlagDto[] dtos = assembleMaterialzuschlagDtos(cl);
 		if (dtos.length > 0) {
-			
+
 			if (!waehrungCNrZielwaehrung.equals(theClientDto
-							.getSMandantenwaehrung())) {
+					.getSMandantenwaehrung())) {
 				try {
-					BigDecimal zuschlag = getLocaleFac().rechneUmInAndereWaehrungZuDatum(
-							dtos[0].getNZuschlag(), theClientDto.getSMandantenwaehrung(),
-							waehrungCNrZielwaehrung,
-							new Date(System.currentTimeMillis()), theClientDto);
-					
+					BigDecimal zuschlag = getLocaleFac()
+							.rechneUmInAndereWaehrungZuDatum(
+									dtos[0].getNZuschlag(),
+									theClientDto.getSMandantenwaehrung(),
+									waehrungCNrZielwaehrung,
+									new Date(System.currentTimeMillis()),
+									theClientDto);
+
 					dtos[0].setNZuschlag(zuschlag);
-					
+
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 
@@ -433,8 +607,7 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		} else {
 			return new MaterialzuschlagDto();
 		}
-		
-		
+
 	}
 
 	public BigDecimal getMaterialzuschlagVKInZielwaehrung(Integer artikelIId,
@@ -555,12 +728,59 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		// }
 	}
 
+	public MaterialDto materialFindByPrimaryKey(Integer iId, Locale locDruck,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+
+		if (iId == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("iId == null"));
+		}
+		// try {
+		Material material = em.find(Material.class, iId);
+		if (material == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		MaterialDto materialDto = assembleMaterialDto(material);
+
+		MaterialsprDto materialsprDto = null;
+		// try {
+		Materialspr materialspr = em.find(Materialspr.class, new MaterialsprPK(
+				Helper.locale2String(locDruck), iId));
+		materialsprDto = assembleMaterialsprDto(materialspr);
+		if (materialsprDto == null) {
+		}
+		// }
+		// catch (FinderException ex) {
+		// }
+		if (materialsprDto == null) {
+			// try {
+			Materialspr temp = em.find(Materialspr.class, new MaterialsprPK(
+					theClientDto.getLocUiAsString(), iId));
+			materialsprDto = assembleMaterialsprDto(temp);
+			if (materialsprDto == null) {
+			}
+			// }
+			// catch (FinderException ex) {
+			// }
+		}
+		materialDto.setMaterialsprDto(materialsprDto);
+		return materialDto;
+		// }
+		// catch (FinderException e) {
+		// throw new EJBExceptionLP(EJBExceptionLP.
+		// FEHLER_BEI_FINDBYPRIMARYKEY,
+		// e);
+		// }
+	}
+
 	/**
 	 * Gibt den zum Zeitpunkt JETZT gueltigen Materialzuschlag zurueck
 	 * 
 	 * @param iId
 	 *            Integer
-	 * @param theClientDto der aktuelle Benutzer 
+	 * @param theClientDto
+	 *            der aktuelle Benutzer
 	 * @return BigDecimal
 	 * @throws EJBExceptionLP
 	 */
@@ -574,7 +794,13 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		Query query = em
 				.createNamedQuery("MaterialzuschlagfindAktuellenZuschlag");
 		query.setParameter(1, iId);
-		query.setParameter(2, theClientDto.getMandant());
+		// SP2910
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+				MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)) {
+			query.setParameter(2, getSystemFac().getHauptmandant());
+		} else {
+			query.setParameter(2, theClientDto.getMandant());
+		}
 		query.setParameter(3, new java.sql.Date(System.currentTimeMillis()));
 		Collection<?> cl = query.getResultList();
 		// if (cl.isEmpty()) {
@@ -607,7 +833,15 @@ public class MaterialFacBean extends Facade implements MaterialFac {
 		Query query = em
 				.createNamedQuery("MaterialzuschlagfindAktuellenZuschlag");
 		query.setParameter(1, iId);
-		query.setParameter(2, theClientDto.getMandant());
+
+		// SP2910
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+				MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM, theClientDto)) {
+			query.setParameter(2, getSystemFac().getHauptmandant());
+		} else {
+			query.setParameter(2, theClientDto.getMandant());
+		}
+
 		query.setParameter(3, dDatum);
 		query.setMaxResults(1);
 		Collection<?> cl = query.getResultList();

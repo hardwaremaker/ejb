@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -135,7 +135,17 @@ public class BSMahnungHandler extends UseCaseHandler {
 						true) : new Boolean(false);
 
 				rows[row][col++] = bsmahnung.getFlrbestellung().getC_nr();
-				rows[row][col++] = bsposition.getC_bezeichnung();
+
+				String bezeichnung = bsposition.getC_bezeichnung();
+
+				if (bezeichnung == null && bsposition.getFlrartikel() != null) {
+					bezeichnung = getArtikelFac()
+							.formatArtikelbezeichnungEinzeiligOhneExc(
+									bsposition.getFlrartikel().getI_id(),
+									theClientDto.getLocUi());
+				}
+
+				rows[row][col++] = bezeichnung;
 
 				rows[row][col++] = bsmahnung.getN_offenemenge();
 				rows[row][col++] = bsmahnung.getFlrbestellung()

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -40,11 +40,12 @@ import java.util.List;
 import javax.ejb.Remote;
 
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.IPositionNumber;
 import com.lp.service.Artikelset;
 import com.lp.util.EJBExceptionLP;
 
 @Remote
-public interface AuftragpositionFac {
+public interface AuftragpositionFac extends IPositionNumber {
 
 	// Tabellennamen
 	public static final String AUFT_AUFTRAGPOSITION = "AUFT_AUFTRAGPOSITION";

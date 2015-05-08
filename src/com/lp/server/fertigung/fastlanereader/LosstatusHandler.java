@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -49,6 +49,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -310,12 +311,52 @@ public class LosstatusHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
-					new Class[] { String.class, String.class },
-					new String[] { "i_id",
-							getTextRespectUISpr("lp.status", mandantCNr, locUI) },
-					new String[] { FertigungFac.FLR_LOSSTATUS_STATUS_C_NR,
-							FertigungFac.FLR_LOSSTATUS_STATUS_C_NR }));
+					new Class[] {
+							String.class,
+							String.class
+					},
+					
+					new String[] {
+							"i_id",
+							getTextRespectUISpr("lp.status", mandantCNr, locUI)
+					},
+					
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST
+					},
+					
+					new String[] {
+							FertigungFac.FLR_LOSSTATUS_STATUS_C_NR,
+							FertigungFac.FLR_LOSSTATUS_STATUS_C_NR
+					})
+			);
 		}
 		return super.getTableInfo();
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

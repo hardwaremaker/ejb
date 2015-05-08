@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -63,6 +63,7 @@ public class AnwenderDto extends CryptDto implements Serializable, ICryptDto {
 	
 	transient private byte[] oCode = null;
 	transient private byte[] oHash = null;
+	private Timestamp tSubscription;
 	
 	public String getMandantCNrHauptmandant() {
 		return mandantCNrHauptmandant;
@@ -163,9 +164,17 @@ public class AnwenderDto extends CryptDto implements Serializable, ICryptDto {
 	public void setTAblauf(Timestamp tAblauf) {
 		this.tAblauf = tAblauf;
 	}
-
+	
 	public Timestamp getTAblauf() {
 		return tAblauf;
+	}
+
+	public void setTSubscription(Timestamp tSubscription) {
+		this.tSubscription = tSubscription;
+	}
+	
+	public Timestamp getTSubscription() {
+		return tSubscription;
 	}
 
 	public void setOCode(byte[] oCode) {

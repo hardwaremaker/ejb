@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -335,5 +335,151 @@ public abstract class BelegpositionDto extends DefaultHandler implements
 		else if (sKeyI.equals(SystemFac.SCHEMA_OF_QUANTITY_UNIT_CUSTOMER)) {
 			setEinheitCNr(sValueI);
 		}
-	}	
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime
+				* result
+				+ ((alSeriennrChargennrMitMenge == null) ? 0
+						: alSeriennrChargennrMitMenge.hashCode());
+		result = prime * result
+				+ ((artikelIId == null) ? 0 : artikelIId.hashCode());
+		result = prime
+				* result
+				+ ((bArtikelbezeichnunguebersteuert == null) ? 0
+						: bArtikelbezeichnunguebersteuert.hashCode());
+		result = prime
+				* result
+				+ ((bNettopreisuebersteuert == null) ? 0
+						: bNettopreisuebersteuert.hashCode());
+		result = prime * result
+				+ ((belegIId == null) ? 0 : belegIId.hashCode());
+		result = prime * result + ((cBez == null) ? 0 : cBez.hashCode());
+		result = prime * result
+				+ ((cZusatzbez == null) ? 0 : cZusatzbez.hashCode());
+		result = prime * result
+				+ ((einheitCNr == null) ? 0 : einheitCNr.hashCode());
+		result = prime * result + iCopyPasteModus;
+		result = prime * result + ((iId == null) ? 0 : iId.hashCode());
+		result = prime * result + ((iSort == null) ? 0 : iSort.hashCode());
+		result = prime
+				* result
+				+ ((mediastandardIId == null) ? 0 : mediastandardIId.hashCode());
+		result = prime
+				* result
+				+ ((nMaterialzuschlag == null) ? 0 : nMaterialzuschlag
+						.hashCode());
+		result = prime * result + ((nMenge == null) ? 0 : nMenge.hashCode());
+		result = prime
+				* result
+				+ ((positioniIdArtikelset == null) ? 0 : positioniIdArtikelset
+						.hashCode());
+		result = prime * result
+				+ ((positionsartCNr == null) ? 0 : positionsartCNr.hashCode());
+		result = prime * result
+				+ ((xTextinhalt == null) ? 0 : xTextinhalt.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		BelegpositionDto other = (BelegpositionDto) obj;
+		if (alSeriennrChargennrMitMenge == null) {
+			if (other.alSeriennrChargennrMitMenge != null)
+				return false;
+		} else if (!alSeriennrChargennrMitMenge
+				.equals(other.alSeriennrChargennrMitMenge))
+			return false;
+		if (artikelIId == null) {
+			if (other.artikelIId != null)
+				return false;
+		} else if (!artikelIId.equals(other.artikelIId))
+			return false;
+		if (bArtikelbezeichnunguebersteuert == null) {
+			if (other.bArtikelbezeichnunguebersteuert != null)
+				return false;
+		} else if (!bArtikelbezeichnunguebersteuert
+				.equals(other.bArtikelbezeichnunguebersteuert))
+			return false;
+		if (bNettopreisuebersteuert == null) {
+			if (other.bNettopreisuebersteuert != null)
+				return false;
+		} else if (!bNettopreisuebersteuert
+				.equals(other.bNettopreisuebersteuert))
+			return false;
+		if (belegIId == null) {
+			if (other.belegIId != null)
+				return false;
+		} else if (!belegIId.equals(other.belegIId))
+			return false;
+		if (cBez == null) {
+			if (other.cBez != null)
+				return false;
+		} else if (!cBez.equals(other.cBez))
+			return false;
+		if (cZusatzbez == null) {
+			if (other.cZusatzbez != null)
+				return false;
+		} else if (!cZusatzbez.equals(other.cZusatzbez))
+			return false;
+		if (einheitCNr == null) {
+			if (other.einheitCNr != null)
+				return false;
+		} else if (!einheitCNr.equals(other.einheitCNr))
+			return false;
+		if (iCopyPasteModus != other.iCopyPasteModus)
+			return false;
+		if (iId == null) {
+			if (other.iId != null)
+				return false;
+		} else if (!iId.equals(other.iId))
+			return false;
+		if (iSort == null) {
+			if (other.iSort != null)
+				return false;
+		} else if (!iSort.equals(other.iSort))
+			return false;
+		if (mediastandardIId == null) {
+			if (other.mediastandardIId != null)
+				return false;
+		} else if (!mediastandardIId.equals(other.mediastandardIId))
+			return false;
+		if (nMaterialzuschlag == null) {
+			if (other.nMaterialzuschlag != null)
+				return false;
+		} else if (!nMaterialzuschlag.equals(other.nMaterialzuschlag))
+			return false;
+		if (nMenge == null) {
+			if (other.nMenge != null)
+				return false;
+		} else if (!nMenge.equals(other.nMenge))
+			return false;
+		if (positioniIdArtikelset == null) {
+			if (other.positioniIdArtikelset != null)
+				return false;
+		} else if (!positioniIdArtikelset.equals(other.positioniIdArtikelset))
+			return false;
+		if (positionsartCNr == null) {
+			if (other.positionsartCNr != null)
+				return false;
+		} else if (!positionsartCNr.equals(other.positionsartCNr))
+			return false;
+		if (xTextinhalt == null) {
+			if (other.xTextinhalt != null)
+				return false;
+		} else if (!xTextinhalt.equals(other.xTextinhalt))
+			return false;
+		return true;
+	}
+	
+	
 }

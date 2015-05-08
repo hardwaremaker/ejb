@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -46,6 +46,7 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelfehlmengeDto;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosistmaterial;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial;
@@ -124,10 +125,18 @@ public class LossollmaterialHandler extends UseCaseHandler {
 					rows[row][col++] = "S";
 				}
 				rows[row][col++] = losmat.getFlrartikel().getC_nr();
-				rows[row][col++] = getArtikelFac()
-						.artikelFindByPrimaryKeySmall(
-								losmat.getFlrartikel().getI_id(), theClientDto)
-						.formatBezeichnung();
+
+				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
+						losmat.getFlrartikel().getI_id(), theClientDto);
+
+				if (aDto.getArtikelsprDto() != null) {
+					rows[row][col++] = aDto.getArtikelsprDto().getCBez();
+					rows[row][col++] = aDto.getArtikelsprDto().getCZbez();
+				} else {
+					rows[row][col++] = null;
+					rows[row][col++] = null;
+				}
+
 				rows[row][col++] = losmat.getN_menge();
 				// erledigte Menge
 				BigDecimal bdAusgegeben = new BigDecimal(0);
@@ -142,26 +151,25 @@ public class LossollmaterialHandler extends UseCaseHandler {
 				}
 				rows[row][col++] = bdAusgegeben;
 
-				
 				ArtikelfehlmengeDto artikelfehlmengeDto = getFehlmengeFac()
 						.artikelfehlmengeFindByBelegartCNrBelegartPositionIIdOhneExc(
 								LocaleFac.BELEGART_LOS, losmat.getI_id());
-				
+
 				if (bFehlmengeStattPreis) {
-					
-					if (Helper.short2boolean(losmat.getB_nachtraeglich()) && artikelfehlmengeDto == null) {
+
+					if (Helper.short2boolean(losmat.getB_nachtraeglich())
+							&& artikelfehlmengeDto == null) {
 						rows[row][col++] = null;
 					} else {
 						rows[row][col++] = losmat.getN_menge().subtract(
 								bdAusgegeben);
 					}
-					
-					
+
 				} else {
 
 					rows[row][col++] = losmat.getN_sollpreis();
 				}
-				
+
 				if (artikelfehlmengeDto != null) {
 					rows[row][col++] = "F";
 				} else {
@@ -288,7 +296,8 @@ public class LossollmaterialHandler extends UseCaseHandler {
 				} else {
 					orderBy.append(FLR_LOSMAT)
 							.append(FertigungFac.FLR_LOSSOLLMATERIAL_FLRARTIKEL
-									+ ".c_nr").append(" ASC , flrlossollmaterial.t_aendern ASC ");
+									+ ".c_nr")
+							.append(" ASC , flrlossollmaterial.t_aendern ASC ");
 				}
 
 				sortAdded = true;
@@ -391,9 +400,9 @@ public class LossollmaterialHandler extends UseCaseHandler {
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
-							String.class, BigDecimal.class, BigDecimal.class,
-							BigDecimal.class, String.class, Icon.class,
-							Color.class },
+							String.class, String.class, BigDecimal.class,
+							BigDecimal.class, BigDecimal.class, String.class,
+							Icon.class, Color.class },
 					new String[] {
 							"i_id",
 							getTextRespectUISpr("lp.art", mandantCNr, locUI),
@@ -401,6 +410,8 @@ public class LossollmaterialHandler extends UseCaseHandler {
 									locUI),
 							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
 									locUI),
+							getTextRespectUISpr("artikel.zusatzbez",
+									mandantCNr, locUI),
 							getTextRespectUISpr("lp.menge", mandantCNr, locUI),
 							getTextRespectUISpr("fert.ausgegeben", mandantCNr,
 									locUI),
@@ -409,6 +420,7 @@ public class LossollmaterialHandler extends UseCaseHandler {
 									: getTextRespectUISpr("lp.preis",
 											mandantCNr, locUI), " ", "S", "" },
 					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, 3,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_PREIS,
@@ -420,6 +432,7 @@ public class LossollmaterialHandler extends UseCaseHandler {
 							Facade.NICHT_SORTIERBAR,
 							FertigungFac.FLR_LOSSOLLMATERIAL_FLRARTIKEL
 									+ ".c_nr",
+							Facade.NICHT_SORTIERBAR,
 							Facade.NICHT_SORTIERBAR,
 							FertigungFac.FLR_LOSSOLLMATERIAL_N_MENGE,
 							Facade.NICHT_SORTIERBAR,

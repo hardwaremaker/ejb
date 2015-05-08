@@ -1,33 +1,33 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.personal.service;
@@ -42,6 +42,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.auftrag.service.AuftragzeitenDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.report.JasperPrintLP;
@@ -131,13 +132,14 @@ public interface ZeiterfassungFacAll {
 	public static final String FLR_MASCHINE_C_INVENTARNUMMER = "c_inventarnummer";
 	public static final String FLR_MASCHINE_C_IDENTIFIKATIONSNR = "c_identifikationsnr";
 	public static final String FLR_MASCHINE_T_KAUFDATUM = "t_kaufdatum";
-	public static final String FLR_MASCHINE_F_VERFUEGBARKEITINPROZENT = "f_verfuegbarkeitinprozent";
+
 	public static final String FLR_MASCHINE_MASCHINENGRUPPE_I_ID = "maschinengruppe_i_id";
 	public static final String FLR_MASCHINE_B_VERSTECKT = "b_versteckt";
 	public static final String FLR_MASCHINE_FLR_MASCHINENGRUPPE = "flrmaschinengruppe";
 
 	public static final String FLR_MASCHINENKOSTEN_T_GUELTIGAB = "t_gueltigab";
 	public static final String FLR_MASCHINENKOSTEN_N_STUNDENSATZ = "n_stundensatz";
+	public static final String FLR_MASCHINENKOSTEN_N_VKSTUNDENSATZ = "n_vkstundensatz";
 	public static final String FLR_MASCHINENKOSTEN_FLRMASCHINE = "flrmaschine";
 
 	public static final String FLR_ZEITSTIFT_B_MEHRFACHSTIFT = "b_mehrfachstift";
@@ -195,6 +197,7 @@ public interface ZeiterfassungFacAll {
 	public static final String TAETIGKEIT_KRANK = "KRANK          ";
 	public static final String TAETIGKEIT_KINDKRANK = "KINDKRANK      ";
 	public static final String TAETIGKEIT_TELEFON = "TELEFON        ";
+	public static final String TAETIGKEIT_URLAUBSANTRAG = "URLAUBSANTRAG  ";
 	// Speziell fuer MECSTERMINAL
 	public static final String TAETIGKEIT_REISE = "REISE          ";
 
@@ -209,6 +212,7 @@ public interface ZeiterfassungFacAll {
 	public final static String REPORT_WOCHENJOURNAL = "pers_wochenjournal.jasper";
 	public final static String REPORT_ZEITSALDO = "pers_zeitsaldo.jasper";
 	public final static String REPORT_LOHNDATENEXPORT = "pers_lohndatenexport.jasper";
+	public final static String REPORT_WOCHENABSCHLUSS = "pers_wochenabschluss.jasper";
 
 	public final static int REPORT_SONDERZEITENLISTE_OPTION_SELEKTIERTE_PERSON = 0;
 	public final static int REPORT_SONDERZEITENLISTE_OPTION_ALLE_PERSONEN = 1;
@@ -256,7 +260,8 @@ public interface ZeiterfassungFacAll {
 			RemoteException;
 
 	public Double berechneArbeitszeitImZeitraum(Integer personalIId,
-			Date dDatumVon, Date dDatumBis, TheClientDto theClientDto);
+			Date dDatumVon, Date dDatumBis, boolean bAbzueglichTelefonzeiten,
+			TheClientDto theClientDto);
 
 	public double berechneDauerPaarweiserSondertaetigkeitenEinerPersonUndEinesZeitraumes(
 			Integer personalIId, Timestamp tVon, Timestamp tBis,
@@ -264,12 +269,12 @@ public interface ZeiterfassungFacAll {
 
 	public JasperPrintLP printWochenabrechnung(Integer personalIId,
 			Timestamp tVon, Timestamp tBis, TheClientDto theClientDto,
-			Integer iOption, Boolean bPlusVersteckte) throws EJBExceptionLP,
-			RemoteException;
-	
+			Integer iOption, Boolean bPlusVersteckte, boolean bNurAnwesende)
+			throws EJBExceptionLP, RemoteException;
+
 	public JasperPrintLP printWochenjournal(Integer personalIId,
 			Timestamp tVon, Timestamp tBis, TheClientDto theClientDto,
-			Integer iOption, Boolean bPlusVersteckte);
+			Integer iOption, Boolean bPlusVersteckte, boolean bNurAnwesende);
 
 	public double berechnePaarweiserSondertaetigkeiten(
 			ZeitdatenDto[] zeitdaten, Integer iTaetigkeit) throws Exception,
@@ -318,13 +323,17 @@ public interface ZeiterfassungFacAll {
 	public Map<?, ?> getAllSprTaetigkeitarten(String cNrSpracheI)
 			throws EJBExceptionLP, RemoteException;
 
-	public Map<Integer, String> getAllSprSondertaetigkeiten(String cNrSpracheI) throws RemoteException;
-	
-	public Map<Integer, String> getAllSprSondertaetigkeitenOhneVersteckt(String cNrSpracheI) throws RemoteException;
+	public Map<Integer, String> getAllSprSondertaetigkeiten(String cNrSpracheI)
+			throws RemoteException;
 
-	public Map<Integer, String> getAllSprSondertaetigkeitenNurBDEBuchbar(String cNrSpracheI) throws RemoteException;
-	
-	public Map<Integer, String> getAllSprSondertaetigkeitenNurBDEBuchbarOhneVersteckt(String cNrSpracheI) throws RemoteException;
+	public Map<Integer, String> getAllSprSondertaetigkeitenOhneVersteckt(
+			String cNrSpracheI) throws RemoteException;
+
+	public Map<Integer, String> getAllSprSondertaetigkeitenNurBDEBuchbar(
+			String cNrSpracheI) throws RemoteException;
+
+	public Map<Integer, String> getAllSprSondertaetigkeitenNurBDEBuchbarOhneVersteckt(
+			String cNrSpracheI) throws RemoteException;
 
 	public Double getSummeZeitenEinesBeleges(String belegartCNr,
 			Integer belegartIId, Integer belegartpositionIId,
@@ -333,8 +342,9 @@ public interface ZeiterfassungFacAll {
 
 	public JasperPrintLP printProduktivitaetsstatistik(Integer personalIId,
 			Timestamp tVon, Timestamp tBis, Integer iOption,
-			Boolean bPlusVersteckte, boolean bVerdichtet,
-			TheClientDto theClientDto) throws RemoteException;
+			Boolean bPlusVersteckte,boolean bNurAnwesende, boolean bVerdichtet,
+			boolean bMonatsbetrachtung, TheClientDto theClientDto)
+			throws RemoteException;
 
 	public PersonalDto[] getPersonenDieZeitmodellVerwenden(
 			Integer zeitmodellIId, TheClientDto theClientDto)
@@ -345,8 +355,9 @@ public interface ZeiterfassungFacAll {
 			TheClientDto theClientDto) throws RemoteException;
 
 	public AuftragzeitenDto[] getAllMaschinenzeitenEinesBeleges(Integer losIId,
-			Integer lossollarbeitsplanIId, java.sql.Timestamp tVon,java.sql.Timestamp tZeitenBis,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+			Integer lossollarbeitsplanIId, java.sql.Timestamp tVon,
+			java.sql.Timestamp tZeitenBis, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public Double getSummeMaschinenZeitenEinesBeleges(Integer losIId,
 			Integer lossollarbeitsplanIId, java.sql.Timestamp tZeitenBis,
@@ -421,11 +432,11 @@ public interface ZeiterfassungFacAll {
 
 	public Integer createZeitdaten(ZeitdatenDto zeitdatenDto,
 			boolean bBucheAutoPausen, boolean bBucheMitternachtssprung,
-			boolean bZeitverteilen, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+			boolean bZeitverteilen, boolean bLospruefungAufFertig,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void removeZeitdaten(ZeitdatenDto zeitdatenDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public void removeZeitdaten(ZeitdatenDto zeitdatenDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void updateZeitdaten(ZeitdatenDto zeitdatenDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
@@ -433,7 +444,8 @@ public interface ZeiterfassungFacAll {
 	public ZeitdatenDto zeitdatenFindByPrimaryKey(Integer iId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	ZeitdatenDto zeitdatenFindByPrimaryKeyOhneExc(Integer iId) throws RemoteException;
+	ZeitdatenDto zeitdatenFindByPrimaryKeyOhneExc(Integer iId)
+			throws RemoteException;
 
 	public ZeitdatenDto zeitdatenFindByPersonalIIdTZeit(Integer personalIId,
 			Timestamp tZeit) throws EJBExceptionLP, RemoteException;
@@ -457,9 +469,9 @@ public interface ZeiterfassungFacAll {
 
 	public TaetigkeitDto taetigkeitFindByCNr(String cNr,
 			TheClientDto theClientDto);
-	
+
 	public TaetigkeitDto taetigkeitFindByCNrSmallOhneExc(String cNr);
-	
+
 	public TaetigkeitDto taetigkeitFindByPrimaryKey(Integer iId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
@@ -501,7 +513,7 @@ public interface ZeiterfassungFacAll {
 	public JasperPrintLP printLohndatenexport(Integer personalIId,
 			Integer iJahr, Integer iMonat, boolean bisMonatsende,
 			java.sql.Date d_datum_bis, TheClientDto theClientDto,
-			Integer iOption, Integer iOptionSortierung, Boolean bPlusVersteckte);
+			Integer iOption, Integer iOptionSortierung, Boolean bPlusVersteckte, boolean bNurAnwesende);
 
 	public double getGesamtDauerEinerSondertaetigkeitImZeitraum(
 			Integer personalIId, Timestamp tVon, Timestamp tBis,
@@ -511,19 +523,21 @@ public interface ZeiterfassungFacAll {
 
 	public JasperPrintLP printSondertaetigkeitsliste(Integer personalIId,
 			Integer taetigkeitIId, Timestamp tVon, Timestamp tBis,
-			Integer iOption, Boolean bPlusVersteckte, TheClientDto theClientDto)
-			throws RemoteException;
+			Integer iOption, Boolean bPlusVersteckte, boolean bNurAnwesende,
+			TheClientDto theClientDto) throws RemoteException;
 
 	public JasperPrintLP printMonatsAbrechnung(Integer personalIId,
 			Integer iJahr, Integer iMonat, boolean bisMonatsende,
 			Date d_datum_bis, TheClientDto theClientDto, Integer iOption,
-			Integer iOptionSortierung, Boolean bPlusVersteckte);
+			Integer iOptionSortierung, Boolean bPlusVersteckte,
+			boolean bNurAnwesende);
 
 	public JasperPrintLP printZeitsaldo(Integer personalIId, Integer iJahrVon,
 			Integer iMonatVon, Integer iJahrBis, Integer iMonatBis,
 			boolean bisMonatsende, java.sql.Date d_datum_bis,
 			TheClientDto theClientDto, Integer iOption,
-			Integer iOptionSortierung, Boolean bPlusVersteckte);
+			Integer iOptionSortierung, Boolean bPlusVersteckte,
+			boolean bNurAnwesende);
 
 	public void konvertiereAngebotszeitenNachAuftragzeiten(Integer angebotIId,
 			Integer auftragIId, TheClientDto theClientDto)
@@ -608,8 +622,9 @@ public interface ZeiterfassungFacAll {
 	public Integer createZeitstift(ZeitstiftDto zeitstiftDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public String istBelegGeradeInBearbeitung(String belegartCNr, Integer belegartIId, TheClientDto theClientDto);
-	
+	public String istBelegGeradeInBearbeitung(String belegartCNr,
+			Integer belegartIId, TheClientDto theClientDto);
+
 	public void removeZeitstift(ZeitstiftDto zeitstiftDto)
 			throws EJBExceptionLP, RemoteException;
 
@@ -657,6 +672,9 @@ public interface ZeiterfassungFacAll {
 	public BigDecimal getMaschinenKostenZumZeitpunkt(Integer maschineIId,
 			Timestamp tDatum);
 
+	
+	public BigDecimal getMaschinenKostenVKZumZeitpunkt(Integer maschineIId,
+			java.sql.Timestamp tDatum);
 	public Timestamp pruefeObAmLetztenBuchungstagKommtUndGehtGebuchtWurde(
 			Integer personalIId, TheClientDto theClientDto)
 			throws RemoteException;
@@ -814,8 +832,9 @@ public interface ZeiterfassungFacAll {
 	public TelefonzeitenDto[] telefonzeitenFindByAnsprechpartnerIId(
 			Integer iAnsprechpartnerIId) throws RemoteException;
 
-	public boolean zeitAufLoseVerteilen(Integer personalIId, Timestamp tZeitBis,
-			TheClientDto theClientDto) throws RemoteException;
+	public boolean zeitAufLoseVerteilen(Integer personalIId,
+			Timestamp tZeitBis, TheClientDto theClientDto)
+			throws RemoteException;
 
 	public void removeZeitverteilungByPersonalIIdUndTag(Integer personalIId,
 			java.sql.Timestamp tTag) throws RemoteException;
@@ -836,7 +855,7 @@ public interface ZeiterfassungFacAll {
 			boolean bOrberByPersonal, boolean bBeruecksichtigeLeistungsfaktor,
 			TheClientDto theClientDto);
 
-	public void erstelleAutomatischeMindestpause(java.sql.Timestamp tGeht,
+	public String erstelleAutomatischeMindestpause(java.sql.Timestamp tGeht,
 			Integer personalIId, TheClientDto theClientDto);
 
 	public void pruefeObSollzeitenUeberschritten(Integer losIId,
@@ -864,7 +883,7 @@ public interface ZeiterfassungFacAll {
 			Integer tagesartIId_Halbtag, Timestamp tDatum,
 			TheClientDto theClientDto);
 
-	public Map<String,String> getBebuchbareBelegarten(TheClientDto theClientDto);
+	public Map<String, String> getBebuchbareBelegarten(TheClientDto theClientDto);
 
 	public void maschineStop(Integer maschineIId,
 			Integer lossollarbeitsplanIId, java.sql.Timestamp tStop,
@@ -873,32 +892,100 @@ public interface ZeiterfassungFacAll {
 	public String getParameterSortierungZeitauswertungen(
 			Integer iOptionSortierung, TheClientDto theClientDto);
 
-	public HashMap<?,?> taetigkeitenMitImportkennzeichen();
+	public HashMap<?, ?> taetigkeitenMitImportkennzeichen();
+
 	public ZeitdatenDto[] assembleZeitdatenDtosOhneBelegzeiten(
 			Collection<?> zeitdatens);
-	
+
 	public void loszeitenVerschieben(Integer losIId_Quelle,
 			Integer losIId_Ziel, TheClientDto theClientDto);
-	
-	public Timestamp getLetztesGehtEinesTages(Integer personalIId, java.sql.Timestamp tDatum, TheClientDto theClientDto);
-	public Timestamp getErstesKommtEinesTages(Integer personalIId, java.sql.Timestamp tDatum, TheClientDto theClientDto);
-	public boolean sindReisezeitenZueinemTagVorhanden(Integer personalIId, java.sql.Timestamp tDatum, TheClientDto theClientDto);
+
+	public Timestamp getLetztesGehtEinesTages(Integer personalIId,
+			java.sql.Timestamp tDatum, TheClientDto theClientDto);
+
+	public Timestamp getErstesKommtEinesTages(Integer personalIId,
+			java.sql.Timestamp tDatum, TheClientDto theClientDto);
+
+	public boolean sindReisezeitenZueinemTagVorhanden(Integer personalIId,
+			java.sql.Timestamp tDatum, TheClientDto theClientDto);
+
 	public void removeBereitschaft(BereitschaftDto dto);
+
 	public void updateBereitschaft(BereitschaftDto dto);
+
 	public BereitschaftDto bereitschaftFindByPrimaryKey(Integer iId);
+
 	public Integer createBereitschaft(BereitschaftDto dto);
-	
 
 	public void projektzeitenVerschieben(Integer projektIId_Quelle,
 			Integer projektIId_Ziel, TheClientDto theClientDto);
+
 	public ArrayList<ReiseKomplettDto> holeReisenKomplett(String belegartCNr,
 			Integer belegartIId, java.sql.Timestamp tVon,
 			java.sql.Timestamp tBis, TheClientDto theClientDto);
+
 	public BigDecimal getKmKostenEinerReise(ReiseKomplettDto rkDto,
 			TheClientDto theClientDto);
+
 	public ArrayList<ReiseKomplettDto> holeReisenKomplett(Integer fahrzeugIId,
 			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
 			TheClientDto theClientDto);
-	public BigDecimal berechneKalkJahresIstStunden(Integer personalIId, Integer iMonat, Integer iJahr, TheClientDto theClientDto);
-	
+
+	public BigDecimal berechneKalkJahresIstStunden(Integer personalIId,
+			Integer iMonat, Integer iJahr, TheClientDto theClientDto);
+
+	public ZeitdatenDto getZugehoerigeEndeBuchung(ZeitdatenDto zeitdatenDto,
+			TheClientDto theClientDto);
+
+	public void wandleUrlaubsantragInUrlaubUm(Integer[] sonderzeitenIIds,
+			TheClientDto theClientDto);
+
+	public void pflegeUmstellungAufVonBisErfassung(TheClientDto theClientDto);
+
+	public VonBisErfassungTagesdatenDto berechneTagesArbeitszeitVonBisZeiterfassungOhneKommtGeht(
+			Integer personalIId, java.sql.Date d_datum,
+			TheClientDto theClientDto);
+
+	public Timestamp getLetzteGebuchteZeit(Integer personalIId,
+			java.sql.Timestamp tDatum, TheClientDto theClientDto);
+
+	public Map getAllMaschinen(TheClientDto theClientDto);
+
+	public ArrayList<AuftragzeitenDto> getAllTelefonzeitenEinesProjekts(
+			Integer projektIId, Integer personalIId, java.sql.Timestamp tVon,
+			java.sql.Timestamp tZeitenBis, TheClientDto theClientDto);
+
+	public ArtikelDto getDefaultArbeitszeitartikel(TheClientDto theClientDto);
+
+	public BigDecimal getPersonalKostenProStunde(TheClientDto theClientDto,
+			HashMap hmGestpreise, int iOption, Integer artikelIId,
+			Integer personalIId, Timestamp tZeitpunkt);
+
+	public WochenabschlussReportDto printWochenabschluss(Integer personalIId,
+			java.sql.Timestamp tKW, TheClientDto theClientDto);
+
+	public void zeitenAbschliessen(Integer personalIId, java.sql.Timestamp tKW,
+			TheClientDto theClientDto);
+
+	public java.sql.Timestamp gibtEsBereitseinenZeitabschlussBisZurKW(
+			Integer personalIId, java.sql.Timestamp tKW,
+			TheClientDto theClientDto);
+
+	public void bringeFehlerWennZeitabschlussvorhanden(Integer personalIId,
+			java.sql.Timestamp tZeitWelcheGeaendertWerdenSoll,
+			TheClientDto theClientDto);
+
+	public PersonalDto[] entferneNichtAnwesendePersonen(
+			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
+			PersonalDto[] personalDtos, TheClientDto theClientDto);
+
+	public PersonalDto[] entferneNichtAnwesendePersonen(Integer iJahrVon,
+			Integer iMonatVon, Integer iJahrBis, Integer iMonatBis,
+			PersonalDto[] personalDtos, TheClientDto theClientDto);
+
+	public DiaetentagessatzDto[] getDiaetenTagesSatzDtos(Integer diaetenIId, java.sql.Timestamp tVon);
+
+	public BigDecimal berechneDiaetenAusScript(Integer diaetenIId, Timestamp tVon,
+			Timestamp tBis, TheClientDto theClientDto, String personalart) throws RemoteException;
+
 }

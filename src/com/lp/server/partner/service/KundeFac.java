@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -199,5 +199,16 @@ public interface KundeFac {
 	 * @return true wenn fuer den Kunden ein Versandweg definiert ist
 	 * @throws RemoteException
 	 */
-	boolean hatKundeVersandweg(Integer kundeIId, TheClientDto theClientDto) throws RemoteException ;	
+	boolean hatKundeVersandweg(Integer kundeIId, TheClientDto theClientDto) throws RemoteException ;
+	
+	/**
+	 * Einen Kunden aufgrund eines Ansprechpartners (eines Partners) ermitteln
+	 * @param ansprechpartnerId
+	 * @param mandantCnr
+	 * @param theClientDto
+	 * @return null oder das KundeDto
+	 * @throws RemoteException 
+	 */
+	KundeDto kundeFindByAnsprechpartnerIdcNrMandantOhneExc(
+			Integer ansprechpartnerId, String mandantCnr, TheClientDto theClientDto) throws RemoteException ;
 }

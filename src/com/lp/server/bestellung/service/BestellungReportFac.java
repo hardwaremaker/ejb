@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -40,6 +40,8 @@ import java.util.HashMap;
 import java.util.Locale;
 
 import javax.ejb.Remote;
+import javax.ejb.TransactionAttribute;
+import javax.ejb.TransactionAttributeType;
 
 import com.lp.server.system.service.ReportJournalKriterienDto;
 import com.lp.server.system.service.TheClientDto;
@@ -61,6 +63,7 @@ public interface BestellungReportFac {
 	public final static String REPORT_BESTELLUNG_JOURNAL_WARENEINGANG = "bes_bestellung_wareneingangsjournal.jasper";
 	public final static String REPORT_ABHOLAUFTRAG = "bes_abholauftrag.jasper";
 	public final static String REPORT_GEAENDERTE_ARTIKEL = "bes_geaenderte_artikel.jasper";
+	public final static String REPORT_RAHMENUEBERSICHT = "bes_rahmenuebersicht.jasper";
 
 	// Konstanten fuer Druck Bestellung
 	public static int REPORT_BESTELLUNG_POSITION = 0;
@@ -117,7 +120,10 @@ public interface BestellungReportFac {
 	public final static int REPORT_BESTELLUNG_ARTIKEL_MATERIALGEWICHT = 51;
 	public final static int REPORT_BESTELLUNG_ARTIKEL_KURS_MATERIALZUSCHLAG = 52;
 	public final static int REPORT_BESTELLUNG_ARTIKEL_DATUM_MATERIALZUSCHLAG = 53;
-	public static int REPORT_BESTELLUNG_ANZAHL_SPALTEN = 54;
+	public final static int REPORT_BESTELLUNG_RAHMENMENGE = 54;
+	public final static int REPORT_BESTELLUNG_ABGERUFENE_MENGE = 55;
+	public final static int REPORT_BESTELLUNG_LETZTER_ABRUF = 56;
+	public static int REPORT_BESTELLUNG_ANZAHL_SPALTEN = 57;
 
 	public static int REPORT_BESTELLUNG_OFFENE_OD_BESTELLUNGCNR = 0;
 	public static int REPORT_BESTELLUNG_OFFENE_OD_BESTELLUNGLIEFERANT = 1;
@@ -155,7 +161,8 @@ public interface BestellungReportFac {
 	public static int REPORT_BESTELLUNG_OFFENE_ABNUMMER = 21;
 	public static int REPORT_BESTELLUNG_OFFENE_ABKOMMENTAR = 22;
 	public static int REPORT_BESTELLUNG_OFFENE_SETARTIKEL_TYP = 23;
-	public static int REPORT_BESTELLUNG_OFFENE_ANZAHL_SPALTEN = 24;
+	public static int REPORT_BESTELLUNG_OFFENE_ABURSPRUNGSTERMIN = 24;
+	public static int REPORT_BESTELLUNG_OFFENE_ANZAHL_SPALTEN = 25;
 
 	public static int REPORT_BESTELLVORSCHLAG_BELEGART = 0;
 	public static int REPORT_BESTELLVORSCHLAG_BESTELLUNGLIEFERANT = 1;
@@ -190,7 +197,8 @@ public interface BestellungReportFac {
 	public static int REPORT_BESTELLVORSCHLAG_ARTIKELZBEZ = 30;
 	public static int REPORT_BESTELLVORSCHLAG_ARTIKELZBEZ2 = 31;
 	public static int REPORT_BESTELLVORSCHLAG_PROJEKT = 32;
-	public static int REPORT_BESTELLVORSCHLAG_ANZAHL_SPALTEN = 33;
+	public static int REPORT_BESTELLVORSCHLAG_MANDANT = 33;
+	public static int REPORT_BESTELLVORSCHLAG_ANZAHL_SPALTEN = 34;
 
 	public static int REPORT_WEP_ETIKETT_ANLIEFERMENGE = 0;
 	public static int REPORT_WEP_ETIKETT_BESTELLNUMMER = 1;
@@ -217,7 +225,8 @@ public interface BestellungReportFac {
 	public static int REPORT_WEP_ETIKETT_HERSTELLERNAME = 22;
 	public static int REPORT_WEP_ETIKETT_HANDMENGE = 23;
 	public static int REPORT_WEP_ETIKETT_WE_REFERENZ = 24;
-	public static int REPORT_WEP_ETIKETT_ANZAHL_SPALTEN = 25;
+	public static int REPORT_WEP_ETIKETT_SUBREPORT_SNRCHNR = 25;
+	public static int REPORT_WEP_ETIKETT_ANZAHL_SPALTEN = 26;
 
 	public static int REPORT_GEAENDERTEARTIKEL_ARTIKELNUMMER_AKTUELL = 0;
 	public static int REPORT_GEAENDERTEARTIKEL_ARTIKELBEZEICHNUNG_AKTUELL = 1;
@@ -306,4 +315,9 @@ public interface BestellungReportFac {
 	public void sendMahnlauf(String cKommuniaktionsart,
 			BSMahnlaufDto bsMahnlaufDto, Locale absenderLocale,
 			TheClientDto theClientDto) throws EJBExceptionLP, Throwable;
+	
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printRahmenuebersicht(Integer bestellungIId,
+			TheClientDto theClientDto);
+	
 }

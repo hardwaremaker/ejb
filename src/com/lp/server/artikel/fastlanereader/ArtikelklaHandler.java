@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -43,10 +43,15 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelklasse;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelklassespr;
+import com.lp.server.artikel.service.ArtklaDto;
+import com.lp.server.system.jcr.service.PrintInfoDto;
+import com.lp.server.system.jcr.service.docnode.DocNodeArtikelklasse;
+import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -373,8 +378,16 @@ public class ArtikelklaHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class, String.class, String.class, Boolean.class },
+			setTableInfo(new TableInfo(
+					new Class[] {
+							Integer.class,
+							String.class,
+							String.class,
+							String.class,
+							String.class,
+							Boolean.class
+					},
+					
 					new String[] {
 							"PK",
 							getTextRespectUISpr("lp.kennung",
@@ -391,12 +404,48 @@ public class ArtikelklaHandler extends UseCaseHandler {
 									theClientDto.getLocUi()),
 							getTextRespectUISpr("fert.tops",
 									theClientDto.getMandant(),
-									theClientDto.getLocUi()) }, new String[] {
-							"artikelklasse.i_id", "artikelklasse.c_nr",
+									theClientDto.getLocUi())
+					},
+					
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST
+					},
+									
+					new String[] {
+							"artikelklasse.i_id",
+							"artikelklasse.c_nr",
 							"artikelklassesprset.c_bez",
 							"artikelklasse.flrartikelklasse.c_nr",
-							"vaterklassesprset.c_bez", "artikelklasse.b_tops" }));
+							"vaterklassesprset.c_bez",
+							"artikelklasse.b_tops"
+					})
+			);
 		}
 		return super.getTableInfo();
+	}
+	
+	@Override
+	public PrintInfoDto getSDocPathAndPartner(Object key) {
+		ArtklaDto klasse = null;
+		try {
+			klasse = getArtikelFac().artklaFindByPrimaryKey((Integer)key, theClientDto);
+		} catch (Exception e) {
+			// nicht gefunden
+		}
+		if(klasse != null) {
+			DocPath path = new DocPath(new DocNodeArtikelklasse(klasse));
+			return new PrintInfoDto(path, null, getSTable());
+		}
+		return null;
+	}
+	
+	@Override
+	public String getSTable() {
+		return "ARTIKELKLASSE";
 	}
 }

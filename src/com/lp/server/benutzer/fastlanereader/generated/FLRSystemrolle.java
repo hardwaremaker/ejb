@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -39,44 +39,53 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 /** @author Hibernate CodeGenerator */
 public class FLRSystemrolle implements Serializable {
 
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
+    /** identifier field */
+    private Integer i_id;
 
-	/** identifier field */
-	private Integer i_id;
+    /** nullable persistent field */
+    private String c_bez;
 
-	/** nullable persistent field */
-	private String c_bez;
+    /** nullable persistent field */
+    private Integer i_max_users;
 
-	/** full constructor */
-	public FLRSystemrolle(String c_bez) {
-		this.c_bez = c_bez;
-	}
+    /** full constructor */
+    public FLRSystemrolle(String c_bez, Integer i_max_users) {
+        this.c_bez = c_bez;
+        this.i_max_users = i_max_users;
+    }
 
-	/** default constructor */
-	public FLRSystemrolle() {
-	}
+    /** default constructor */
+    public FLRSystemrolle() {
+    }
 
-	public Integer getI_id() {
-		return this.i_id;
-	}
+    public Integer getI_id() {
+        return this.i_id;
+    }
 
-	public void setI_id(Integer i_id) {
-		this.i_id = i_id;
-	}
+    public void setI_id(Integer i_id) {
+        this.i_id = i_id;
+    }
 
-	public String getC_bez() {
-		return this.c_bez;
-	}
+    public String getC_bez() {
+        return this.c_bez;
+    }
 
-	public void setC_bez(String c_bez) {
-		this.c_bez = c_bez;
-	}
+    public void setC_bez(String c_bez) {
+        this.c_bez = c_bez;
+    }
 
-	public String toString() {
-		return new ToStringBuilder(this).append("i_id", getI_id()).toString();
-	}
+    public Integer getI_max_users() {
+        return this.i_max_users;
+    }
+
+    public void setI_max_users(Integer i_max_users) {
+        this.i_max_users = i_max_users;
+    }
+
+    public String toString() {
+        return new ToStringBuilder(this)
+            .append("i_id", getI_id())
+            .toString();
+    }
 
 }

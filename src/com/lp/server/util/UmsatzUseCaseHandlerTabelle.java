@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -62,8 +62,8 @@ public abstract class UmsatzUseCaseHandlerTabelle  extends UseCaseHandlerTabelle
 	protected Locale locUI = null;
 	protected String mandantCNr = null;
 	
-	protected final int IDX_SUMMEN_VORJAHR = 0;
-	protected final int IDX_SUMMEN_GESAMT = 16;
+	protected final static int IDX_SUMMEN_VORJAHR = 0;
+	protected final static int IDX_SUMMEN_GESAMT = 16;
 
 	
 	public UmsatzUseCaseHandlerTabelle() {

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -48,6 +48,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -308,25 +309,41 @@ public class UrlaubsanspruchHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					Integer.class, Double.class,Double.class, Double.class, Double.class,
-					Double.class }, new String[] {
-					"Id",
-					getTextRespectUISpr("lp.jahr", mandantCNr, locUI),
-					getTextRespectUISpr("pers.jahresurlaub", mandantCNr, locUI),
-					getTextRespectUISpr("lp.tage", mandantCNr, locUI),
-					getTextRespectUISpr("pers.urlaubsanspruch.tagezusaetzlich",
-							mandantCNr, locUI),
-					getTextRespectUISpr("lp.stunden", mandantCNr, locUI),
-					getTextRespectUISpr(
-							"pers.urlaubsanspruch.stundenzusaetzlich",
-							mandantCNr, locUI) }, new String[] { "i_id",
-					PersonalFac.FLR_URLAUBSANSPRUCH_I_JAHR,
-					PersonalFac.FLR_URLAUBSANSPRUCH_F_JAHRESURLAUBINWOCHEN,
-					PersonalFac.FLR_URLAUBSANSPRUCH_F_TAGE,
-					PersonalFac.FLR_URLAUBSANSPRUCH_F_TAGEZUSAETZLICH,
-					PersonalFac.FLR_URLAUBSANSPRUCH_F_STUNDEN,
-					PersonalFac.FLR_URLAUBSANSPRUCH_F_STUNDENZUSAETZLICH }));
+			setTableInfo(new TableInfo(
+					new Class[] { Integer.class, Integer.class, Double.class,
+							Double.class, Double.class, Double.class,
+							Double.class },
+					new String[] {
+							"Id",
+							getTextRespectUISpr("lp.jahr", mandantCNr, locUI),
+							getTextRespectUISpr("pers.jahresurlaub",
+									mandantCNr, locUI),
+							getTextRespectUISpr("lp.tage", mandantCNr, locUI),
+							getTextRespectUISpr(
+									"pers.urlaubsanspruch.tagezusaetzlich",
+									mandantCNr, locUI),
+							getTextRespectUISpr("lp.stunden", mandantCNr, locUI),
+							getTextRespectUISpr(
+									"pers.urlaubsanspruch.stundenzusaetzlich",
+									mandantCNr, locUI) },
+
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
+					new String[] {
+							"i_id",
+							PersonalFac.FLR_URLAUBSANSPRUCH_I_JAHR,
+							PersonalFac.FLR_URLAUBSANSPRUCH_F_JAHRESURLAUBINWOCHEN,
+							PersonalFac.FLR_URLAUBSANSPRUCH_F_TAGE,
+							PersonalFac.FLR_URLAUBSANSPRUCH_F_TAGEZUSAETZLICH,
+							PersonalFac.FLR_URLAUBSANSPRUCH_F_STUNDEN,
+							PersonalFac.FLR_URLAUBSANSPRUCH_F_STUNDENZUSAETZLICH }));
 
 		}
 

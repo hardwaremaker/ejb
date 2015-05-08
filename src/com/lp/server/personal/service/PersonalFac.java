@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -129,7 +129,6 @@ public interface PersonalFac {
 	public static final String FLR_FEIERTAG_FLRTAGESART = "flrtagesart";
 	public static final String FLR_FEIERTAG_FLRRELIGION = "flrreligion";
 
-	
 	public static final String FLR_URLAUBSANSPRUCH_PERSONAL_I_ID = "personal_i_id";
 	public static final String FLR_URLAUBSANSPRUCH_I_JAHR = "i_jahr";
 	public static final String FLR_URLAUBSANSPRUCH_F_STUNDEN = "f_stunden";
@@ -869,24 +868,50 @@ public interface PersonalFac {
 
 	public FeiertagDto feiertagFindByPrimaryKey(Integer iId,
 			TheClientDto theClientDto);
-	
+
 	public void feiertageAusVorlageFuerJahrEintragen(Integer iJahr,
 			TheClientDto theClientDto);
+
 	public Integer createFahrzeug(FahrzeugDto dto, TheClientDto theClientDto);
+
 	public void updateFahrzeug(FahrzeugDto dto, TheClientDto theClientDto);
+
 	public FahrzeugDto fahrzeugFindByPrimaryKey(Integer iId);
+
 	public void removeFahrzeug(FahrzeugDto dto);
+
 	public Integer createFahrzeugkosten(FahrzeugkostenDto dto);
+
 	public void updateFahrzeugkosten(FahrzeugkostenDto dto);
+
 	public FahrzeugkostenDto fahrzeugkostenFindByPrimaryKey(Integer iId);
-	public void removeFahrzeugkosten(FahrzeugkostenDto dto) ;
+
+	public void removeFahrzeugkosten(FahrzeugkostenDto dto);
 
 	public BigDecimal getKMKostenInZielwaehrung(Integer fahrzeugIId,
-			java.util.Date datGueltigkeitsdatumI, String waehrungCNrZielwaehrung,
-			TheClientDto theClientDto);
-	
+			java.util.Date datGueltigkeitsdatumI,
+			String waehrungCNrZielwaehrung, TheClientDto theClientDto);
+
 	public String getSignatur(Integer personalIId, String locale);
+
 	public void updateSignatur(Integer personalIId, String xSignatur,
 			TheClientDto theClientDto);
-	
+
+	public PersonalDto getPersonalDto_Vorgesetzter(Integer personalIId,
+			TheClientDto theClientDto);
+
+	public Integer createZeitabschluss(ZeitabschlussDto dto,
+			TheClientDto theClientDto);
+
+	public void updateZeitabschluss(ZeitabschlussDto zeitabschlussDto,
+			TheClientDto theClientDto);
+
+	public ZeitabschlussDto zeitabschlussFindByPrimaryKey(Integer iId,
+			TheClientDto theClientDto);
+
+	public void removeZeitabschluss(ZeitabschlussDto zeitabschlussDto,
+			TheClientDto theClientDto);
+
+	PersonalDto[] personalFindByMandantCNrWithEmail(String mandantCNr,
+			boolean bPlusVersteckte) throws EJBExceptionLP;
 }

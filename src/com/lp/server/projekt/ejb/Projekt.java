@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -42,6 +42,7 @@ import javax.persistence.Id;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
 import javax.persistence.Table;
 
 
@@ -68,6 +69,28 @@ public class Projekt implements Serializable {
 	@Column(name = "BEREICH_I_ID")
 	private Integer bereichIId;
 
+	@Column(name = "C_BUILDNUMBER")
+	private String buildNumber;
+	
+	@Column(name = "C_DEPLOYNUMBER")
+	private String deployNumber;
+
+	public void setBuildNumber(String buildNumber) {
+		this.buildNumber = buildNumber;
+	}
+	
+	public String getBuildNumber() {
+		return buildNumber;
+	}
+	
+	public void setDeployNumber(String deployNumber) {
+		this.deployNumber = deployNumber;
+	}
+	
+	public String getDeployNumber() {
+		return deployNumber;
+	}
+	
 	public Integer getBereichIId() {
 		return bereichIId;
 	}
@@ -195,7 +218,8 @@ public class Projekt implements Serializable {
 	@Column(name = "PROJEKTTYP_C_NR")
 	private String projProjekttypCNr;
 	
-	@OneToMany(mappedBy="PROJEKT") //@OrderBy("sortcolumn")
+	@OneToMany(mappedBy="PROJEKT") 
+	@OrderBy("tBelegdatum DESC")
 	private List<History> historyCollection;
 
 

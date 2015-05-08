@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -45,10 +45,13 @@ import javax.persistence.Table;
 @NamedQueries( {
 		@NamedQuery(name = "TheClientfindByUserLoggedIn", query = "SELECT OBJECT (o) FROM Theclient o WHERE o.cNr=?1 AND o.tLoggedin <?2 AND o.tLoggedout IS NULL"),
 		@NamedQuery(name = "TheClientfindByTLoggedIn", query = "SELECT OBJECT (o) FROM Theclient o WHERE o.tLoggedin>?1 AND o.tLoggedin <?2"),
-		@NamedQuery(name = "TheClientfindByCBenutzernameLoggedIn", query = "SELECT OBJECT (o) FROM Theclient o WHERE o.cBenutzername=?1 AND o.tLoggedin >?2 AND o.tLoggedout IS NULL")})
+		@NamedQuery(name = "TheClientfindByCBenutzernameLoggedIn", query = "SELECT OBJECT (o) FROM Theclient o WHERE o.cBenutzername=?1 AND o.tLoggedin >?2 AND o.tLoggedout IS NULL"),
+		@NamedQuery(name = "TheClientfindLoggedIn", query = "SELECT OBJECT (o) FROM Theclient o WHERE o.tLoggedout IS NULL")
+		})
 @Entity
 @Table(name = "LP_THECLIENT")
 public class Theclient implements Serializable {
+	
 	@Id
 	@Column(name = "C_NR")
 	private String cNr;
@@ -85,6 +88,9 @@ public class Theclient implements Serializable {
 
 	@Column(name = "T_LOGGEDOUT")
 	private Timestamp tLoggedout;
+	
+	@Column(name = "SYSTEMROLLE_I_ID")
+	private Integer systemrolleIId;
 
 	private static final long serialVersionUID = 1L;
 
@@ -101,7 +107,8 @@ public class Theclient implements Serializable {
 			String locUiAsString,
 			String locMandantAsString,
 			String locKonzernAsString,
-			Timestamp loggedin) {
+			Timestamp loggedin,
+			Integer systemrolleIId) {
 		setCNr(user);
 		setCMandant(mandant);
 		setIPersonal(personal);
@@ -112,6 +119,15 @@ public class Theclient implements Serializable {
 		setTLoggedin(loggedin);
 		setCKennwort(kennwortAsString);
 		setCMandantwaehrung(mandantenwaehrung);
+		setSystemrolleIId(systemrolleIId);
+	}
+	
+	public Integer getSystemrolleIId() {
+		return systemrolleIId;
+	}
+	
+	public void setSystemrolleIId(Integer systemrolleIId) {
+		this.systemrolleIId = systemrolleIId;
 	}
 
 	public String getCNr() {

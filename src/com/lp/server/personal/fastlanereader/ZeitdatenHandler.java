@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -211,12 +211,27 @@ public class ZeitdatenHandler extends UseCaseHandler {
 												zeitdaten.getI_belegartid());
 
 								sZusatz = "LO" + losDto.getCNr();
+								
+								
+								//PJ18515
+								if(losDto.getStuecklisteIId()!=null){
+									StuecklisteDto stklDto=getStuecklisteFac().stuecklisteFindByPrimaryKey(losDto.getStuecklisteIId(), theClientDto);
+									if(stklDto.getArtikelDto()!=null && stklDto.getArtikelDto().getArtikelsprDto()!=null){
+										sZusatz +=","+stklDto.getArtikelDto().getArtikelsprDto().getCBez();
+									}
+								}
+								
+								
 								if (losDto.getCProjekt() != null) {
 									sZusatz = sZusatz + ","
-											+ losDto.getCProjekt();
+											+ losDto.getCProjekt()+", ";
 								}
 
-								// PJ 16029
+								
+							
+								
+								
+								// PJ16029
 								if (zeitdaten.getI_belegartpositionid() != null) {
 									LossollarbeitsplanDto soapDto = getFertigungFac()
 											.lossollarbeitsplanFindByPrimaryKeyOhneExc(

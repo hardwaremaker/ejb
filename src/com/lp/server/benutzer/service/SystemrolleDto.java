@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -41,6 +41,8 @@ public class SystemrolleDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private Integer iId;
 	private String cBez;
+	private Integer iMaxUsers;
+	private Integer aliasRolleIId;
 
 	public Integer getIId() {
 		return iId;
@@ -58,35 +60,73 @@ public class SystemrolleDto implements Serializable {
 		this.cBez = cBez;
 	}
 
-	public boolean equals(Object obj) {
-		if (this == obj) {
-			return true;
-		}
-		if (!(obj instanceof SystemrolleDto)) {
-			return false;
-		}
-		SystemrolleDto that = (SystemrolleDto) obj;
-		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId))) {
-			return false;
-		}
-		if (!(that.cBez == null ? this.cBez == null : that.cBez
-				.equals(this.cBez))) {
-			return false;
-		}
-		return true;
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((aliasRolleIId == null) ? 0 : aliasRolleIId.hashCode());
+		result = prime * result + ((cBez == null) ? 0 : cBez.hashCode());
+		result = prime * result + ((iId == null) ? 0 : iId.hashCode());
+		result = prime * result
+				+ ((iMaxUsers == null) ? 0 : iMaxUsers.hashCode());
+		return result;
 	}
 
-	public int hashCode() {
-		int result = 17;
-		result = 37 * result + this.iId.hashCode();
-		result = 37 * result + this.cBez.hashCode();
-		return result;
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		SystemrolleDto other = (SystemrolleDto) obj;
+		if (aliasRolleIId == null) {
+			if (other.aliasRolleIId != null)
+				return false;
+		} else if (!aliasRolleIId.equals(other.aliasRolleIId))
+			return false;
+		if (cBez == null) {
+			if (other.cBez != null)
+				return false;
+		} else if (!cBez.equals(other.cBez))
+			return false;
+		if (iId == null) {
+			if (other.iId != null)
+				return false;
+		} else if (!iId.equals(other.iId))
+			return false;
+		if (iMaxUsers == null) {
+			if (other.iMaxUsers != null)
+				return false;
+		} else if (!iMaxUsers.equals(other.iMaxUsers))
+			return false;
+		return true;
 	}
 
 	public String toString() {
 		String returnString = "";
 		returnString += iId;
 		returnString += ", " + cBez;
+		returnString += ", " + iMaxUsers;
 		return returnString;
+	}
+
+	public Integer getIMaxUsers() {
+		return iMaxUsers;
+	}
+
+	public void setiMaxUsers(Integer iMaxUsers) {
+		this.iMaxUsers = iMaxUsers;
+	}
+
+	public Integer getAliasRolleIId() {
+		return aliasRolleIId;
+	}
+
+	public void setAliasRolleIId(Integer aliasRolleIId) {
+		this.aliasRolleIId = aliasRolleIId;
 	}
 }

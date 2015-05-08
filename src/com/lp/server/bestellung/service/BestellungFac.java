@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -97,27 +97,30 @@ public interface BestellungFac extends IAktivierbarControlled {
 
 	public BestellungDto createBestellungDto(Integer lieferantIId,
 			String mandantCNr, Integer personalId);
+
 	public BestellpositionDto createBestellPositionDto(Integer bsId,
 			Integer lieferantId, Integer artikelIId, BigDecimal menge,
 			TheClientDto theClientDto);
-	
+
 	public Integer createBestellung(BestellungDto bestellungDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void updateBestellung(BestellungDto bestellungDtoI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public void updateBestellung(BestellungDto bestellungDtoI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void updateBestellung(BestellungDto bestellungDtoI,
-			TheClientDto theClientDto, boolean pruefeKorrekterStatus) throws EJBExceptionLP;
-	
-	public void updateBestellungMahnstufe(Integer bestellungIId,Integer mahnstufeNeu , TheClientDto theClientDto);
+			TheClientDto theClientDto, boolean pruefeKorrekterStatus)
+			throws EJBExceptionLP;
+
+	public void updateBestellungMahnstufe(Integer bestellungIId,
+			Integer mahnstufeNeu, TheClientDto theClientDto);
 
 	public BestellungDto bestellungFindByPrimaryKey(Integer iIdBSI)
 			throws EJBExceptionLP, RemoteException;
 
-	public BestellungDto bestellungFindByCNrMandantCNr(
-			String cNr, String mandantCNr);
-	
+	public BestellungDto bestellungFindByCNrMandantCNr(String cNr,
+			String mandantCNr);
+
 	public BestellungDto[] bestellungFindByLieferadressePartnerIIdMandantCNr(
 			Integer partnerIId, String cNrMandantI) throws EJBExceptionLP,
 			RemoteException;
@@ -134,11 +137,11 @@ public interface BestellungFac extends IAktivierbarControlled {
 			throws RemoteException;
 
 	public void pruefeUndSetzeBestellungstatusBeiAenderung(
-			Integer iIdBestellungI, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
-	
-	public void aktiviereBestellung(Integer iIdBestellungI, TheClientDto theClientDto)
+			Integer iIdBestellungI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
+
+	public void aktiviereBestellung(Integer iIdBestellungI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public BigDecimal berechneNettowertGesamt(Integer iIdBestellungI,
 			TheClientDto theClientDto) throws RemoteException;
@@ -146,23 +149,23 @@ public interface BestellungFac extends IAktivierbarControlled {
 	public void updateBestellungKonditionen(Integer iIdBestellungI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void manuellFreigeben(Integer iIdBestellungI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public void manuellFreigeben(Integer iIdBestellungI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void manuellErledigen(Integer iIdBestellungI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public void manuellErledigen(Integer iIdBestellungI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public BigDecimal berechneEinkaufswertIst(Integer iIdBestellungI,
 			String sArtikelartI, TheClientDto theClientDto);
-	
+
 	public void stornoAufheben(Integer iIdBestellungI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public void stornieren(Integer iIdBestellungI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-//	public void setzeBestellungstatus(Integer iIdBSI, String sStatusNewI,
-//			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	// public void setzeBestellungstatus(Integer iIdBSI, String sStatusNewI,
+	// TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public Integer erzeugeBestellungAusAnfrage(Integer iIdAnfrageI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
@@ -170,12 +173,12 @@ public interface BestellungFac extends IAktivierbarControlled {
 	public BestellungDto[] bestellungFindByAnfrage(Integer iIdAnfrageI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void erledigenAufheben(Integer iIdBestellungI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public void erledigenAufheben(Integer iIdBestellungI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public Double getWechselkursBestellungswaehrungZuMandantwaehrung(
-			Integer iIdBestellungI, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+			Integer iIdBestellungI, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public BestellungDto[] abrufBestellungenfindByRahmenbestellung(
 			Integer iIdRahmenBestellungI, TheClientDto theClientDto)
@@ -183,8 +186,9 @@ public interface BestellungFac extends IAktivierbarControlled {
 
 	public BestellungDto bestellungFindByPrimaryKeyOhneExc(Integer iBestellungId)
 			throws RemoteException;
-	
-	public BestellungDto bestellungFindByPrimaryKeyWithNull(Integer iBestellungId);
+
+	public BestellungDto bestellungFindByPrimaryKeyWithNull(
+			Integer iBestellungId);
 
 	public BestellungDto[] bestellungFindByLieferantIIdBestelladresseMandantCNr(
 			Integer lieferantIId, String cNrMandantI) throws EJBExceptionLP,
@@ -199,15 +203,15 @@ public interface BestellungFac extends IAktivierbarControlled {
 
 	public BestellungDto[] bestellungFindByLieferantIIdRechnungsadresseMandantCNrOhneExc(
 			Integer lieferantIId, String cNrMandantI) throws RemoteException;
-	
+
 	public BestellungDto[] bestellungFindByAuftragIId(Integer auftragIId);
 
-//	public void updateRahmenbestellung(BestellungDto bestellungDtoI,
-//			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	// public void updateRahmenbestellung(BestellungDto bestellungDtoI,
+	// TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-//	public void updateBestellungOhneWeitereAktionen(
-//			BestellungDto bestellungDto, TheClientDto theClientDto)
-//			throws EJBExceptionLP, RemoteException;
+	// public void updateBestellungOhneWeitereAktionen(
+	// BestellungDto bestellungDto, TheClientDto theClientDto)
+	// throws EJBExceptionLP, RemoteException;
 
 	public BestellungDto[] findBestellungByMandantCNrAndBestellstatus(
 			TheClientDto theClientDto, String bsStatus) throws EJBExceptionLP,
@@ -216,14 +220,14 @@ public interface BestellungFac extends IAktivierbarControlled {
 	public void setzeBSMahnsperre(Integer bestellungIId, Date tmahnsperre,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public Boolean isBSErledigt(Integer iIdBestellungI, TheClientDto theClientDto)
-			throws RemoteException;
+	public Boolean isBSErledigt(Integer iIdBestellungI,
+			TheClientDto theClientDto) throws RemoteException;
 
-	public Boolean isBSGeliefert(Integer iIdBestellungI, TheClientDto theClientDto)
-			throws RemoteException;
+	public Boolean isBSGeliefert(Integer iIdBestellungI,
+			TheClientDto theClientDto) throws RemoteException;
 
-	public void refreshBSStatusAndBestelltListe(Integer iIdBSI, TheClientDto theClientDto)
-			throws RemoteException;
+	public void refreshBSStatusAndBestelltListe(Integer iIdBSI,
+			TheClientDto theClientDto) throws RemoteException;
 
 	public Integer erzeugeBestellungAusBestellung(Integer iIdBestellungI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
@@ -234,19 +238,29 @@ public interface BestellungFac extends IAktivierbarControlled {
 	public Integer erzeugeEingangsrechnungAusBestellung(Integer iIdBestellungI,
 			EingangsrechnungDto eingangsrechnungDtoI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
-	
-	public String getRichtigenBestellStatus(Integer bestellungIId,boolean bRekursiv, TheClientDto theClientDto) 
+
+	public String getRichtigenBestellStatus(Integer bestellungIId,
+			boolean bRekursiv, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
-	
+
 	public BestellungDto[] bestellungenFindAll();
-	public void importiereMonatsbestellung(ArrayList<ImportMonatsbestellungDto> importMonatbestellung,TheClientDto theClientDto);
+
+	public void importiereMonatsbestellung(
+			ArrayList<ImportMonatsbestellungDto> importMonatbestellung,
+			TheClientDto theClientDto);
+
 	public String checkBestellStati(TheClientDto theClientDto);
-	
-	public void setzeVersandzeitpunktAufJetzt(Integer iBestellungIId, String sDruckart);
-	
-	public void setAuftragIIdInBestellung(BestellungDto bestellungDto, TheClientDto theClientDto);
-	
+
+	public void setzeVersandzeitpunktAufJetzt(Integer iBestellungIId,
+			String sDruckart);
+
+	public void setAuftragIIdInBestellung(BestellungDto bestellungDto,
+			TheClientDto theClientDto);
+
 	public ArrayList<Integer> getAngelegtenBestellungen(Integer lieferantIId,
 			TheClientDto theClientDto);
-	
+
+	public void updateBestellungRechnungsadresse(Integer bestellungIId,
+			Integer lieferantIIdRechnungsadresseNeu, TheClientDto theClientDto);
+
 }

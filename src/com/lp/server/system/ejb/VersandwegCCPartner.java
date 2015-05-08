@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -60,8 +60,8 @@ public class VersandwegCCPartner implements Serializable, IVersandwegPartner {
 	private static final long serialVersionUID = 5390354347904059127L;
 
 	@Id
-	@TableGenerator(name="versandwegcc_id", table="lp_primarykey",
-	pkColumnName = "c_name", pkColumnValue="versandwegccpartner", valueColumnName="i_index", initialValue = 1, allocationSize = 5)
+	@TableGenerator(name="versandwegcc_id", table="LP_PRIMARYKEY",
+	pkColumnName = "C_NAME", pkColumnValue="versandwegccpartner", valueColumnName="I_INDEX", initialValue = 1, allocationSize = 5)
 	@GeneratedValue(strategy = GenerationType.TABLE, generator="versandwegcc_id")
 	@Column(name="I_ID") 
 	private Integer iId ;

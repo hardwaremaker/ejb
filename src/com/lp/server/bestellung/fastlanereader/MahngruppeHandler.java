@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -255,6 +255,7 @@ public class MahngruppeHandler extends UseCaseHandler {
 			String queryString = "SELECT COUNT(*) FROM FLRMahngruppe AS mahngruppe"
 					+ " LEFT JOIN mahngruppe.flrartikelgruppe.artikelgruppesprset AS artgruset "
 					+ buildWhereClause();
+			
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -287,8 +288,10 @@ public class MahngruppeHandler extends UseCaseHandler {
 									locUI), }, new int[] {
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_XL,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST }, new String[] {
-							"artgru_i_id", "flrartikelgruppe.c_nr",
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+					new String[] {
+							"artgru_i_id",
+							"mahngruppe.flrartikelgruppe.c_nr",
 							"artgruset.c_bez" }));
 		}
 		return super.getTableInfo();

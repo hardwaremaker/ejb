@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -120,7 +120,7 @@ public class ZEMecs extends HttpServlet {
 			theClientDto = logonFac.logon(
 					Helper.getFullUsername(sUser),
 					Helper.getMD5Hash((sUser + "lpwebappzemecs").toCharArray()),
-					new Locale("de", "AT"), null, null, 
+					new Locale("de", "AT"), null, 
 					new Timestamp(System.currentTimeMillis()));
 		} catch (Exception e) {
 			myLogger.error("Fehler beim holen der Fac", e);
@@ -339,7 +339,7 @@ public class ZEMecs extends HttpServlet {
 			zeitdatenDto.setPersonalIId(personalFac.personalFindByCAusweis(
 					schluesselNr).getIId());
 
-			zeiterfassungFac.createZeitdaten(zeitdatenDto, true, true,false, theClientDto);
+			zeiterfassungFac.createZeitdaten(zeitdatenDto, true, true,false, false, theClientDto);
 
 			response.setStatus(HttpServletResponse.SC_OK);
 			response.flushBuffer();

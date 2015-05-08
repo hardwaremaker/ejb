@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -46,6 +46,7 @@ import org.jboss.annotation.ejb.Service;
 
 import com.lp.server.anfrage.fastlanereader.AnfrageHandler;
 import com.lp.server.anfrage.fastlanereader.AnfrageartHandler;
+import com.lp.server.anfrage.fastlanereader.AnfrageerledigungsgrundHandler;
 import com.lp.server.anfrage.fastlanereader.AnfragepositionHandler;
 import com.lp.server.anfrage.fastlanereader.AnfragepositionartHandler;
 import com.lp.server.anfrage.fastlanereader.AnfragepositionlieferdatenHandler;
@@ -60,17 +61,22 @@ import com.lp.server.angebot.fastlanereader.AngebotpositionHandler;
 import com.lp.server.angebot.fastlanereader.AngebotpositionartHandler;
 import com.lp.server.angebot.fastlanereader.AngebottextHandler;
 import com.lp.server.angebotstkl.fastlanereader.AgstklHandler;
+import com.lp.server.angebotstkl.fastlanereader.AgstklarbeitsplanHandler;
+import com.lp.server.angebotstkl.fastlanereader.AgstklmengenstaffelHandler;
 import com.lp.server.angebotstkl.fastlanereader.AgstklpositionHandler;
 import com.lp.server.angebotstkl.fastlanereader.AufschlagHandler;
 import com.lp.server.angebotstkl.fastlanereader.EinkaufsangebotHandler;
 import com.lp.server.angebotstkl.fastlanereader.EinkaufsangebotpositionHandler;
+import com.lp.server.artikel.fastlanereader.AlergenHandler;
 import com.lp.server.artikel.fastlanereader.AlleSnrChnrHandler;
 import com.lp.server.artikel.fastlanereader.ArtikelHandler;
+import com.lp.server.artikel.fastlanereader.ArtikelalergenHandler;
 import com.lp.server.artikel.fastlanereader.ArtikelbestelltHandler;
 import com.lp.server.artikel.fastlanereader.ArtikelgruHandler;
 import com.lp.server.artikel.fastlanereader.ArtikelherstellerHandler;
 import com.lp.server.artikel.fastlanereader.ArtikelklaHandler;
 import com.lp.server.artikel.fastlanereader.ArtikelkommentarHandler;
+import com.lp.server.artikel.fastlanereader.ArtikelkommentarSucheHandler;
 import com.lp.server.artikel.fastlanereader.ArtikelkommentarartHandler;
 import com.lp.server.artikel.fastlanereader.ArtikellagerHandler;
 import com.lp.server.artikel.fastlanereader.ArtikellagerplaetzeHandler;
@@ -80,11 +86,12 @@ import com.lp.server.artikel.fastlanereader.ArtikellisteHandler;
 import com.lp.server.artikel.fastlanereader.ArtikelreservierungHandler;
 import com.lp.server.artikel.fastlanereader.ArtikelshopgruppeHandler;
 import com.lp.server.artikel.fastlanereader.ArtikelsperrenHandler;
+import com.lp.server.artikel.fastlanereader.AutomotiveHandler;
 import com.lp.server.artikel.fastlanereader.ChargenAufLagerHandler;
 import com.lp.server.artikel.fastlanereader.EinkaufseanHandler;
 import com.lp.server.artikel.fastlanereader.FarbcodeHandler;
-import com.lp.server.artikel.fastlanereader.FehlmengeAufloesenHandler;
 import com.lp.server.artikel.fastlanereader.FehlmengeHandler;
+import com.lp.server.artikel.fastlanereader.FehlmengeReservierungAufloesenHandler;
 import com.lp.server.artikel.fastlanereader.HandlagerbewegungHandler;
 import com.lp.server.artikel.fastlanereader.InventurHandler;
 import com.lp.server.artikel.fastlanereader.InventurlisteHandler;
@@ -94,6 +101,7 @@ import com.lp.server.artikel.fastlanereader.KatalogHandler;
 import com.lp.server.artikel.fastlanereader.KundenidentnummerHandler;
 import com.lp.server.artikel.fastlanereader.LagerGrunddatenHandler;
 import com.lp.server.artikel.fastlanereader.LagerHandler;
+import com.lp.server.artikel.fastlanereader.LagerMitMandantHandler;
 import com.lp.server.artikel.fastlanereader.LagercockpitArtikelHandler;
 import com.lp.server.artikel.fastlanereader.LagercockpitFehlmengeHandler;
 import com.lp.server.artikel.fastlanereader.LagercockpitLossollmaterialHandler;
@@ -101,8 +109,11 @@ import com.lp.server.artikel.fastlanereader.LagercockpitNichtLagerbewirtschaftet
 import com.lp.server.artikel.fastlanereader.LagerplatzHandler;
 import com.lp.server.artikel.fastlanereader.MaterialHandler;
 import com.lp.server.artikel.fastlanereader.MaterialzuschlagHandler;
+import com.lp.server.artikel.fastlanereader.MedicalHandler;
 import com.lp.server.artikel.fastlanereader.PaternosterHandler;
 import com.lp.server.artikel.fastlanereader.PreislistennameHandler;
+import com.lp.server.artikel.fastlanereader.ReachHandler;
+import com.lp.server.artikel.fastlanereader.RohsHandler;
 import com.lp.server.artikel.fastlanereader.SeriennummernchargennummernAufLagerHandler;
 import com.lp.server.artikel.fastlanereader.ShopgruppeHandler;
 import com.lp.server.artikel.fastlanereader.ShopgruppewebshopHandler;
@@ -111,6 +122,7 @@ import com.lp.server.artikel.fastlanereader.SperrenHandler;
 import com.lp.server.artikel.fastlanereader.VerleihHandler;
 import com.lp.server.artikel.fastlanereader.VkpfStaffelmengeHandler;
 import com.lp.server.artikel.fastlanereader.VorschlagstextHandler;
+import com.lp.server.artikel.fastlanereader.VorzugHandler;
 import com.lp.server.artikel.fastlanereader.WebshopHandler;
 import com.lp.server.artikel.fastlanereader.ZugehoerigeHandler;
 import com.lp.server.auftrag.bl.AuftragUebersichtHandler;
@@ -129,7 +141,11 @@ import com.lp.server.auftrag.fastlanereader.AuftragpositionartHandler;
 import com.lp.server.auftrag.fastlanereader.AuftragseriennrnHandler;
 import com.lp.server.auftrag.fastlanereader.AuftragteilnehmerHandler;
 import com.lp.server.auftrag.fastlanereader.AuftragtextHandler;
+import com.lp.server.auftrag.fastlanereader.MeilensteinHandler;
 import com.lp.server.auftrag.fastlanereader.PositionenSichtAuftragHandler;
+import com.lp.server.auftrag.fastlanereader.ZahlungsplanHandler;
+import com.lp.server.auftrag.fastlanereader.ZahlungsplanmeilensteinHandler;
+import com.lp.server.auftrag.fastlanereader.ZeitplanHandler;
 import com.lp.server.benutzer.fastlanereader.BenutzerHandler;
 import com.lp.server.benutzer.fastlanereader.BenutzermandantsystemrolleHandler;
 import com.lp.server.benutzer.fastlanereader.FertigungsgrupperolleHandler;
@@ -189,6 +205,7 @@ import com.lp.server.fertigung.fastlanereader.LossollmaterialHandler;
 import com.lp.server.fertigung.fastlanereader.LosstatusHandler;
 import com.lp.server.fertigung.fastlanereader.LostechnikerHandler;
 import com.lp.server.fertigung.fastlanereader.LoszusatzstatusHandler;
+import com.lp.server.fertigung.fastlanereader.OffeneAgsHandler;
 import com.lp.server.fertigung.fastlanereader.WiederholendeloseHandler;
 import com.lp.server.fertigung.fastlanereader.ZusatzstatusHandler;
 import com.lp.server.finanz.fastlanereader.BankkontoHandler;
@@ -255,6 +272,9 @@ import com.lp.server.lieferschein.fastlanereader.LieferscheinartHandler;
 import com.lp.server.lieferschein.fastlanereader.LieferscheinpositionHandler;
 import com.lp.server.lieferschein.fastlanereader.LieferscheinpositionartHandler;
 import com.lp.server.lieferschein.fastlanereader.LieferscheintextHandler;
+import com.lp.server.lieferschein.fastlanereader.VerkettetHandler;
+import com.lp.server.media.fastlanereader.EmailMediaBelegHandler;
+import com.lp.server.media.fastlanereader.EmailMediaInboxHandler;
 import com.lp.server.partner.bl.KundeUmsatzHandler;
 import com.lp.server.partner.bl.LieferantMonatsstatistikHandler;
 import com.lp.server.partner.fastlanereader.AnredeHandler;
@@ -280,10 +300,13 @@ import com.lp.server.partner.fastlanereader.PartnerHandler;
 import com.lp.server.partner.fastlanereader.PartnerReferenzHandler;
 import com.lp.server.partner.fastlanereader.PartnerartHandler;
 import com.lp.server.partner.fastlanereader.PartnerklasseHandler;
+import com.lp.server.partner.fastlanereader.PartnerkommentarHandler;
+import com.lp.server.partner.fastlanereader.PartnerkommentarartHandler;
 import com.lp.server.partner.fastlanereader.PartnerkommunikationHandler;
 import com.lp.server.partner.fastlanereader.SachbearbeiterHandler;
 import com.lp.server.partner.fastlanereader.SelektionHandler;
 import com.lp.server.partner.fastlanereader.SerienbriefHandler;
+import com.lp.server.partner.fastlanereader.SerienbriefselektionnegativHandler;
 import com.lp.server.partner.fastlanereader.WiedervorlageHandler;
 import com.lp.server.partner.fastlanereader.generated.AnsprechpartnerPartnerHandler;
 import com.lp.server.partner.fastlanereader.generated.SerienbriefselektionHandler;
@@ -309,10 +332,13 @@ import com.lp.server.personal.fastlanereader.LohnartstundenfaktorHandler;
 import com.lp.server.personal.fastlanereader.LohngruppeHandler;
 import com.lp.server.personal.fastlanereader.LohnstundenartHandler;
 import com.lp.server.personal.fastlanereader.MaschineHandler;
+import com.lp.server.personal.fastlanereader.MaschinemaschinenzmHandler;
 import com.lp.server.personal.fastlanereader.MaschinengruppeHandler;
 import com.lp.server.personal.fastlanereader.MaschinenkostenHandler;
 import com.lp.server.personal.fastlanereader.MaschinenzeitdatenGutSchlechtHandler;
 import com.lp.server.personal.fastlanereader.MaschinenzeitdatenHandler;
+import com.lp.server.personal.fastlanereader.MaschinenzmHandler;
+import com.lp.server.personal.fastlanereader.MaschinenzmtagesartHandler;
 import com.lp.server.personal.fastlanereader.PendlerpauschaleHandler;
 import com.lp.server.personal.fastlanereader.PersonalHandler;
 import com.lp.server.personal.fastlanereader.PersonalZeiterfassungHandler;
@@ -335,8 +361,11 @@ import com.lp.server.personal.fastlanereader.StundenabrechnungHandler;
 import com.lp.server.personal.fastlanereader.TagesartHandler;
 import com.lp.server.personal.fastlanereader.TelefonzeitenHandler;
 import com.lp.server.personal.fastlanereader.UrlaubsanspruchHandler;
+import com.lp.server.personal.fastlanereader.ZeitabschlussHandler;
 import com.lp.server.personal.fastlanereader.ZeitdatenGutSchlechtHandler;
 import com.lp.server.personal.fastlanereader.ZeitdatenHandler;
+import com.lp.server.personal.fastlanereader.ZeitdatenVonBisHandler;
+import com.lp.server.personal.fastlanereader.ZeiterfassungFavoritenHandler;
 import com.lp.server.personal.fastlanereader.ZeitmodellHandler;
 import com.lp.server.personal.fastlanereader.ZeitmodelltagHandler;
 import com.lp.server.personal.fastlanereader.ZeitmodelltagpauseHandler;
@@ -400,6 +429,7 @@ import com.lp.server.stueckliste.fastlanereader.FertigungsgruppeHandler;
 import com.lp.server.stueckliste.fastlanereader.KommentarimportHandler;
 import com.lp.server.stueckliste.fastlanereader.MontageartHandler;
 import com.lp.server.stueckliste.fastlanereader.PosersatzHandler;
+import com.lp.server.stueckliste.fastlanereader.StklagerentnahmeHandler;
 import com.lp.server.stueckliste.fastlanereader.StuecklisteHandler;
 import com.lp.server.stueckliste.fastlanereader.StuecklistearbeitsplanHandler;
 import com.lp.server.stueckliste.fastlanereader.StuecklisteeigenschaftHandler;
@@ -434,7 +464,9 @@ import com.lp.server.system.fastlanereader.PanelbeschreibungHandler;
 import com.lp.server.system.fastlanereader.ParameterHandler;
 import com.lp.server.system.fastlanereader.ParameteranwenderHandler;
 import com.lp.server.system.fastlanereader.ParametermandantHandler;
+import com.lp.server.system.fastlanereader.ParametermandantgueltigabHandler;
 import com.lp.server.system.fastlanereader.PositionsartHandler;
+import com.lp.server.system.fastlanereader.ReportvarianteHandler;
 import com.lp.server.system.fastlanereader.SpediteurHandler;
 import com.lp.server.system.fastlanereader.StatusHandler;
 import com.lp.server.system.fastlanereader.TheClientHandler;
@@ -456,6 +488,9 @@ import com.lp.util.Pair;
 
 @Service
 public class FastLaneReaderBean implements FastLaneReader {
+	// protected final ILPLogger myLogger =
+	// LPLogService.getInstance().getLogger(
+	// this.getClass());
 
 	/**
 	 * holds instances of UseCaseHandlers for all use cases.
@@ -485,8 +520,8 @@ public class FastLaneReaderBean implements FastLaneReader {
 			// UW 31.03.06 im vorherigen Aufruf wurde sCurrentUser gesetzt
 			UseCaseHandler ucHandler = getUseCaseHandler(uuid, useCaseId,
 					theClientDto);
-			System.out.println("setQuery: " + useCaseId + " "
-					+ ucHandler.toString() + " FLR:" + this.toString());
+			// System.out.println("setQuery: " + useCaseId + " "
+			// + ucHandler.toString() + " FLR:" + this.toString());
 
 			qr = ucHandler.setQuery(query);
 		} catch (Throwable t) {
@@ -642,6 +677,15 @@ public class FastLaneReaderBean implements FastLaneReader {
 
 	public UseCaseHandler getUseCaseHandler(String uuid, Integer useCaseId,
 			TheClientDto theClientDto) {
+		//
+		// // SP 2015
+		// StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+		// if (stack != null && stack.length > 2)
+		// myLogger.warn(stack[2].getMethodName());
+		// myLogger.warn(String.format(
+		// "uuid = %s; useCaseId = %d; IDUser = %s; Login Time = %s",
+		// uuid, useCaseId, theClientDto.getIDUser(), theClientDto
+		// .getDLoggedin().toString()));
 
 		HashMap<Integer, HashMap<String, UseCaseHandler>> hashMapDesClients = useCaseHandlers
 				.get(theClientDto.getIDUser());
@@ -698,6 +742,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				break;
 			case QueryParameters.UC_ID_PROJEKTVERLAUF: {
 				oUCHandler = new ProjektverlaufHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_ZEITERFASSUNG_FAVORITEN: {
+				oUCHandler = new ZeiterfassungFavoritenHandler();
 			}
 				break;
 			case QueryParameters.UC_ID_FINANZKONTEN: {
@@ -1022,6 +1070,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				oUCHandler = new ProjekterledigungsgrundHandler();
 			}
 				break;
+			case QueryParameters.UC_ID_ANFRAGEERLEDIGUNGSGRUND: {
+				oUCHandler = new AnfrageerledigungsgrundHandler();
+			}
+				break;
 			case QueryParameters.UC_ID_RELIGION: {
 				oUCHandler = new ReligionHandler();
 			}
@@ -1094,6 +1146,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				oUCHandler = new ZeitmodellHandler();
 			}
 				break;
+			case QueryParameters.UC_ID_MASCHINEZM: {
+				oUCHandler = new MaschinenzmHandler();
+			}
+				break;
 			case QueryParameters.UC_ID_LAGERPLATZ: { // gibt es nicht
 				oUCHandler = new LagerplatzHandler();
 			}
@@ -1114,8 +1170,16 @@ public class FastLaneReaderBean implements FastLaneReader {
 				oUCHandler = new ZeitmodelltagHandler();
 			}
 				break;
+			case QueryParameters.UC_ID_MASCHINENZMTAGESART: {
+				oUCHandler = new MaschinenzmtagesartHandler();
+			}
+				break;
 			case QueryParameters.UC_ID_PERSONALZEITMODELL: {
 				oUCHandler = new PersonalzeitmodellHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_MASCHINEMASCHINENZM: {
+				oUCHandler = new MaschinemaschinenzmHandler();
 			}
 				break;
 			case QueryParameters.UC_ID_SCHICHTZEITMODELL: {
@@ -1148,6 +1212,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				break;
 			case QueryParameters.UC_ID_ZEITDATEN: {
 				oUCHandler = new ZeitdatenHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_ZEITDATEN_VON_BIS: {
+				oUCHandler = new ZeitdatenVonBisHandler();
 			}
 				break;
 			case QueryParameters.UC_ID_GEWERK: {
@@ -1196,6 +1264,18 @@ public class FastLaneReaderBean implements FastLaneReader {
 				break;
 			case QueryParameters.UC_ID_TAGESART: {
 				oUCHandler = new TagesartHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_ZEITPLAN: {
+				oUCHandler = new ZeitplanHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_ZAHLUNGSPLAN: {
+				oUCHandler = new ZahlungsplanHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_ZAHLUNGSPLANMEILENSTEIN: {
+				oUCHandler = new ZahlungsplanmeilensteinHandler();
 			}
 				break;
 			case QueryParameters.UC_ID_ZEITMODELLTAGPAUSE: {
@@ -1451,6 +1531,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				oUCHandler = new ParametermandantHandler();
 			}
 				break;
+			case QueryParameters.UC_ID_PARAMETERMANDANTGUELTIGAB: {
+				oUCHandler = new ParametermandantgueltigabHandler();
+			}
+				break;
 			case QueryParameters.UC_ID_ANFRAGE: {
 				oUCHandler = new AnfrageHandler();
 			}
@@ -1575,6 +1659,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				oUCHandler = new AuftragartHandler();
 			}
 				break;
+			case QueryParameters.UC_ID_MEILENSTEIN: {
+				oUCHandler = new MeilensteinHandler();
+			}
+				break;
 			case QueryParameters.UC_ID_LIEFERSCHEINART: {
 				oUCHandler = new LieferscheinartHandler();
 			}
@@ -1597,6 +1685,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				break;
 			case QueryParameters.UC_ID_STUECKLISTEARBEITSPLAN: {
 				oUCHandler = new StuecklistearbeitsplanHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_AGSTKLARBEITSPLAN: {
+				oUCHandler = new AgstklarbeitsplanHandler();
 			}
 				break;
 			case QueryParameters.UC_ID_STUECKLISTE: {
@@ -1687,6 +1779,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				oUCHandler = new LoslagerentnahmeHandler();
 			}
 				break;
+			case QueryParameters.UC_ID_STKLAGERENTNAHME: {
+				oUCHandler = new StklagerentnahmeHandler();
+			}
+				break;
 			case QueryParameters.UC_ID_ZULAGE: {
 				oUCHandler = new ZulageHandler();
 			}
@@ -1711,12 +1807,16 @@ public class FastLaneReaderBean implements FastLaneReader {
 				oUCHandler = new BegruendungHandler();
 			}
 				break;
+			case QueryParameters.UC_ID_VERKETTET: {
+				oUCHandler = new VerkettetHandler();
+			}
+				break;
 			case QueryParameters.UC_ID_LOSTECHNIKER: {
 				oUCHandler = new LostechnikerHandler();
 			}
 				break;
 			case QueryParameters.UC_ID_FEHLMENGEAUFLOESEN: {
-				oUCHandler = new FehlmengeAufloesenHandler();
+				oUCHandler = new FehlmengeReservierungAufloesenHandler();
 			}
 				break;
 			case QueryParameters.UC_ID_LFLIEFERGRUPPENONELF: {
@@ -1783,6 +1883,14 @@ public class FastLaneReaderBean implements FastLaneReader {
 				oUCHandler = new ArtikelkommentarHandler();
 			}
 				break;
+			case QueryParameters.UC_ID_PARTNERKOMMENTAR: {
+				oUCHandler = new PartnerkommentarHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_ARTIKELKOMMENTARSUCHE: {
+				oUCHandler = new ArtikelkommentarSucheHandler();
+			}
+				break;
 			case QueryParameters.UC_ID_PERSONALGRUPPE: {
 				oUCHandler = new PersonalgruppeHandler();
 			}
@@ -1793,6 +1901,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				break;
 			case QueryParameters.UC_ID_ARTIKELKOMMENTARART: {
 				oUCHandler = new ArtikelkommentarartHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_PARTNERKOMMENTARART: {
+				oUCHandler = new PartnerkommentarartHandler();
 			}
 				break;
 			case QueryParameters.UC_ID_LOSZEITEN: {
@@ -1825,6 +1937,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				break;
 			case QueryParameters.UC_ID_SERIENBRIEFSELEKTION: {
 				oUCHandler = new SerienbriefselektionHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_SERIENBRIEFSELEKTIONNEGATIV: {
+				oUCHandler = new SerienbriefselektionnegativHandler();
 			}
 				break;
 			case QueryParameters.UC_ID_BEWEGUNGSVORSCHAU2: {
@@ -2044,6 +2160,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				oUCHandler = new ExtralisteHandler();
 			}
 				break;
+			case QueryParameters.UC_ID_REPORTVARIANTE: {
+				oUCHandler = new ReportvarianteHandler();
+			}
+				break;
 			case QueryParameters.UC_ID_PARAMETER: {
 				oUCHandler = new ParameterHandler();
 			}
@@ -2110,6 +2230,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				break;
 			case QueryParameters.UC_ID_WIEDERHOLENDELOSE: {
 				oUCHandler = new WiederholendeloseHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_OFFENE_AGS: {
+				oUCHandler = new OffeneAgsHandler();
 			}
 				break;
 			case QueryParameters.UC_ID_REKLAMATION: {
@@ -2216,6 +2340,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				oUCHandler = new Kdc100logHandler();
 			}
 				break;
+			case QueryParameters.UC_ID_LAGER_MIT_MANDANT: {
+				oUCHandler = new LagerMitMandantHandler();
+			}
+				break;
 			case QueryParameters.UC_ID_WIEDERVORLAGE: {
 				oUCHandler = new WiedervorlageHandler();
 			}
@@ -2244,6 +2372,10 @@ public class FastLaneReaderBean implements FastLaneReader {
 				oUCHandler = new LagerrolleHandler();
 			}
 				break;
+			case QueryParameters.UC_ID_AGSTKLMENGENSTAFFEL: {
+				oUCHandler = new AgstklmengenstaffelHandler();
+			}
+				break;
 			case QueryParameters.UC_ID_FERTIGUNGSGRUPPEROLLE: {
 				oUCHandler = new FertigungsgrupperolleHandler();
 			}
@@ -2264,6 +2396,48 @@ public class FastLaneReaderBean implements FastLaneReader {
 				oUCHandler = new SteuerkategorieHandler();
 			}
 				break;
+			case QueryParameters.UC_ID_REACH: {
+				oUCHandler = new ReachHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_VORZUG: {
+				oUCHandler = new VorzugHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_ALERGEN: {
+				oUCHandler = new AlergenHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_ARTIKELALERGEN: {
+				oUCHandler = new ArtikelalergenHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_ROHS: {
+				oUCHandler = new RohsHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_AUTOMOTIVE: {
+				oUCHandler = new AutomotiveHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_MEDICAL: {
+				oUCHandler = new MedicalHandler();
+			}
+				break;
+			case QueryParameters.UC_ID_ZEITABSCHLUSS: {
+				oUCHandler = new ZeitabschlussHandler();
+			}
+				break;
+
+			case QueryParameters.UC_ID_MEDIA_INBOX: {
+				oUCHandler = new EmailMediaInboxHandler();
+			}
+				break;
+
+			case QueryParameters.UC_ID_MEDIA_BELEG: {
+				oUCHandler = new EmailMediaBelegHandler();
+			}
+				break;
 
 			default: {
 				oUCHandler = new UnknownUseCaseHandler(useCaseId);
@@ -2280,6 +2454,12 @@ public class FastLaneReaderBean implements FastLaneReader {
 
 			this.useCaseHandlers.put(theClientDto.getIDUser(),
 					hashMapDesClients);
+
+			// // SP 2015
+			// myLogger.warn(String
+			// .format("new UseCaseHandler: uuid = %s; useCaseId = %d; IDUser = %s; Login Time = %s",
+			// uuid, useCaseId, theClientDto.getIDUser(),
+			// theClientDto.getDLoggedin().toString()));
 
 		}
 		oUCHandler.setCurrentUser(theClientDto);

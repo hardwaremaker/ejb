@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -97,25 +97,80 @@ public abstract class TauscheISort<T> {
 		int step = (maxSort - minSort) / 2 ;
 		return step == 0 ? null : (minSort + step) ;
 	}
+
+	private interface IISortFunction {
+		Integer evaluate() ;
+	}
+
+	private Integer evaluateISort(IISortFunction function) {
+		Integer newISort = null ;
+		int retry = 0 ;
+		do {
+			newISort = function.evaluate();
+			if(newISort == null) {
+				renumber() ;
+			}
+		} while((newISort == null) && (++retry < 2)) ;
+		return newISort ;
+	}
+	
 	
 	public Integer getNextISort(Integer iId) throws EJBExceptionLP {
-		Validator.pkFieldNotNull(iId, "iId") ;	
-		T myEntity = getEntity(iId) ;
-		T nextEntity = findNextEntityISort(myEntity) ;
-		return getISortBetweenIds(iId, nextEntity == null ? null : ((IISort)nextEntity).getISort()) ;
+		Validator.pkFieldNotNull(iId, "iId") ;
+		final Integer searchId = iId ;
+		Integer newISort = evaluateISort(new IISortFunction() {
+			@Override
+			public Integer evaluate() {
+				T myEntity = getEntity(searchId) ;
+				T nextEntity = findNextEntityISort(myEntity) ;
+				Integer newISort = getISortBetweenIds(
+						searchId, nextEntity == null ? null : ((IISort)nextEntity).getISort()) ;
+				return newISort ;
+			}
+		}) ;
+		
+		return newISort ;
+//		T myEntity = getEntity(iId) ;
+//		T nextEntity = findNextEntityISort(myEntity) ;
+//		return getISortBetweenIds(iId, nextEntity == null ? null : ((IISort)nextEntity).getISort()) ;
 	}
 
 	public Integer getNextISort() throws EJBExceptionLP {
-		T lastEntity = findLastEntityISort() ;
-		return getISortBetweenIds(lastEntity == null ? null : ((IIId) lastEntity).getIId(), null) ;
+		Integer newISort = evaluateISort(new IISortFunction() {			
+			@Override
+			public Integer evaluate() {
+				T lastEntity = findLastEntityISort() ;
+				Integer newISort = getISortBetweenIds(
+						lastEntity == null ? null : ((IIId) lastEntity).getIId(), null) ;
+				return newISort ;
+			}
+		}) ;
+				
+//		T lastEntity = findLastEntityISort() ;
+//		Integer newISort = getISortBetweenIds(lastEntity == null ? null : ((IIId) lastEntity).getIId(), null) ;
+		return newISort ;
 	}
 	
 	
 	public Integer getPreviousISort(Integer iId) throws EJBExceptionLP {
-		Validator.pkFieldNotNull(iId, "iId") ;	
-		T myEntity = getEntity(iId) ;
-		T previousEntity = findPreviousEntityISort(myEntity) ;
-		return getISortBetweenIds(previousEntity == null ? null : ((IIId)previousEntity).getIId(), iId) ;		
+		Validator.pkFieldNotNull(iId, "iId") ;
+		final Integer searchId = iId ;
+		Integer newISort = evaluateISort(new IISortFunction() {
+			@Override
+			public Integer evaluate() {
+				T myEntity = getEntity(searchId) ;
+				T previousEntity = findPreviousEntityISort(myEntity) ;
+				Integer newISort = getISortBetweenIds(
+						previousEntity == null ? null : ((IIId)previousEntity).getIId(), searchId) ;
+				return newISort ;
+			}	
+		}) ;
+		
+//		T myEntity = getEntity(searchId) ;
+//		T previousEntity = findPreviousEntityISort(myEntity) ;
+//		Integer newISort = getISortBetweenIds(
+//				previousEntity == null ? null : ((IIId)previousEntity).getIId(), searchId) ;
+		return newISort ;
 	}
 	
 	

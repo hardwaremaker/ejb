@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -315,7 +315,18 @@ public class BestellpositionFacBean extends Beleg implements
 			if (oBestellpositionDtoI.getPositionsartCNr().equalsIgnoreCase(
 					BestellpositionFac.BESTELLPOSITIONART_IDENT)) {
 				preispflege(oBestellpositionDtoI, sPreispflegeI,
-						artikellieferantstaffelIId_ZuAendern, theClientDto);
+						artikellieferantstaffelIId_ZuAendern, false,
+						theClientDto);
+			}
+
+			// PJ18750
+			if (oBestellpositionDtoI.getPositionsartCNr().equalsIgnoreCase(
+					BestellpositionFac.BESTELLPOSITIONART_HANDEINGABE)) {
+				preispflege(
+						oBestellpositionDtoI,
+						BestellpositionFac.PREISPFLEGEARTIKELLIEFERANT_STAFFELPREIS_RUECKPFLEGEN,
+						artikellieferantstaffelIId_ZuAendern, false,
+						theClientDto);
 			}
 
 			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
@@ -412,7 +423,8 @@ public class BestellpositionFacBean extends Beleg implements
 								.setNNettoeinzelpreis(new BigDecimal(0));
 						oBestellpositionDtoI
 								.setNRabattbetrag(new BigDecimal(0));
-
+						
+						oBestellpositionDtoI.setDRabattsatz(0D);
 						oBestellpositionDtoI
 								.setNNettogesamtpreis(new BigDecimal(0));
 
@@ -667,7 +679,7 @@ public class BestellpositionFacBean extends Beleg implements
 		befuelleZusaetzlichePreisfelder(bestellpositionDto.getIId());
 		BestellungDto b = getBestellungFac().bestellungFindByPrimaryKey(
 				bestellpositionDto.getBestellungIId());
-		getBestellungFac().updateBestellung(b, theClientDto,false);
+		getBestellungFac().updateBestellung(b, theClientDto, false);
 		// }
 		// catch (FinderException ex) {
 		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
@@ -994,7 +1006,8 @@ public class BestellpositionFacBean extends Beleg implements
 				if (bestellpositionDto.getPositionsartCNr().equalsIgnoreCase(
 						BestellpositionFac.BESTELLPOSITIONART_IDENT)) {
 					preispflege(bestellpositionDto, sPreispflegeI,
-							artikellieferantstaffelIId_ZuAendern, theClientDto);
+							artikellieferantstaffelIId_ZuAendern, false,
+							theClientDto);
 				}
 			}
 
@@ -1147,11 +1160,22 @@ public class BestellpositionFacBean extends Beleg implements
 
 	public void preispflege(BestellpositionDto besPosDto, String sPreispflegeI,
 			Integer artikellieferantstaffelIId_ZuAendern,
-			TheClientDto theClientDto) {
+			boolean bNullPreiseZurueckpflegen, TheClientDto theClientDto) {
 		try {
 			if (sPreispflegeI != null
 					&& !sPreispflegeI
 							.equals(BestellpositionFac.PREISPFLEGEARTIKELLIEFERANT_PREIS_UNVERAENDERT)) {
+
+				// SP3305
+				if (bNullPreiseZurueckpflegen == false) {
+
+					if (besPosDto.getNNettogesamtpreis() == null
+							|| besPosDto.getNNettogesamtpreis().doubleValue() == 0) {
+						return;
+					}
+
+				}
+
 				BestellungDto besDto = getBestellungFac()
 						.bestellungFindByPrimaryKey(
 								besPosDto.getBestellungIId());
@@ -2375,7 +2399,8 @@ public class BestellpositionFacBean extends Beleg implements
 			if (abrufbestellpositionDtoI.getPositionsartCNr().equalsIgnoreCase(
 					BestellpositionFac.BESTELLPOSITIONART_IDENT)) {
 				preispflege(abrufbestellpositionDtoI, sPreispflegeI,
-						artikellieferantstaffelIId_ZuAendern, theClientDto);
+						artikellieferantstaffelIId_ZuAendern, false,
+						theClientDto);
 			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -2846,43 +2871,57 @@ public class BestellpositionFacBean extends Beleg implements
 			throws EJBExceptionLP {
 
 		try {
-			BestellpositionDto bestellpos[] = null;
-
-			bestellpos = bestellpositionFindByBestellung(
+			BestellpositionDto bestellpos[] = bestellpositionFindByBestellung(
 					bestellpositionDto.getBestellungIId(), theClientDto);
-			int countBestaetigt = 0;
+
+			ArrayList<BestellpositionDto> alBestpos = new ArrayList<BestellpositionDto>();
+			// SP2979 Nur Ident/Handeingabe zaehlt
 			for (int i = 0; i < bestellpos.length; i++) {
-				if (bestellpos[i].getBestellpositionstatusCNr().equals(
-						BestellpositionFac.BESTELLPOSITIONSTATUS_BESTAETIGT)) {
+				if (bestellpos[i].getPositionsartCNr().equals(
+						BestellpositionFac.BESTELLPOSITIONART_IDENT)
+						|| bestellpos[i]
+								.getPositionsartCNr()
+								.equals(BestellpositionFac.BESTELLPOSITIONART_HANDEINGABE))
+					alBestpos.add(bestellpos[i]);
+			}
+
+			int countBestaetigt = 0;
+			int countOffen = 0;
+			for (int i = 0; i < alBestpos.size(); i++) {
+				if (alBestpos
+						.get(i)
+						.getBestellpositionstatusCNr()
+						.equals(BestellpositionFac.BESTELLPOSITIONSTATUS_BESTAETIGT)) {
 					countBestaetigt++;
 				}
+
+				if (alBestpos.get(i).getBestellpositionstatusCNr()
+						.equals(BestellpositionFac.BESTELLPOSITIONSTATUS_OFFEN)) {
+					countOffen++;
+				}
+
 			}
 
 			BestellungDto bestellungDto = null;
 			bestellungDto = getBestellungFac().bestellungFindByPrimaryKey(
 					bestellpositionDto.getBestellungIId());
 
-			// wenn alle pos bestaetig dann bestellung ebenfalls bestaetigt
-			if (countBestaetigt == bestellpos.length) {
+			// Wenn kein Keine Position mit Bestaetigt vorhanden ist, dann ist
+			// die Bestellung OFFEN
 
+			if (countOffen == alBestpos.size()) {
+				bestellungDto.setStatusCNr(BestellungFac.BESTELLSTATUS_OFFEN);
+				getBestellungFac()
+						.updateBestellung(bestellungDto, theClientDto);
+			} else if (countOffen == 0) {
+				// Wenn keine Offene merh vorhanden, dann ist die Bestellung
+				// bestaetigt
 				bestellungDto
 						.setStatusCNr(BestellungFac.BESTELLSTATUS_BESTAETIGT);
 				getBestellungFac()
 						.updateBestellung(bestellungDto, theClientDto);
-
 			}
-			// wenn der Status der Bestellung bestaetigt jedoch countBestaetigt
-			// != bestellpos laenge
-			// dann wird Status auf offen zurueckgesetzt
-			else if (bestellungDto.getStatusCNr().equals(
-					BestellungFac.BESTELLSTATUS_BESTAETIGT)
-					&& countBestaetigt != bestellpos.length) {
 
-				bestellungDto.setStatusCNr(BestellungFac.BESTELLSTATUS_OFFEN);
-				getBestellungFac()
-						.updateBestellung(bestellungDto, theClientDto);
-
-			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
@@ -2947,32 +2986,57 @@ public class BestellpositionFacBean extends Beleg implements
 	 * 
 	 * @param bestellungIId
 	 *            Integer
+	 * @param markierteBestellpositionenIIds
 	 * @param abDatum
 	 *            Date
 	 * @param abNummer
 	 *            String
-	 * @param selectAllOrEmpty
-	 *            boolean
+	 * @param iOption 
 	 * @param theClientDto
-	 *            String
 	 * @throws EJBExceptionLP
 	 */
 	public void setForAllPositionenABTermin(Integer bestellungIId,
-			java.sql.Date abDatum, String abNummer, boolean selectAllOrEmpty,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			Integer[] markierteBestellpositionenIIds, java.sql.Date abDatum,
+			String abNummer, int iOption, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		BestellpositionDto[] besposDto = null;
 		besposDto = bestellpositionFindByBestellung(bestellungIId, theClientDto);
 
 		// wenn true werden alle gesetzt
-		if (selectAllOrEmpty) {
+		if (iOption == SICHT_LIEFERANTENTERMINE_ABTERMIN_SETZEN_OPTION_ALLE) {
 			for (int i = 0; i < besposDto.length; i++) {
 				besposDto[i].setTAuftragsbestaetigungstermin(abDatum);
 				besposDto[i].setCABNummer(abNummer);
 				updateBestellpositionMitABTermin(besposDto[i], theClientDto, "");
 			}
 		}
-		// sonst nur leere Positionen setzen
-		else {
+		// oder markierte Positionen setzen
+		else if (iOption == SICHT_LIEFERANTENTERMINE_ABTERMIN_SETZEN_OPTION_MARKIERTE) {
+
+			for (int i = 0; i < besposDto.length; i++) {
+
+				boolean bMarkiert = false;
+
+				for (int z = 0; z < markierteBestellpositionenIIds.length; z++) {
+					if (besposDto[i].getIId().equals(
+							markierteBestellpositionenIIds[z])) {
+						bMarkiert = true;
+						break;
+					}
+
+				}
+
+				if (bMarkiert == true) {
+
+					besposDto[i].setTAuftragsbestaetigungstermin(abDatum);
+					besposDto[i].setCABNummer(abNummer);
+					updateBestellpositionMitABTermin(besposDto[i],
+							theClientDto, "");
+				}
+
+			}
+			// sonst nur leere Positionen setzen
+		} else if (iOption == SICHT_LIEFERANTENTERMINE_ABTERMIN_SETZEN_OPTION_LEERE) {
 
 			for (int i = 0; i < besposDto.length; i++) {
 				if (besposDto[i].getTAuftragsbestaetigungstermin() == null) {

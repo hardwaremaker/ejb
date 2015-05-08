@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -68,6 +68,9 @@ public class EingangsrechnungAuftragszuordnungDtoAssembler {
 			eingangsrechnungAuftragszuordnungDto
 					.setTAendern(eingangsrechnungAuftragszuordnung
 							.getTAendern());
+			eingangsrechnungAuftragszuordnungDto
+					.setBKeineAuftragswertung(eingangsrechnungAuftragszuordnung
+							.getBKeineAuftragswertung());
 		}
 		return eingangsrechnungAuftragszuordnungDto;
 	}
@@ -76,7 +79,8 @@ public class EingangsrechnungAuftragszuordnungDtoAssembler {
 			Collection<?> eingangsrechnungAuftragszuordnungs) {
 		List<EingangsrechnungAuftragszuordnungDto> list = new ArrayList<EingangsrechnungAuftragszuordnungDto>();
 		if (eingangsrechnungAuftragszuordnungs != null) {
-			Iterator<?> iterator = eingangsrechnungAuftragszuordnungs.iterator();
+			Iterator<?> iterator = eingangsrechnungAuftragszuordnungs
+					.iterator();
 			while (iterator.hasNext()) {
 				list.add(createDto((EingangsrechnungAuftragszuordnung) iterator
 						.next()));

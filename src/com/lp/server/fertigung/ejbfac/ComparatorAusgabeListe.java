@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -93,6 +93,33 @@ public class ComparatorAusgabeListe implements Comparator<Object> {
 				if (afmDto1 != null && afmDto1.getSIdent() != null
 						&& afmDto2 != null && afmDto2.getSIdent() != null) {
 					return afmDto1.getSIdent().compareTo(afmDto2.getSIdent());
+				} else {
+					return 0;
+				}
+			}
+
+		}
+		case Helper.SORTIERUNG_NACH_ARTIKELBEZEICHNUNG: {
+			if (bVorrangigNachFarbcode == true) {
+				int i = afmDto1.getSFarbcode()
+						.compareTo(afmDto2.getSFarbcode());
+
+				if (i == 0) {
+
+					if (afmDto1 != null && afmDto1.getSBezeichnung() != null
+							&& afmDto2 != null && afmDto2.getSBezeichnung() != null) {
+						return afmDto1.getSBezeichnung().compareTo(
+								afmDto2.getSBezeichnung());
+					} else {
+						return 0;
+					}
+				} else {
+					return i;
+				}
+			} else {
+				if (afmDto1 != null && afmDto1.getSBezeichnung() != null
+						&& afmDto2 != null && afmDto2.getSBezeichnung() != null) {
+					return afmDto1.getSBezeichnung().compareTo(afmDto2.getSBezeichnung());
 				} else {
 					return 0;
 				}

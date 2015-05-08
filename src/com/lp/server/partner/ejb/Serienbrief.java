@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -105,6 +105,29 @@ public class Serienbrief implements Serializable {
 		this.xMailtext = xMailtext;
 	}
 
+	@Column(name = "B_WENNKEINANSPMITFKT_DANNERSTERANSP")
+	private Short bWennkeinanspmitfktDannersteransp;
+
+	@Column(name = "B_SELEKTIONEN_LOGISCHES_ODER")
+	private Short bSelektionenLogischesOder;
+
+	public Short getBWennkeinanspmitfktDannersteransp() {
+		return bWennkeinanspmitfktDannersteransp;
+	}
+
+	public void setBWennkeinanspmitfktDannersteransp(
+			Short bWennkeinanspmitfktDannersteransp) {
+		this.bWennkeinanspmitfktDannersteransp = bWennkeinanspmitfktDannersteransp;
+	}
+
+	public Short getBSelektionenLogischesOder() {
+		return bSelektionenLogischesOder;
+	}
+
+	public void setBSelektionenLogischesOder(Short bSelektionenLogischesOder) {
+		this.bSelektionenLogischesOder = bSelektionenLogischesOder;
+	}
+
 	public Short getBMitzugeordnetenfirmen() {
 		return bMitzugeordnetenfirmen;
 	}
@@ -133,19 +156,18 @@ public class Serienbrief implements Serializable {
 
 	@Column(name = "BRANCHE_I_ID")
 	private Integer brancheIId;
-	
+
 	@Column(name = "B_NEWSLETTER")
 	private Short bNewsletter;
 
-	
 	public Short getbNewsletter() {
 		return bNewsletter;
 	}
-	
+
 	public void setbNewsletter(Short bNewsletter) {
 		this.bNewsletter = bNewsletter;
 	}
-	
+
 	public Integer getPartnerklasseIId() {
 		return partnerklasseIId;
 	}
@@ -212,7 +234,9 @@ public class Serienbrief implements Serializable {
 			Short bGehtAnKunden, Short bGehtAnInteressenten,
 			Short bVersteckteDabei, Short bAnsprechpartnerfunktionAuchOhne,
 			Short bGehtanlieferanten, Short bGehtanmoeglichelieferanten,
-			Short bGehtanpartner, Short bMitzugeordnetenfirmen, Short bNewsletter) {
+			Short bGehtanpartner, Short bMitzugeordnetenfirmen,
+			Short bNewsletterShort, Short bSelektionenLogischesOder,
+			Short bWennkeinanspmitfktDannersteransp) {
 
 		setIId(iId);
 		setCBez(cBez);
@@ -230,6 +254,8 @@ public class Serienbrief implements Serializable {
 		setBGehtanpartner(bGehtanpartner);
 		setBMitzugeordnetenfirmen(bMitzugeordnetenfirmen);
 		setbNewsletter(bNewsletter);
+		setBWennkeinanspmitfktDannersteransp(bWennkeinanspmitfktDannersteransp);
+		setBSelektionenLogischesOder(bSelektionenLogischesOder);
 	}
 
 	public Integer getIId() {

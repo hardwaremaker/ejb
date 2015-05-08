@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -139,7 +139,8 @@ public class ZahlungsvorschlagHandler extends UseCaseHandler {
 				} else {
 					rows[row][col++] = null;
 				}
-				rows[row][col++] = zv.getN_offen();
+
+				rows[row][col++] = zv.getN_zahlbetrag();
 				rows[row][col++] = sWaehrung;
 				rows[row][col++] = er.getC_text();
 				rows[row][col++] = new Boolean(Helper.short2Boolean(zv
@@ -156,6 +157,10 @@ public class ZahlungsvorschlagHandler extends UseCaseHandler {
 							bvLF[0].getBankPartnerIId(), theClientDto);
 					rows[row][col++] = bankDto.getPartnerDto()
 							.getCName1nachnamefirmazeile1();
+
+					rows[row][col++] = bvLF[0].getCIban();
+					rows[row][col++] = bankDto.getCBic();
+
 				}
 				row++;
 				col = 0;
@@ -358,11 +363,12 @@ public class ZahlungsvorschlagHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class, Integer.class,
-							String.class, BigDecimal.class,
+					new Class[] { Integer.class, String.class, String.class,
+							Integer.class, String.class, BigDecimal.class,
 							java.util.Date.class, String.class,
 							BigDecimal.class, String.class, String.class,
-							Boolean.class, String.class },
+							Boolean.class, String.class, String.class,
+							String.class },
 					new String[] {
 							"i_id",
 							"",
@@ -375,14 +381,18 @@ public class ZahlungsvorschlagHandler extends UseCaseHandler {
 							getTextRespectUISpr("er.zv.faellig", mandantCNr,
 									locUI),
 							getTextRespectUISpr("system.skt", mandantCNr, locUI),
-							getTextRespectUISpr("lp.betrag", mandantCNr, locUI),
+							getTextRespectUISpr(
+									"er.zahlungsvorschlag.zahlbetrag",
+									mandantCNr, locUI),
 							getTextRespectUISpr("lp.waehrung", mandantCNr,
 									locUI),
 							getTextRespectUISpr("lp.text", mandantCNr, locUI),
 							getTextRespectUISpr("lp.freigabezurueberweisung",
 									mandantCNr, locUI),
 							getTextRespectUISpr("lp.bankverbindung",
-									mandantCNr, locUI) },
+									mandantCNr, locUI),
+							getTextRespectUISpr("lp.iban", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bic", mandantCNr, locUI) },
 					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST, 1,
 							QueryParameters.FLR_BREITE_M, 3,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
@@ -390,6 +400,8 @@ public class ZahlungsvorschlagHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_M, 5,
 							QueryParameters.FLR_BREITE_PREIS, 6,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST, 2,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 					new String[] {
 							EingangsrechnungFac.FLR_ZV_I_ID,
@@ -409,9 +421,10 @@ public class ZahlungsvorschlagHandler extends UseCaseHandler {
 							Facade.NICHT_SORTIERBAR,
 							EingangsrechnungFac.FLR_ZV_T_FAELLIG,
 							EingangsrechnungFac.FLR_ZV_N_ANGEWANDTERSKONTOSATZ,
+							EingangsrechnungFac.FLR_ZV_N_ZAHLBETRAG,
 							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
-							Facade.NICHT_SORTIERBAR,
 							EingangsrechnungFac.FLR_ZV_B_BEZAHLEN,
+							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
 							Facade.NICHT_SORTIERBAR }));
 		}
 		return super.getTableInfo();

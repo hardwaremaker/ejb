@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -45,6 +45,7 @@ import javax.ejb.Remote;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
+import com.lp.server.stueckliste.service.IStklImportResult;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.util.EJBExceptionLP;
 
@@ -103,6 +104,9 @@ public interface ArtikelFac {
 	public static final String FLR_ARTIKELLISTE_B_SERIENNRTRAGEND = "b_seriennrtragend";
 	public static final String FLR_ARTIKELLISTE_B_CHARGENNRTRAGEND = "b_chargennrtragend";
 
+	public static final String FLR_ARTIKELLISTE_STUECKLISTE_PARTNER_ID = "stuecklisten.partner_i_id";
+	public static final String FLR_ARTIKELLISTE_SHOPGRUPPE_ID = "shopgruppe_i_id" ;
+	
 	public static final String FLR_HERSTELLER_FLRPARTNER = "flrpartner";
 
 	public static final String SETARTIKEL_TYP_KOPF = "Kopf";
@@ -163,16 +167,19 @@ public interface ArtikelFac {
 
 	// Feldlaengen
 	public static final int MAX_ARTIKEL_ARTIKELNUMMER = 25;
-	public static final int MAX_ARTIKEL_REFERENZNUMMER = 25;
+	public static final int MAX_ARTIKEL_REFERENZNUMMER = 30;
 	public static final int MAX_ARTIKEL_VERKAUFEANNR = 15;
 	public static final int MAX_ARTIKEL_WARENVERKEHRSNUMMER = 10;
 	public static final int MAX_ARTIKEL_ARTIKELBEZEICHNUNG = 40;
 	public static final int MAX_ARTIKEL_ZUSATZBEZEICHNUNG = 40;
 	public static final int MAX_ARTIKEL_ZUSATZBEZEICHNUNG2 = 40;
-	public static final int MAX_ARTIKEL_KURZBEZEICHNUNG = 25;
+	public static final int MAX_ARTIKEL_KURZBEZEICHNUNG = 30;
 	public static final int MAX_ARTIKEL_BAUFORM = 20;
 	public static final int MAX_ARTIKEL_VERPACKUNGSART = 20;
 	public static final int MAX_ARTIKEL_TEXTBREITE = 2;
+	public static final int MAX_ARTIKEL_ECCN = 10;
+	public static final int MAX_ARTIKEL_REVISION = 40;
+	public static final int MAX_ARTIKEL_HERSTELLERBEZEICHNUNG = 40;
 
 	public static final int MAX_KATALOG_KATALOG = 15;
 	public static final int MAX_KATALOG_SEITE = 5;
@@ -286,9 +293,11 @@ public interface ArtikelFac {
 	public static final String ARTIKEL_LOG_NUR_ZUR_INFO = "NUR_ZUR_INFO";
 	public static final String ARTIKEL_LOG_REINE_MANNZEIT = "REINE_MANNZEIT";
 	public static final String ARTIKEL_LOG_LETZTE_WARTUNG = "LETZTE_WARTUNG";
+	public static final String ARTIKEL_LOG_ARTIKELSPERREN_SPERRE = "ARTIKELSPERREN_SPERRE";
+	public static final String ARTIKEL_LOG_ARTIKELSPERREN_GRUND = "ARTIKELSPERREN_GRUND";
 
 	public Integer createArtikel(ArtikelDto artikelDto,
-			TheClientDto theClientDto);
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void removeArtikel(Integer iId, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -365,7 +374,8 @@ public interface ArtikelFac {
 
 	public ArtgruDto[] artgruFindAll() throws EJBExceptionLP, RemoteException;
 
-	public void alleSIwerteNachtragen(TheClientDto theClientDto);
+	public void alleSIwerteNachtragen(TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public Integer createKatalog(KatalogDto katalogDto) throws EJBExceptionLP,
 			RemoteException;
@@ -426,13 +436,7 @@ public interface ArtikelFac {
 			Integer lieferantIId, TheClientDto theClientDto)
 			throws RemoteException;
 
-	public ArtikellieferantDto artikellieferantFindByArtikellIIdLieferantIIdOhneExc(
-			Integer artikelIId, Integer lieferantIId, TheClientDto theClientDto)
-			throws RemoteException;
 
-	public ArtikellieferantDto artikellieferantFindByArtikellIIdLieferantIId(
-			Integer artikelIId, Integer lieferantIId, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
 
 	public ArtikellieferantDto artikellieferantFindByArtikellIIdLieferantIIdTPreisgueltigabKleiner(
 			Integer artikelIId, Integer lieferantIId,
@@ -532,10 +536,6 @@ public interface ArtikelFac {
 	public String formatArtikelbezeichnungEinzeiligOhneExc(Integer iIdArtikelI,
 			Locale locBezeichnungI) throws RemoteException;
 
-	public void importiereArtikel(ArtikelImportDto[] daten,
-			boolean bBestehendeArtikelUeberschreiben, TheClientDto theClientDto)
-			throws RemoteException;
-
 	public String baueArtikelBezeichnungMehrzeilig(Integer iIdArtikelI,
 			String cNrPositionsartI, String cBezUebersteuertI,
 			String cZBezUebersteuertI, boolean bIncludeCNrI, Locale localeI,
@@ -572,8 +572,8 @@ public interface ArtikelFac {
 			throws EJBExceptionLP, RemoteException;
 
 	public Object[] kopiereArtikel(Integer artikelIId, String artikelnummerNeu,
-			java.util.HashMap zuKopieren,Integer herstellerIIdNeu, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+			java.util.HashMap zuKopieren, Integer herstellerIIdNeu,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public Integer createSperren(SperrenDto sperrenDto,
 			TheClientDto theClientDto) throws RemoteException;
@@ -588,7 +588,7 @@ public interface ArtikelFac {
 	public Integer createArtikelsperren(ArtikelsperrenDto artikelsperrenDto,
 			TheClientDto theClientDto) throws RemoteException;
 
-	public void removeArtikelsperren(ArtikelsperrenDto artikelsperrenDto)
+	public void removeArtikelsperren(ArtikelsperrenDto artikelsperrenDto, TheClientDto theClientDto)
 			throws RemoteException;
 
 	public void updateArtikelsperren(ArtikelsperrenDto artikelsperrenDto,
@@ -674,6 +674,7 @@ public interface ArtikelFac {
 	public Map getAllVerleih();
 
 	public Map getAllSprArtgru(TheClientDto theClientDto);
+	
 
 	public Integer createWebshop(WebshopDto dto);
 
@@ -730,11 +731,113 @@ public interface ArtikelFac {
 			throws EJBExceptionLP;
 
 	public List<ArtgruDto> artgruFindByMandantCNrSpr(TheClientDto theClientDto);
+
 	public void setzeArtikelSNRtragendOhneWeitereAktion(Integer artikelIId);
-	
+
 	public byte[] getXLSForPreispflege(Integer artikelgruppeIId,
 			Integer artikelklasseIId, String artikelNrVon, String artikelNrBis,
 			boolean bMitVersteckten, TheClientDto theClientDto);
-	public void preiseXLSForPreispflege(byte[] xlsFile, TheClientDto theClientDto);
-	public void importiereDigiraster(byte[] xlsFile, TheClientDto theClientDto);
+
+	public void preiseXLSForPreispflege(byte[] xlsFile,
+			TheClientDto theClientDto);
+
+	public ArrayList<Map<Integer, String>> getListeDerArtikellieferanten(
+			Integer bestellvorschlagIId, BigDecimal nMenge,
+			TheClientDto theClientDto);
+
+	public Integer createReach(ReachDto dto);
+
+	public Integer createRohs(RohsDto dto);
+
+	public Integer createAutomotive(AutomotiveDto dto);
+
+	public Integer createMedicale(MedicalDto dto);
+
+	public void updateReach(ReachDto dto);
+
+	public void updateAutomotive(AutomotiveDto dto);
+
+	public void updateMedical(MedicalDto dto);
+
+	public void updateRohs(RohsDto dto);
+
+	public void removeReach(ReachDto dto);
+
+	public void removeRohs(RohsDto dto);
+
+	public void removeAutomotive(AutomotiveDto dto);
+
+	public void removeMedical(MedicalDto dto);
+
+	public ReachDto reachFindByPrimaryKey(Integer iId);
+
+	public RohsDto rohsFindByPrimaryKey(Integer iId);
+
+	public AutomotiveDto automotiveFindByPrimaryKey(Integer iId);
+
+	public MedicalDto medicalFindByPrimaryKey(Integer iId);
+
+	public ArrayList<String> getVorgaengerArtikel(Integer artikelIId);
+
+	public void removeVorzug(VorzugDto dto);
+
+	public VorzugDto vorzugFindByPrimaryKey(Integer iId);
+
+	public Integer createVorzug(VorzugDto dto);
+
+	public void updateVorzug(VorzugDto dto);
+
+	public Map getAllVorzug(TheClientDto theClientDto);
+
+	public void wandleHandeingabeInArtikelUm(Integer positionIId, int iArt,
+			String neueArtikelnummer, TheClientDto theClientDto);
+
+	public void updateAllergen(AlergenDto dto);
+
+	public Integer createAllergen(AlergenDto dto);
+
+	public AlergenDto allergenFindByPrimaryKey(Integer iId);
+
+	public void removeAllergen(AlergenDto dto);
+
+	public void vertauscheAlergen(Integer iId1, Integer iId2);
+
+	public Integer createArtikelallergen(ArtikelalergenDto dto,
+			TheClientDto theClientDto);
+
+	public void updateArtikelallergen(ArtikelalergenDto dto,
+			TheClientDto theClientDto);
+
+	public ArtikelalergenDto artikelallergenFindByPrimaryKey(Integer iId);
+
+	public void removeArtikelallergen(ArtikelalergenDto dto);
+
+	public ArtikelalergenDto[] artikelallergenFindByArtikelIId(
+			Integer artikelIId);
+
+	public AlergenDto[] allergenFindByMandantCNr(TheClientDto theClientDto);
+
+	public ArtikellieferantDto artikellieferantfindByArtikellIIdLieferantIIdTPreisgueltigabOhneExc(
+			Integer artikelIId, Integer lieferantIId,
+			java.sql.Timestamp tPreisgueltigab, TheClientDto theClientDto);
+
+	public void siWertNachtragen(Integer artikelIId, String localeCNr,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+
+	public int HANDARTIKEL_UMWANDELN_ANGEBOT = 0;
+	public int HANDARTIKEL_UMWANDELN_ANFRAGE = 1;
+	public int HANDARTIKEL_UMWANDELN_AUFTRAG = 2;
+
+	/**
+	 * Aktualisiert einen Artikel im Artikelstamm, wenn er sich zum
+	 * selektierten Artikel des Intelligenten St&uuml;cklistenimports
+	 * unterscheidet.
+	 * 
+	 * @param result Importresult des St&uuml;cklistenimports
+	 * @param theClientDto der aktuelle Benutzer
+	 * @throws RemoteException TODO
+	 */
+	public void updateArtikelAusImportResult(IStklImportResult result,
+			TheClientDto theClientDto) throws RemoteException;
+
 }

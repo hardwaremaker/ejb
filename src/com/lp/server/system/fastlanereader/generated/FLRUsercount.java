@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,6 +35,7 @@ package com.lp.server.system.fastlanereader.generated;
 import java.io.Serializable;
 import java.util.Date;
 import org.apache.commons.lang.builder.ToStringBuilder;
+import com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle;
 
 
 /** @author Hibernate CodeGenerator */
@@ -46,9 +47,13 @@ public class FLRUsercount implements Serializable {
     /** nullable persistent field */
     private Integer i_anzahl;
 
+    /** nullable persistent field */
+    private FLRSystemrolle flrsystemrolle;
+
     /** full constructor */
-    public FLRUsercount(Integer i_anzahl) {
+    public FLRUsercount(Integer i_anzahl, FLRSystemrolle flrsystemrolle) {
         this.i_anzahl = i_anzahl;
+        this.flrsystemrolle = flrsystemrolle;
     }
 
     /** default constructor */
@@ -69,6 +74,14 @@ public class FLRUsercount implements Serializable {
 
     public void setI_anzahl(Integer i_anzahl) {
         this.i_anzahl = i_anzahl;
+    }
+
+    public FLRSystemrolle getFlrsystemrolle() {
+        return this.flrsystemrolle;
+    }
+
+    public void setFlrsystemrolle(FLRSystemrolle flrsystemrolle) {
+        this.flrsystemrolle = flrsystemrolle;
     }
 
     public String toString() {

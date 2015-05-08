@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -333,9 +333,11 @@ public class BestellungSichtLieferTermineHandler extends UseCaseHandler {
 			if (super.getTableInfo() == null) {
 				int iNachkommastellenPreis = getMandantFac()
 						.getNachkommastellenPreisEK(theClientDto.getMandant());
+				int iNachkommastellenMenge = getMandantFac()
+						.getNachkommastellenMenge(theClientDto.getMandant());
 				setTableInfo(new TableInfo(
-						new Class[] { Integer.class, BigDecimal.class,
-								String.class, BigDecimal.class, Date.class,
+						new Class[] { Integer.class, super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
+								String.class,super.getUIClassBigDecimalNachkommastellen(iNachkommastellenPreis), Date.class,
 								Integer.class, Date.class, Boolean.class },
 						new String[] {
 								"i_id",

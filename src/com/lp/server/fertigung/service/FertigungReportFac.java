@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -40,6 +40,7 @@ import javax.ejb.Remote;
 
 import com.lp.server.system.service.ReportJournalKriterienDto;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.DatumsfilterVonBis;
 import com.lp.server.util.report.JasperPrintLP;
 import com.lp.util.EJBExceptionLP;
 
@@ -69,26 +70,26 @@ public interface FertigungReportFac {
 	public final static String REPORT_LOSETIKETTA4 = "fert_losetikett_a4.jasper";
 	public final static String REPORT_ZEITENTWICKLUNG = "fert_zeitentwicklung.jasper";
 	public final static String REPORT_AUSLASTUNGSVORSCHAU = "fert_auslastungsvorschau.jasper";
+	public final static String REPORT_AUSLASTUNGSVORSCHAU_DETAILIERT = "fert_auslastungsvorschau_detailiert.jasper";
 	public final static String REPORT_AUSLIEFERLISTE = "fert_auslieferliste.jasper";
 	public final static String REPORT_FEHLTEILE = "fert_fehlteile.jasper";
 	public final static String REPORT_ABLIEFERETIKETT = "fert_ablieferetikett.jasper";
 	public final static String REPORT_LOSZEITEN = "fert_loszeiten.jasper";
 	public final static String REPORT_MATERIALLISTE = "fert_materialliste.jasper";
+	public final static String REPORT_GESAMTALKULATION = "fert_gesamtkalkulation.jasper";
+	public final static String REPORT_MASCHINEUNDMATERIAL = "fert_maschineundmaterial.jasper";
 
-	
 	public final static String REPORT_PRODUKTIONSINFORMATION = "fert_produktionsinformation.jasper";
 
 	public final static int SORTIERUNG_AUSGABELISTE_MONTAGEARTPLUSCHALE = 0;
 	public final static int SORTIERUNG_AUSGABELISTE_ARTIKELKLASSE = 1;
 	public final static int SORTIERUNG_AUSGABELISTE_LAGERORT = 2;
 	public final static int SORTIERUNG_AUSGABELISTE_IDENT = 3;
-	
-	
+
 	public final static int SORTIERUNG_FEHLERSTATISTIK_LOSNUMMER = 0;
 	public final static int SORTIERUNG_FEHLERSTATISTIK_ARTIKELNUMMER = 1;
 	public final static int SORTIERUNG_FEHLERSTATISTIK_FEHLER = 2;
-	
-	
+
 	public final static int LOSZEITEN_OPTION_SORTIERUNG_PERSON = 0;
 	public final static int LOSZEITEN_OPTION_SORTIERUNG_ARTIKEL = 1;
 	public final static int LOSZEITEN_OPTION_SORTIERUNG_AG_UAG = 2;
@@ -105,10 +106,16 @@ public interface FertigungReportFac {
 
 	public final static int HF_OPTION_SORTIERUNG_LOSNR = 0;
 	public final static int HF_OPTION_SORTIERUNG_ARTIKELNR = 1;
+	public final static int HF_OPTION_SORTIERUNG_AUFTRAGNR = 2;
 
 	public final static Integer OFFENE_OPTION_STICHTAG_LIEFERTERMIN = 0;
 	public final static Integer OFFENE_OPTION_STICHTAG_BEGINNDATUM = 1;
 	public final static Integer OFFENE_OPTION_STICHTAG_ENDEDATUM = 2;
+	
+	public final static int ABLIEFERSTATISTIK_OPTION_SORTIERUNG_ABLIEFERDATUM = 0;
+	public final static int ABLIEFERSTATISTIK_OPTION_SORTIERUNG_ARTIKEL = 1;
+	public final static int ABLIEFERSTATISTIK_OPTION_SORTIERUNG_AUFTRAG = 2;
+	
 
 	public JasperPrintLP printTheoretischeFehlmengen(Integer losIId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
@@ -119,15 +126,17 @@ public interface FertigungReportFac {
 
 	public JasperPrintLP printAusgabeListe(Integer[] losIId,
 			Integer iSortierung, boolean bVerdichtetNachIdent,
-			boolean bVorrangigNachFarbcodeSortiert, Integer artikelklasseIId,String alternativerReport,  TheClientDto theClientDto)
+			boolean bVorrangigNachFarbcodeSortiert, Integer artikelklasseIId,
+			String alternativerReport, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public JasperPrintLP printFertigungsbegleitschein(Integer losIId,Boolean bStammtVonSchnellanlage,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	public JasperPrintLP printFertigungsbegleitschein(Integer losIId,
+			Boolean bStammtVonSchnellanlage, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printProduktionsinformation(Integer losIId,
 			TheClientDto theClientDto);
-	
+
 	public JasperPrintLP printAlle(ReportJournalKriterienDto krit,
 			boolean bNurAngelegte, Integer fertigungsgruppeIId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
@@ -141,19 +150,22 @@ public interface FertigungReportFac {
 	public JasperPrintLP printLosstatistik(java.sql.Timestamp tVon,
 			java.sql.Timestamp tBis, Integer losIId, Integer stuecklisteIId,
 			Integer auftragIId, boolean bArbeitsplanSortiertNachAG,
-			boolean bVerdichtet,java.sql.Timestamp tStichtag, TheClientDto theClientDto)
-			throws RemoteException;
+			boolean bVerdichtet, java.sql.Timestamp tStichtag,
+			TheClientDto theClientDto) throws RemoteException;
 
 	public JasperPrintLP printHalbfertigfabrikatsinventur(
 			java.sql.Timestamp tsStichtag, int iSortierung,
 			boolean bVerdichtet, Integer partnerIIdFertigungsort,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+			boolean bSortiertNachFertigungsgruppe, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printMonatsauswertung(java.sql.Timestamp tVon,
 			java.sql.Timestamp tBis, boolean bVerdichtet,
 			TheClientDto theClientDto) throws RemoteException;
+
 	public JasperPrintLP printMaterialliste(Integer losIId,
 			TheClientDto theClientDto);
+
 	public JasperPrintLP printRankingliste(TheClientDto theClientDto)
 			throws RemoteException;
 
@@ -172,12 +184,12 @@ public interface FertigungReportFac {
 			RemoteException;
 
 	public JasperPrintLP printAblieferungsstatistik(Date dVon, Date dBis,
-			Integer artikelIId, boolean bSortiertNachArtikel,
-			boolean bVerdichtetNachArtikel, TheClientDto theClientDto)
+			Integer artikelIId, int iSortierungAblieferungsstatistik,
+			boolean bVerdichtetNachArtikel, boolean bNurKopfloseanhandStueckliste , TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public boolean istErstlos(LosDto losDto, TheClientDto theClientDto);
-	
+
 	public JasperPrintLP printAufloesbareFehlmengen(Integer iSortierung,
 			Boolean bNurArtikelMitLagerstand,
 			Boolean bOhneEigengefertigteArtikel, TheClientDto theClientDto);
@@ -192,28 +204,43 @@ public interface FertigungReportFac {
 	public JasperPrintLP printStueckrueckmeldung(Integer losIId,
 			int iSortierung, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
-	public JasperPrintLP printLoszeiten(Integer iIdAuftragI,
-			int iSortierung, java.sql.Timestamp tVon,java.sql.Timestamp tBis, TheClientDto theClientDto);
+
+	public JasperPrintLP printLoszeiten(Integer iIdAuftragI, int iSortierung,
+			java.sql.Timestamp tVon, java.sql.Timestamp tBis,
+			TheClientDto theClientDto);
+
 	public JasperPrintLP printLosEtikett(Integer losIId, BigDecimal bdMenge,
-			String sKommentar, boolean bMitInhalten, Integer iExemplare, TheClientDto theCLientDto)
-			throws RemoteException;
+			String sKommentar, boolean bMitInhalten, Integer iExemplare,
+			TheClientDto theCLientDto) throws RemoteException;
+
 	public JasperPrintLP printLosEtikettA4(Integer losIId, BigDecimal bdMenge,
 			String sKommentar, boolean bMitInhalten, Integer iExemplare,
 			TheClientDto theClientDto) throws RemoteException;
+
 	public JasperPrintLP printAuslastungsvorschau(java.sql.Timestamp tStichtag,
 			boolean bSortiertNachArtikelgruppe, TheClientDto theClientDto);
 
 	public JasperPrintLP printOffeneArbeitsgaenge(java.sql.Date dStichtag,
 			int iOptionStichtag, String belegNrVon, String belegNrBis,
 			Integer kundeIId, Integer kostenstelleIId,
-			Integer fertigungsgruppeIId, Integer artikelgruppeIId,Integer maschineIId, boolean bSollstundenbetrachtung,
+			Integer fertigungsgruppeIId, Integer artikelgruppeIId,
+			Integer maschineIId, boolean bSollstundenbetrachtung,
 			TheClientDto theClientDto);
 
 	public JasperPrintLP printAblieferEtikett(Integer losablieferungIId,
 			Integer iExemplare, BigDecimal bdHandmenge,
 			TheClientDto theClientDto);
-	
-	public JasperPrintLP printFehlerstatistik(java.sql.Timestamp tVon,
-			java.sql.Timestamp tBis, Integer iSortierung, TheClientDto theClientDto);
 
+	public JasperPrintLP printFehlerstatistik(java.sql.Timestamp tVon,
+			java.sql.Timestamp tBis, Integer iSortierung,
+			boolean bAlleAnzeigen, TheClientDto theClientDto);
+
+	public JasperPrintLP printAuslastungsvorschauDetailliert(
+			java.sql.Timestamp tStichtag, TheClientDto theClientDto);
+
+	public JasperPrintLP printGesamtkalkulation(Integer losIId,
+			TheClientDto theClientDto);
+
+	public JasperPrintLP printMaschineUndMaterial(Integer maschineIId,
+			DatumsfilterVonBis vonBis, TheClientDto theClientDto);
 }

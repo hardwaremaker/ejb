@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -60,29 +60,32 @@ public interface AnfrageFac extends IAktivierbarControlled {
 	public static final String FLR_ANFRAGE_MANDANT_C_NR = "mandant_c_nr";
 	public static final String FLR_ANFRAGE_LFLIEFERGRUPPE_I_ID = "lfliefergruppe_i_id";
 
-	public Integer createAnfrage(AnfrageDto anfrageDtoI, TheClientDto theClientDto);
+	public Integer createAnfrage(AnfrageDto anfrageDtoI,
+			TheClientDto theClientDto);
 
 	public void storniereAnfrage(Integer iIdAnfrageI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void updateAnfrage(AnfrageDto anfrageDtoI, String waehrungOriCNrI,
+	public void updateAnfrage(AnfrageDto anfrageDtoI, String waehrungOriCNrI,boolean bAufAngelegtZuruecksetzen,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void manuellErledigen(Integer iIdAnfrageI, TheClientDto theClientDto)
+	public void manuellErledigen(Integer iIdAnfrageI,
+			Integer erledigungsgrundIId, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void erledigungAufheben(Integer iIdAnfrageI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public void erledigungAufheben(Integer iIdAnfrageI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public AnfrageDto anfrageFindByPrimaryKey(Integer iIdAnfrageI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-	
+
 	public AnfrageDto anfrageFindByPrimaryKeyOhneExc(Integer iIdAnfrageI);
 
 	public AnfrageDto[] anfrageFindByMandantCNr(String cNrMandantI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-	
-	public AnfrageDto anfrageFindByCNrMandantCNrOhneExc(String cNr, String cNrMandantI);
+
+	public AnfrageDto anfrageFindByCNrMandantCNrOhneExc(String cNr,
+			String cNrMandantI);
 
 	public AnfrageDto[] anfrageFindByAnsprechpartnerlieferantIIdMandantCNr(
 			Integer iAnsprechpartnerLieferantIId, String cNrMandantI,
@@ -105,15 +108,17 @@ public interface AnfrageFac extends IAktivierbarControlled {
 			TheClientDto theClientDto) throws RemoteException;
 
 	public void pruefeUndSetzeAnfragestatusBeiAenderung(Integer iIdAnfrageI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+			boolean bSetzeAufAngelegt, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public BigDecimal berechneNettowertGesamt(Integer iIdAnfrageI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public ArrayList<Integer> getAngelegteAnfragenNachUmwandlungDerLiefergruppenanfragen(Integer liefergruppeIId, TheClientDto theClientDto);
-	
-	public void updateAnfrageKonditionen(Integer iIdAnfrageI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public ArrayList<Integer> getAngelegteAnfragenNachUmwandlungDerLiefergruppenanfragen(
+			Integer liefergruppeIId, TheClientDto theClientDto);
+
+	public void updateAnfrageKonditionen(AnfrageDto anfrageDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void setzeDruckzeitpunkt(Integer iIdAnfrageI, Timestamp timestampI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
@@ -131,15 +136,22 @@ public interface AnfrageFac extends IAktivierbarControlled {
 			BigDecimal nNettogesamtwertI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public ArrayList<Integer> erzeugeAnfragenAusLiefergruppenanfrage(Integer iIdAnfrageI,ArrayList<Integer> bereitserzeugteAnfragen,
+	public ArrayList<Integer> erzeugeAnfragenAusLiefergruppenanfrage(
+			Integer iIdAnfrageI, ArrayList<Integer> bereitserzeugteAnfragen,
 			TheClientDto theClientDto);
 
 	public void erzeugeAnfragenAusBestellvorschlag(
 			BestellvorschlagUeberleitungKriterienDto bestellvorschlagUeberleitungKriterienDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void setzeVersandzeitpunktAufJetzt(Integer iAnfrageIId, String sDruckart);
+	public void setzeVersandzeitpunktAufJetzt(Integer iAnfrageIId,
+			String sDruckart);
+
 	public BigDecimal berechneEinkaufswertIst(Integer iIdAnfrageI,
 			String sArtikelartI, TheClientDto theClientDto);
+
+	public void updateAnfrageLieferKonditionen(Integer iIdAnfrageI,
+			TheClientDto theClientDto);
+	public Integer erzeugeAnfrageAusAnfrage(Integer anfrageIIdVorhanden,TheClientDto theClientDto);
 
 }

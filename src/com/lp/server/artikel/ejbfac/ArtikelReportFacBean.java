@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -43,6 +43,7 @@ import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -65,13 +66,18 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Example;
+import org.hibernate.criterion.Expression;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
 import com.lp.server.anfrage.service.ReportAnfragestatistikKriterienDto;
+import com.lp.server.angebotstkl.fastlanereader.generated.FLRAgstklarbeitsplan;
 import com.lp.server.angebotstkl.fastlanereader.generated.FLRAgstklposition;
+import com.lp.server.angebotstkl.fastlanereader.generated.FLREinkaufsangebotposition;
 import com.lp.server.angebotstkl.service.AngebotstklpositionFac;
+import com.lp.server.artikel.ejb.Lagerbewegung;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikelalergen;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelbestellt;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikellager;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikellagerplaetze;
@@ -82,9 +88,11 @@ import com.lp.server.artikel.fastlanereader.generated.FLRFehlmenge;
 import com.lp.server.artikel.fastlanereader.generated.FLRInventurstand;
 import com.lp.server.artikel.fastlanereader.generated.FLRLagerbewegung;
 import com.lp.server.artikel.fastlanereader.generated.FLRLagercockpitumbuchung;
+import com.lp.server.artikel.service.AlergenDto;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikelReportFac;
+import com.lp.server.artikel.service.ArtikelalergenDto;
 import com.lp.server.artikel.service.ArtikelbestelltFac;
 import com.lp.server.artikel.service.ArtikelkommentarDto;
 import com.lp.server.artikel.service.ArtikellagerplaetzeDto;
@@ -94,10 +102,13 @@ import com.lp.server.artikel.service.BelegInfos;
 import com.lp.server.artikel.service.HerstellerDto;
 import com.lp.server.artikel.service.LagerDto;
 import com.lp.server.artikel.service.LagerFac;
+import com.lp.server.artikel.service.LagerabgangursprungDto;
+import com.lp.server.artikel.service.LagerbewegungDto;
 import com.lp.server.artikel.service.LagerplatzDto;
 import com.lp.server.artikel.service.MaterialDto;
 import com.lp.server.artikel.service.RahmenbestelltReportDto;
 import com.lp.server.artikel.service.ReportRahmenreservierungDto;
+import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
 import com.lp.server.artikel.service.VerkaufspreisDto;
 import com.lp.server.artikel.service.VkPreisfindungEinzelverkaufspreisDto;
 import com.lp.server.artikel.service.VkPreisfindungPreislisteDto;
@@ -124,6 +135,9 @@ import com.lp.server.fertigung.fastlanereader.generated.FLRLos;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosReport;
 import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.fertigung.service.LosDto;
+import com.lp.server.fertigung.service.LosablieferungDto;
+import com.lp.server.fertigung.service.LosistmaterialDto;
+import com.lp.server.fertigung.service.LossollmaterialDto;
 import com.lp.server.lieferschein.service.LieferscheinpositionDto;
 import com.lp.server.partner.fastlanereader.generated.FLRKundesokomengenstaffel;
 import com.lp.server.partner.fastlanereader.generated.FLRPartner;
@@ -140,11 +154,15 @@ import com.lp.server.stueckliste.service.FertigungsgruppeDto;
 import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.stueckliste.service.StuecklisteReportFac;
 import com.lp.server.stueckliste.service.StuecklisteeigenschaftDto;
+import com.lp.server.stueckliste.service.StuecklistepositionDto;
 import com.lp.server.system.jcr.service.PrintInfoDto;
+import com.lp.server.system.jcr.service.docnode.DocNodeArtikeletikett;
 import com.lp.server.system.jcr.service.docnode.DocNodeBase;
 import com.lp.server.system.jcr.service.docnode.DocNodeFile;
 import com.lp.server.system.jcr.service.docnode.DocNodeFolder;
 import com.lp.server.system.jcr.service.docnode.DocNodeLiteral;
+import com.lp.server.system.jcr.service.docnode.DocNodeLosAblieferung;
+import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.jcr.service.docnode.HeliumDocPath;
 import com.lp.server.system.service.KostenstelleDto;
 import com.lp.server.system.service.LocaleFac;
@@ -152,6 +170,8 @@ import com.lp.server.system.service.MandantDto;
 import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.MediaFac;
 import com.lp.server.system.service.MwstsatzDto;
+import com.lp.server.system.service.PanelFac;
+import com.lp.server.system.service.PanelbeschreibungDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
@@ -223,7 +243,10 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 	private static int REPORT_ARTIKELETIKETT_VERKAUFS_EAN = 27;
 	private static int REPORT_ARTIKELETIKETT_VERPACKUNGSMENGE = 28;
 	private static int REPORT_ARTIKELETIKETT_SNRCHNR = 29;
-	private static int REPORT_ARTIKELETIKETT_ANZAHL_SPALTEN = 30;
+	private static int REPORT_ARTIKELETIKETT_VERSION = 30;
+	private static int REPORT_ARTIKELETIKETT_PERSON_BUCHENDER = 31;
+	private static int REPORT_ARTIKELETIKETT_KURZZEICHEN_BUCHENDER = 32;
+	private static int REPORT_ARTIKELETIKETT_ANZAHL_SPALTEN = 33;
 
 	private static int REPORT_FREIINFERTIGUNG_LOSNR = 0;
 	private static int REPORT_FREIINFERTIGUNG_FREIEMENGE = 1;
@@ -277,7 +300,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 	private static int REPORT_ARTIKELSTAMMBLATT_RAHMENRESERVIERT = 21;
 	private static int REPORT_ARTIKELSTAMMBLATT_RAHMENBESTELLT = 22;
 	private static int REPORT_ARTIKELSTAMMBLATT_DETAILBEDARF = 23;
-	private static int REPORT_ARTIKELSTAMMBLATT_SUBREPORT_LAGERSTAENDE = 24;
+	private static int REPORT_ARTIKELSTAMMBLATT_ECCN = 24;
+	private static int REPORT_ARTIKELSTAMMBLATT_SUBREPORT_LAGERSTAENDE = 25;
 
 	private static int REPORT_VERWENDUNGSNACHWEIS_STUECKLISTE = 0;
 	private static int REPORT_VERWENDUNGSNACHWEIS_BEZEICHNUNG = 1;
@@ -296,6 +320,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 	private static int REPORT_VERWENDUNGSNACHWEIS_RAHMENRESERVIERT = 14;
 	private static int REPORT_VERWENDUNGSNACHWEIS_IN_FERTIGUNG = 15;
 	private static int REPORT_VERWENDUNGSNACHWEIS_FEHLMENGE = 16;
+	private static int REPORT_VERWENDUNGSNACHWEIS_ANGBEOTSTUECKLSTE = 17;
+	private static int REPORT_VERWENDUNGSNACHWEIS_ANZAHL_SPALTEN = 18;
 
 	private static int REPORT_KUNDENSOKOS_KUNDE_NAME1 = 0;
 	private static int REPORT_KUNDENSOKOS_KUNDE_NAME2 = 1;
@@ -312,7 +338,9 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 	private static int REPORT_KUNDENSOKOS_KUNDE_RABATT = 12;
 	private static int REPORT_KUNDENSOKOS_KUNDE_BERECHNETER_PREIS = 13;
 	private static int REPORT_KUNDENSOKOS_KUNDE_NAECHSTE_VKPREISBASIS_GUELTIG_AB = 14;
-	private static int REPORT_KUNDENSOKOS_ANZAHL_FELDER = 15;
+	private static int REPORT_KUNDENSOKOS_KUNDE_KBEZ = 15;
+	private static int REPORT_KUNDENSOKOS_KUNDE_UID = 16;
+	private static int REPORT_KUNDENSOKOS_ANZAHL_FELDER = 17;
 
 	private static int REPORT_BEWEGUNGSVORSCHAU_BELEGART = 0;
 	private static int REPORT_BEWEGUNGSVORSCHAU_BELEGNR = 1;
@@ -327,7 +355,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 	private static int REPORT_BEWEGUNGSVORSCHAU_BEST_ABTERMIN = 10;
 	private static int REPORT_BEWEGUNGSVORSCHAU_BEST_ABNUMMER = 11;
 	private static int REPORT_BEWEGUNGSVORSCHAU_LOS_AUFTRAGSNUMMER = 12;
-	private static int REPORT_BEWEGUNGSVORSCHAU_ANZAHL_FELDER = 13;
+	private static int REPORT_BEWEGUNGSVORSCHAU_MANDANT = 13;
+	private static int REPORT_BEWEGUNGSVORSCHAU_ANZAHL_FELDER = 14;
 
 	private static final int REPORT_AUFGELOESTEFEHLMENGEN_ARTIKEL = 0;
 	private static final int REPORT_AUFGELOESTEFEHLMENGEN_MENGE = 1;
@@ -348,6 +377,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 	private static final int REPORT_AUFGELOESTEFEHLMENGEN_GEWICHTKG = 16;
 	private static final int REPORT_AUFGELOESTEFEHLMENGEN_RASTERSTEHEND = 17;
 	private static final int REPORT_AUFGELOESTEFEHLMENGEN_LAGERORT = 18;
+	private static final int REPORT_AUFGELOESTEFEHLMENGEN_LIEFERSCHEIN = 19;
+	private static final int REPORT_AUFGELOESTEFEHLMENGEN_ANZAHL_SPALTEN = 20;
 
 	private static int REPORT_VKPREISLISTE_ARTIKELNUMMER = 0;
 	private static int REPORT_VKPREISLISTE_BEZEICHNUNG = 1;
@@ -484,7 +515,9 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 	private static int REPORT_ARTIKELSTATISTIK_BEWEGUNGSVORSCHAU = 25;
 	private static int REPORT_ARTIKELSTATISTIK_SORTIERDATUM = 26;
 	private static int REPORT_ARTIKELSTATISTIK_MATERIALZUSCHLAG = 27;
-	private static int REPORT_ARTIKELSTATISTIK_ANZAHL_SPALTEN = 28;
+	private static int REPORT_ARTIKELSTATISTIK_VERSION = 28;
+	private static int REPORT_ARTIKELSTATISTIK_I_ID_BUCHUNG = 29;
+	private static int REPORT_ARTIKELSTATISTIK_ANZAHL_SPALTEN = 30;
 
 	private static int REPORT_MONATSSTATISTIK_MONAT = 0;
 	private static int REPORT_MONATSSTATISTIK_JAHR = 1;
@@ -508,6 +541,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 	private static int REPORT_VKPREISENTWICKLUNG_T_AENDERN = 8;
 	private static int REPORT_VKPREISENTWICKLUNG_PERSON_GEAENDERT = 9;
 	private static int REPORT_VKPREISENTWICKLUNG_STAFFELMENGE = 10;
+	private static int REPORT_VKPREISENTWICKLUNG_MANDANT = 11;
+	private static int REPORT_VKPREISENTWICKLUNG_ANZAHL_SPALTEN = 12;
 
 	private static int REPORT_AUFTRAGSERIENNR_AUFTRAG = 0;
 	private static int REPORT_AUFTRAGSERIENNR_KUNDE = 1;
@@ -549,6 +584,12 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 	private static int REPORT_NAECHSTE_WARTUNGEN_LETZTE_WARTUNG = 14;
 	private static int REPORT_NAECHSTE_WARTUNGEN_ANZAHL_SPALTEN = 15;
 
+	private static int REPORT_ALLERGENE_ARTIKELNUMMER = 0;
+	private static int REPORT_ALLERGENE_BEZEICHNUNG = 1;
+	private static int REPORT_ALLERGENE_SUBREPORT_ENTHALTENE_ALLERGENE = 2;
+
+	private static int REPORT_ALLERGENE_ANZAHL_SPALTEN = 3;
+
 	public Object getFieldValue(JRField jRField) throws JRException {
 		Object value = null;
 		String fieldName = jRField.getName();
@@ -575,6 +616,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				value = data[index][REPORT_ARTIKELSTATISTIK_MATERIALZUSCHLAG];
 			} else if ("Snrchnr".equals(fieldName)) {
 				value = data[index][REPORT_ARTIKELSTATISTIK_SNRCHNR];
+			} else if ("Version".equals(fieldName)) {
+				value = data[index][REPORT_ARTIKELSTATISTIK_VERSION];
 			} else if ("Lager".equals(fieldName)) {
 				value = data[index][REPORT_ARTIKELSTATISTIK_LAGER];
 			} else if ("F_BELEGARTCNR".equals(fieldName)) {
@@ -611,6 +654,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				value = data[index][REPORT_ARTIKELSTATISTIK_AUFTRAG_AUSLOESER];
 			} else if ("F_BEWEGUNGSVORSCHAU".equals(fieldName)) {
 				value = data[index][REPORT_ARTIKELSTATISTIK_BEWEGUNGSVORSCHAU];
+			} else if ("F_I_ID_BUCHUNG".equals(fieldName)) {
+				value = data[index][REPORT_ARTIKELSTATISTIK_I_ID_BUCHUNG];
 			}
 
 		} else if (sAktuellerReport
@@ -627,6 +672,14 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				value = data[index][REPORT_MONATSSTATISTIK_ABGANG_MENGE];
 			} else if ("Abgangswert".equals(fieldName)) {
 				value = data[index][REPORT_MONATSSTATISTIK_ABGANG_WERT];
+			}
+		} else if (sAktuellerReport.equals(ArtikelReportFac.REPORT_ALLERGENE)) {
+			if ("Artikelnummer".equals(fieldName)) {
+				value = data[index][REPORT_ALLERGENE_ARTIKELNUMMER];
+			} else if ("Bezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_ALLERGENE_BEZEICHNUNG];
+			} else if ("SubreportEnthalteneAllergene".equals(fieldName)) {
+				value = data[index][REPORT_ALLERGENE_SUBREPORT_ENTHALTENE_ALLERGENE];
 			}
 		} else if (sAktuellerReport.equals(ArtikelReportFac.REPORT_KUNDENSOKOS)) {
 			if ("KundeName1".equals(fieldName)) {
@@ -659,6 +712,10 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				value = data[index][REPORT_KUNDENSOKOS_KUNDE_BERECHNETER_PREIS];
 			} else if ("NaechsteVKPreisbasisGueltigab".equals(fieldName)) {
 				value = data[index][REPORT_KUNDENSOKOS_KUNDE_NAECHSTE_VKPREISBASIS_GUELTIG_AB];
+			} else if ("KundeKbez".equals(fieldName)) {
+				value = data[index][REPORT_KUNDENSOKOS_KUNDE_KBEZ];
+			} else if ("KundeUID".equals(fieldName)) {
+				value = data[index][REPORT_KUNDENSOKOS_KUNDE_UID];
 			}
 		} else if (sAktuellerReport
 				.equals(ArtikelReportFac.REPORT_LAGERCOCKPIT_MATERIAL_VERTEILUNGSVORSCHLAG)) {
@@ -830,6 +887,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				value = data[index][REPORT_ARTIKELETIKETT_MENGE];
 			} else if ("SnrChnr".equals(fieldName)) {
 				value = data[index][REPORT_ARTIKELETIKETT_SNRCHNR];
+			} else if ("Version".equals(fieldName)) {
+				value = data[index][REPORT_ARTIKELETIKETT_VERSION];
 			} else if ("Bauform".equals(fieldName)) {
 				value = data[index][REPORT_ARTIKELETIKETT_BAUFORM];
 			} else if ("Verpackungsart".equals(fieldName)) {
@@ -848,6 +907,10 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				value = data[index][REPORT_ARTIKELETIKETT_REVISION];
 			} else if ("Mandantadresse".equals(fieldName)) {
 				value = data[index][REPORT_ARTIKELETIKETT_MANDANTADRESSE];
+			} else if ("PersonBuchender".equals(fieldName)) {
+				value = data[index][REPORT_ARTIKELETIKETT_PERSON_BUCHENDER];
+			} else if ("KurzzeichenBuchender".equals(fieldName)) {
+				value = data[index][REPORT_ARTIKELETIKETT_KURZZEICHEN_BUCHENDER];
 			}
 		} else if (sAktuellerReport.equals(ArtikelReportFac.REPORT_LOSSTATUS)) {
 			if ("Auftrag".equals(fieldName)) {
@@ -1051,6 +1114,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				value = data[index][REPORT_ARTIKELSTAMMBLATT_VERPACKUNGSEINHEIT];
 			} else if ("Warenverkehrsnummer".equals(fieldName)) {
 				value = data[index][REPORT_ARTIKELSTAMMBLATT_WARENVERKEHRSNUMMER];
+			} else if ("Eccn".equals(fieldName)) {
+				value = data[index][REPORT_ARTIKELSTAMMBLATT_ECCN];
 			} else if ("Zusatzbezeichnung".equals(fieldName)) {
 				value = data[index][REPORT_ARTIKELSTAMMBLATT_ZUSATZBEZEICHNUNG];
 			} else if ("Lagerstand".equals(fieldName)) {
@@ -1121,6 +1186,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				value = data[index][REPORT_BEWEGUNGSVORSCHAU_BELEGART];
 			} else if ("Belegnummer".equals(fieldName)) {
 				value = data[index][REPORT_BEWEGUNGSVORSCHAU_BELEGNR];
+			} else if ("Mandant".equals(fieldName)) {
+				value = data[index][REPORT_BEWEGUNGSVORSCHAU_MANDANT];
 			} else if ("Liefertermin".equals(fieldName)) {
 				value = data[index][REPORT_BEWEGUNGSVORSCHAU_LIEFERTERMIN];
 			} else if ("BestellungABTermin".equals(fieldName)) {
@@ -1184,6 +1251,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				value = data[index][REPORT_AUFGELOESTEFEHLMENGEN_BAUFORM];
 			} else if ("Verpackungsart".equals(fieldName)) {
 				value = data[index][REPORT_AUFGELOESTEFEHLMENGEN_VERPACKUNGSART];
+			} else if ("Lieferschein".equals(fieldName)) {
+				value = data[index][REPORT_AUFGELOESTEFEHLMENGEN_LIEFERSCHEIN];
 			}
 		} else if (sAktuellerReport
 				.equals(ArtikelReportFac.REPORT_ARTIKELBESTELLT)) {
@@ -1273,6 +1342,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				value = data[index][REPORT_VKPREISENTWICKLUNG_PERSON_GEAENDERT];
 			} else if ("Staffelmenge".equals(fieldName)) {
 				value = data[index][REPORT_VKPREISENTWICKLUNG_STAFFELMENGE];
+			} else if ("Mandant".equals(fieldName)) {
+				value = data[index][REPORT_VKPREISENTWICKLUNG_MANDANT];
 			}
 		} else if (sAktuellerReport
 				.equals(ArtikelReportFac.REPORT_MINDESTLAGERSTAENDE)) {
@@ -1338,7 +1409,7 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				}
 			}
 
-			data = new Object[al.size()][19];
+			data = new Object[al.size()][REPORT_AUFGELOESTEFEHLMENGEN_ANZAHL_SPALTEN];
 			for (int i = 0; i < al.size(); i++) {
 				AufgeloesteFehlmengenDto aufgeloesteFehlmengenDto = (AufgeloesteFehlmengenDto) al
 						.get(i);
@@ -1436,149 +1507,207 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				data[i][REPORT_AUFGELOESTEFEHLMENGEN_SNRCHNR] = Helper
 						.erzeugeStringAusStringArray(aufgeloesteFehlmengenDto
 								.getSSeriennrChnr());
+
+				if (aufgeloesteFehlmengenDto.getLieferscheinDto() != null) {
+					data[i][REPORT_AUFGELOESTEFEHLMENGEN_LIEFERSCHEIN] = aufgeloesteFehlmengenDto
+							.getLieferscheinDto().getCNr();
+				}
+
 			}
 			HashMap<String, Object> parameter = new HashMap<String, Object>();
 			index = -1;
 			sAktuellerReport = ArtikelReportFac.REPORT_AUFGELOESTEFEHLMENGEN;
 
-			AufgeloesteFehlmengenDto aufgeloesteFehlmengenDto = (AufgeloesteFehlmengenDto) al
-					.get(0);
-			String losBez = aufgeloesteFehlmengenDto.getLosDto().getCNr();
-			if (aufgeloesteFehlmengenDto.getLosDto().getCProjekt() != null) {
-				losBez += " "
-						+ aufgeloesteFehlmengenDto.getLosDto().getCProjekt();
-			}
-			LosDto losDto = aufgeloesteFehlmengenDto.getLosDto();
-			parameter.put("P_LOSNUMMER", losDto.getCNr());
+			if (al.size() > 0) {
 
-			parameter.put("P_ANGELEGT", new java.util.Date(losDto.getTAnlegen()
-					.getTime()));
+				AufgeloesteFehlmengenDto aufgeloesteFehlmengenDto = (AufgeloesteFehlmengenDto) al
+						.get(0);
 
-			parameter.put("P_PROJEKT", losDto.getCProjekt());
-			parameter.put("P_LOSKOMMENTAR", losDto.getCKommentar());
-			parameter.put("P_LOSLANGTEXT", losDto.getXText());
-			parameter.put("P_LOSGROESSE", losDto.getNLosgroesse());
+				if (aufgeloesteFehlmengenDto.getLosDto() != null) {
 
-			parameter
-					.put("P_PRODUKTIONSBEGINN", losDto.getTProduktionsbeginn());
-			parameter.put("P_PRODUKTIONSENDE", losDto.getTProduktionsende());
+					String losBez = aufgeloesteFehlmengenDto.getLosDto()
+							.getCNr();
+					if (aufgeloesteFehlmengenDto.getLosDto().getCProjekt() != null) {
+						losBez += " "
+								+ aufgeloesteFehlmengenDto.getLosDto()
+										.getCProjekt();
+					}
+					LosDto losDto = aufgeloesteFehlmengenDto.getLosDto();
+					parameter.put("P_LOSNUMMER", losDto.getCNr());
 
-			try {
-				if (losDto.getAuftragIId() != null) {
-					AuftragDto auftragDto = getAuftragFac()
-							.auftragFindByPrimaryKey(losDto.getAuftragIId());
-					parameter.put("P_AUFTRAGNUMMER", auftragDto.getCNr());
+					parameter.put("P_ANGELEGT", new java.util.Date(losDto
+							.getTAnlegen().getTime()));
+
+					parameter.put("P_PROJEKT", losDto.getCProjekt());
+					parameter.put("P_LOSKOMMENTAR", losDto.getCKommentar());
+					parameter.put("P_LOSLANGTEXT", losDto.getXText());
+					parameter.put("P_LOSGROESSE", losDto.getNLosgroesse());
+
+					parameter.put("P_PRODUKTIONSBEGINN",
+							losDto.getTProduktionsbeginn());
+					parameter.put("P_PRODUKTIONSENDE",
+							losDto.getTProduktionsende());
+
+					try {
+						if (losDto.getAuftragIId() != null) {
+							AuftragDto auftragDto = getAuftragFac()
+									.auftragFindByPrimaryKey(
+											losDto.getAuftragIId());
+							parameter.put("P_AUFTRAGNUMMER",
+									auftragDto.getCNr());
+							parameter
+									.put("P_KUNDE",
+											getKundeFac()
+													.kundeFindByPrimaryKey(
+															auftragDto
+																	.getKundeIIdAuftragsadresse(),
+															theClientDto)
+													.getPartnerDto()
+													.getCName1nachnamefirmazeile1());
+						}
+
+						KostenstelleDto kstDto = getSystemFac()
+								.kostenstelleFindByPrimaryKey(
+										losDto.getKostenstelleIId());
+						parameter.put("P_KOSTENSTELLENUMMER", kstDto.getCNr());
+
+						FertigungsgruppeDto fertGruppeDto = getStuecklisteFac()
+								.fertigungsgruppeFindByPrimaryKey(
+										losDto.getFertigungsgruppeIId());
+						parameter.put("P_FERTIGUNGSGRUPPE",
+								fertGruppeDto.getCBez());
+
+						if (losDto.getStuecklisteIId() != null) {
+							StuecklisteDto stkDto = getStuecklisteFac()
+									.stuecklisteFindByPrimaryKey(
+											losDto.getStuecklisteIId(),
+											theClientDto);
+							parameter.put("P_STUECKLISTEBEZEICHNUNG", stkDto
+									.getArtikelDto().getArtikelsprDto()
+									.getCBez());
+							parameter.put("P_STUECKLISTEZUSATZBEZEICHNUNG",
+									stkDto.getArtikelDto().getArtikelsprDto()
+											.getCZbez());
+							parameter.put("P_STUECKLISTEZUSATZBEZEICHNUNG2",
+									stkDto.getArtikelDto().getArtikelsprDto()
+											.getCZbez2());
+							parameter.put("P_STUECKLISTENUMMER", stkDto
+									.getArtikelDto().getCNr());
+
+							// Zeichnungsnummer
+							StuecklisteeigenschaftDto[] stuecklisteeigenschaftDtos = getStuecklisteFac()
+									.stuecklisteeigenschaftFindByStuecklisteIId(
+											losDto.getStuecklisteIId());
+							ArrayList<Object[]> alZeichnung = new ArrayList<Object[]>();
+							for (int i = 0; i < stuecklisteeigenschaftDtos.length; i++) {
+								StuecklisteeigenschaftDto dto = stuecklisteeigenschaftDtos[i];
+
+								Object[] o = new Object[2];
+								String sStklEigenschaftArt = dto
+										.getStuecklisteeigenschaftartDto()
+										.getCBez();
+								o[0] = sStklEigenschaftArt;
+								o[1] = dto.getCBez();
+								alZeichnung.add(o);
+
+								// Index und Materialplatz auch einzeln an
+								// Report
+								// uebergeben
+								if (sStklEigenschaftArt
+										.equals(StuecklisteReportFac.REPORT_STUECKLISTE_EIGENSCHAFTEN_INDEX)) {
+									parameter.put(
+											P_STUECKLISTENEIGENSCHAFT_INDEX,
+											dto.getCBez());
+								}
+								if (sStklEigenschaftArt
+										.equals(StuecklisteReportFac.REPORT_STUECKLISTE_EIGENSCHAFTEN_MATERIALPLATZ)) {
+									parameter
+											.put(P_STUECKLISTENEIGENSCHAFT_MATERIALPLATZ,
+													dto.getCBez());
+								}
+							}
+
+							// Stuecklisteeigenschaft fuer Subreport
+							if (stuecklisteeigenschaftDtos.length > 0) {
+								String[] fieldnames = new String[] {
+										"F_EIGENSCHAFTART", "F_BEZEICHNUNG" };
+								Object[][] dataSub = new Object[alZeichnung
+										.size()][fieldnames.length];
+								dataSub = (Object[][]) alZeichnung
+										.toArray(dataSub);
+
+								parameter.put("DATENSUBREPORT",
+										new LPDatenSubreport(dataSub,
+												fieldnames));
+							}
+
+							// Stuecklisteeigenschaften als einzelne Parameter
+							// fuer
+							// Index und Materialplatz
+							Hashtable<?, ?> htStklEigenschaften = getStuecklisteReportFac()
+									.getStuecklisteEigenschaften(
+											losDto.getStuecklisteIId(),
+											theClientDto.getMandant(),
+											theClientDto);
+							if (htStklEigenschaften != null) {
+								if (htStklEigenschaften
+										.containsKey(StuecklisteReportFac.REPORT_STUECKLISTE_EIGENSCHAFTEN_INDEX)) {
+									parameter
+											.put(P_STUECKLISTENEIGENSCHAFT_INDEX,
+													htStklEigenschaften
+															.get(StuecklisteReportFac.REPORT_STUECKLISTE_EIGENSCHAFTEN_INDEX));
+								}
+								if (htStklEigenschaften
+										.containsKey(StuecklisteReportFac.REPORT_STUECKLISTE_EIGENSCHAFTEN_MATERIALPLATZ)) {
+									parameter
+											.put(P_STUECKLISTENEIGENSCHAFT_MATERIALPLATZ,
+													htStklEigenschaften
+															.get(StuecklisteReportFac.REPORT_STUECKLISTE_EIGENSCHAFTEN_MATERIALPLATZ));
+								}
+							}
+
+						} else {
+							parameter.put("P_STUECKLISTEBEZEICHNUNG",
+									losDto.getCProjekt());
+							parameter.put(
+									"P_STUECKLISTENUMMER",
+									getTextRespectUISpr("fert.materialliste",
+											theClientDto.getMandant(),
+											theClientDto.getLocUi()));
+						}
+					} catch (RemoteException ex) {
+						throwEJBExceptionLPRespectOld(ex);
+					}
+				} else if (aufgeloesteFehlmengenDto.getAuftagDto() != null) {
+					parameter.put("P_KUNDENAUFTRAGSNUMMER",
+							aufgeloesteFehlmengenDto.getAuftagDto().getCNr());
+
+					parameter.put("P_ANGELEGT", new java.util.Date(
+							aufgeloesteFehlmengenDto.getAuftagDto()
+									.getTAnlegen().getTime()));
+
+					parameter.put("P_PROJEKT", aufgeloesteFehlmengenDto
+							.getAuftagDto().getCBezProjektbezeichnung());
+
 					parameter
 							.put("P_KUNDE",
 									getKundeFac()
 											.kundeFindByPrimaryKey(
-													auftragDto
+													aufgeloesteFehlmengenDto
+															.getAuftagDto()
 															.getKundeIIdAuftragsadresse(),
 													theClientDto)
 											.getPartnerDto()
 											.getCName1nachnamefirmazeile1());
+
+					KostenstelleDto kstDto = getSystemFac()
+							.kostenstelleFindByPrimaryKey(
+									aufgeloesteFehlmengenDto.getAuftagDto()
+											.getKostIId());
+					parameter.put("P_KOSTENSTELLENUMMER", kstDto.getCNr());
+
 				}
-
-				KostenstelleDto kstDto = getSystemFac()
-						.kostenstelleFindByPrimaryKey(
-								losDto.getKostenstelleIId());
-				parameter.put("P_KOSTENSTELLENUMMER", kstDto.getCNr());
-
-				FertigungsgruppeDto fertGruppeDto = getStuecklisteFac()
-						.fertigungsgruppeFindByPrimaryKey(
-								losDto.getFertigungsgruppeIId());
-				parameter.put("P_FERTIGUNGSGRUPPE", fertGruppeDto.getCBez());
-
-				if (losDto.getStuecklisteIId() != null) {
-					StuecklisteDto stkDto = getStuecklisteFac()
-							.stuecklisteFindByPrimaryKey(
-									losDto.getStuecklisteIId(), theClientDto);
-					parameter.put("P_STUECKLISTEBEZEICHNUNG", stkDto
-							.getArtikelDto().getArtikelsprDto().getCBez());
-					parameter.put("P_STUECKLISTEZUSATZBEZEICHNUNG", stkDto
-							.getArtikelDto().getArtikelsprDto().getCZbez());
-					parameter.put("P_STUECKLISTEZUSATZBEZEICHNUNG2", stkDto
-							.getArtikelDto().getArtikelsprDto().getCZbez2());
-					parameter.put("P_STUECKLISTENUMMER", stkDto.getArtikelDto()
-							.getCNr());
-
-					// Zeichnungsnummer
-					StuecklisteeigenschaftDto[] stuecklisteeigenschaftDtos = getStuecklisteFac()
-							.stuecklisteeigenschaftFindByStuecklisteIId(
-									losDto.getStuecklisteIId());
-					ArrayList<Object[]> alZeichnung = new ArrayList<Object[]>();
-					for (int i = 0; i < stuecklisteeigenschaftDtos.length; i++) {
-						StuecklisteeigenschaftDto dto = stuecklisteeigenschaftDtos[i];
-
-						Object[] o = new Object[2];
-						String sStklEigenschaftArt = dto
-								.getStuecklisteeigenschaftartDto().getCBez();
-						o[0] = sStklEigenschaftArt;
-						o[1] = dto.getCBez();
-						alZeichnung.add(o);
-
-						// Index und Materialplatz auch einzeln an Report
-						// uebergeben
-						if (sStklEigenschaftArt
-								.equals(StuecklisteReportFac.REPORT_STUECKLISTE_EIGENSCHAFTEN_INDEX)) {
-							parameter.put(P_STUECKLISTENEIGENSCHAFT_INDEX,
-									dto.getCBez());
-						}
-						if (sStklEigenschaftArt
-								.equals(StuecklisteReportFac.REPORT_STUECKLISTE_EIGENSCHAFTEN_MATERIALPLATZ)) {
-							parameter.put(
-									P_STUECKLISTENEIGENSCHAFT_MATERIALPLATZ,
-									dto.getCBez());
-						}
-					}
-
-					// Stuecklisteeigenschaft fuer Subreport
-					if (stuecklisteeigenschaftDtos.length > 0) {
-						String[] fieldnames = new String[] {
-								"F_EIGENSCHAFTART", "F_BEZEICHNUNG" };
-						Object[][] dataSub = new Object[alZeichnung.size()][fieldnames.length];
-						dataSub = (Object[][]) alZeichnung.toArray(dataSub);
-
-						parameter.put("DATENSUBREPORT", new LPDatenSubreport(
-								dataSub, fieldnames));
-					}
-
-					// Stuecklisteeigenschaften als einzelne Parameter fuer
-					// Index und Materialplatz
-					Hashtable<?, ?> htStklEigenschaften = getStuecklisteReportFac()
-							.getStuecklisteEigenschaften(
-									losDto.getStuecklisteIId(),
-									theClientDto.getMandant(), theClientDto);
-					if (htStklEigenschaften != null) {
-						if (htStklEigenschaften
-								.containsKey(StuecklisteReportFac.REPORT_STUECKLISTE_EIGENSCHAFTEN_INDEX)) {
-							parameter
-									.put(P_STUECKLISTENEIGENSCHAFT_INDEX,
-											htStklEigenschaften
-													.get(StuecklisteReportFac.REPORT_STUECKLISTE_EIGENSCHAFTEN_INDEX));
-						}
-						if (htStklEigenschaften
-								.containsKey(StuecklisteReportFac.REPORT_STUECKLISTE_EIGENSCHAFTEN_MATERIALPLATZ)) {
-							parameter
-									.put(P_STUECKLISTENEIGENSCHAFT_MATERIALPLATZ,
-											htStklEigenschaften
-													.get(StuecklisteReportFac.REPORT_STUECKLISTE_EIGENSCHAFTEN_MATERIALPLATZ));
-						}
-					}
-
-				} else {
-					parameter.put("P_STUECKLISTEBEZEICHNUNG",
-							losDto.getCProjekt());
-					parameter.put(
-							"P_STUECKLISTENUMMER",
-							getTextRespectUISpr("fert.materialliste",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()));
-				}
-			} catch (RemoteException ex) {
-				throwEJBExceptionLPRespectOld(ex);
 			}
-
 			initJRDS(parameter, ArtikelReportFac.REPORT_MODUL,
 					ArtikelReportFac.REPORT_AUFGELOESTEFEHLMENGEN,
 					theClientDto.getMandant(), theClientDto.getLocUi(),
@@ -1602,7 +1731,9 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 		values.setiId(theClientDto.getIDPersonal());
 		values.setTable("");
 
-		print.setOInfoForArchive(values);
+		if (print != null) {
+			print.setOInfoForArchive(values);
+		}
 		return print;
 
 	}
@@ -2044,6 +2175,9 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 		}
 
 		// Erstellung des Reports
+
+		ArrayList alDaten = new ArrayList();
+
 		JasperPrintLP print = null;
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
 		String sMandant = theClientDto.getMandant();
@@ -2107,7 +2241,7 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 		Iterator<?> resultListIterator = results.iterator();
 
 		data = new Object[results.size() + results2.size() + results3.size()][17];
-		int row = 0;
+
 		while (resultListIterator.hasNext()) {
 			FLRStuecklisteposition stuecklisteposition = (FLRStuecklisteposition) resultListIterator
 					.next();
@@ -2116,47 +2250,48 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 					stuecklisteposition.getFlrstueckliste().getFlrartikel()
 							.getI_id(), theClientDto);
 
-			data[row][REPORT_VERWENDUNGSNACHWEIS_STUECKLISTE] = stuecklisteposition
+			Object[] oZeile = new Object[REPORT_VERWENDUNGSNACHWEIS_ANZAHL_SPALTEN];
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_STUECKLISTE] = stuecklisteposition
 					.getFlrstueckliste().getFlrartikel().getC_nr();
-			data[row][REPORT_VERWENDUNGSNACHWEIS_BEZEICHNUNG] = artikelDto
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_BEZEICHNUNG] = artikelDto
 					.formatBezeichnung();
-			data[row][REPORT_VERWENDUNGSNACHWEIS_VERSTECKT] = Helper
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_VERSTECKT] = Helper
 					.short2Boolean(artikelDto.getBVersteckt());
-			data[row][REPORT_VERWENDUNGSNACHWEIS_MENGE] = stuecklisteposition
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_MENGE] = stuecklisteposition
 					.getN_menge();
-			data[row][REPORT_VERWENDUNGSNACHWEIS_EINHEIT] = stuecklisteposition
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_EINHEIT] = stuecklisteposition
 					.getEinheit_c_nr();
 
 			try {
-				data[row][REPORT_VERWENDUNGSNACHWEIS_LETZTE_VERWENDUNG] = getLagerFac()
+				oZeile[REPORT_VERWENDUNGSNACHWEIS_LETZTE_VERWENDUNG] = getLagerFac()
 						.getDatumLetzterZugangsOderAbgangsbuchung(
 								artikelDto.getIId(), true);
-				data[row][REPORT_VERWENDUNGSNACHWEIS_SPERREN] = getArtikelFac()
+				oZeile[REPORT_VERWENDUNGSNACHWEIS_SPERREN] = getArtikelFac()
 						.getArtikelsperrenText(artikelDto.getIId());
 				if (bMitVerbrauchtenMengen) {
-					data[row][REPORT_VERWENDUNGSNACHWEIS_VERBRAUCHTEMENGE] = getLagerFac()
+					oZeile[REPORT_VERWENDUNGSNACHWEIS_VERBRAUCHTEMENGE] = getLagerFac()
 							.getVerbrauchteMengeEinesArtikels(
 									stuecklisteposition.getFlrstueckliste()
 											.getFlrartikel().getI_id(), tVon,
 									tBis, theClientDto);
 				}
 
-				data[row][REPORT_VERWENDUNGSNACHWEIS_LAGERSTAND] = getLagerFac()
+				oZeile[REPORT_VERWENDUNGSNACHWEIS_LAGERSTAND] = getLagerFac()
 						.getLagerstandAllerLagerEinesMandanten(
 								artikelDto.getIId(), theClientDto);
 
-				data[row][REPORT_VERWENDUNGSNACHWEIS_RESERVIERT] = getReservierungFac()
+				oZeile[REPORT_VERWENDUNGSNACHWEIS_RESERVIERT] = getReservierungFac()
 						.getAnzahlReservierungen(artikelDto.getIId(),
 								theClientDto);
 
-				data[row][REPORT_VERWENDUNGSNACHWEIS_IN_FERTIGUNG] = getFertigungFac()
+				oZeile[REPORT_VERWENDUNGSNACHWEIS_IN_FERTIGUNG] = getFertigungFac()
 						.getAnzahlInFertigung(artikelDto.getIId(), theClientDto);
 
-				data[row][REPORT_VERWENDUNGSNACHWEIS_FEHLMENGE] = getFehlmengeFac()
+				oZeile[REPORT_VERWENDUNGSNACHWEIS_FEHLMENGE] = getFehlmengeFac()
 						.getAnzahlFehlmengeEinesArtikels(artikelDto.getIId(),
 								theClientDto);
 
-				data[row][REPORT_VERWENDUNGSNACHWEIS_RAHMENRESERVIERT] = getReservierungFac()
+				oZeile[REPORT_VERWENDUNGSNACHWEIS_RAHMENRESERVIERT] = getReservierungFac()
 						.getAnzahlRahmenreservierungen(artikelDto.getIId(),
 								theClientDto);
 
@@ -2164,7 +2299,7 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				throwEJBExceptionLPRespectOld(e);
 			}
 
-			row++;
+			alDaten.add(oZeile);
 
 		}
 		while (resultListIterator2.hasNext()) {
@@ -2175,56 +2310,61 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 					stuecklisteposition.getFlrstueckliste().getFlrartikel()
 							.getI_id(), theClientDto);
 
-			data[row][REPORT_VERWENDUNGSNACHWEIS_STUECKLISTE] = stuecklisteposition
+			Object[] oZeile = new Object[REPORT_VERWENDUNGSNACHWEIS_ANZAHL_SPALTEN];
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_STUECKLISTE] = stuecklisteposition
 					.getFlrstueckliste().getFlrartikel().getC_nr();
-			data[row][REPORT_VERWENDUNGSNACHWEIS_BEZEICHNUNG] = artikelDto
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_BEZEICHNUNG] = artikelDto
 					.formatBezeichnung();
-			data[row][REPORT_VERWENDUNGSNACHWEIS_VERSTECKT] = Helper
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_VERSTECKT] = Helper
 					.short2Boolean(artikelDto.getBVersteckt());
-			data[row][REPORT_VERWENDUNGSNACHWEIS_ZUSATZ] = "A";
-			data[row][REPORT_VERWENDUNGSNACHWEIS_ARBEITSGANG] = stuecklisteposition
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_ZUSATZ] = "A";
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_ARBEITSGANG] = stuecklisteposition
 					.getI_arbeitsgang();
 
 			double lStueckzeit = stuecklisteposition.getL_stueckzeit();
-			data[row][REPORT_VERWENDUNGSNACHWEIS_STUECKZEIT] = Helper
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_STUECKZEIT] = Helper
 					.rundeKaufmaennisch(new BigDecimal(lStueckzeit / 3600000),
 							4);
 			double lRuestzeit = stuecklisteposition.getL_ruestzeit();
-			data[row][REPORT_VERWENDUNGSNACHWEIS_RUESTZEIT] = Helper
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_RUESTZEIT] = Helper
 					.rundeKaufmaennisch(new BigDecimal(lRuestzeit / 3600000), 4);
 
 			try {
-				data[row][REPORT_VERWENDUNGSNACHWEIS_LETZTE_VERWENDUNG] = getLagerFac()
+				oZeile[REPORT_VERWENDUNGSNACHWEIS_LETZTE_VERWENDUNG] = getLagerFac()
 						.getDatumLetzterZugangsOderAbgangsbuchung(
 								artikelDto.getIId(), true);
-				data[row][REPORT_VERWENDUNGSNACHWEIS_SPERREN] = getArtikelFac()
+				oZeile[REPORT_VERWENDUNGSNACHWEIS_SPERREN] = getArtikelFac()
 						.getArtikelsperrenText(artikelDto.getIId());
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
 			}
 
-			row++;
+			alDaten.add(oZeile);
 
 		}
 		while (resultListIterator3.hasNext()) {
 			FLRAgstklposition stuecklisteposition = (FLRAgstklposition) resultListIterator3
 					.next();
-
-			data[row][REPORT_VERWENDUNGSNACHWEIS_STUECKLISTE] = "AS "
+			Object[] oZeile = new Object[REPORT_VERWENDUNGSNACHWEIS_ANZAHL_SPALTEN];
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_STUECKLISTE] = "AS "
 					+ stuecklisteposition.getFlragstkl().getC_nr();
-			data[row][REPORT_VERWENDUNGSNACHWEIS_BEZEICHNUNG] = stuecklisteposition
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_BEZEICHNUNG] = stuecklisteposition
 					.getFlragstkl().getC_bez();
-			data[row][REPORT_VERWENDUNGSNACHWEIS_MENGE] = stuecklisteposition
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_MENGE] = stuecklisteposition
 					.getN_menge();
-			data[row][REPORT_VERWENDUNGSNACHWEIS_EINHEIT] = stuecklisteposition
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_EINHEIT] = stuecklisteposition
 					.getEinheit_c_nr();
+
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_VERSTECKT] = Helper
+					.short2Boolean(Helper.boolean2Short(false));
+
 			if (stuecklisteposition.getFlrartikel() != null) {
 				try {
-					data[row][REPORT_VERWENDUNGSNACHWEIS_LETZTE_VERWENDUNG] = getLagerFac()
+					oZeile[REPORT_VERWENDUNGSNACHWEIS_LETZTE_VERWENDUNG] = getLagerFac()
 							.getDatumLetzterZugangsOderAbgangsbuchung(
 									stuecklisteposition.getFlrartikel()
 											.getI_id(), true);
-					data[row][REPORT_VERWENDUNGSNACHWEIS_SPERREN] = getArtikelFac()
+					oZeile[REPORT_VERWENDUNGSNACHWEIS_SPERREN] = getArtikelFac()
 							.getArtikelsperrenText(
 									stuecklisteposition.getFlrartikel()
 											.getI_id());
@@ -2233,13 +2373,128 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				}
 			}
 
-			row++;
+			alDaten.add(oZeile);
 
 		}
 
 		session.close();
 		session2.close();
 		session3.close();
+
+		// AGSTKLARBEITSPLAN hinzufuegen
+		session = FLRSessionFactory.getFactory().openSession();
+		org.hibernate.Criteria critAgstklAP = session
+				.createCriteria(
+						com.lp.server.angebotstkl.fastlanereader.generated.FLRAgstklarbeitsplan.class)
+				.createAlias(
+						AngebotstklpositionFac.FLR_AGSTKLPOSITION_FLRAGSTKL,
+						"as")
+				.add(Restrictions.eq("as.mandant_c_nr", sMandant))
+				.createAlias(
+						AngebotstklpositionFac.FLR_AGSTKLPOSITION_FLRARTIKEL,
+						"a").add(Restrictions.eq("a.i_id", artikelIId))
+				.addOrder(Order.asc("as.c_nr"));
+
+		List<?> resultsAgstklAP = critAgstklAP.list();
+		Iterator<?> resultListIteratorAgstklAP = resultsAgstklAP.iterator();
+
+		while (resultListIteratorAgstklAP.hasNext()) {
+			FLRAgstklarbeitsplan stuecklisteposition = (FLRAgstklarbeitsplan) resultListIteratorAgstklAP
+					.next();
+
+			Object[] oZeile = new Object[REPORT_VERWENDUNGSNACHWEIS_ANZAHL_SPALTEN];
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_STUECKLISTE] = "AS "
+					+ stuecklisteposition.getFlragstkl().getC_nr();
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_BEZEICHNUNG] = stuecklisteposition
+					.getFlragstkl().getC_bez();
+
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_ARBEITSGANG] = stuecklisteposition
+					.getI_arbeitsgang();
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_VERSTECKT] = Helper
+					.short2Boolean(Helper.boolean2Short(false));
+
+			double lStueckzeit = stuecklisteposition.getL_stueckzeit();
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_STUECKZEIT] = Helper
+					.rundeKaufmaennisch(new BigDecimal(lStueckzeit / 3600000),
+							4);
+			double lRuestzeit = stuecklisteposition.getL_ruestzeit();
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_RUESTZEIT] = Helper
+					.rundeKaufmaennisch(new BigDecimal(lRuestzeit / 3600000), 4);
+
+			if (stuecklisteposition.getFlrartikel() != null) {
+				try {
+					oZeile[REPORT_VERWENDUNGSNACHWEIS_LETZTE_VERWENDUNG] = getLagerFac()
+							.getDatumLetzterZugangsOderAbgangsbuchung(
+									stuecklisteposition.getFlrartikel()
+											.getI_id(), true);
+					oZeile[REPORT_VERWENDUNGSNACHWEIS_SPERREN] = getArtikelFac()
+							.getArtikelsperrenText(
+									stuecklisteposition.getFlrartikel()
+											.getI_id());
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+			}
+
+			alDaten.add(oZeile);
+
+		}
+
+		session.close();
+
+		// EK-Angebot
+		session = FLRSessionFactory.getFactory().openSession();
+		org.hibernate.Criteria critEKAngebotPos = session
+				.createCriteria(
+						com.lp.server.angebotstkl.fastlanereader.generated.FLREinkaufsangebotposition.class)
+				.createAlias("flreinkaufsangebot", "ek")
+				.add(Restrictions.eq("ek.mandant_c_nr", sMandant))
+				.createAlias(
+						AngebotstklpositionFac.FLR_AGSTKLPOSITION_FLRARTIKEL,
+						"a").add(Restrictions.eq("a.i_id", artikelIId))
+				.addOrder(Order.asc("ek.c_nr"));
+
+		List<?> resultsEKAngebotPos = critEKAngebotPos.list();
+		Iterator<?> resultListIteratorEKAngebotPos = resultsEKAngebotPos
+				.iterator();
+
+		while (resultListIteratorEKAngebotPos.hasNext()) {
+
+			FLREinkaufsangebotposition stuecklisteposition = (FLREinkaufsangebotposition) resultListIteratorEKAngebotPos
+					.next();
+			Object[] oZeile = new Object[REPORT_VERWENDUNGSNACHWEIS_ANZAHL_SPALTEN];
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_STUECKLISTE] = "EK "
+					+ stuecklisteposition.getFlreinkaufsangebot().getC_nr();
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_BEZEICHNUNG] = stuecklisteposition
+					.getFlreinkaufsangebot().getC_projekt();
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_MENGE] = stuecklisteposition
+					.getN_menge();
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_EINHEIT] = stuecklisteposition
+					.getEinheit_c_nr();
+			oZeile[REPORT_VERWENDUNGSNACHWEIS_VERSTECKT] = Helper
+					.short2Boolean(Helper.boolean2Short(false));
+
+			if (stuecklisteposition.getFlrartikel() != null) {
+				try {
+					oZeile[REPORT_VERWENDUNGSNACHWEIS_LETZTE_VERWENDUNG] = getLagerFac()
+							.getDatumLetzterZugangsOderAbgangsbuchung(
+									stuecklisteposition.getFlrartikel()
+											.getI_id(), true);
+					oZeile[REPORT_VERWENDUNGSNACHWEIS_SPERREN] = getArtikelFac()
+							.getArtikelsperrenText(
+									stuecklisteposition.getFlrartikel()
+											.getI_id());
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+			}
+
+			alDaten.add(oZeile);
+
+		}
+		session.close();
+		data = new Object[alDaten.size()][REPORT_VERWENDUNGSNACHWEIS_ANZAHL_SPALTEN];
+		data = (Object[][]) alDaten.toArray(data);
 
 		// Nun noch nach Stueckliste sortieren
 		for (int m = data.length - 1; m > 0; --m) {
@@ -2390,7 +2645,7 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
 		index = -1;
 		sAktuellerReport = ArtikelReportFac.REPORT_ARTIKELSTAMMBLATT;
-		data = new Object[1][25];
+		data = new Object[1][26];
 
 		try {
 
@@ -2446,6 +2701,7 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 					.getFGewichtkg();
 			data[0][REPORT_ARTIKELSTAMMBLATT_WARENVERKEHRSNUMMER] = artikelDto
 					.getCWarenverkehrsnummer();
+			data[0][REPORT_ARTIKELSTAMMBLATT_ECCN] = artikelDto.getCEccn();
 			data[0][REPORT_ARTIKELSTAMMBLATT_EAN] = artikelDto
 					.getCVerkaufseannr();
 			data[0][REPORT_ARTIKELSTAMMBLATT_VERPACKUNGSEINHEIT] = artikelDto
@@ -2655,6 +2911,7 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 			parameter.put("P_BESTELLEINHEIT_INVERS",
 					Helper.short2Boolean(dto.getbBestellmengeneinheitInvers()));
 			parameter.put("P_LAGERMINDESTSTAND", dto.getFLagermindest());
+			parameter.put("P_UEBERPRODUKTION", dto.getFUeberproduktion());
 			parameter.put("P_LAGERSOLLSTAND", dto.getFLagersoll());
 			parameter.put("P_FERTIGUNGSSATZGROESSE",
 					dto.getFFertigungssatzgroesse());
@@ -2683,8 +2940,16 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 					.toArray(returnArray);
 			LagerDto lagerDto = getLagerFac().getHauptlagerDesMandanten(
 					theClientDto);
-			LagerDto[] allelaegerDtos = getLagerFac().lagerFindByMandantCNr(
-					theClientDto.getMandant());
+			LagerDto[] allelaegerDtos = null;
+
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+					theClientDto)) {
+				allelaegerDtos = getLagerFac().lagerFindAll();
+			} else {
+				allelaegerDtos = getLagerFac().lagerFindByMandantCNr(
+						theClientDto.getMandant());
+			}
 
 			int row = 0;
 			data = new Object[list.size() + allelaegerDtos.length][REPORT_BEWEGUNGSVORSCHAU_ANZAHL_FELDER];
@@ -2696,6 +2961,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 			}
 			data[0][REPORT_BEWEGUNGSVORSCHAU_BELEGART] = "Lagerstand";
 			data[0][REPORT_BEWEGUNGSVORSCHAU_BELEGNR] = lagerDto.getCNr();
+			data[0][REPORT_BEWEGUNGSVORSCHAU_MANDANT] = lagerDto
+					.getMandantCNr();
 			data[0][REPORT_BEWEGUNGSVORSCHAU_PARTNER] = LagerFac.LAGERART_HAUPTLAGER
 					.trim();
 			data[0][REPORT_BEWEGUNGSVORSCHAU_MENGE] = getLagerFac()
@@ -2705,32 +2972,72 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 					.short2Boolean(lagerDto.getBBestellvorschlag());
 			data[0][REPORT_BEWEGUNGSVORSCHAU_INTERNEBESTELLUNG_BERUECKSICHTIGT_LAGER] = Helper
 					.short2Boolean(lagerDto.getBInternebestellung());
-
-			for (int i = 0; i < allelaegerDtos.length; i++) {
-				LagerDto dto = allelaegerDtos[i];
-				if (!dto.getLagerartCNr().equals(LagerFac.LAGERART_HAUPTLAGER)) {
-					row++;
-					data[row][REPORT_BEWEGUNGSVORSCHAU_BELEGART] = "Lagerstand";
-					data[row][REPORT_BEWEGUNGSVORSCHAU_BELEGNR] = dto.getCNr();
-					data[row][REPORT_BEWEGUNGSVORSCHAU_PARTNER] = dto
-							.getLagerartCNr();
-					BigDecimal bdLagerstandActLager = getLagerFac()
-							.getLagerstand(artikelId, dto.getIId(),
-									theClientDto);
-					data[row][REPORT_BEWEGUNGSVORSCHAU_MENGE] = bdLagerstandActLager;
-					if (Helper.short2boolean(dto.getBBestellvorschlag())
-							|| Helper
-									.short2boolean(dto.getBInternebestellung())) {
-						// Lagerstand der Laeger aendert sich nur wenn im Artikel
-						// beruecksichigen aktiviert wurde
-						anfangslagerstand = anfangslagerstand
-								.add(bdLagerstandActLager);
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+					theClientDto)) {
+				for (int i = 0; i < allelaegerDtos.length; i++) {
+					LagerDto dto = allelaegerDtos[i];
+					if (!dto.getIId().equals(lagerDto.getIId())) {
+						row++;
+						data[row][REPORT_BEWEGUNGSVORSCHAU_BELEGART] = "Lagerstand";
+						data[row][REPORT_BEWEGUNGSVORSCHAU_BELEGNR] = dto
+								.getCNr();
+						data[row][REPORT_BEWEGUNGSVORSCHAU_MANDANT] = dto
+								.getMandantCNr();
+						data[row][REPORT_BEWEGUNGSVORSCHAU_PARTNER] = dto
+								.getLagerartCNr();
+						BigDecimal bdLagerstandActLager = getLagerFac()
+								.getLagerstand(artikelId, dto.getIId(),
+										theClientDto);
+						data[row][REPORT_BEWEGUNGSVORSCHAU_MENGE] = bdLagerstandActLager;
+						if (Helper.short2boolean(dto.getBBestellvorschlag())
+								|| Helper.short2boolean(dto
+										.getBInternebestellung())) {
+							// Lagerstand der Laeger aendert sich nur wenn im
+							// Artikel
+							// beruecksichigen aktiviert wurde
+							anfangslagerstand = anfangslagerstand
+									.add(bdLagerstandActLager);
+						}
+						data[row][REPORT_BEWEGUNGSVORSCHAU_FIKTIVERLAGERSTAND] = anfangslagerstand;
+						data[row][REPORT_BEWEGUNGSVORSCHAU_BESTELLVORSCHLAG_BERUECKSICHTIGT_LAGER] = Helper
+								.short2Boolean(dto.getBBestellvorschlag());
+						data[row][REPORT_BEWEGUNGSVORSCHAU_INTERNEBESTELLUNG_BERUECKSICHTIGT_LAGER] = Helper
+								.short2Boolean(dto.getBInternebestellung());
 					}
-					data[row][REPORT_BEWEGUNGSVORSCHAU_FIKTIVERLAGERSTAND] = anfangslagerstand;
-					data[row][REPORT_BEWEGUNGSVORSCHAU_BESTELLVORSCHLAG_BERUECKSICHTIGT_LAGER] = Helper
-							.short2Boolean(dto.getBBestellvorschlag());
-					data[row][REPORT_BEWEGUNGSVORSCHAU_INTERNEBESTELLUNG_BERUECKSICHTIGT_LAGER] = Helper
-							.short2Boolean(dto.getBInternebestellung());
+				}
+			} else {
+				for (int i = 0; i < allelaegerDtos.length; i++) {
+					LagerDto dto = allelaegerDtos[i];
+					if (!dto.getLagerartCNr().equals(
+							LagerFac.LAGERART_HAUPTLAGER)) {
+						row++;
+						data[row][REPORT_BEWEGUNGSVORSCHAU_BELEGART] = "Lagerstand";
+						data[row][REPORT_BEWEGUNGSVORSCHAU_BELEGNR] = dto
+								.getCNr();
+						data[row][REPORT_BEWEGUNGSVORSCHAU_MANDANT] = dto
+								.getMandantCNr();
+						data[row][REPORT_BEWEGUNGSVORSCHAU_PARTNER] = dto
+								.getLagerartCNr();
+						BigDecimal bdLagerstandActLager = getLagerFac()
+								.getLagerstand(artikelId, dto.getIId(),
+										theClientDto);
+						data[row][REPORT_BEWEGUNGSVORSCHAU_MENGE] = bdLagerstandActLager;
+						if (Helper.short2boolean(dto.getBBestellvorschlag())
+								|| Helper.short2boolean(dto
+										.getBInternebestellung())) {
+							// Lagerstand der Laeger aendert sich nur wenn im
+							// Artikel
+							// beruecksichigen aktiviert wurde
+							anfangslagerstand = anfangslagerstand
+									.add(bdLagerstandActLager);
+						}
+						data[row][REPORT_BEWEGUNGSVORSCHAU_FIKTIVERLAGERSTAND] = anfangslagerstand;
+						data[row][REPORT_BEWEGUNGSVORSCHAU_BESTELLVORSCHLAG_BERUECKSICHTIGT_LAGER] = Helper
+								.short2Boolean(dto.getBBestellvorschlag());
+						data[row][REPORT_BEWEGUNGSVORSCHAU_INTERNEBESTELLUNG_BERUECKSICHTIGT_LAGER] = Helper
+								.short2Boolean(dto.getBInternebestellung());
+					}
 				}
 			}
 
@@ -2742,6 +3049,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 						.getCBelegartCNr();
 				data[row][REPORT_BEWEGUNGSVORSCHAU_BELEGNR] = dto
 						.getCBelegnummer();
+				data[row][REPORT_BEWEGUNGSVORSCHAU_MANDANT] = dto
+						.getMandantCNr();
 
 				if (dto.getCBelegartCNr() != null
 						&& dto.getCBelegartCNr().equals(LocaleFac.BELEGART_LOS)) {
@@ -2885,8 +3194,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 			parameter.put("P_VON", new java.sql.Timestamp(dVon.getTime()));
 		}
 		if (dBis != null) {
-			crit.add(Restrictions.le(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM,
-					dBis));
+			crit.add(Restrictions.lt(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM,
+					new java.sql.Timestamp(dBis.getTime() + 24 * 3600000)));
 			parameter.put("P_BIS", new java.sql.Timestamp(dBis.getTime()));
 		}
 
@@ -2972,6 +3281,15 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 
 		String sQuery = "FROM FLRInventurstand AS i WHERE i.flrartikel.i_id="
 				+ artikelIId;
+		// SP3180
+		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+				MandantFac.ZUSATZFUNKTION_GETRENNTE_LAGER, theClientDto)) {
+
+			sQuery += " AND i.flrlager.mandant_c_nr='"
+					+ theClientDto.getMandant() + "'";
+
+		}
+
 		if (dVon != null) {
 
 			sQuery += " AND i.flrinventur.t_inventurdatum>='"
@@ -3032,6 +3350,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 								.getN_inventurmenge();
 						zeile[REPORT_ARTIKELSTATISTIK_BELEGNUMMER] = flr
 								.getFlrinventur().getC_bez();
+						zeile[REPORT_ARTIKELSTATISTIK_LAGER] = flr
+								.getFlrlager().getC_nr();
 
 						al.add(zeile);
 						alInventurliste.remove(0);
@@ -3107,9 +3427,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 					} else if (lagerbewegung.getC_belegartnr().equals(
 							LocaleFac.BELEGART_LIEFERSCHEIN)) {
 						LieferscheinpositionDto lsPos = getLieferscheinpositionFac()
-								.lieferscheinpositionFindByPrimaryKeyOhneExc(
-										lagerbewegung.getI_belegartpositionid(),
-										theClientDto);
+								.lieferscheinpositionFindByPrimaryKeyOhneExcUndOhneSnrChnrList(
+										lagerbewegung.getI_belegartpositionid());
 						if (lsPos != null) {
 							aufposIId = lsPos.getAuftragpositionIId();
 						}
@@ -3131,6 +3450,10 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 						.getFlrlager().getC_nr();
 				zeile[REPORT_ARTIKELSTATISTIK_SNRCHNR] = lagerbewegung
 						.getC_seriennrchargennr();
+				zeile[REPORT_ARTIKELSTATISTIK_VERSION] = lagerbewegung
+						.getC_version();
+				zeile[REPORT_ARTIKELSTATISTIK_I_ID_BUCHUNG] = lagerbewegung
+						.getI_id_buchung();
 
 				BigDecimal preis = new BigDecimal(0);
 				BigDecimal wert = new BigDecimal(0);
@@ -3309,6 +3632,7 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 					.getN_inventurmenge();
 			zeile[REPORT_ARTIKELSTATISTIK_BELEGNUMMER] = flr.getFlrinventur()
 					.getC_bez();
+			zeile[REPORT_ARTIKELSTATISTIK_LAGER] = flr.getFlrlager().getC_nr();
 
 			al.add(zeile);
 			alInventurliste.remove(0);
@@ -3322,6 +3646,20 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 		ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKey(artikelIId,
 				theClientDto);
 		parameter.put("P_ARTIKEL", aDto.formatArtikelbezeichnung());
+
+		// SP3003
+		parameter.put("P_CHARGENEIGENSCHAFTEN_ANZEIGEN", Boolean.FALSE);
+
+		if (aDto.istArtikelSnrOderchargentragend()) {
+			PanelbeschreibungDto[] panelDtos = getPanelFac()
+					.panelbeschreibungFindByPanelCNrMandantCNr(
+							PanelFac.PANEL_CHARGENEIGENSCHAFTEN,
+							theClientDto.getMandant(), aDto.getArtgruIId());
+			if (panelDtos != null && panelDtos.length > 0) {
+				parameter.put("P_CHARGENEIGENSCHAFTEN_ANZEIGEN", Boolean.TRUE);
+			}
+		}
+
 		parameter.put("P_ARTIKELEINHEIT", aDto.getEinheitCNr().trim());
 		parameter.put("P_BESTELLEINHEIT", aDto.getEinheitCNrBestellung());
 		parameter.put("P_MULTIPLIKATORBESTELLMENGE",
@@ -3656,16 +3994,6 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 		index = -1;
 		sAktuellerReport = ArtikelReportFac.REPORT_VKPREISENTWICKLUNG;
 
-		/*
-		 * Session session = FLRSessionFactory.getFactory().openSession();
-		 * org.hibernate.Criteria crit = session.createCriteria(
-		 * FLRVkpfartikelverkaufspreisbasis
-		 * .class).add(Restrictions.eq("artikel_i_id", artikelIId)); List<?>
-		 * results = crit.list(); Iterator<?> resultListIterator =
-		 * results.iterator();
-		 */
-
-		// int row = 0;
 		ArrayList alDaten = new ArrayList();
 
 		try {
@@ -3676,7 +4004,7 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 
 			// Preisbasis
 			for (int i = 0; i < vkPreisfindungEinzelverkaufspreisDtos.length; i++) {
-				Object[] zeile = new Object[11];
+				Object[] zeile = new Object[REPORT_VKPREISENTWICKLUNG_ANZAHL_SPALTEN];
 				zeile[REPORT_VKPREISENTWICKLUNG_GUELTIGAB] = vkPreisfindungEinzelverkaufspreisDtos[i]
 						.getTVerkaufspreisbasisgueltigab();
 				zeile[REPORT_VKPREISENTWICKLUNG_ART] = "Preisbasis";
@@ -3684,6 +4012,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 						.getTAendern();
 				zeile[REPORT_VKPREISENTWICKLUNG_VKPREISBASIS] = vkPreisfindungEinzelverkaufspreisDtos[i]
 						.getNVerkaufspreisbasis();
+				zeile[REPORT_VKPREISENTWICKLUNG_MANDANT] = vkPreisfindungEinzelverkaufspreisDtos[i]
+						.getMandantCNr();
 
 				PersonalDto personalDto;
 
@@ -3703,7 +4033,7 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 			VkPreisfindungPreislisteDto[] preislisten = getVkPreisfindungFac()
 					.vkPreisfindungPreislisteFindByArtikelIId(artikelIId);
 			for (int i = 0; i < preislisten.length; i++) {
-				Object[] zeile = new Object[11];
+				Object[] zeile = new Object[REPORT_VKPREISENTWICKLUNG_ANZAHL_SPALTEN];
 
 				zeile[REPORT_VKPREISENTWICKLUNG_GUELTIGAB] = preislisten[i]
 						.getTPreisgueltigab();
@@ -3720,10 +4050,14 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 
 				}
 
-				zeile[REPORT_VKPREISENTWICKLUNG_PREISLISTENNAME] = getVkPreisfindungFac()
+				VkpfartikelpreislisteDto preisliste = getVkPreisfindungFac()
 						.vkpfartikelpreislisteFindByPrimaryKey(
-								preislisten[i].getVkpfartikelpreislisteIId())
+								preislisten[i].getVkpfartikelpreislisteIId());
+
+				zeile[REPORT_VKPREISENTWICKLUNG_PREISLISTENNAME] = preisliste
 						.getCNr();
+				zeile[REPORT_VKPREISENTWICKLUNG_MANDANT] = preisliste
+						.getMandantCNr();
 
 				PersonalDto personalDto;
 
@@ -3738,10 +4072,11 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 			// Mengenstaffeln
 
 			VkpfMengenstaffelDto[] staffeln = getVkPreisfindungFac()
-					.vkpfMengenstaffelFindByArtikelIId(artikelIId, theClientDto);
+					.vkpfMengenstaffelFindByArtikelIIdFuerVKPreisentwicklung(
+							artikelIId, theClientDto);
 
 			for (int i = 0; i < staffeln.length; i++) {
-				Object[] zeile = new Object[11];
+				Object[] zeile = new Object[REPORT_VKPREISENTWICKLUNG_ANZAHL_SPALTEN];
 				zeile[REPORT_VKPREISENTWICKLUNG_GUELTIGAB] = staffeln[i]
 						.getTPreisgueltigab();
 				zeile[REPORT_VKPREISENTWICKLUNG_GUELTIGBIS] = staffeln[i]
@@ -3762,6 +4097,17 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 						staffeln[i].getPersonalIIdAendern(), theClientDto);
 				zeile[REPORT_VKPREISENTWICKLUNG_PERSON_GEAENDERT] = personalDto
 						.formatAnrede();
+
+				if (staffeln[i].getVkpfartikelpreislisteIId() != null) {
+					VkpfartikelpreislisteDto preisliste = getVkPreisfindungFac()
+							.vkpfartikelpreislisteFindByPrimaryKey(
+									staffeln[i].getVkpfartikelpreislisteIId());
+
+					zeile[REPORT_VKPREISENTWICKLUNG_PREISLISTENNAME] = preisliste
+							.getCNr();
+					zeile[REPORT_VKPREISENTWICKLUNG_MANDANT] = preisliste
+							.getMandantCNr();
+				}
 
 				alDaten.add(zeile);
 
@@ -3784,6 +4130,83 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				theClientDto);
 
 		return getReportPrint();
+	}
+
+	private LinkedHashMap getAllergeneEinesArtikels(Integer artikelIId,
+			LinkedHashMap hmDaten, TheClientDto theClientDto) {
+
+		ArtikelalergenDto[] artikelalergeneDtos = getArtikelFac()
+				.artikelallergenFindByArtikelIId(artikelIId);
+
+		for (int i = 0; i < artikelalergeneDtos.length; i++) {
+			artikelalergeneDtos[i].getAlergenIId();
+
+			hmDaten.put(artikelalergeneDtos[i].getAlergenIId(), "");
+
+		}
+
+		StuecklisteDto stklDto = getStuecklisteFac()
+				.stuecklisteFindByArtikelIIdMandantCNrOhneExc(artikelIId,
+						theClientDto.getMandant());
+
+		if (stklDto != null) {
+
+			StuecklistepositionDto[] stkposDto = getStuecklisteFac()
+					.stuecklistepositionFindByStuecklisteIId(stklDto.getIId(),
+							theClientDto);
+
+			for (int i = 0; i < stkposDto.length; i++) {
+				hmDaten = getAllergeneEinesArtikels(
+						stkposDto[i].getArtikelIId(), hmDaten, theClientDto);
+
+			}
+
+		}
+
+		return hmDaten;
+
+	};
+
+	public LPDatenSubreport getSubreportAllergene(Integer artikelIId,
+			TheClientDto theClientDto) {
+		String[] fieldnames = new String[] { "Allergen", "Enthalten" };
+
+		TreeMap tmAlergeneKomplett = new TreeMap();
+
+		LinkedHashMap hmDaten = new LinkedHashMap();
+
+		AlergenDto[] alergene = getArtikelFac().allergenFindByMandantCNr(
+				theClientDto);
+
+		if (alergene.length > 0) {
+			for (int i = 0; i < alergene.length; i++) {
+				tmAlergeneKomplett.put(alergene[i].getISort(), alergene[i]);
+			}
+			hmDaten = getAllergeneEinesArtikels(artikelIId, hmDaten,
+					theClientDto);
+
+		}
+
+		//
+
+		ArrayList alDaten = new ArrayList();
+
+		Iterator it = tmAlergeneKomplett.keySet().iterator();
+
+		while (it.hasNext()) {
+
+			AlergenDto aDto = (AlergenDto) tmAlergeneKomplett.get(it.next());
+
+			Object[] oZeile = new Object[2];
+			oZeile[0] = aDto.getCBez();
+			oZeile[1] = new Boolean(hmDaten.containsKey(aDto.getIId()));
+
+			alDaten.add(oZeile);
+		}
+
+		Object[][] dataSubKD = new Object[alDaten.size()][2];
+		dataSubKD = (Object[][]) alDaten.toArray(dataSubKD);
+		return new LPDatenSubreport(dataSubKD, fieldnames);
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
@@ -3975,7 +4398,7 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 
 				VkpfMengenstaffelDto[] vkpfMengenstaffelDtos = getVkPreisfindungFac()
 						.vkpfMengenstaffelFindByArtikelIIdGueltigkeitsdatum(
-								artikel_i_id, jetzt, null, theClientDto);
+								artikel_i_id, datGueltikeitsdatumI, null, theClientDto);
 
 				if (vkpfMengenstaffelDtos.length > 0) {
 					data[row][REPORT_VKPREISLISTE_STAFFEL1] = vkpfMengenstaffelDtos[0]
@@ -4076,6 +4499,124 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 
 		return getReportPrint();
 
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printAllergene(String artikelNrVon,
+			String artikelNrBis, TheClientDto theClientDto) {
+
+		// Erstellung des Reports
+
+		// Es werden nur Stuecklisten angezeigt
+
+		HashMap<String, Object> parameter = new HashMap<String, Object>();
+		parameter.put("P_ARTIKELNRVON", artikelNrVon);
+		parameter.put("P_ARTIKELNRBIS", artikelNrBis);
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String queryString = "SELECT distinct aa.flrartikelliste.i_id,aa.flrartikelliste.c_nr, aspr.c_bez FROM FLRArtikelalergen as aa LEFT OUTER JOIN aa.flrartikelliste.artikelsprset AS aspr"
+				+ " WHERE aa.flrartikelliste.mandant_c_nr='"
+				+ theClientDto.getMandant() + "' ";
+
+		String artikelNrBis_Gefuellt = null;
+		if (artikelNrBis != null) {
+			artikelNrBis_Gefuellt = Helper.fitString2Length(artikelNrBis, 25,
+					'_');
+		}
+
+		TreeMap<String, ArtikelDto> tmBetroffeneArtikel = new TreeMap<String, ArtikelDto>();
+
+		queryString += " GROUP BY aa.flrartikelliste.i_id,aa.flrartikelliste.c_nr, aspr.c_bez ORDER BY aa.flrartikelliste.c_nr ASC";
+
+		session.enableFilter("filterLocale").setParameter("paramLocale",
+				Helper.locale2String(theClientDto.getLocUi()));
+
+		Query query = session.createQuery(queryString);
+
+		List<?> results = query.list();
+
+		Iterator<?> resultListIterator = results.iterator();
+
+		ArrayList al = new ArrayList();
+
+		while (resultListIterator.hasNext()) {
+			Object[] o = (Object[]) resultListIterator.next();
+			Integer artikelIId = (Integer) o[0];
+			tmBetroffeneArtikel = betroffeneStuecklistenHinzufuegen(artikelIId,
+					tmBetroffeneArtikel, theClientDto);
+
+		}
+
+		session.close();
+
+		Iterator itBetroffeneArtikel = tmBetroffeneArtikel.keySet().iterator();
+		while (itBetroffeneArtikel.hasNext()) {
+
+			ArtikelDto aDto = tmBetroffeneArtikel.get(itBetroffeneArtikel
+					.next());
+
+			if (artikelNrVon != null) {
+				if (aDto.getCNr().compareTo(artikelNrVon) < 0) {
+					continue;
+				}
+			}
+			if (artikelNrBis_Gefuellt != null) {
+				if (aDto.getCNr().compareTo(artikelNrBis_Gefuellt) > 0) {
+					continue;
+				}
+			}
+
+			Object[] oZeile = new Object[REPORT_ALLERGENE_ANZAHL_SPALTEN];
+			oZeile[REPORT_ALLERGENE_ARTIKELNUMMER] = aDto.getCNr();
+			oZeile[REPORT_ALLERGENE_BEZEICHNUNG] = aDto.getArtikelsprDto()
+					.getCBez();
+			oZeile[REPORT_ALLERGENE_SUBREPORT_ENTHALTENE_ALLERGENE] = getSubreportAllergene(
+					aDto.getIId(), theClientDto);
+
+			al.add(oZeile);
+
+		}
+
+		index = -1;
+		sAktuellerReport = ArtikelReportFac.REPORT_ALLERGENE;
+		Object[][] returnArray = new Object[al.size()][REPORT_ALLERGENE_ANZAHL_SPALTEN];
+		data = (Object[][]) al.toArray(returnArray);
+
+		initJRDS(parameter, ArtikelFac.REPORT_MODUL,
+				ArtikelReportFac.REPORT_ALLERGENE, theClientDto.getMandant(),
+				theClientDto.getLocUi(), theClientDto);
+		return getReportPrint();
+
+	}
+
+	private TreeMap<String, ArtikelDto> betroffeneStuecklistenHinzufuegen(
+			Integer artikelIId,
+			TreeMap<String, ArtikelDto> tmBetroffeneArtikel,
+			TheClientDto theClientDto) {
+		// Abhaengige Stuecklisten hinzufuegen
+		Session sessionStkl = FLRSessionFactory.getFactory().openSession();
+		String queryStringStkl = "SELECT stklpos FROM FLRStuecklisteposition stklpos WHERE stklpos.flrartikel.i_id="
+				+ artikelIId + "";
+		Query queryStkl = sessionStkl.createQuery(queryStringStkl);
+		List<?> resultsStkl = queryStkl.list();
+		Iterator<?> resultListIteratorStkl = resultsStkl.iterator();
+		while (resultListIteratorStkl.hasNext()) {
+			FLRStuecklisteposition stklPos = (FLRStuecklisteposition) resultListIteratorStkl
+					.next();
+
+			ArtikelDto aDto = getArtikelFac()
+					.artikelFindByPrimaryKeySmall(
+							stklPos.getFlrstueckliste().getArtikel_i_id(),
+							theClientDto);
+
+			tmBetroffeneArtikel.put(aDto.getCNr(), aDto);
+			betroffeneStuecklistenHinzufuegen(stklPos.getFlrstueckliste()
+					.getArtikel_i_id(), tmBetroffeneArtikel, theClientDto);
+
+		}
+
+		sessionStkl.close();
+		return tmBetroffeneArtikel;
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
@@ -4353,7 +4894,8 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 			String sKommentar, BigDecimal bdMenge, Integer iExemplare,
 			String[] cSnrChnr, TheClientDto theClientDto) {
 		// Erstellung des Reports
-
+		ArtikelDto artikelDto = getArtikelFac().artikelFindByPrimaryKey(
+				artikelIId, theClientDto);
 		JasperPrintLP print = null;
 		Integer varianteIId = theClientDto.getReportvarianteIId();
 		int iAnzahlSnrs = 1;
@@ -4369,8 +4911,7 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 			data = new Object[1][REPORT_ARTIKELETIKETT_ANZAHL_SPALTEN];
 
 			try {
-				ArtikelDto artikelDto = getArtikelFac()
-						.artikelFindByPrimaryKey(artikelIId, theClientDto);
+
 				MandantDto mandantDto = getMandantFac()
 						.mandantFindByPrimaryKey(theClientDto.getMandant(),
 								theClientDto);
@@ -4478,6 +5019,61 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 				data[0][REPORT_ARTIKELETIKETT_MENGE] = bdMenge;
 				data[0][REPORT_ARTIKELETIKETT_SNRCHNR] = snrChr;
 				data[0][REPORT_ARTIKELETIKETT_KOMMENTAR] = sKommentar;
+
+				// letzte lagerbewegung dazu holen
+
+				SessionFactory factory = FLRSessionFactory.getFactory();
+				Session session = factory.openSession();
+
+				org.hibernate.Criteria crit = session
+						.createCriteria(FLRLagerbewegung.class);
+				crit.setMaxResults(1);
+
+				crit.createAlias(LagerFac.FLR_LAGERPLAETZE_FLRARTIKEL, "a")
+						.add(Expression.eq("a.i_id", artikelIId))
+						.add(Expression.eq("b_historie",
+								Helper.boolean2Short(false)));
+				crit.createAlias(LagerFac.FLR_LAGERPLAETZE_FLRLAGER, "l");
+
+				crit.add(Expression.eq(LagerFac.FLR_LAGERBEWEGUNG_B_ABGANG,
+						Helper.boolean2Short(false)));
+
+				if (snrChr != null) {
+					crit.add(Expression.eq(
+							LagerFac.FLR_LAGERBEWEGUNG_C_SERIENNRCHARGENNR,
+							snrChr));
+				} else {
+					crit.add(Expression
+							.isNull(LagerFac.FLR_LAGERBEWEGUNG_C_SERIENNRCHARGENNR));
+				}
+
+				crit.addOrder(
+						Order.desc(LagerFac.FLR_LAGERBEWEGUNG_T_BELEGDATUM))
+						.addOrder(
+								Order.desc(LagerFac.FLR_LAGERBEWEGUNG_T_BUCHUNGSZEIT));
+				List<?> resultList = crit.list();
+				Iterator<?> resultListIterator = resultList.iterator();
+
+				if (resultListIterator.hasNext()) {
+
+					FLRLagerbewegung lagerbewegung = (FLRLagerbewegung) resultListIterator
+							.next();
+					data[0][REPORT_ARTIKELETIKETT_VERSION] = lagerbewegung
+							.getC_version();
+
+					// PJ18617
+					PersonalDto personalDto = getPersonalFac()
+							.personalFindByPrimaryKey(
+									lagerbewegung.getFlrpersonal().getI_id(),
+									theClientDto);
+
+					data[0][REPORT_ARTIKELETIKETT_PERSON_BUCHENDER] = personalDto
+							.formatFixUFTitelName2Name1();
+					data[0][REPORT_ARTIKELETIKETT_KURZZEICHEN_BUCHENDER] = personalDto
+							.getCKurzzeichen();
+
+				}
+
 			} catch (RemoteException ex) {
 				throwEJBExceptionLPRespectOld(ex);
 			}
@@ -4504,6 +5100,10 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 
 			}
 		}
+
+		PrintInfoDto values = new PrintInfoDto();
+		values.setDocPath(new DocPath(new DocNodeArtikeletikett(artikelDto)));
+		print.setOInfoForArchive(values);
 
 		return print;
 
@@ -4560,6 +5160,11 @@ public class ArtikelReportFacBean extends LPReport implements ArtikelReportFac,
 			zeile[REPORT_KUNDENSOKOS_KUNDE_NAME2] = flrKundesokomengenstaffel
 					.getFlrkundesoko().getFlrkunde().getFlrpartner()
 					.getC_name2vornamefirmazeile2();
+			zeile[REPORT_KUNDENSOKOS_KUNDE_KBEZ] = flrKundesokomengenstaffel
+					.getFlrkundesoko().getFlrkunde().getFlrpartner()
+					.getC_kbez();
+			zeile[REPORT_KUNDENSOKOS_KUNDE_UID] = flrKundesokomengenstaffel
+					.getFlrkundesoko().getFlrkunde().getFlrpartner().getC_uid();
 			if (flrKundesokomengenstaffel.getFlrkundesoko().getFlrkunde()
 					.getFlrpartner().getFlrlandplzort() != null) {
 				zeile[REPORT_KUNDENSOKOS_KUNDE_LKZ] = flrKundesokomengenstaffel

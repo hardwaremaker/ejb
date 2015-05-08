@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -120,9 +120,16 @@ public class LPMail {
 		message.setSentDate(new Date(System.currentTimeMillis()));
 		
 		//Body
-		BodyPart messageBodyPart = new MimeBodyPart();
-		messageBodyPart.setText(text != null ? text : "") ;
-		
+ 		BodyPart messageBodyPart = new MimeBodyPart();
+		if(text == null) {
+			text = "" ;
+		}
+		if(text.startsWith("<html")) {
+			((MimeBodyPart)messageBodyPart).setText(text, "utf-8", "html") ;
+		} else {
+			messageBodyPart.setText(text) ;
+		}
+		 		
 //		if (text == null)
 //			messageBodyPart.setText("");
 //		else

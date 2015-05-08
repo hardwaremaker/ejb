@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,11 +32,15 @@
  ******************************************************************************/
 package com.lp.server.fertigung.fastlanereader;
 
+import java.awt.Color;
 import java.math.BigDecimal;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+
+import javax.swing.Icon;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -49,6 +53,7 @@ import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.fertigung.fastlanereader.generated.FLRInternebestellung;
 import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.stueckliste.service.StuecklisteFac;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -59,6 +64,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -77,6 +83,8 @@ import com.lp.util.EJBExceptionLP;
  * @version 1.0
  */
 public class InternebestellungHandler extends UseCaseHandler {
+
+	boolean bStuecklistenfreigabe = false;
 
 	/**
 	 * 
@@ -120,6 +128,26 @@ public class InternebestellungHandler extends UseCaseHandler {
 				rows[row][col++] = intbest.getN_menge();
 				rows[row][col++] = artikelDto.getEinheitCNr().trim();
 				rows[row][col++] = intbest.getT_liefertermin();
+
+				if (bStuecklistenfreigabe == true
+						&& intbest.getFlrstueckliste() != null
+						&& intbest.getFlrstueckliste().getT_freigabe() != null) {
+					rows[row][col++] = FertigungFac.STATUS_ERLEDIGT;
+				}
+
+				Calendar c = Calendar.getInstance();
+				c.setTime(intbest.getT_liefertermin());
+				c.add(Calendar.DATE, 1);
+
+				BigDecimal db = getFertigungFac().getAnzahlInFertigung(
+						intbest.getFlrstueckliste().getFlrartikel().getI_id(),
+						Helper.cutDate(new java.sql.Date(c.getTimeInMillis())),
+						theClientDto);
+
+				if (db != null && db.doubleValue() > 0) {
+					rows[row][col++] = new Color(34, 139, 34);
+				}
+
 				row++;
 				col = 0;
 			}
@@ -341,37 +369,95 @@ public class InternebestellungHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
+
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_STUECKLISTENFREIGABE,
+					theClientDto)) {
+				bStuecklistenfreigabe = true;
+			}
+
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							BigDecimal.class, String.class, Date.class },
-					new String[] {
-							"i_id",
-							getTextRespectUISpr("lp.artikelnummer", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.menge", mandantCNr, locUI),
-							getTextRespectUISpr("lp.einh", mandantCNr, locUI),
-							getTextRespectUISpr("lp.liefertermin", mandantCNr,
-									locUI) },
-					new int[] { 0, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							60, QueryParameters.FLR_BREITE_PREIS, 5,
-							QueryParameters.FLR_BREITE_M },
-					new String[] {
-							FertigungFac.FLR_INTERNE_BESTELLUNG_I_ID,
-							FertigungFac.FLR_INTERNE_BESTELLUNG_FLRSTUECKLISTE
-									+ "."
-									+ StuecklisteFac.FLR_STUECKLISTE_FLRARTIKEL
-									+ ".c_nr",
-							Facade.NICHT_SORTIERBAR,
-							FertigungFac.FLR_INTERNE_BESTELLUNG_N_MENGE,
-							FertigungFac.FLR_INTERNE_BESTELLUNG_FLRSTUECKLISTE
-									+ "."
-									+ StuecklisteFac.FLR_STUECKLISTE_FLRARTIKEL
-									+ "." + ArtikelFac.FLR_ARTIKEL_EINHEIT_C_NR,
-							FertigungFac.FLR_INTERNE_BESTELLUNG_T_LIEFERTERMIN }));
+
+			if (bStuecklistenfreigabe == true) {
+				setTableInfo(new TableInfo(
+						new Class[] { Integer.class, String.class,
+								String.class, BigDecimal.class, String.class,
+								Date.class, Icon.class, Color.class },
+						new String[] {
+								"i_id",
+								getTextRespectUISpr("lp.artikelnummer",
+										mandantCNr, locUI),
+								getTextRespectUISpr("lp.bezeichnung",
+										mandantCNr, locUI),
+								getTextRespectUISpr("lp.menge", mandantCNr,
+										locUI),
+								getTextRespectUISpr("lp.einh", mandantCNr,
+										locUI),
+								getTextRespectUISpr("lp.liefertermin",
+										mandantCNr, locUI),
+								getTextRespectUISpr("stk.freigabe", mandantCNr,
+										locUI), "" },
+						new int[] { 0,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST, 60,
+								QueryParameters.FLR_BREITE_PREIS, 5,
+								QueryParameters.FLR_BREITE_M, 1,
+								QueryParameters.FLR_BREITE_S },
+						new String[] {
+								FertigungFac.FLR_INTERNE_BESTELLUNG_I_ID,
+								FertigungFac.FLR_INTERNE_BESTELLUNG_FLRSTUECKLISTE
+										+ "."
+										+ StuecklisteFac.FLR_STUECKLISTE_FLRARTIKEL
+										+ ".c_nr",
+								Facade.NICHT_SORTIERBAR,
+								FertigungFac.FLR_INTERNE_BESTELLUNG_N_MENGE,
+								FertigungFac.FLR_INTERNE_BESTELLUNG_FLRSTUECKLISTE
+										+ "."
+										+ StuecklisteFac.FLR_STUECKLISTE_FLRARTIKEL
+										+ "."
+										+ ArtikelFac.FLR_ARTIKEL_EINHEIT_C_NR,
+								FertigungFac.FLR_INTERNE_BESTELLUNG_T_LIEFERTERMIN,
+								"",
+								FertigungFac.FLR_INTERNE_BESTELLUNG_FLRSTUECKLISTE
+										+ ".t_freigabe" }));
+			} else {
+
+				setTableInfo(new TableInfo(
+						new Class[] { Integer.class, String.class,
+								String.class, BigDecimal.class, String.class,
+								Date.class, Color.class },
+						new String[] {
+								"i_id",
+								getTextRespectUISpr("lp.artikelnummer",
+										mandantCNr, locUI),
+								getTextRespectUISpr("lp.bezeichnung",
+										mandantCNr, locUI),
+								getTextRespectUISpr("lp.menge", mandantCNr,
+										locUI),
+								getTextRespectUISpr("lp.einh", mandantCNr,
+										locUI),
+								getTextRespectUISpr("lp.liefertermin",
+										mandantCNr, locUI), "" },
+						new int[] { 0,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST, 60,
+								QueryParameters.FLR_BREITE_PREIS, 5,
+								QueryParameters.FLR_BREITE_M, 1 },
+						new String[] {
+								FertigungFac.FLR_INTERNE_BESTELLUNG_I_ID,
+								FertigungFac.FLR_INTERNE_BESTELLUNG_FLRSTUECKLISTE
+										+ "."
+										+ StuecklisteFac.FLR_STUECKLISTE_FLRARTIKEL
+										+ ".c_nr",
+								Facade.NICHT_SORTIERBAR,
+								FertigungFac.FLR_INTERNE_BESTELLUNG_N_MENGE,
+								FertigungFac.FLR_INTERNE_BESTELLUNG_FLRSTUECKLISTE
+										+ "."
+										+ StuecklisteFac.FLR_STUECKLISTE_FLRARTIKEL
+										+ "."
+										+ ArtikelFac.FLR_ARTIKEL_EINHEIT_C_NR,
+								FertigungFac.FLR_INTERNE_BESTELLUNG_T_LIEFERTERMIN,
+								"" }));
+			}
 		}
 		return super.getTableInfo();
 	}

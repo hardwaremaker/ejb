@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -54,6 +54,11 @@ import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.artikel.ejb.Artgru;
+import com.lp.server.artikel.ejb.Artgruspr;
+import com.lp.server.artikel.ejb.ArtgrusprPK;
+import com.lp.server.artikel.service.ArtgruDto;
+import com.lp.server.artikel.service.ArtgrusprDto;
 import com.lp.server.auftrag.ejb.Auftragart;
 import com.lp.server.auftrag.ejb.Auftragartspr;
 import com.lp.server.auftrag.ejb.AuftragartsprPK;
@@ -67,6 +72,12 @@ import com.lp.server.auftrag.ejb.Auftragtext;
 import com.lp.server.auftrag.ejb.Auftragwiederholungsintervall;
 import com.lp.server.auftrag.ejb.Auftragwiederholungsintervallspr;
 import com.lp.server.auftrag.ejb.AuftragwiederholungsintervallsprPK;
+import com.lp.server.auftrag.ejb.Meilenstein;
+import com.lp.server.auftrag.ejb.Meilensteinspr;
+import com.lp.server.auftrag.ejb.MeilensteinsprPK;
+import com.lp.server.auftrag.ejb.Zahlungsplan;
+import com.lp.server.auftrag.ejb.Zahlungsplanmeilenstein;
+import com.lp.server.auftrag.ejb.Zeitplan;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragstatus;
 import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.auftrag.service.AuftragStatusDto;
@@ -91,9 +102,20 @@ import com.lp.server.auftrag.service.AuftragwiederholungsintervallDto;
 import com.lp.server.auftrag.service.AuftragwiederholungsintervallDtoAssembler;
 import com.lp.server.auftrag.service.AuftragwiederholungsintervallsprDto;
 import com.lp.server.auftrag.service.AuftragwiederholungsintervallsprDtoAssembler;
+import com.lp.server.auftrag.service.MeilensteinDto;
+import com.lp.server.auftrag.service.MeilensteinDtoAssembler;
+import com.lp.server.auftrag.service.MeilensteinsprDto;
+import com.lp.server.auftrag.service.MeilensteinsprDtoAssembler;
+import com.lp.server.auftrag.service.ZahlungsplanDto;
+import com.lp.server.auftrag.service.ZahlungsplanDtoAssembler;
+import com.lp.server.auftrag.service.ZahlungsplanmeilensteinDto;
+import com.lp.server.auftrag.service.ZahlungsplanmeilensteinDtoAssembler;
+import com.lp.server.auftrag.service.ZeitplanDto;
+import com.lp.server.auftrag.service.ZeitplanDtoAssembler;
 
 import com.lp.server.system.fastlanereader.generated.FLRStatusspr;
 import com.lp.server.system.pkgenerator.PKConst;
+import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.MediaFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
@@ -128,19 +150,267 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		return auftragartDtoI.getCNr();
 	}
 
-	
-	
+	public Integer createMeilenstein(MeilensteinDto meilensteinDto,
+			TheClientDto theClientDto) {
 
-	public Integer createAuftragbegruendung(AuftragbegruendungDto auftragbegruendungDto) {
+		meilensteinDto.setMandantCNr(theClientDto.getMandant());
+
+		try {
+			Query query = em.createNamedQuery("MeilensteinFindByCNrMandantCNr");
+			query.setParameter(1, meilensteinDto.getCNr());
+			query.setParameter(2, theClientDto.getMandant());
+			Meilenstein doppelt = (Meilenstein) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("AUFT_MEILENSTEIN.UK"));
+		} catch (NoResultException ex) {
+
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_MEILENSTEIN);
+			meilensteinDto.setIId(pk);
+			Meilenstein meilenstein = new Meilenstein(meilensteinDto.getIId(),
+					meilensteinDto.getCNr(), meilensteinDto.getMandantCNr());
+			em.persist(meilenstein);
+			em.flush();
+			setMeilensteinFromMeilensteinDto(meilenstein, meilensteinDto);
+			if (meilensteinDto.getMeilensteinsprDto() != null) {
+				Meilensteinspr meilensteinspr = new Meilensteinspr(
+						theClientDto.getLocUiAsString(), meilensteinDto
+								.getMeilensteinsprDto().getCBez(),
+						meilensteinDto.getIId());
+				em.persist(meilensteinspr);
+				em.flush();
+
+			}
+			return meilensteinDto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
+					new Exception(e));
+		}
+	}
+
+	public Integer createZahlungsplanmeilenstein(
+			ZahlungsplanmeilensteinDto zahlungsplanmeilensteinDto,
+			TheClientDto theClientDto) {
+
+		try {
+			Query query = em
+					.createNamedQuery("ZahlungsplanmeilensteinFindByMeilensteinIIdZahlungplanIId");
+			query.setParameter(1, zahlungsplanmeilensteinDto.getMeilensteinId());
+			query.setParameter(2,
+					zahlungsplanmeilensteinDto.getZahlungsplaniId());
+			Zahlungsplanmeilenstein doppelt = (Zahlungsplanmeilenstein) query
+					.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("AUFT_ZAHLUNGSPLANMEILENSTEIN.UK"));
+		} catch (NoResultException ex) {
+
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen
+					.getNextPrimaryKey(PKConst.PK_ZAHLUNGSPLANMEILENSTEIN);
+			zahlungsplanmeilensteinDto.setIId(pk);
+			Zahlungsplanmeilenstein zahlungsplanmeilenstein = new Zahlungsplanmeilenstein(
+					zahlungsplanmeilensteinDto.getIId(),
+					zahlungsplanmeilensteinDto.getZahlungsplaniId(),
+					zahlungsplanmeilensteinDto.getMeilensteinId());
+			em.persist(zahlungsplanmeilenstein);
+			em.flush();
+			setZahlungsplanmeilensteinFromZahlungsplanmeilensteinDto(
+					zahlungsplanmeilenstein, zahlungsplanmeilensteinDto);
+
+			return zahlungsplanmeilensteinDto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
+					new Exception(e));
+		}
+	}
+
+	private void setMeilensteinFromMeilensteinDto(Meilenstein meilenstein,
+			MeilensteinDto meilensteinDto) {
+		meilenstein.setCNr(meilensteinDto.getCNr());
+
+		em.merge(meilenstein);
+		em.flush();
+	}
+
+	private void setZahlungsplanmeilensteinFromZahlungsplanmeilensteinDto(
+			Zahlungsplanmeilenstein zahlungsplanmeilenstein,
+			ZahlungsplanmeilensteinDto zahlungsplanmeilensteinDto) {
+		zahlungsplanmeilenstein.setCKommentar(zahlungsplanmeilensteinDto
+				.getCKommentar());
+		zahlungsplanmeilenstein.setMeilensteinIId(zahlungsplanmeilensteinDto
+				.getMeilensteinId());
+		zahlungsplanmeilenstein.setZahlungsplanIId(zahlungsplanmeilensteinDto
+				.getZahlungsplaniId());
+		zahlungsplanmeilenstein.setTErledigt(zahlungsplanmeilensteinDto
+				.getTErledigt());
+		zahlungsplanmeilenstein
+				.setPersonalIIdErledigt(zahlungsplanmeilensteinDto
+						.getPersonalIIdErledigt());
+		zahlungsplanmeilenstein.setXText(zahlungsplanmeilensteinDto.getXText());
+
+		em.merge(zahlungsplanmeilenstein);
+		em.flush();
+	}
+
+	public void updateMeilenstein(MeilensteinDto meilensteinDto,
+			TheClientDto theClientDto) {
+
+		Integer iId = meilensteinDto.getIId();
+		Meilenstein meilenstein = null;
+		// try {
+		meilenstein = em.find(Meilenstein.class, iId);
+
+		// duplicateunique: Pruefung: Artikelgruppe bereits vorhanden.
+		try {
+			Query query = em.createNamedQuery("MeilensteinFindByCNrMandantCNr");
+			query.setParameter(1, meilensteinDto.getCNr());
+			query.setParameter(2, theClientDto.getMandant());
+			// @todo getSingleResult oder getResultList ?
+			Integer iIdVorhanden = ((Meilenstein) query.getSingleResult())
+					.getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"AUFT_MEILENSTEIN.UK"));
+
+			}
+		} catch (NoResultException ex) {
+
+		}
+
+		setMeilensteinFromMeilensteinDto(meilenstein, meilensteinDto);
+		try {
+			if (meilensteinDto.getMeilensteinsprDto() != null) {
+				try {
+					Meilensteinspr meilensteinspr = em.find(
+							Meilensteinspr.class, new MeilensteinsprPK(
+									theClientDto.getLocUiAsString(), iId));
+					if (meilensteinspr == null) {
+						meilensteinspr = new Meilensteinspr(
+								theClientDto.getLocUiAsString(), meilensteinDto
+										.getMeilensteinsprDto().getCBez(), iId);
+						em.persist(meilensteinspr);
+						em.flush();
+					}
+					meilensteinspr.setCBez(meilensteinDto
+							.getMeilensteinsprDto().getCBez());
+
+				} catch (NoResultException ex) {
+					Meilensteinspr meilensteinspr = new Meilensteinspr(
+							theClientDto.getLocUiAsString(), meilensteinDto
+									.getMeilensteinsprDto().getCBez(), iId);
+					em.persist(meilensteinspr);
+
+				}
+			}
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+	}
+
+	public void updateZahlungsplanmeilenstein(
+			ZahlungsplanmeilensteinDto zahlungsplanmeilensteinDto,
+			TheClientDto theClientDto) {
+
+		Integer iId = zahlungsplanmeilensteinDto.getIId();
+		Zahlungsplanmeilenstein zahlgunsplanmeilenstein = em.find(
+				Zahlungsplanmeilenstein.class, iId);
+
+		try {
+			Query query = em
+					.createNamedQuery("ZahlungsplanmeilensteinFindByMeilensteinIIdZahlungplanIId");
+			query.setParameter(1, zahlungsplanmeilensteinDto.getMeilensteinId());
+			query.setParameter(2,
+					zahlungsplanmeilensteinDto.getZahlungsplaniId());
+			// @todo getSingleResult oder getResultList ?
+			Integer iIdVorhanden = ((Zahlungsplanmeilenstein) query
+					.getSingleResult()).getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"AUFT_ZAHLUNGSPLANMEILENSTEIN.UK"));
+
+			}
+		} catch (NoResultException ex) {
+
+		}
+
+		setZahlungsplanmeilensteinFromZahlungsplanmeilensteinDto(
+				zahlgunsplanmeilenstein, zahlungsplanmeilensteinDto);
+
+	}
+
+	public MeilensteinDto meilensteinFindByPrimaryKey(Integer iId,
+			TheClientDto theClientDto) {
+		if (iId == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("iId == null"));
+		}
+		Meilenstein meilenstein = em.find(Meilenstein.class, iId);
+
+		MeilensteinDto meilensteinDto = assembleMeilensteinDto(meilenstein);
+		MeilensteinsprDto meilensteinsprDto = null;
+		Meilensteinspr meilensteinspr = em.find(Meilensteinspr.class,
+				new MeilensteinsprPK(theClientDto.getLocUiAsString(), iId));
+		if (meilensteinspr != null) {
+			meilensteinsprDto = assembleMeilensteinsprDto(meilensteinspr);
+		}
+		if (meilensteinsprDto == null) {
+			meilensteinspr = em.find(Meilensteinspr.class,
+					new MeilensteinsprPK(theClientDto.getLocKonzernAsString(),
+							iId));
+			if (meilensteinspr != null) {
+				meilensteinsprDto = assembleMeilensteinsprDto(meilensteinspr);
+			}
+		}
+		meilensteinDto.setMeilensteinsprDto(meilensteinsprDto);
+		return meilensteinDto;
+	}
+
+	public void removeMeilenstein(MeilensteinDto meilensteinDto) {
+
+		try {
+			Query query = em.createNamedQuery("MeilensteinsprByMeilensteinIId");
+			query.setParameter(1, meilensteinDto.getIId());
+			Collection<?> allArtgruspr = query.getResultList();
+			Iterator<?> iter = allArtgruspr.iterator();
+			while (iter.hasNext()) {
+				Meilensteinspr meilensteinsprTemp = (Meilensteinspr) iter
+						.next();
+				em.remove(meilensteinsprTemp);
+			}
+			Meilenstein meilenstein = em.find(Meilenstein.class,
+					meilensteinDto.getIId());
+
+			em.remove(meilenstein);
+			em.flush();
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
+		}
+
+	}
+
+	public Integer createAuftragbegruendung(
+			AuftragbegruendungDto auftragbegruendungDto) {
 		Integer iId = getPKGeneratorObj().getNextPrimaryKey(
 				PKConst.PK_AUFTRAGBEGRUENDUNG);
 		auftragbegruendungDto.setIId(iId);
 		try {
 
 			try {
-				Query query = em.createNamedQuery("AuftragbegruendungFindByCNr");
+				Query query = em
+						.createNamedQuery("AuftragbegruendungFindByCNr");
 				query.setParameter(1, auftragbegruendungDto.getCNr());
-				Auftragbegruendung doppelt = (Auftragbegruendung) query.getSingleResult();
+				Auftragbegruendung doppelt = (Auftragbegruendung) query
+						.getSingleResult();
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
 								"LP_BEGRUENDUNG.C_NR"));
@@ -148,11 +418,14 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 
 			}
 
-			Auftragbegruendung begruendung = new Auftragbegruendung(auftragbegruendungDto.getIId(),
-					auftragbegruendungDto.getCNr(), auftragbegruendungDto.getCBez());
+			Auftragbegruendung begruendung = new Auftragbegruendung(
+					auftragbegruendungDto.getIId(),
+					auftragbegruendungDto.getCNr(),
+					auftragbegruendungDto.getCBez());
 			em.persist(begruendung);
 			em.flush();
-			setAuftragbegruendungFromAuftragbegruendungDto(begruendung, auftragbegruendungDto);
+			setAuftragbegruendungFromAuftragbegruendungDto(begruendung,
+					auftragbegruendungDto);
 
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
@@ -165,12 +438,15 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		try {
 			Integer iId = begruendungDto.getIId();
 			// try {
-			Auftragbegruendung begruendung = em.find(Auftragbegruendung.class, iId);
+			Auftragbegruendung begruendung = em.find(Auftragbegruendung.class,
+					iId);
 
 			try {
-				Query query = em.createNamedQuery("AuftragbegruendungFindByCNr");
+				Query query = em
+						.createNamedQuery("AuftragbegruendungFindByCNr");
 				query.setParameter(1, begruendungDto.getCNr());
-				Auftragbegruendung vorhanden = (Auftragbegruendung) query.getSingleResult();
+				Auftragbegruendung vorhanden = (Auftragbegruendung) query
+						.getSingleResult();
 				if (vorhanden != null
 						&& iId.equals(vorhanden.getIId()) == false) {
 					throw new EJBExceptionLP(
@@ -181,12 +457,13 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 			} catch (NoResultException ex) {
 			}
 
-			setAuftragbegruendungFromAuftragbegruendungDto(begruendung, begruendungDto);
+			setAuftragbegruendungFromAuftragbegruendungDto(begruendung,
+					begruendungDto);
 
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
-	
+
 	}
 
 	public void removeAuftragbegruendung(Integer iId) {
@@ -211,21 +488,20 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		}
 		return assembleAuftragbegruendungDto(begruendung);
 	}
-	private AuftragbegruendungDto assembleAuftragbegruendungDto(Auftragbegruendung begruendung) {
+
+	private AuftragbegruendungDto assembleAuftragbegruendungDto(
+			Auftragbegruendung begruendung) {
 		return AuftragbegruendungDtoAssembler.createDto(begruendung);
 	}
-	private void setAuftragbegruendungFromAuftragbegruendungDto(Auftragbegruendung begruendung,
-			AuftragbegruendungDto begruendungDto) {
+
+	private void setAuftragbegruendungFromAuftragbegruendungDto(
+			Auftragbegruendung begruendung, AuftragbegruendungDto begruendungDto) {
 		begruendung.setCNr(begruendungDto.getCNr());
 		begruendung.setCBez(begruendungDto.getCBez());
 		em.merge(begruendung);
 		em.flush();
 	}
 
-	
-	
-	
-	
 	private void checkAuftragartDto(AuftragartDto auftragartDtoI)
 			throws EJBExceptionLP {
 		if (auftragartDtoI == null) {
@@ -249,8 +525,8 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 				Auftragartspr item = (Auftragartspr) iter.next();
 				em.remove(item);
 			}
-			Auftragart auftragart = em.find(Auftragart.class, auftragartDtoI
-					.getCNr());
+			Auftragart auftragart = em.find(Auftragart.class,
+					auftragartDtoI.getCNr());
 			if (auftragart == null) {
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
@@ -293,9 +569,9 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 						auftragartsprDto);
 			} else {
 				Auftragartspr auftragartspr = new Auftragartspr(auftragartDtoI
-						.getAuftragartsprDto().getLocaleCNr(), auftragartDtoI
-						.getCNr(), auftragartDtoI.getAuftragartsprDto()
-						.getCBez());
+						.getAuftragartsprDto().getLocaleCNr(),
+						auftragartDtoI.getCNr(), auftragartDtoI
+								.getAuftragartsprDto().getCBez());
 				em.persist(auftragartspr);
 				em.flush();
 
@@ -362,8 +638,8 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		AuftragartsprDto auftragartsprDto = null;
 
 		try {
-			AuftragartsprPK auftragartsprPK = new AuftragartsprPK(theClientDto
-					.getLocUiAsString(), auftragartDto.getCNr());
+			AuftragartsprPK auftragartsprPK = new AuftragartsprPK(
+					theClientDto.getLocUiAsString(), auftragartDto.getCNr());
 			Auftragartspr auftragartspr = em.find(Auftragartspr.class,
 					auftragartsprPK);
 			if (auftragartspr != null) {
@@ -425,10 +701,10 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 				while (sprsetIterator.hasNext()) {
 					FLRStatusspr statusspr = (FLRStatusspr) sprsetIterator
 							.next();
-					if (statusspr.getLocale().getC_nr().trim().equals(
-							sLocale.trim())) {
-						hm.put(statusspr.getStatus().getC_nr(), statusspr
-								.getC_bez());
+					if (statusspr.getLocale().getC_nr().trim()
+							.equals(sLocale.trim())) {
+						hm.put(statusspr.getStatus().getC_nr(),
+								statusspr.getC_bez());
 						break;
 					}
 				}
@@ -579,8 +855,9 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 			return;
 		}
 		try {
-			Auftragartspr auftragartspr = new Auftragartspr(auftragartsprDto
-					.getLocaleCNr(), auftragartsprDto.getAuftragartCNr(),
+			Auftragartspr auftragartspr = new Auftragartspr(
+					auftragartsprDto.getLocaleCNr(),
+					auftragartsprDto.getAuftragartCNr(),
 					auftragartsprDto.getCBez());
 			em.persist(auftragartspr);
 			em.flush();
@@ -721,8 +998,9 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		checkAuftragpositionartDto(auftragpositionArtDtoI);
 		try {
 			Auftragpositionart auftragpositionart = new Auftragpositionart(
-					auftragpositionArtDtoI.getCNr(), auftragpositionArtDtoI
-							.getISort(), auftragpositionArtDtoI.getBVersteckt());
+					auftragpositionArtDtoI.getCNr(),
+					auftragpositionArtDtoI.getISort(),
+					auftragpositionArtDtoI.getBVersteckt());
 			em.persist(auftragpositionart);
 			em.flush();
 			setAuftragpositionArtFromAuftragpositionArtDto(auftragpositionart,
@@ -1044,8 +1322,7 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 			while (iterator.hasNext()) {
 				Auftragpositionstatus auftragpositionstatus = (Auftragpositionstatus) iterator
 						.next();
-				list
-						.add(assembleAuftragpositionstatusDto(auftragpositionstatus));
+				list.add(assembleAuftragpositionstatusDto(auftragpositionstatus));
 			}
 		}
 		AuftragpositionstatusDto[] returnArray = new AuftragpositionstatusDto[list
@@ -1059,8 +1336,9 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 			return;
 		}
 		try {
-			Auftragstatus auftragStatus = new Auftragstatus(auftragStatusDto
-					.getStatusCNr(), auftragStatusDto.getISort());
+			Auftragstatus auftragStatus = new Auftragstatus(
+					auftragStatusDto.getStatusCNr(),
+					auftragStatusDto.getISort());
 			em.persist(auftragStatus);
 			em.flush();
 			setAuftragStatusFromAuftragStatusDto(auftragStatus,
@@ -1236,12 +1514,62 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 
 		try {
 			Auftragtext auftragtext = new Auftragtext(auftragtextDto.getIId(),
-					auftragtextDto.getMandantCNr(), auftragtextDto
-							.getLocaleCNr(), auftragtextDto.getMediaartCNr(),
+					auftragtextDto.getMandantCNr(),
+					auftragtextDto.getLocaleCNr(),
+					auftragtextDto.getMediaartCNr(),
 					auftragtextDto.getCTextinhalt());
 			em.persist(auftragtext);
 			em.flush();
 			setAuftragtextFromAuftragtextDto(auftragtext, auftragtextDto);
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
+		}
+
+		return iId;
+	}
+
+	public Integer createZeitplan(ZeitplanDto zeitplanDto) {
+		// den PK erzeugen und setzen
+		Integer iId = null;
+
+		iId = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_ZEITPLAN);
+		zeitplanDto.setIId(iId);
+
+		zeitplanDto.setNMaterialUrsprung(zeitplanDto.getNMaterial());
+		zeitplanDto.setNDauerUrsprung(zeitplanDto.getNDauer());
+
+		try {
+			Zeitplan auftragtext = new Zeitplan(zeitplanDto.getIId(),
+					zeitplanDto.getAuftragIId(),
+					zeitplanDto.getITerminVorLiefertermin());
+			em.persist(auftragtext);
+			em.flush();
+			setZeitplanFromZeitplanDto(auftragtext, zeitplanDto);
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
+		}
+
+		return iId;
+	}
+
+	public Integer createZahlungsplan(ZahlungsplanDto zahlungsplanDto) {
+		// den PK erzeugen und setzen
+		Integer iId = null;
+
+		iId = getPKGeneratorObj().getNextPrimaryKey(PKConst.PK_ZAHLUNGSPLAN);
+		zahlungsplanDto.setIId(iId);
+
+		zahlungsplanDto.setNBetragUrsprung(zahlungsplanDto.getNBetrag());
+
+		try {
+			Zahlungsplan zahlungsplan = new Zahlungsplan(
+					zahlungsplanDto.getIId(), zahlungsplanDto.getAuftragIId(),
+					zahlungsplanDto.getITageVorLiefertermin(),
+					zahlungsplanDto.getNBetrag(),
+					zahlungsplanDto.getNBetragUrsprung());
+			em.persist(zahlungsplan);
+			em.flush();
+			setZahlungsplanFromZahlungsplanDto(zahlungsplan, zahlungsplanDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
@@ -1283,8 +1611,8 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		try {
 			Auftragdokument auftragdokument = new Auftragdokument(
 					auftragdokumentDto.getIId(), auftragdokumentDto.getCNr(),
-					auftragdokumentDto.getCBez(), auftragdokumentDto
-							.getBVersteckt());
+					auftragdokumentDto.getCBez(),
+					auftragdokumentDto.getBVersteckt());
 			em.persist(auftragdokument);
 			em.flush();
 			setAuftragdokumentFromAuftragdokumentDto(auftragdokument,
@@ -1310,8 +1638,8 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		checkAuftragtextDto(auftragtextDto);
 
 		// try {
-		Auftragtext auftragtext = em.find(Auftragtext.class, auftragtextDto
-				.getIId());
+		Auftragtext auftragtext = em.find(Auftragtext.class,
+				auftragtextDto.getIId());
 		if (auftragtext == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
@@ -1323,6 +1651,24 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 		// ex);
 		// }
+	}
+
+	public void updateZeitplan(ZeitplanDto dto) {
+		Zeitplan zeitplan = em.find(Zeitplan.class, dto.getIId());
+		if (zeitplan == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		setZeitplanFromZeitplanDto(zeitplan, dto);
+	}
+
+	public void updateZahlungsplan(ZahlungsplanDto dto) {
+		Zahlungsplan zahlungsplan = em.find(Zahlungsplan.class, dto.getIId());
+		if (zahlungsplan == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		setZahlungsplanFromZahlungsplanDto(zahlungsplan, dto);
 	}
 
 	public void updateAuftragdokument(AuftragdokumentDto auftragdokumentDto) {
@@ -1370,8 +1716,8 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		checkAuftragtextDto(auftragtextDto);
 
 		// try {
-		Auftragtext toRemove = em.find(Auftragtext.class, auftragtextDto
-				.getIId());
+		Auftragtext toRemove = em.find(Auftragtext.class,
+				auftragtextDto.getIId());
 		if (toRemove == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
@@ -1386,6 +1732,52 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		// catch (RemoveException ex) {
 		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
 		// }
+	}
+
+	public void removeZeitplan(ZeitplanDto zeitplanDto) {
+		Zeitplan toRemove = em.find(Zeitplan.class, zeitplanDto.getIId());
+		if (toRemove == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+	}
+
+	public void removeZahlungsplanmeilenstein(
+			ZahlungsplanmeilensteinDto zahlungsplanmeilensteinDto) {
+		Zahlungsplanmeilenstein toRemove = em.find(
+				Zahlungsplanmeilenstein.class,
+				zahlungsplanmeilensteinDto.getIId());
+		if (toRemove == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+	}
+
+	public void removeZahlungsplan(ZahlungsplanDto zahlungsplanDto) {
+		Zahlungsplan toRemove = em.find(Zahlungsplan.class,
+				zahlungsplanDto.getIId());
+		if (toRemove == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
 	}
 
 	public void removeAuftragdokument(AuftragdokumentDto auftragdokumentDto) {
@@ -1435,6 +1827,41 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		// }
 
 		return textDto;
+	}
+
+	public ZeitplanDto zeitplanFindByPrimaryKey(Integer iId) {
+		return ZeitplanDtoAssembler.createDto(em.find(Zeitplan.class, iId));
+
+	}
+
+	public ZahlungsplanDto zahlungsplanFindByPrimaryKey(Integer iId) {
+		return ZahlungsplanDtoAssembler.createDto(em.find(Zahlungsplan.class,
+				iId));
+
+	}
+
+	public void toggleZahlungplanmeilensteinErledigt(
+			Integer zahlungsplanmeilensteinIId, TheClientDto theClientDto) {
+		Zahlungsplanmeilenstein zahlungsplanmeilenstein = em.find(
+				Zahlungsplanmeilenstein.class, zahlungsplanmeilensteinIId);
+
+		if (zahlungsplanmeilenstein.getTErledigt() == null) {
+			zahlungsplanmeilenstein.setTErledigt(new java.sql.Timestamp(System
+					.currentTimeMillis()));
+			zahlungsplanmeilenstein.setPersonalIIdErledigt(theClientDto
+					.getIDPersonal());
+		} else {
+			zahlungsplanmeilenstein.setTErledigt(null);
+			zahlungsplanmeilenstein.setPersonalIIdErledigt(null);
+		}
+
+	}
+
+	public ZahlungsplanmeilensteinDto zahlungsplanmeilensteinFindByPrimaryKey(
+			Integer iId) {
+		return ZahlungsplanmeilensteinDtoAssembler.createDto(em.find(
+				Zahlungsplanmeilenstein.class, iId));
+
 	}
 
 	public AuftragdokumentDto auftragdokumentFindByPrimaryKey(Integer iId) {
@@ -1576,6 +2003,33 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 		auftragtext.setMediaartCNr(auftragtextDto.getMediaartCNr());
 		auftragtext.setXTextinhalt(auftragtextDto.getCTextinhalt());
 		em.merge(auftragtext);
+		em.flush();
+	}
+
+	private void setZeitplanFromZeitplanDto(Zeitplan zeitplan,
+			ZeitplanDto zeitplanDto) {
+		zeitplan.setAuftragIId(zeitplanDto.getAuftragIId());
+		zeitplan.setCKommentar(zeitplanDto.getCKommentar());
+		zeitplan.setITerminVorLiefertermin(zeitplanDto
+				.getITerminVorLiefertermin());
+		zeitplan.setNDauer(zeitplanDto.getNDauer());
+		zeitplan.setNDauerUrsprung(zeitplanDto.getNDauerUrsprung());
+		zeitplan.setNMaterial(zeitplanDto.getNMaterial());
+		zeitplan.setNMaterialUrsprung(zeitplanDto.getNMaterialUrsprung());
+		zeitplan.setXText(zeitplanDto.getXText());
+		em.merge(zeitplan);
+		em.flush();
+	}
+
+	private void setZahlungsplanFromZahlungsplanDto(Zahlungsplan zahlungsplan,
+			ZahlungsplanDto zahlungsplanDto) {
+		zahlungsplan.setAuftragIId(zahlungsplanDto.getAuftragIId());
+		zahlungsplan.setNBetrag(zahlungsplanDto.getNBetrag());
+		zahlungsplan.setNBetragUrsprung(zahlungsplanDto.getNBetragUrsprung());
+		zahlungsplan.setITageVorLiefertermin(zahlungsplanDto
+				.getITageVorLiefertermin());
+
+		em.merge(zahlungsplan);
 		em.flush();
 	}
 
@@ -1738,6 +2192,10 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 				.createDto(auftragwiederholungsintervall);
 	}
 
+	private MeilensteinDto assembleMeilensteinDto(Meilenstein meilenstein) {
+		return MeilensteinDtoAssembler.createDto(meilenstein);
+	}
+
 	private AuftragwiederholungsintervallDto[] assembleAuftragwiederholungsintervallDtos(
 			Collection<?> auftragwiederholungsintervalls) {
 		List<AuftragwiederholungsintervallDto> list = new ArrayList<AuftragwiederholungsintervallDto>();
@@ -1746,8 +2204,7 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 			while (iterator.hasNext()) {
 				Auftragwiederholungsintervall auftragwiederholungsintervall = (Auftragwiederholungsintervall) iterator
 						.next();
-				list
-						.add(assembleAuftragwiederholungsintervallDto(auftragwiederholungsintervall));
+				list.add(assembleAuftragwiederholungsintervallDto(auftragwiederholungsintervall));
 			}
 		}
 		AuftragwiederholungsintervallDto[] returnArray = new AuftragwiederholungsintervallDto[list
@@ -1926,6 +2383,11 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 				.createDto(auftragwiederholungsintervallspr);
 	}
 
+	private MeilensteinsprDto assembleMeilensteinsprDto(
+			Meilensteinspr meilensteinspr) {
+		return MeilensteinsprDtoAssembler.createDto(meilensteinspr);
+	}
+
 	private AuftragwiederholungsintervallsprDto[] assembleAuftragwiederholungsintervallsprDtos(
 			Collection<?> auftragwiederholungsintervallsprs) {
 		List<AuftragwiederholungsintervallsprDto> list = new ArrayList<AuftragwiederholungsintervallsprDto>();
@@ -1934,8 +2396,7 @@ public class AuftragServiceFacBean extends Facade implements AuftragServiceFac {
 			while (iterator.hasNext()) {
 				Auftragwiederholungsintervallspr auftragwiederholungsintervallspr = (Auftragwiederholungsintervallspr) iterator
 						.next();
-				list
-						.add(assembleAuftragwiederholungsintervallsprDto(auftragwiederholungsintervallspr));
+				list.add(assembleAuftragwiederholungsintervallsprDto(auftragwiederholungsintervallspr));
 			}
 		}
 		AuftragwiederholungsintervallsprDto[] returnArray = new AuftragwiederholungsintervallsprDto[list

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -41,6 +41,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
+import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
@@ -65,25 +66,35 @@ import com.lp.server.anfrage.service.AnfrageDtoAssembler;
 import com.lp.server.anfrage.service.AnfrageFac;
 import com.lp.server.anfrage.service.AnfrageServiceFac;
 import com.lp.server.anfrage.service.AnfragepositionDto;
+import com.lp.server.anfrage.service.AnfragepositionFac;
 import com.lp.server.anfrage.service.AnfragepositionlieferdatenDto;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.bestellung.fastlanereader.generated.FLRBestellvorschlag;
+import com.lp.server.bestellung.service.BestellpositionDto;
+import com.lp.server.bestellung.service.BestellpositionFac;
+import com.lp.server.bestellung.service.BestellungDto;
 import com.lp.server.bestellung.service.BestellvorschlagDto;
 import com.lp.server.bestellung.service.BestellvorschlagFac;
 import com.lp.server.bestellung.service.BestellvorschlagUeberleitungKriterienDto;
+import com.lp.server.partner.service.AnsprechpartnerDto;
 import com.lp.server.partner.service.LieferantDto;
-import com.lp.server.system.ejbfac.BelegAktivierungController;
+import com.lp.server.system.ejbfac.BelegAktivierungFac;
 import com.lp.server.system.ejbfac.IAktivierbar;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.format.LpBelegnummer;
 import com.lp.server.system.pkgenerator.format.LpBelegnummerFormat;
+import com.lp.server.system.service.BelegPruefungDto;
 import com.lp.server.system.service.BelegartDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MediaFac;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.service.BelegDto;
+import com.lp.service.BelegpositionDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
@@ -91,10 +102,11 @@ import com.lp.util.Helper;
 public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 	@PersistenceContext
 	private EntityManager em;
-
 	// Anfrage
-	// -------------------------------------------------------------------
 
+	@EJB
+	private BelegAktivierungFac belegAktivierungFac ;
+	
 	/**
 	 * Anlegen einer neuen Anfrage.
 	 * 
@@ -215,7 +227,8 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 	 *             Ausnahme
 	 */
 	public void updateAnfrage(AnfrageDto anfrageDtoI, String waehrungOriCNrI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			boolean bAufAngelegtZuruecksetzen, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		checkAnfrageDto(anfrageDtoI);
 
 		try {
@@ -286,7 +299,7 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 			}
 			setAnfrageFromAnfrageDto(anfrage, anfrageDtoI);
 			pruefeUndSetzeAnfragestatusBeiAenderung(anfrageDtoI.getIId(),
-					theClientDto);
+					bAufAngelegtZuruecksetzen, theClientDto);
 			// }
 			// catch (FinderException ex) {
 			// throw new
@@ -338,7 +351,8 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 	 * @throws EJBExceptionLP
 	 *             Ausnahme
 	 */
-	public void manuellErledigen(Integer iIdAnfrageI, TheClientDto theClientDto)
+	public void manuellErledigen(Integer iIdAnfrageI,
+			Integer erledigungsgrundIId, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		checkAnfrageIId(iIdAnfrageI);
 
@@ -358,6 +372,7 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 			anfrage.setAnfragestatusCNr(AnfrageServiceFac.ANFRAGESTATUS_ERLEDIGT);
 			anfrage.setPersonalIIdManuellerledigt(theClientDto.getIDPersonal());
 			anfrage.setTManuellerledigt(getTimestamp());
+			anfrage.setAnfrageerledigungsgrundIId(erledigungsgrundIId);
 		} else {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_STATUS,
 					new Exception(
@@ -398,9 +413,40 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 			if (anfrage.getPersonalIIdManuellerledigt() != null
 					&& anfrage.getTManuellerledigt() != null) {
 
-				anfrage.setAnfragestatusCNr(AnfrageServiceFac.ANFRAGESTATUS_OFFEN);
+				// Wenn bereits Lieferdaten erfasst wurden, dann ist der Status
+				// erfasst
+				boolean bErfasst = false;
+				try {
+					AnfragepositionDto[] anfPosDtos = getAnfragepositionFac()
+							.anfragepositionFindByAnfrage(iIdAnfrageI,
+									theClientDto);
+
+					for (AnfragepositionDto anfPosDto : anfPosDtos) {
+						AnfragepositionlieferdatenDto lfDto = getAnfragepositionFac()
+								.anfragepositionlieferdatenFindByAnfragepositionIIdOhneExc(
+										anfPosDto.getIId());
+
+						if (lfDto != null
+								&& Helper.short2boolean(lfDto.getBErfasst())) {
+							bErfasst = true;
+							break;
+						}
+
+					}
+
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+
+				if (bErfasst == true) {
+					anfrage.setAnfragestatusCNr(AnfrageServiceFac.ANFRAGESTATUS_ERFASST);
+				} else {
+					anfrage.setAnfragestatusCNr(AnfrageServiceFac.ANFRAGESTATUS_OFFEN);
+				}
+
 				anfrage.setPersonalIIdManuellerledigt(null);
 				anfrage.setTManuellerledigt(null);
+				anfrage.setAnfrageerledigungsgrundIId(null);
 			} else {
 				// throw new EJBExceptionLP(
 				// EJBExceptionLP.FEHLER_BELEG_WURDE_NICHT_MANUELL_ERLEDIGT,
@@ -699,6 +745,8 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 				.getAnfrageIIdLiefergruppenanfrage());
 		anfrage.setCLieferartort(anfrageDto.getCLieferartort());
 		anfrage.setProjektIId(anfrageDto.getProjektIId());
+		anfrage.setAnfrageerledigungsgrundIId(anfrageDto
+				.getAnfrageerledigungsgrundIId());
 		em.merge(anfrage);
 		em.flush();
 	}
@@ -750,7 +798,8 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 	 * @throws EJBExceptionLP
 	 */
 	public void pruefeUndSetzeAnfragestatusBeiAenderung(Integer iIdAnfrageI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			boolean bSetzeAufAngelegt, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		checkAnfrageIId(iIdAnfrageI);
 
 		Anfrage anfrage = null;
@@ -763,28 +812,28 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 					"Fehler bei pruefe und setze Anfragestatus bei Aenderung. Es gibt keine Anfrage mit iid "
 							+ iIdAnfrageI);
 		}
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
-
-		anfrage.setPersonalIIdAendern(theClientDto.getIDPersonal());
-		anfrage.setTAendern(getTimestamp());
-		String sStatus = anfrage.getAnfragestatusCNr();
-
-		if (!sStatus.equals(AnfrageServiceFac.ANFRAGESTATUS_ANGELEGT)
-				&& !sStatus.equals(AnfrageServiceFac.ANFRAGESTATUS_OFFEN)
-				&& !sStatus.equals(AnfrageServiceFac.ANFRAGESTATUS_ERFASST)) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_STATUS,
-					new Exception(sStatus));
-		}
-
-		if (sStatus.equals(AnfrageServiceFac.ANFRAGESTATUS_OFFEN)
-				|| sStatus.equals(AnfrageServiceFac.ANFRAGESTATUS_ERFASST)) {
+		if (bSetzeAufAngelegt == true) {
 			anfrage.setAnfragestatusCNr(AnfrageServiceFac.ANFRAGESTATUS_ANGELEGT);
 			anfrage.setNGesamtanfragewertinanfragewaehrung(null);
+		} else {
+
+			anfrage.setPersonalIIdAendern(theClientDto.getIDPersonal());
+			anfrage.setTAendern(getTimestamp());
+			String sStatus = anfrage.getAnfragestatusCNr();
+
+			if (!sStatus.equals(AnfrageServiceFac.ANFRAGESTATUS_ANGELEGT)
+					&& !sStatus.equals(AnfrageServiceFac.ANFRAGESTATUS_OFFEN)
+					&& !sStatus.equals(AnfrageServiceFac.ANFRAGESTATUS_ERFASST)) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_STATUS,
+						new Exception(sStatus));
+			}
+
+			if (sStatus.equals(AnfrageServiceFac.ANFRAGESTATUS_OFFEN)
+					|| sStatus.equals(AnfrageServiceFac.ANFRAGESTATUS_ERFASST)) {
+				anfrage.setAnfragestatusCNr(AnfrageServiceFac.ANFRAGESTATUS_OFFEN);
+			}
 		}
+
 	}
 
 	/**
@@ -883,14 +932,24 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 	 * Wenn der Abschlag in den Konditionen geaendert wurde, dann werden im
 	 * Anschluss die davon abhaengigen Werte neu berechnet.
 	 * 
-	 * @param iIdAnfrageI
-	 *            PK der Anfrage
+	 * @param anfrageDto die Anfrage
 	 * @param theClientDto
 	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 *             Ausnahme
 	 */
-	public void updateAnfrageKonditionen(Integer iIdAnfrageI,
+	public void updateAnfrageKonditionen(AnfrageDto anfrageDto,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+		Anfrage anfrage = em.find(Anfrage.class, anfrageDto.getIId());
+		anfrage.setXKopftextuebersteuert(anfrageDto.getXKopftextuebersteuert());
+		anfrage.setXFusstextuebersteuert(anfrageDto.getXFusstextuebersteuert());
+		anfrage.setPersonalIIdAendern(theClientDto.getIDPersonal());
+		anfrage.setTAendern(getTimestamp());
+		anfrage.setAnfragestatusCNr(AnfrageServiceFac.ANFRAGESTATUS_ANGELEGT);
+
+	}
+
+	public void updateAnfrageLieferKonditionen(Integer iIdAnfrageI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAnfrageIId(iIdAnfrageI);
 
@@ -920,7 +979,7 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 						"Fehler bei updateAnfrageKonditionen. Es gibt keine Anfrage mit iid "
 								+ iIdAnfrageI);
 			}
-			
+
 			anfrage.setPersonalIIdAendern(theClientDto.getIDPersonal());
 			anfrage.setTAendern(getTimestamp());
 
@@ -1073,25 +1132,28 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 		// ex);
 		// }
 	}
-	
+
 	@Override
 	public void pruefeAktivierbar(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
-		//nichts zu pruefen
+		// nichts zu pruefen
 	}
-	
+
 	@Override
 	public void aktiviereBeleg(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
 		Anfrage anfrage = em.find(Anfrage.class, iid);
-		if(anfrage.getAnfragestatusCNr().equals(AnfrageServiceFac.ANFRAGESTATUS_ANGELEGT))
-			setzeAnfragestatus(AnfrageServiceFac.ANFRAGESTATUS_OFFEN, iid, theClientDto);
+		if (anfrage.getAnfragestatusCNr().equals(
+				AnfrageServiceFac.ANFRAGESTATUS_ANGELEGT))
+			setzeAnfragestatus(AnfrageServiceFac.ANFRAGESTATUS_OFFEN, iid,
+					theClientDto);
 	}
-	
+
 	@Override
-	public void berechneBeleg(Integer iid, TheClientDto theClientDto)
+	public Timestamp berechneBeleg(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
-		//hier gibt es nichts zu berechnen
+		// hier gibt es nichts zu berechnen
+		return getTimestamp();
 	}
 
 	/**
@@ -1194,7 +1256,7 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 			// alle mengenbehafteten Positionen beruecksichtigen
 			if (aAnfragepositionDtos[i].getNMenge() != null
 					&& aAnfragepositionDtos[i].getArtikelIId() != null) {
-				
+
 				if (aAnfragepositionDtos[i].getPositioniIdArtikelset() == null) {
 
 					ArtikelDto oArtikelDto = getArtikelFac()
@@ -1240,7 +1302,74 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 		}
 
 		return bdEKwertIstO;
+
 	}
+	
+	public Integer erzeugeAnfrageAusAnfrage(Integer anfrageIIdVorhanden,TheClientDto theClientDto){
+		
+		
+	
+		
+		AnfrageDto anfrageBasisDto  = anfrageFindByPrimaryKey(
+					anfrageIIdVorhanden,theClientDto);
+	
+		Integer iIdAnfrageKopie = null;
+
+		try {
+			AnfrageDto anfrageDto = (AnfrageDto) anfrageBasisDto
+					.clone();
+
+			anfrageDto
+					.setFWechselkursmandantwaehrungzubelegwaehrung(new Double(
+							getLocaleFac().getWechselkurs2(
+									getMandantFac().mandantFindByPrimaryKey(
+											theClientDto.getMandant(),
+											theClientDto).getWaehrungCNr(),
+									anfrageDto.getWaehrungCNr(),
+									theClientDto).doubleValue()));
+			
+			
+			anfrageDto.setTBelegdatum(Helper.cutTimestamp(new java.sql.Timestamp(System
+					.currentTimeMillis())));
+
+			
+			anfrageDto.setStatusCNr(LocaleFac.STATUS_ANGELEGT);
+			anfrageDto.setCAngebotnummer(null);
+			anfrageDto.setNTransportkosteninanfragewaehrung(BigDecimal.ZERO);
+			anfrageDto.setNGesamtwertinbelegwaehrung(null);
+			anfrageDto.setTAngebotdatum(null);
+			anfrageDto.setTAngebotgueltigbis(null);
+			anfrageDto.setAnfrageerledigungsgrundIId(null);
+			anfrageDto.setTManuellerledigt(null);
+			anfrageDto.setPersonalIIdManuellerledigt(null);
+			anfrageDto.setPersonalIIdStorniert(null);
+		
+			
+			iIdAnfrageKopie = createAnfrage(anfrageDto, theClientDto);
+
+			// alle Positionen kopieren
+			AnfragepositionDto[] aBSpositionBasis = getAnfragepositionFac()
+					.anfragepositionFindByAnfrage(anfrageIIdVorhanden,
+							theClientDto);
+
+			for (int i = 0; i < aBSpositionBasis.length; i++) {
+				AnfragepositionDto afpositionDto = (AnfragepositionDto) aBSpositionBasis[i]
+						.clone();
+				
+				afpositionDto.setBelegIId(iIdAnfrageKopie);
+
+				getAnfragepositionFac().createAnfrageposition(afpositionDto, theClientDto);
+			
+
+			}
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
+		}
+		
+		
+		return iIdAnfrageKopie;
+	}
+	
 
 	/**
 	 * Alle Anfragen zu einer Liefergruppenanfrage erzeugen.
@@ -1270,7 +1399,16 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 
 		AnfragepositionDto[] aAnfragepositionDto = null;
 		LieferantDto[] aLieferantDto = null;
+
+		boolean bAnsprechpartnerVorbesetzen = false;
+
 		try {
+
+			ParametermandantDto param = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_ANFRAGE,
+					ParameterFac.PARAMETER_ANFRAGE_ANSP_VORBESETZEN);
+			bAnsprechpartnerVorbesetzen = (Boolean) param.getCWertAsObject();
+
 			aAnfragepositionDto = getAnfragepositionFac()
 					.anfragepositionFindByAnfrage(iIdAnfrageI, theClientDto);
 
@@ -1308,6 +1446,19 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 															.getWaehrungCNr(),
 													anfrageDto.getWaehrungCNr(),
 													theClientDto).doubleValue()));
+
+					// SP3131
+					if (bAnsprechpartnerVorbesetzen == true) {
+						AnsprechpartnerDto anspDto = getAnsprechpartnerFac()
+								.ansprechpartnerFindErstenEinesPartnersOhneExc(
+										aLieferantDto[i].getPartnerIId(),
+										theClientDto);
+						if (anspDto != null) {
+							anfrageDto.setAnsprechpartnerIIdLieferant(anspDto
+									.getIId());
+						}
+					}
+
 				} catch (RemoteException e) {
 					throwEJBExceptionLPRespectOld(e);
 				}
@@ -1315,6 +1466,7 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 				anfrageDto.setArtCNr(AnfrageServiceFac.ANFRAGEART_LIEFERANT);
 				anfrageDto.setLieferantIIdAnfrageadresse(aLieferantDto[i]
 						.getIId());
+
 				anfrageDto.setLiefergruppeIId(null);
 				anfrageDto
 						.setAnfrageIIdLiefergruppenanfrage(liefergruppenanfrageDto
@@ -1472,6 +1624,14 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 		}
 
 		try {
+
+			boolean bAnsprechpartnerVorbesetzen = false;
+
+			ParametermandantDto param = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_ANFRAGE,
+					ParameterFac.PARAMETER_ANFRAGE_ANSP_VORBESETZEN);
+			bAnsprechpartnerVorbesetzen = (Boolean) param.getCWertAsObject();
+
 			// alle Bestellvorschlaege entsprechend den Kriterien des Benutzers
 			// holen,
 			// sortiert wird nach Lieferanten und innerhalb der Lieferanten nach
@@ -1513,7 +1673,19 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 							.currentTimeMillis()));
 					anfrageDto.setLieferantIIdAnfrageadresse(lieferantDto
 							.getIId());
-					// ansprechpartner, liefergruppe, cbez, angebotnummer null
+					// SP3131
+					if (bAnsprechpartnerVorbesetzen == true) {
+						AnsprechpartnerDto anspDto = getAnsprechpartnerFac()
+								.ansprechpartnerFindErstenEinesPartnersOhneExc(
+										lieferantDto.getPartnerIId(),
+										theClientDto);
+						if (anspDto != null) {
+							anfrageDto.setAnsprechpartnerIIdLieferant(anspDto
+									.getIId());
+						}
+					}
+
+					// liefergruppe, cbez, angebotnummer null
 					anfrageDto.setTAnliefertermin(tLiefertermin);
 					anfrageDto.setWaehrungCNr(lieferantDto.getWaehrungCNr());
 					anfrageDto
@@ -1617,7 +1789,9 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 							anfragepositionDto.setEinheitCNr(artikelDto
 									.getEinheitCNr());
 							if (bestellvorschlagUeberleitungKriterienDtoI
-									.getBRichtpreisUebernehmen()) {
+									.getBRichtpreisUebernehmen()
+									&& aBestellvorschlagDto[iIndexAbarbeitung]
+											.getNNettogesamtpreis() != null) {
 								anfragepositionDto
 										.setNRichtpreis(aBestellvorschlagDto[iIndexAbarbeitung]
 												.getNNettogesamtpreis());
@@ -1793,36 +1967,66 @@ public class AnfrageFacBean extends Facade implements AnfrageFac, IAktivierbar {
 	}
 
 	@Override
-	public void aktiviereBelegControlled(Integer iid, Timestamp t,
-			TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException {
-		new BelegAktivierungController(this).aktiviereBelegControlled(iid, t, theClientDto);
-	}
-	
-	@Override
-	public Timestamp berechneBelegControlled(Integer iid,
+	public BelegPruefungDto aktiviereBelegControlled(Integer iid, Timestamp t,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		return new BelegAktivierungController(this).berechneBelegControlled(iid, theClientDto);
+		return belegAktivierungFac.aktiviereBelegControlled(this, iid, t, theClientDto) ;
+		
+//		new BelegAktivierungController(this).aktiviereBelegControlled(iid, t,
+//				theClientDto);
 	}
 
 	@Override
-	public boolean hatAenderungenNach(Integer iid, Timestamp t)
+	public BelegPruefungDto berechneBelegControlled(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return belegAktivierungFac.berechneBelegControlled(this, iid, theClientDto) ;
+//		return new BelegAktivierungController(this).berechneBelegControlled(
+//				iid, theClientDto);
+	}
+
+	@Override
+	public List<Timestamp> getAenderungsZeitpunkte(Integer iid)
 			throws EJBExceptionLP, RemoteException {
 		Anfrage anfrage = em.find(Anfrage.class, iid);
-		if(anfrage.getTAendern() != null && anfrage.getTAendern().after(t))
-			return true;
-		if(anfrage.getTManuellerledigt() != null && anfrage.getTManuellerledigt().after(t))
-			return true;
-		if(anfrage.getTStorniert() != null && anfrage.getTStorniert().after(t))
-			return true;
-		return false;
+		List<Timestamp> timestamps = new ArrayList<Timestamp>();
+
+		timestamps.add(anfrage.getTAendern());
+		timestamps.add(anfrage.getTManuellerledigt());
+		timestamps.add(anfrage.getTStorniert());
+		return timestamps;
 	}
-	
+
 	public void updateTAendern(Integer iid, TheClientDto theClientDto) {
 		Anfrage anfrage = em.find(Anfrage.class, iid);
 		anfrage.setPersonalIIdAendern(theClientDto.getIDPersonal());
 		anfrage.setTAendern(getTimestamp());
 		em.merge(anfrage);
 		em.flush();
+	}
+	
+	@Override
+	public BelegPruefungDto berechneAktiviereBelegControlled(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return belegAktivierungFac.berechneAktiviereControlled(this, iid, theClientDto) ;
+//		new BelegAktivierungController(this).berechneAktiviereControlled(iid, theClientDto);
+	}
+	
+	@Override
+	public BelegDto getBelegDto(Integer iid, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
+		BelegDto belegDto = anfrageFindByPrimaryKey(iid, theClientDto) ;
+		belegDto.setBelegartCNr(LocaleFac.BELEGART_ANFRAGE);
+		return belegDto ;
+	}
+	
+	@Override
+	public BelegpositionDto[] getBelegPositionDtos(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return getAnfragepositionFac().anfragepositionFindByAnfrage(iid, theClientDto) ;
+	}
+	
+	@Override
+	public Integer getKundeIdDesBelegs(BelegDto belegDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return null ; // Eine Anfrage hat keinen Kunden weil ich ja beim Lieferanten anfrage
 	}
 }

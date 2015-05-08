@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -37,12 +37,15 @@ import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
@@ -50,6 +53,7 @@ import javax.ejb.TransactionAttributeType;
 import javax.interceptor.Interceptors;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
 
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JRField;
@@ -62,6 +66,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
+import com.lp.server.artikel.fastlanereader.generated.FLRLagerbewegung;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikelkommentarDto;
@@ -71,11 +76,15 @@ import com.lp.server.artikel.service.VerkaufspreisDto;
 import com.lp.server.artikel.service.VkPreisfindungEinzelverkaufspreisDto;
 import com.lp.server.artikel.service.VkpfartikelpreislisteDto;
 import com.lp.server.artikel.service.VkpreisfindungDto;
+import com.lp.server.bestellung.fastlanereader.generated.FLRWareneingangspositionen;
+import com.lp.server.lieferschein.service.LieferscheinReportFac;
 import com.lp.server.partner.service.KundeDto;
+import com.lp.server.partner.service.KundesokoDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklistearbeitsplan;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklisteeigenschaft;
 import com.lp.server.stueckliste.service.PosersatzDto;
+import com.lp.server.stueckliste.service.StklagerentnahmeDto;
 import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.stueckliste.service.StuecklisteMitStrukturDto;
@@ -129,7 +138,16 @@ public class StuecklisteReportFacBean extends LPReport implements
 	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_I_EBENE = 18;
 	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_IN_FERTIGUNG = 19;
 	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_F_ARTIKELBILD = 20;
-	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ANZAHL_SPALTEN = 21;
+	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ARTIKEL_HERSTELLERNUMMER = 21;
+	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ARTIKEL_HERSTELLERBEZEICHNUNG = 22;
+	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ERSATZARTIKEL_HERSTELLERNUMMER = 23;
+	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ERSATZARTIKEL_HERSTELLERBEZEICHNUNG = 24;
+	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_FREIGABE_ZEITPUNKT = 25;
+	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_FREIGABE_PERSON = 26;
+	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_LAGERSTAND_ZIELLAGER = 27;
+	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_KUNDENARTIKELNUMMER = 28;
+	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_KUNDENARTIKELBEZEICHNUNG = 29;
+	private static int REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ANZAHL_SPALTEN = 30;
 
 	private static int REPORT_ARBEITSPLAN_ARTIKEL = 0;
 	private static int REPORT_ARBEITSPLAN_ARTIKELBEZEICHNUNG = 1;
@@ -182,7 +200,18 @@ public class StuecklisteReportFacBean extends LPReport implements
 	private static int REPORT_GESAMTKALKULATION_WIEDERBESCHAFFUNGSZEIT = 22;
 	private static int REPORT_GESAMTKALKULATION_MATERIALZUSCHLAG = 23;
 	private static int REPORT_GESAMTKALKULATION_FIXKOSTEN = 24;
-	private static int REPORT_GESAMTKALKULATION_ANZAHL_SPALTEN = 25;
+	private static int REPORT_GESAMTKALKULATION_KLEINSTER_LIEF1PREIS_2JAHRE = 25;
+	private static int REPORT_GESAMTKALKULATION_GROESSTER_LIEF1PREIS_2JAHRE = 26;
+	private static int REPORT_GESAMTKALKULATION_ARTIKELZUSATZBEZEICHNUNG = 27;
+	private static int REPORT_GESAMTKALKULATION_ARTIKELZUSATZBEZEICHNUNG2 = 28;
+	private static int REPORT_GESAMTKALKULATION_KOMMENTAR = 29;
+	private static int REPORT_GESAMTKALKULATION_AG = 30;
+	private static int REPORT_GESAMTKALKULATION_UAG = 31;
+	private static int REPORT_GESAMTKALKULATION_I_EBENE = 32;
+	private static int REPORT_GESAMTKALKULATION_FREIGABE_ZEITPUNKT = 33;
+	private static int REPORT_GESAMTKALKULATION_FREIGABE_PERSON = 34;
+	private static int REPORT_GESAMTKALKULATION_ANZAHL_ARBEITSSCHRITTE = 35;
+	private static int REPORT_GESAMTKALKULATION_ANZAHL_SPALTEN = 36;
 
 	@PersistenceContext
 	private EntityManager em;
@@ -191,9 +220,9 @@ public class StuecklisteReportFacBean extends LPReport implements
 	public JasperPrintLP printAusgabestueckliste(Integer[] stuecklisteIId,
 			Integer lagerIId, Boolean bMitStuecklistenkommentar,
 			Boolean bUnterstuecklistenEinbinden,
-			Boolean bGleichePositionenZusammenfassen,
-			Integer iOptionSortierungUnterstuecklisten, BigDecimal nLosgroesse,
-			boolean bUnterstklstrukurBelassen, TheClientDto theClientDto) {
+			Boolean bGleichePositionenZusammenfassen, BigDecimal nLosgroesse,
+			boolean bSortiertNachArtikelbezeichnung,
+			boolean bNurAbbuchungslaeger, TheClientDto theClientDto) {
 
 		if (stuecklisteIId == null || lagerIId == null
 				|| bMitStuecklistenkommentar == null
@@ -204,16 +233,11 @@ public class StuecklisteReportFacBean extends LPReport implements
 					new Exception(
 							"stuecklisteIId == null || lagerIId == null || bMitStuecklistenkommentar == null || bUnterstuecklistenEinbinden == null || bGleichePositionenZusammenfassen == null"));
 		}
-		if (bUnterstuecklistenEinbinden.booleanValue() == true
-				&& iOptionSortierungUnterstuecklisten == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception(
-							"bUnterstuecklistenEinbinden.booleanValue()==true && iOptionSortierungUnterstuecklisten==null"));
-		}
+
 		// Losgreosse updaten
 		StuecklisteDto dto = null;
 		String stuecklisten = "";
+		HashSet<Integer> slagerIIdsAbbuchungslager = new HashSet<Integer>();
 		for (int i = 0; i < stuecklisteIId.length; i++) {
 
 			StuecklisteDto stklDto = getStuecklisteFac()
@@ -221,8 +245,8 @@ public class StuecklisteReportFacBean extends LPReport implements
 							theClientDto);
 
 			stuecklisten += stklDto.getArtikelDto().getCNr();
-			if(i!=stuecklisteIId.length-1){
-				stuecklisten +=", ";
+			if (i != stuecklisteIId.length - 1) {
+				stuecklisten += ", ";
 			}
 
 			if (i == 0) {
@@ -231,17 +255,56 @@ public class StuecklisteReportFacBean extends LPReport implements
 
 			getStuecklisteFac().updateStuecklisteLosgroesse(stuecklisteIId[i],
 					nLosgroesse);
+			StklagerentnahmeDto[] laDtos = getStuecklisteFac()
+					.stklagerentnahmeFindByStuecklisteIId(stklDto.getIId());
+
+			for (int j = 0; j < laDtos.length; j++) {
+				slagerIIdsAbbuchungslager.add(laDtos[j].getLagerIId());
+			}
 		}
+
+		KundeDto kdDto = null;
+
+		try {
+			if (dto.getPartnerIId() != null) {
+				kdDto = getKundeFac().kundeFindByiIdPartnercNrMandantOhneExc(
+						dto.getPartnerIId(), theClientDto.getMandant(),
+						theClientDto);
+
+			}
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		// PJ18852
+		String inLagerstaende = "(";
+
+		Iterator itLagerstaende = slagerIIdsAbbuchungslager.iterator();
+		while (itLagerstaende.hasNext()) {
+			Integer lagerIIdIn = (Integer) itLagerstaende.next();
+
+			inLagerstaende += lagerIIdIn;
+
+			if (itLagerstaende.hasNext()) {
+				inLagerstaende += ",";
+			}
+
+		}
+
+		inLagerstaende += ")";
 
 		index = -1;
 		sAktuellerReport = StuecklisteReportFac.REPORT_STUECKLISTE_AUSGABESTUECKLSITE;
 
-		List<?> m = getStuecklisteFac().getStrukturDatenEinerStueckliste(
-				stuecklisteIId, theClientDto,
-				iOptionSortierungUnterstuecklisten.intValue(), 0, null,
-				bUnterstuecklistenEinbinden.booleanValue(),
-				bGleichePositionenZusammenfassen.booleanValue(), nLosgroesse,
-				null, bUnterstklstrukurBelassen);
+		List<?> m = getStuecklisteFac()
+				.getStrukturDatenEinerStueckliste(
+						stuecklisteIId,
+						theClientDto,
+						StuecklisteReportFac.REPORT_STUECKLISTE_OPTION_SORTIERUNG_ARTIKELNR,
+						0, null, bUnterstuecklistenEinbinden.booleanValue(),
+						bGleichePositionenZusammenfassen.booleanValue(),
+						nLosgroesse, null, false);
 
 		Iterator<?> it = m.listIterator();
 		data = new Object[m.size()][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ANZAHL_SPALTEN];
@@ -252,13 +315,12 @@ public class StuecklisteReportFacBean extends LPReport implements
 			StuecklistepositionDto position = struktur
 					.getStuecklistepositionDto();
 
-			String einrueckung = "";
-			for (int i = 0; i < struktur.getIEbene(); i++) {
-				einrueckung = einrueckung + "   ";
-			}
-
 			data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_I_EBENE] = struktur
 					.getIEbene();
+			data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_FREIGABE_PERSON] = struktur
+					.getCKurzzeichenPersonFreigabe();
+			data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_FREIGABE_ZEITPUNKT] = struktur
+					.getTFreigabe();
 
 			try {
 
@@ -277,8 +339,29 @@ public class StuecklisteReportFacBean extends LPReport implements
 					data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ARTIKEL] = "";
 
 				} else {
-					data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ARTIKEL] = einrueckung
-							+ artikelDto.getCNr();
+					data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ARTIKEL] = artikelDto
+							.getCNr();
+					data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ARTIKEL_HERSTELLERNUMMER] = artikelDto
+							.getCArtikelnrhersteller();
+					data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ARTIKEL_HERSTELLERBEZEICHNUNG] = artikelDto
+							.getCArtikelbezhersteller();
+
+					if (kdDto != null) {
+						// KundeArtikelnr gueltig zu Belegdatum
+						KundesokoDto kundeSokoDto_gueltig = this
+								.getKundesokoFac()
+								.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
+										kdDto.getIId(),
+										artikelDto.getIId(),
+										Helper.cutDate(new java.sql.Date(System
+												.currentTimeMillis())));
+						if (kundeSokoDto_gueltig != null) {
+							data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_KUNDENARTIKELNUMMER] = kundeSokoDto_gueltig
+									.getCKundeartikelnummer();
+							data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_KUNDENARTIKELBEZEICHNUNG] = kundeSokoDto_gueltig
+									.getCKundeartikelbez();
+						}
+					}
 
 					// Artikelkommentar Text und Bild
 					Image imageKommentar = null;
@@ -338,9 +421,48 @@ public class StuecklisteReportFacBean extends LPReport implements
 						.getCRevision();
 
 				BigDecimal lagerstand = null;
-				lagerstand = getLagerFac().getLagerstandOhneExc(
-						artikelDto.getIId(), lagerIId, theClientDto);
-				data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_LAGERSTAND] = lagerstand;
+
+				if (bNurAbbuchungslaeger) {
+					// PJ18852 Der Lagerstand ist die Summe der
+					// Quicklagerstaende
+					// der Abbuchungslaeger
+
+					if (inLagerstaende != null && inLagerstaende.length() > 2) {
+
+						Session session = FLRSessionFactory.getFactory()
+								.openSession();
+						String sQuery = "SELECT sum(al.n_lagerstand) FROM FLRArtikellager al WHERE al.compId.artikel_i_id="
+								+ artikelDto.getIId()
+								+ " AND al.compId.lager_i_id IN "
+								+ inLagerstaende;
+
+						org.hibernate.Query hquery = session
+								.createQuery(sQuery);
+
+						List<?> resultList = hquery.list();
+						Iterator<?> resultListIterator = resultList.iterator();
+
+						if (resultListIterator.hasNext()) {
+							lagerstand = (BigDecimal) resultListIterator.next();
+						}
+					}
+					if (lagerstand == null) {
+						lagerstand = BigDecimal.ZERO;
+					}
+
+					data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_LAGERSTAND] = lagerstand;
+
+				} else {
+
+					lagerstand = getLagerFac().getLagerstandOhneExc(
+							artikelDto.getIId(), lagerIId, theClientDto);
+					data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_LAGERSTAND] = lagerstand;
+				}
+
+				BigDecimal lagerstandZiellager = getLagerFac()
+						.getLagerstandOhneExc(artikelDto.getIId(),
+								dto.getLagerIIdZiellager(), theClientDto);
+				data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_LAGERSTAND_ZIELLAGER] = lagerstandZiellager;
 
 				// Verfuegbar
 				BigDecimal reservierungen = getReservierungFac()
@@ -376,9 +498,29 @@ public class StuecklisteReportFacBean extends LPReport implements
 						.getMontageartDto().getCBez();
 
 				try {
-					data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_LAGERORT] = getLagerFac()
-							.getLagerplaezteEinesArtikels(artikelDto.getIId(),
-									lagerIId);
+
+					if (bNurAbbuchungslaeger) {
+
+						String lagerorte = "";
+						itLagerstaende = slagerIIdsAbbuchungslager.iterator();
+						while (itLagerstaende.hasNext()) {
+							Integer lagerIIdIn = (Integer) itLagerstaende
+									.next();
+
+							lagerorte += getLagerFac()
+									.getLagerplaezteEinesArtikels(
+											artikelDto.getIId(), lagerIIdIn);
+
+						}
+
+						data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_LAGERORT] = lagerorte;
+					} else {
+
+						data[row][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_LAGERORT] = getLagerFac()
+								.getLagerplaezteEinesArtikels(
+										artikelDto.getIId(), lagerIId);
+
+					}
 
 				} catch (javax.ejb.EJBException ex1) {
 					// kein lagerort vorhanden
@@ -391,22 +533,32 @@ public class StuecklisteReportFacBean extends LPReport implements
 			row++;
 		}
 
-		if (bUnterstuecklistenEinbinden == false
-				|| (bUnterstuecklistenEinbinden == true && !bUnterstklstrukurBelassen)) {
+		for (int k = data.length - 1; k > 0; --k) {
+			for (int j = 0; j < k; ++j) {
+				Object[] a1 = (Object[]) data[j];
+				Object[] a2 = (Object[]) data[j + 1];
 
-			// Nach Fertigungsgruppe sortieren
-			for (int k = data.length - 1; k > 0; --k) {
-				for (int j = 0; j < k; ++j) {
-					Object[] a1 = (Object[]) data[j];
-					Object[] a2 = (Object[]) data[j + 1];
+				if (bSortiertNachArtikelbezeichnung) {
+					String bez1 = "";
+					if (a1[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_BEZEICHNUNG] != null) {
+						bez1 = (String) a1[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_BEZEICHNUNG];
+					}
+					String bez2 = "";
+					if (a2[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_BEZEICHNUNG] != null) {
+						bez2 = (String) a2[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_BEZEICHNUNG];
+					}
+					if (bez1.compareTo(bez2) > 0) {
+						data[j] = a2;
+						data[j + 1] = a1;
 
+					}
+				} else {
 					if (((String) a1[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ARTIKEL])
 							.compareTo((String) a2[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ARTIKEL]) > 0) {
 						data[j] = a2;
 						data[j + 1] = a1;
 
 					}
-
 				}
 
 			}
@@ -428,24 +580,55 @@ public class StuecklisteReportFacBean extends LPReport implements
 				for (int j = 0; j < posersatzDtos.length; j++) {
 					Object[] neueZeile = data[i].clone();
 
-					String einrueckung = "";
-					for (int k = 0; k < (Integer) data[i][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_I_EBENE]; k++) {
-						einrueckung = einrueckung + "   ";
-					}
-
 					com.lp.server.artikel.service.ArtikelDto artikelDto = getArtikelFac()
 							.artikelFindByPrimaryKeySmall(
 									posersatzDtos[j].getArtikelIIdErsatz(),
 									theClientDto);
 
-					neueZeile[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ERSATZARTIKEL] = einrueckung
-							+ artikelDto.getCNr();
+					neueZeile[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ERSATZARTIKEL] = artikelDto
+							.getCNr();
 
 					neueZeile[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ERSATZARTIKEL_BEZEICHNUNG] = artikelDto
 							.formatBezeichnung();
 
+					neueZeile[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ERSATZARTIKEL_HERSTELLERNUMMER] = artikelDto
+							.getCArtikelnrhersteller();
+					neueZeile[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ERSATZARTIKEL_HERSTELLERBEZEICHNUNG] = artikelDto
+							.getCArtikelbezhersteller();
+
 					neueZeile[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ZIELMENGE] = new BigDecimal(
 							0);
+
+					// SP2537
+
+					try {
+						BigDecimal lagerstand = null;
+						lagerstand = getLagerFac().getLagerstandOhneExc(
+								artikelDto.getIId(), lagerIId, theClientDto);
+						neueZeile[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_LAGERSTAND] = lagerstand;
+
+						// Verfuegbar
+						BigDecimal reservierungen = getReservierungFac()
+								.getAnzahlReservierungen(artikelDto.getIId(),
+										theClientDto);
+						BigDecimal fehlmengen = getFehlmengeFac()
+								.getAnzahlFehlmengeEinesArtikels(
+										artikelDto.getIId(), theClientDto);
+
+						BigDecimal verfuegbar = lagerstand.subtract(fehlmengen)
+								.subtract(reservierungen);
+						neueZeile[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_VERFUEGBAR] = verfuegbar;
+
+						neueZeile[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_IN_FERTIGUNG] = getFertigungFac()
+								.getAnzahlInFertigung(artikelDto.getIId(),
+										theClientDto);
+
+						neueZeile[REPORT_STUECKLISTE_AUSGABESTUECKLISTE_BESTELLT] = getArtikelbestelltFac()
+								.getAnzahlBestellt(artikelDto.getIId());
+					} catch (RemoteException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 
 					alDaten.add(neueZeile);
 
@@ -467,6 +650,9 @@ public class StuecklisteReportFacBean extends LPReport implements
 
 		}
 
+		parameter.put("P_NUR_ABBUCHUNGSLAEGER", new Boolean(
+				bNurAbbuchungslaeger));
+
 		parameter.put("P_STUECKLISTE", dto.getArtikelDto().getCNr());
 		parameter.put("P_ERFASSUNGSFAKTOR", dto.getIErfassungsfaktor());
 		parameter.put("P_STUECKLISTEBEZEICHNUNG", dto.getArtikelDto()
@@ -474,9 +660,20 @@ public class StuecklisteReportFacBean extends LPReport implements
 		parameter.put("P_EINHEIT", dto.getArtikelDto().getEinheitCNr());
 		parameter.put("P_ANLEGEN", dto.getTAnlegen());
 		parameter.put("P_AENDERN", dto.getTAendern());
+		parameter.put("P_AENDERN_POSITION", dto.getTAendernposition());
+		parameter.put("P_AENDERN_ARBEITSPLAN", dto.getTAendernarbeitsplan());
 		if (bMitStuecklistenkommentar.booleanValue() == true) {
 			parameter.put("P_KOMMENTAR",
 					Helper.formatStyledTextForJasper(dto.getXKommentar()));
+		}
+
+		parameter.put("P_FREIGABE_ZEITPUNKT", dto.getTFreigabe());
+		if (dto.getPersonalIIdFreigabe() != null) {
+			parameter.put(
+					"P_FREIGABE_PERSON",
+					getPersonalFac().personalFindByPrimaryKey(
+							dto.getPersonalIIdFreigabe(), theClientDto)
+							.getCKurzzeichen());
 		}
 
 		parameter.put("P_LOSGROESSE", dto.getNLosgroesse());
@@ -488,9 +685,68 @@ public class StuecklisteReportFacBean extends LPReport implements
 		return getReportPrint();
 	}
 
+	public BigDecimal[] getLief1PreisDerLetzten2JahreInMandantenwaehrung(
+			Integer artikelIId, BigDecimal nMenge, TheClientDto theClientDto) {
+		BigDecimal[] bdPreise = new BigDecimal[2];
+
+		Timestamp tVor2Jahren = new Timestamp(System.currentTimeMillis());
+		tVor2Jahren = Helper.addiereTageZuTimestamp(tVor2Jahren, -730);
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String sQuery = "SELECT wep FROM FLRWareneingangspositionen AS wep WHERE wep.flrbestellposition.flrartikel.i_id="
+				+ artikelIId
+				+ " AND wep.flrwareneingang.t_wareneingansdatum<='"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(System
+						.currentTimeMillis()))
+				+ "' AND  wep.flrwareneingang.t_wareneingansdatum>='"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tVor2Jahren
+						.getTime()))
+				+ "' AND wep.n_gelieferterpreis IS NOT NULL ";
+
+		org.hibernate.Query hquery = session.createQuery(sQuery);
+
+		List<?> resultList = hquery.list();
+		Iterator<?> resultListIterator = resultList.iterator();
+
+		TreeSet<BigDecimal> ts = new TreeSet<BigDecimal>();
+
+		while (resultListIterator.hasNext()) {
+			FLRWareneingangspositionen wepos = (FLRWareneingangspositionen) resultListIterator
+					.next();
+
+			BigDecimal geliefertPreis = wepos.getN_gelieferterpreis();
+
+			// Mit Welchselkurs zu Mandantenwaehrung multiplizieren
+			if (wepos.getFlrwareneingang().getN_wechselkurs() != null
+					&& wepos.getFlrwareneingang().getN_wechselkurs()
+							.doubleValue() != 0) {
+				geliefertPreis = wepos.getN_gelieferterpreis().divide(
+						wepos.getFlrwareneingang().getN_wechselkurs(), 4,
+						BigDecimal.ROUND_HALF_EVEN);
+
+			}
+
+			ts.add(geliefertPreis);
+
+		}
+
+		session.close();
+
+		if (ts.size() > 0) {
+			bdPreise[0] = ts.first();
+			bdPreise[1] = ts.last();
+
+		}
+
+		return bdPreise;
+	}
+
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printGesamtkalkulation(Integer stuecklisteIId,
-			BigDecimal nLosgroesse, TheClientDto theClientDto) {
+			BigDecimal nLosgroesse, boolean lief1PreisInKalkpreisUebernehmen,
+			boolean bMitPreisenDerLetzten2Jahre,
+			boolean unterstuecklistenVerdichten, TheClientDto theClientDto) {
 
 		if (stuecklisteIId == null || nLosgroesse == null) {
 			throw new EJBExceptionLP(
@@ -577,6 +833,9 @@ public class StuecklisteReportFacBean extends LPReport implements
 		}
 
 		Iterator<?> it = m.listIterator();
+
+		ArrayList alDaten = new ArrayList();
+
 		data = new Object[m.size()][REPORT_GESAMTKALKULATION_ANZAHL_SPALTEN];
 
 		BigDecimal bdArbeitszeitkosten = new BigDecimal(0);
@@ -594,7 +853,8 @@ public class StuecklisteReportFacBean extends LPReport implements
 
 		HashMap<Integer, BigDecimal> hmHoechsteDurchlaufzeitEinerEbene = new HashMap<Integer, BigDecimal>();
 
-		int row = 0;
+		int iMaxAnzahlArbeitsschritte = 0;
+
 		while (it.hasNext()) {
 			StuecklisteMitStrukturDto struktur = (StuecklisteMitStrukturDto) it
 					.next();
@@ -602,6 +862,22 @@ public class StuecklisteReportFacBean extends LPReport implements
 			String einrueckung = "";
 			for (int i = 0; i < struktur.getIEbene(); i++) {
 				einrueckung = einrueckung + "   ";
+			}
+
+			Object[] zeile = new Object[REPORT_GESAMTKALKULATION_ANZAHL_SPALTEN];
+
+			zeile[REPORT_GESAMTKALKULATION_I_EBENE] = struktur.getIEbene();
+
+			zeile[REPORT_GESAMTKALKULATION_FREIGABE_PERSON] = struktur
+					.getCKurzzeichenPersonFreigabe();
+			zeile[REPORT_GESAMTKALKULATION_FREIGABE_ZEITPUNKT] = struktur
+					.getTFreigabe();
+			zeile[REPORT_GESAMTKALKULATION_ANZAHL_ARBEITSSCHRITTE] = struktur
+					.getiAnzahlArbeitsschritte();
+			if (struktur.getiAnzahlArbeitsschritte() != null
+					&& struktur.getiAnzahlArbeitsschritte() > iMaxAnzahlArbeitsschritte) {
+				iMaxAnzahlArbeitsschritte = struktur
+						.getiAnzahlArbeitsschritte();
 			}
 
 			// Wenn Position
@@ -617,28 +893,39 @@ public class StuecklisteReportFacBean extends LPReport implements
 								.getArtikelartCNr()
 								.equals(com.lp.server.artikel.service.ArtikelFac.ARTIKELART_HANDARTIKEL)) {
 
-					data[row][REPORT_GESAMTKALKULATION_ARTIKEL] = "";
+					zeile[REPORT_GESAMTKALKULATION_ARTIKEL] = "";
 
 				} else {
-					data[row][REPORT_GESAMTKALKULATION_ARTIKEL] = einrueckung
+					zeile[REPORT_GESAMTKALKULATION_ARTIKEL] = einrueckung
 							+ artikelDto.getCNr();
 				}
 
-				data[row][REPORT_GESAMTKALKULATION_GEWICHT] = artikelDto
+				zeile[REPORT_GESAMTKALKULATION_GEWICHT] = artikelDto
 						.getFGewichtkg();
-				data[row][REPORT_GESAMTKALKULATION_MATERIALGEWICHT] = artikelDto
+				zeile[REPORT_GESAMTKALKULATION_MATERIALGEWICHT] = artikelDto
 						.getFMaterialgewicht();
 
-				data[row][REPORT_GESAMTKALKULATION_ARTIKELBEZEICHNUNG] = artikelDto
-						.formatBezeichnung();
-				data[row][REPORT_GESAMTKALKULATION_MENGE] = position
-						.getNZielmenge().multiply(nLosgroesse);
+				if (artikelDto.getArtikelsprDto() != null) {
+					zeile[REPORT_GESAMTKALKULATION_ARTIKELBEZEICHNUNG] = artikelDto
+							.getArtikelsprDto().getCBez();
+					zeile[REPORT_GESAMTKALKULATION_ARTIKELZUSATZBEZEICHNUNG] = artikelDto
+							.getArtikelsprDto().getCZbez();
+					zeile[REPORT_GESAMTKALKULATION_ARTIKELZUSATZBEZEICHNUNG2] = artikelDto
+							.getArtikelsprDto().getCZbez2();
+				}
 
-				data[row][REPORT_GESAMTKALKULATION_MENGENEINHEIT] = artikelDto
+				zeile[REPORT_GESAMTKALKULATION_MENGE] = Helper
+						.rundeKaufmaennisch(
+								position.getNZielmenge().multiply(nLosgroesse),
+								4);
+				zeile[REPORT_GESAMTKALKULATION_KOMMENTAR] = position
+						.getCKommentar();
+
+				zeile[REPORT_GESAMTKALKULATION_MENGENEINHEIT] = artikelDto
 						.getEinheitCNr().trim();
-				data[row][REPORT_GESAMTKALKULATION_MINDESTDECKUNGSBEITRAG] = artikelDto
+				zeile[REPORT_GESAMTKALKULATION_MINDESTDECKUNGSBEITRAG] = artikelDto
 						.getFMindestdeckungsbeitrag();
-				data[row][REPORT_GESAMTKALKULATION_DURCHLAUFZEIT] = struktur
+				zeile[REPORT_GESAMTKALKULATION_DURCHLAUFZEIT] = struktur
 						.getDurchlaufzeit();
 
 				// Hoechste durclaufzeit pro ebene ermitteln
@@ -662,9 +949,9 @@ public class StuecklisteReportFacBean extends LPReport implements
 
 				// Kalkpreis (fuer CNC-Rettenbacher)
 				if (position.getNKalkpreis() != null) {
-					data[row][REPORT_GESAMTKALKULATION_KALKPREIS] = position
+					zeile[REPORT_GESAMTKALKULATION_KALKPREIS] = position
 							.getNKalkpreis();
-					data[row][REPORT_GESAMTKALKULATION_KALKWERT] = position
+					zeile[REPORT_GESAMTKALKULATION_KALKWERT] = position
 							.getNKalkpreis().multiply(
 									position.getNZielmenge().multiply(
 											nLosgroesse));
@@ -700,13 +987,18 @@ public class StuecklisteReportFacBean extends LPReport implements
 								if (kundenVKPreisDto != null
 										&& kundenVKPreisDto.nettopreis != null) {
 
-									data[row][REPORT_GESAMTKALKULATION_VKPREIS] = kundenVKPreisDto.nettopreis;
-									data[row][REPORT_GESAMTKALKULATION_MATERIALZUSCHLAG] = kundenVKPreisDto.bdMaterialzuschlag;
-									data[row][REPORT_GESAMTKALKULATION_VKWERT] = position
-											.getNZielmenge()
-											.multiply(nLosgroesse)
-											.multiply(
-													kundenVKPreisDto.nettopreis);
+									zeile[REPORT_GESAMTKALKULATION_VKPREIS] = kundenVKPreisDto.nettopreis;
+									zeile[REPORT_GESAMTKALKULATION_MATERIALZUSCHLAG] = kundenVKPreisDto.bdMaterialzuschlag;
+
+									// Lt. WH 15.4.2014 auf 2 Stellen runden
+									zeile[REPORT_GESAMTKALKULATION_VKWERT] = Helper
+											.rundeKaufmaennisch(
+													position.getNZielmenge()
+															.multiply(
+																	nLosgroesse)
+															.multiply(
+																	kundenVKPreisDto.nettopreis),
+													2);
 								}
 
 							}
@@ -726,28 +1018,51 @@ public class StuecklisteReportFacBean extends LPReport implements
 									theClientDto);
 					if (artikellieferantDto != null
 							&& artikellieferantDto.getLief1Preis() != null) {
-						data[row][REPORT_GESAMTKALKULATION_LIEF1PREIS] = artikellieferantDto
+						zeile[REPORT_GESAMTKALKULATION_LIEF1PREIS] = artikellieferantDto
 								.getLief1Preis();
-						data[row][REPORT_GESAMTKALKULATION_LIEF1PREISGESAMT] = position
+						zeile[REPORT_GESAMTKALKULATION_LIEF1PREISGESAMT] = position
 								.getNZielmenge().multiply(nLosgroesse)
 								.multiply(artikellieferantDto.getLief1Preis());
-						data[row][REPORT_GESAMTKALKULATION_WIEDERBESCHAFFUNGSZEIT] = artikellieferantDto
+						zeile[REPORT_GESAMTKALKULATION_WIEDERBESCHAFFUNGSZEIT] = artikellieferantDto
 								.getIWiederbeschaffungszeit();
 						if (artikellieferantDto.getNFixkosten() != null) {
-							data[row][REPORT_GESAMTKALKULATION_FIXKOSTEN] = artikellieferantDto
+							zeile[REPORT_GESAMTKALKULATION_FIXKOSTEN] = artikellieferantDto
 									.getNFixkosten();
 						} else {
-							data[row][REPORT_GESAMTKALKULATION_FIXKOSTEN] = new BigDecimal(
+							zeile[REPORT_GESAMTKALKULATION_FIXKOSTEN] = new BigDecimal(
 									0);
 						}
 
 					} else {
-						data[row][REPORT_GESAMTKALKULATION_LIEF1PREIS] = new BigDecimal(
+						zeile[REPORT_GESAMTKALKULATION_LIEF1PREIS] = new BigDecimal(
 								0);
-						data[row][REPORT_GESAMTKALKULATION_LIEF1PREISGESAMT] = new BigDecimal(
+						zeile[REPORT_GESAMTKALKULATION_LIEF1PREISGESAMT] = new BigDecimal(
 								0);
-						data[row][REPORT_GESAMTKALKULATION_FIXKOSTEN] = new BigDecimal(
+						zeile[REPORT_GESAMTKALKULATION_FIXKOSTEN] = new BigDecimal(
 								0);
+					}
+
+					// PJ18427 Lief1Preis zurueckschreiben
+
+					if (lief1PreisInKalkpreisUebernehmen) {
+
+						StuecklistepositionDto stklPosDtoTemp = getStuecklisteFac()
+								.stuecklistepositionFindByPrimaryKey(
+										position.getIId(), theClientDto);
+						stklPosDtoTemp
+								.setNKalkpreis((BigDecimal) zeile[REPORT_GESAMTKALKULATION_LIEF1PREIS]);
+						getStuecklisteFac().updateStuecklisteposition(
+								stklPosDtoTemp, theClientDto);
+					}
+
+					if (bMitPreisenDerLetzten2Jahre == true) {
+
+						BigDecimal[] geliefertpreise = getLief1PreisDerLetzten2JahreInMandantenwaehrung(
+								artikelDto.getIId(), position.getNZielmenge()
+										.multiply(nLosgroesse), theClientDto);
+
+						zeile[REPORT_GESAMTKALKULATION_GROESSTER_LIEF1PREIS_2JAHRE] = geliefertpreise[1];
+						zeile[REPORT_GESAMTKALKULATION_KLEINSTER_LIEF1PREIS_2JAHRE] = geliefertpreise[0];
 					}
 
 					BigDecimal bdGestpreis = null;
@@ -767,81 +1082,54 @@ public class StuecklisteReportFacBean extends LPReport implements
 
 					if (!struktur.isBStueckliste()) {
 
-						data[row][REPORT_GESAMTKALKULATION_GESTPREIS] = bdGestpreis;
-						data[row][REPORT_GESAMTKALKULATION_GESTWERT] = bdGestpreis
+						zeile[REPORT_GESAMTKALKULATION_GESTPREIS] = bdGestpreis;
+						zeile[REPORT_GESAMTKALKULATION_GESTWERT] = bdGestpreis
 								.multiply(position.getNZielmenge().multiply(
 										nLosgroesse));
 
 					} else {
 
 						if (struktur.getStuecklisteDto() != null) {
-							data[row][REPORT_GESAMTKALKULATION_STKLART] = struktur
+							zeile[REPORT_GESAMTKALKULATION_STKLART] = struktur
 									.getStuecklisteDto().getStuecklisteartCNr();
 						}
 
-						data[row][REPORT_GESAMTKALKULATION_GESTPREISWENNSTUECKLISTE] = bdGestpreis;
-						// Summe der Gestehungspreise der Unterstueckliste
-						// berechnen
-						BigDecimal summePositionen = getStuecklisteFac()
-								.berechneStuecklistenGestehungspreisAusPositionen(
-										artikelDto.getIId(), theClientDto);
+						zeile[REPORT_GESAMTKALKULATION_GESTPREISWENNSTUECKLISTE] = bdGestpreis;
 
-						if (summePositionen == null) {
-							summePositionen = new BigDecimal(0);
-						}
-						data[row][REPORT_GESAMTKALKULATION_SUMMEGESTPREISPOSITIONENWENNSTUECKLISTE] = summePositionen;
-						// Wenn mehr wie 10% Abweichung, dann wird Flag gesetzt
-
-						BigDecimal abweichung = bdGestpreis
-								.subtract(summePositionen)
-								.abs()
-								.divide(new BigDecimal(10),
-										BigDecimal.ROUND_HALF_EVEN);
-
-						if (summePositionen.doubleValue() < bdGestpreis.add(
-								abweichung).doubleValue()
-								&& summePositionen.doubleValue() > bdGestpreis
-										.subtract(abweichung).doubleValue()) {
-							data[row][REPORT_GESAMTKALKULATION_GESTPREISEWEICHENAB] = new Boolean(
-									false);
-						} else {
-							data[row][REPORT_GESAMTKALKULATION_GESTPREISEWEICHENAB] = new Boolean(
-									true);
-						}
 					}
 					if (artikelDto.getArtikelartCNr().equals(
 							ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
 						bdArbeitszeitkosten = bdArbeitszeitkosten
-								.add((BigDecimal) data[row][REPORT_GESAMTKALKULATION_GESTWERT]);
+								.add((BigDecimal) zeile[REPORT_GESAMTKALKULATION_GESTWERT]);
 						bdZeitMannGesamt = bdZeitMannGesamt.add(position
 								.getNMenge());
 						if (sEinheit.equals(SystemFac.EINHEIT_STUNDE.trim())) {
-							data[row][REPORT_GESAMTKALKULATION_STUECKZEIT] = position
+							zeile[REPORT_GESAMTKALKULATION_STUECKZEIT] = position
 									.getNMenge();
 						} else if (sEinheit.equals(SystemFac.EINHEIT_MINUTE
 								.trim())) {
-							data[row][REPORT_GESAMTKALKULATION_STUECKZEIT] = position
+							zeile[REPORT_GESAMTKALKULATION_STUECKZEIT] = position
 									.getNMenge().multiply(new BigDecimal(60));
 						} else if (sEinheit.equals(SystemFac.EINHEIT_SEKUNDE
 								.trim())) {
-							data[row][REPORT_GESAMTKALKULATION_STUECKZEIT] = position
+							zeile[REPORT_GESAMTKALKULATION_STUECKZEIT] = position
 									.getNMenge().multiply(new BigDecimal(3600));
 						}
 					} else {
-						if (data[row][REPORT_GESAMTKALKULATION_GESTWERT] != null) {
+						if (zeile[REPORT_GESAMTKALKULATION_GESTWERT] != null) {
 							bdMaterialkosten = bdMaterialkosten
-									.add((BigDecimal) data[row][REPORT_GESAMTKALKULATION_GESTWERT]);
+									.add((BigDecimal) zeile[REPORT_GESAMTKALKULATION_GESTWERT]);
 						}
-						if (data[row][REPORT_GESAMTKALKULATION_LIEF1PREISGESAMT] != null
-								&& data[row][REPORT_GESAMTKALKULATION_GESTPREISWENNSTUECKLISTE] == null) {
+						if (zeile[REPORT_GESAMTKALKULATION_LIEF1PREISGESAMT] != null
+								&& zeile[REPORT_GESAMTKALKULATION_GESTPREISWENNSTUECKLISTE] == null) {
 							bdMaterialkostenLief = bdMaterialkostenLief
-									.add((BigDecimal) data[row][REPORT_GESAMTKALKULATION_LIEF1PREISGESAMT]);
+									.add((BigDecimal) zeile[REPORT_GESAMTKALKULATION_LIEF1PREISGESAMT]);
 						}
 
-						if (data[row][REPORT_GESAMTKALKULATION_FIXKOSTEN] != null
-								&& data[row][REPORT_GESAMTKALKULATION_GESTPREISWENNSTUECKLISTE] == null) {
+						if (zeile[REPORT_GESAMTKALKULATION_FIXKOSTEN] != null
+								&& zeile[REPORT_GESAMTKALKULATION_GESTPREISWENNSTUECKLISTE] == null) {
 							bdFixkostenLief = bdFixkostenLief
-									.add((BigDecimal) data[row][REPORT_GESAMTKALKULATION_FIXKOSTEN]);
+									.add((BigDecimal) zeile[REPORT_GESAMTKALKULATION_FIXKOSTEN]);
 						}
 					}
 				} catch (RemoteException ex1) {
@@ -860,17 +1148,24 @@ public class StuecklisteReportFacBean extends LPReport implements
 						&& artikelDto
 								.getArtikelartCNr()
 								.equals(com.lp.server.artikel.service.ArtikelFac.ARTIKELART_HANDARTIKEL)) {
-					data[row][REPORT_GESAMTKALKULATION_ARTIKEL] = "";
+					zeile[REPORT_GESAMTKALKULATION_ARTIKEL] = "";
 				} else {
-					data[row][REPORT_GESAMTKALKULATION_ARTIKEL] = einrueckung
+					zeile[REPORT_GESAMTKALKULATION_ARTIKEL] = einrueckung
 							+ artikelDto.getCNr();
 				}
 
-				data[row][REPORT_GESAMTKALKULATION_ARTIKELBEZEICHNUNG] = artikelDto
-						.formatBezeichnung();
-				data[row][REPORT_GESAMTKALKULATION_MINDESTDECKUNGSBEITRAG] = artikelDto
+				if (artikelDto.getArtikelsprDto() != null) {
+					zeile[REPORT_GESAMTKALKULATION_ARTIKELBEZEICHNUNG] = artikelDto
+							.getArtikelsprDto().getCBez();
+					zeile[REPORT_GESAMTKALKULATION_ARTIKELZUSATZBEZEICHNUNG] = artikelDto
+							.getArtikelsprDto().getCZbez();
+					zeile[REPORT_GESAMTKALKULATION_ARTIKELZUSATZBEZEICHNUNG2] = artikelDto
+							.getArtikelsprDto().getCZbez2();
+				}
+
+				zeile[REPORT_GESAMTKALKULATION_MINDESTDECKUNGSBEITRAG] = artikelDto
 						.getFMindestdeckungsbeitrag();
-				data[row][REPORT_GESAMTKALKULATION_MENGENEINHEIT] = artikelDto
+				zeile[REPORT_GESAMTKALKULATION_MENGENEINHEIT] = artikelDto
 						.getEinheitCNr().trim();
 
 				BigDecimal bdGesamtzeit = Helper.berechneGesamtzeitInStunden(
@@ -879,7 +1174,7 @@ public class StuecklisteReportFacBean extends LPReport implements
 						nLosgroesse, null,
 						stuecklistearbeitsplanDto.getIAufspannung());
 
-				data[row][REPORT_GESAMTKALKULATION_MENGE] = bdGesamtzeit;
+				zeile[REPORT_GESAMTKALKULATION_MENGE] = bdGesamtzeit;
 
 				try {
 					// Wenn Maschinenzeit, dann statt Artikelnr und Bezeichnung,
@@ -894,17 +1189,17 @@ public class StuecklisteReportFacBean extends LPReport implements
 
 						if (artikellieferantDto != null
 								&& artikellieferantDto.getLief1Preis() != null) {
-							data[row][REPORT_GESAMTKALKULATION_GESTPREIS] = artikellieferantDto
+							zeile[REPORT_GESAMTKALKULATION_GESTPREIS] = artikellieferantDto
 									.getLief1Preis();
-							data[row][REPORT_GESAMTKALKULATION_GESTWERT] = artikellieferantDto
+							zeile[REPORT_GESAMTKALKULATION_GESTWERT] = artikellieferantDto
 									.getLief1Preis().multiply(bdGesamtzeit);
 							bdArbeitszeitkosten = bdArbeitszeitkosten
 									.add(artikellieferantDto.getLief1Preis()
 											.multiply(bdGesamtzeit));
 						} else {
-							data[row][REPORT_GESAMTKALKULATION_GESTPREIS] = new BigDecimal(
+							zeile[REPORT_GESAMTKALKULATION_GESTPREIS] = new BigDecimal(
 									0);
-							data[row][REPORT_GESAMTKALKULATION_GESTWERT] = new BigDecimal(
+							zeile[REPORT_GESAMTKALKULATION_GESTWERT] = new BigDecimal(
 									0);
 						}
 					} else {
@@ -913,13 +1208,13 @@ public class StuecklisteReportFacBean extends LPReport implements
 										stuecklistearbeitsplanDto
 												.getMaschineIId());
 
-						data[row][REPORT_GESAMTKALKULATION_ARTIKEL] = einrueckung
+						zeile[REPORT_GESAMTKALKULATION_ARTIKEL] = einrueckung
 								+ "M:" + maschineDto.getCIdentifikationsnr();
 
-						data[row][REPORT_GESAMTKALKULATION_ARTIKELBEZEICHNUNG] = maschineDto
+						zeile[REPORT_GESAMTKALKULATION_ARTIKELBEZEICHNUNG] = maschineDto
 								.getCBez();
 
-						data[row][REPORT_GESAMTKALKULATION_MENGENEINHEIT] = SystemFac.EINHEIT_STUNDE
+						zeile[REPORT_GESAMTKALKULATION_MENGENEINHEIT] = SystemFac.EINHEIT_STUNDE
 								.trim();
 
 						BigDecimal maschinenkosten = getZeiterfassungFac()
@@ -928,12 +1223,12 @@ public class StuecklisteReportFacBean extends LPReport implements
 										new java.sql.Timestamp(System
 												.currentTimeMillis()));
 
-						data[row][REPORT_GESAMTKALKULATION_GESTPREIS] = maschinenkosten;
-						data[row][REPORT_GESAMTKALKULATION_GESTWERT] = maschinenkosten
-								.multiply(bdGesamtzeit);
 						bdMaschinenzeitkosten = bdMaschinenzeitkosten
 								.add(maschinenkosten.multiply(bdGesamtzeit));
 
+						zeile[REPORT_GESAMTKALKULATION_GESTPREIS] = maschinenkosten;
+						zeile[REPORT_GESAMTKALKULATION_GESTWERT] = maschinenkosten
+								.multiply(bdGesamtzeit);
 					}
 				} catch (RemoteException ex1) {
 					throwEJBExceptionLPRespectOld(ex1);
@@ -989,60 +1284,288 @@ public class StuecklisteReportFacBean extends LPReport implements
 								.add(new BigDecimal(dRuestzeit / 3600));
 					}
 				}
-				data[row][REPORT_GESAMTKALKULATION_STUECKZEIT] = bdStueckzeit;
-				data[row][REPORT_GESAMTKALKULATION_RUESTZEIT] = new BigDecimal(
+				zeile[REPORT_GESAMTKALKULATION_STUECKZEIT] = bdStueckzeit;
+				zeile[REPORT_GESAMTKALKULATION_RUESTZEIT] = new BigDecimal(
 						dRuestzeit);
 
-				// VKPreise
-				if (stklDto.getPartnerIId() != null) {
-					try {
-						if (kundeDto != null) {
+				zeile[REPORT_GESAMTKALKULATION_AG] = stuecklistearbeitsplanDto
+						.getIArbeitsgang();
+				zeile[REPORT_GESAMTKALKULATION_UAG] = stuecklistearbeitsplanDto
+						.getIUnterarbeitsgang();
+				zeile[REPORT_GESAMTKALKULATION_KOMMENTAR] = stuecklistearbeitsplanDto
+						.getCKommentar();
 
-							if (kundeDto.getMwstsatzbezIId() != null) {
-								VkpreisfindungDto vkpreisDto = getVkPreisfindungFac()
-										.verkaufspreisfindung(
-												artikelDto.getIId(),
-												kundeDto.getIId(),
-												bdGesamtzeit
-														.multiply(nLosgroesse),
-												new java.sql.Date(System
-														.currentTimeMillis()),
-												kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
-												getMandantFac()
-														.mwstsatzFindByMwstsatzbezIIdAktuellster(
-																kundeDto.getMwstsatzbezIId(),
-																theClientDto)
-														.getIId(),
-												theClientDto
-														.getSMandantenwaehrung(),
-												theClientDto);
+				if (!struktur.isBMaschinenzeit()) {
 
-								VerkaufspreisDto kundenVKPreisDto = Helper
-										.getVkpreisBerechnet(vkpreisDto);
+					// VKPreise
+					if (stklDto.getPartnerIId() != null) {
+						try {
+							if (kundeDto != null) {
 
-								if (kundenVKPreisDto != null
-										&& kundenVKPreisDto.nettopreis != null) {
+								if (kundeDto.getMwstsatzbezIId() != null) {
+									VkpreisfindungDto vkpreisDto = getVkPreisfindungFac()
+											.verkaufspreisfindung(
+													artikelDto.getIId(),
+													kundeDto.getIId(),
+													bdGesamtzeit
+															.multiply(nLosgroesse),
+													new java.sql.Date(
+															System.currentTimeMillis()),
+													kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
+													getMandantFac()
+															.mwstsatzFindByMwstsatzbezIIdAktuellster(
+																	kundeDto.getMwstsatzbezIId(),
+																	theClientDto)
+															.getIId(),
+													theClientDto
+															.getSMandantenwaehrung(),
+													theClientDto);
 
-									data[row][REPORT_GESAMTKALKULATION_VKPREIS] = kundenVKPreisDto.nettopreis;
-									data[row][REPORT_GESAMTKALKULATION_VKWERT] = bdGesamtzeit
-											.multiply(kundenVKPreisDto.nettopreis);
+									VerkaufspreisDto kundenVKPreisDto = Helper
+											.getVkpreisBerechnet(vkpreisDto);
+
+									if (kundenVKPreisDto != null
+											&& kundenVKPreisDto.nettopreis != null) {
+
+										zeile[REPORT_GESAMTKALKULATION_VKPREIS] = kundenVKPreisDto.nettopreis;
+										zeile[REPORT_GESAMTKALKULATION_VKWERT] = bdGesamtzeit
+												.multiply(kundenVKPreisDto.nettopreis);
+									}
+
 								}
+							}
+						} catch (RemoteException ex5) {
+							throwEJBExceptionLPRespectOld(ex5);
+						}
 
+					}
+				} else {
+					BigDecimal maschinenkostenVK = getZeiterfassungFac()
+							.getMaschinenKostenVKZumZeitpunkt(
+									stuecklistearbeitsplanDto.getMaschineIId(),
+									new java.sql.Timestamp(System
+											.currentTimeMillis()));
+
+					zeile[REPORT_GESAMTKALKULATION_VKPREIS] = maschinenkostenVK;
+					zeile[REPORT_GESAMTKALKULATION_VKWERT] = maschinenkostenVK
+							.multiply(bdGesamtzeit);
+				}
+
+			}
+			alDaten.add(zeile);
+		}
+
+		if (unterstuecklistenVerdichten) {
+			ArrayList alDatenVerdichtet = new ArrayList();
+
+			for (int i = 0; i < alDaten.size(); i++) {
+				Object[] zeile = (Object[]) alDaten.get(i);
+
+				int iEbene = (Integer) zeile[REPORT_GESAMTKALKULATION_I_EBENE];
+
+				if (iEbene == 0) {
+
+					BigDecimal gestpreis = BigDecimal.ZERO;
+					BigDecimal gestwert = BigDecimal.ZERO;
+					BigDecimal lief1preis = BigDecimal.ZERO;
+					BigDecimal lief1wert = BigDecimal.ZERO;
+
+					BigDecimal kalkpreis = BigDecimal.ZERO;
+					BigDecimal kalkwert = BigDecimal.ZERO;
+					BigDecimal vkpreis = BigDecimal.ZERO;
+					BigDecimal vkwert = BigDecimal.ZERO;
+
+					Double gewicht = 0D;
+
+					if (zeile[REPORT_GESAMTKALKULATION_GEWICHT] != null) {
+						gewicht = (Double) zeile[REPORT_GESAMTKALKULATION_GEWICHT];
+					}
+					if (zeile[REPORT_GESAMTKALKULATION_GESTPREIS] != null) {
+						gestpreis = (BigDecimal) zeile[REPORT_GESAMTKALKULATION_GESTPREIS];
+					}
+
+					if (zeile[REPORT_GESAMTKALKULATION_GESTWERT] != null) {
+						gestwert = (BigDecimal) zeile[REPORT_GESAMTKALKULATION_GESTWERT];
+					}
+					if (zeile[REPORT_GESAMTKALKULATION_LIEF1PREIS] != null) {
+						lief1preis = (BigDecimal) zeile[REPORT_GESAMTKALKULATION_LIEF1PREIS];
+					}
+					if (zeile[REPORT_GESAMTKALKULATION_LIEF1PREISGESAMT] != null) {
+						lief1wert = (BigDecimal) zeile[REPORT_GESAMTKALKULATION_LIEF1PREISGESAMT];
+					}
+					if (zeile[REPORT_GESAMTKALKULATION_KALKPREIS] != null) {
+						kalkpreis = (BigDecimal) zeile[REPORT_GESAMTKALKULATION_KALKPREIS];
+					}
+					if (zeile[REPORT_GESAMTKALKULATION_KALKWERT] != null) {
+						kalkwert = (BigDecimal) zeile[REPORT_GESAMTKALKULATION_KALKWERT];
+					}
+					if (zeile[REPORT_GESAMTKALKULATION_VKPREIS] != null) {
+						vkpreis = (BigDecimal) zeile[REPORT_GESAMTKALKULATION_VKPREIS];
+					}
+					if (zeile[REPORT_GESAMTKALKULATION_VKWERT] != null) {
+						vkwert = (BigDecimal) zeile[REPORT_GESAMTKALKULATION_VKWERT];
+					}
+
+					for (int j = i + 1; j < alDaten.size(); j++) {
+
+						Object[] zeileTemp = (Object[]) alDaten.get(j);
+						int iEbeneTemp = (Integer) zeileTemp[REPORT_GESAMTKALKULATION_I_EBENE];
+						if (iEbeneTemp == 0) {
+							break;
+						}
+
+						if (zeileTemp[REPORT_GESAMTKALKULATION_GEWICHT] != null) {
+							gewicht = gewicht
+									+ ((Double) zeileTemp[REPORT_GESAMTKALKULATION_GEWICHT]);
+						}
+
+						if (zeileTemp[REPORT_GESAMTKALKULATION_GESTPREIS] != null) {
+							gestpreis = gestpreis
+									.add((BigDecimal) zeileTemp[REPORT_GESAMTKALKULATION_GESTPREIS]);
+						}
+						if (zeileTemp[REPORT_GESAMTKALKULATION_GESTWERT] != null) {
+							gestwert = gestwert
+									.add((BigDecimal) zeileTemp[REPORT_GESAMTKALKULATION_GESTWERT]);
+						}
+						if (zeileTemp[REPORT_GESAMTKALKULATION_LIEF1PREIS] != null) {
+							lief1preis = lief1preis
+									.add((BigDecimal) zeileTemp[REPORT_GESAMTKALKULATION_LIEF1PREIS]);
+						}
+						if (zeileTemp[REPORT_GESAMTKALKULATION_LIEF1PREISGESAMT] != null) {
+							lief1wert = lief1wert
+									.add((BigDecimal) zeileTemp[REPORT_GESAMTKALKULATION_LIEF1PREISGESAMT]);
+						}
+						if (zeileTemp[REPORT_GESAMTKALKULATION_KALKPREIS] != null) {
+							kalkpreis = kalkpreis
+									.add((BigDecimal) zeileTemp[REPORT_GESAMTKALKULATION_KALKPREIS]);
+						}
+						if (zeileTemp[REPORT_GESAMTKALKULATION_KALKWERT] != null) {
+							kalkwert = kalkwert
+									.add((BigDecimal) zeileTemp[REPORT_GESAMTKALKULATION_KALKWERT]);
+						}
+						if (zeileTemp[REPORT_GESAMTKALKULATION_VKPREIS] != null) {
+							vkpreis = vkpreis
+									.add((BigDecimal) zeileTemp[REPORT_GESAMTKALKULATION_VKPREIS]);
+						}
+						if (zeileTemp[REPORT_GESAMTKALKULATION_VKWERT] != null) {
+							vkwert = vkwert
+									.add((BigDecimal) zeileTemp[REPORT_GESAMTKALKULATION_VKWERT]);
+						}
+
+					}
+
+					zeile[REPORT_GESAMTKALKULATION_GEWICHT] = gewicht;
+
+					zeile[REPORT_GESAMTKALKULATION_GESTPREIS] = gestpreis;
+					zeile[REPORT_GESAMTKALKULATION_GESTWERT] = gestwert;
+					zeile[REPORT_GESAMTKALKULATION_LIEF1PREIS] = lief1preis;
+					zeile[REPORT_GESAMTKALKULATION_LIEF1PREISGESAMT] = lief1wert;
+					zeile[REPORT_GESAMTKALKULATION_KALKPREIS] = kalkpreis;
+					zeile[REPORT_GESAMTKALKULATION_KALKWERT] = kalkwert;
+					zeile[REPORT_GESAMTKALKULATION_VKPREIS] = vkpreis;
+					zeile[REPORT_GESAMTKALKULATION_VKWERT] = vkwert;
+
+					zeile[REPORT_GESAMTKALKULATION_DURCHLAUFZEIT] = null;
+
+					alDatenVerdichtet.add(zeile);
+				}
+
+			}
+
+			data = new Object[alDatenVerdichtet.size()][REPORT_GESAMTKALKULATION_ANZAHL_SPALTEN];
+			data = (Object[][]) alDatenVerdichtet.toArray(data);
+
+		} else {
+			// SP3389 Summe der Positionen
+			for (int i = 0; i < alDaten.size(); i++) {
+				Object[] zeileUnterstkl = (Object[]) alDaten.get(i);
+
+				if (zeileUnterstkl[REPORT_GESAMTKALKULATION_STKLART] != null) {
+					// Ist eine Unterstkl
+
+					// Nun die Gestpreise/Werte der Positionen in die Unterstkl
+					// zurueckschreiben
+
+					int iEbeneUnterstkl = (Integer) zeileUnterstkl[REPORT_GESAMTKALKULATION_I_EBENE];
+
+					BigDecimal mengeUnterstkl = (BigDecimal) zeileUnterstkl[REPORT_GESAMTKALKULATION_MENGE];
+
+					if (zeileUnterstkl[REPORT_GESAMTKALKULATION_ARTIKEL]
+							.equals("039.5028")) {
+						int u = 0;
+					}
+
+					int iNaechsteEbene = iEbeneUnterstkl + 1;
+
+					BigDecimal gestwertStklpositionen = BigDecimal.ZERO;
+
+					for (int j = i + 1; j < alDaten.size(); j++) {
+
+						Object[] zeileNaechsteEbene = (Object[]) alDaten.get(j);
+
+						if (((Integer) zeileNaechsteEbene[REPORT_GESAMTKALKULATION_I_EBENE]) >= iNaechsteEbene) {
+
+							BigDecimal gestwertTemp = (BigDecimal) zeileNaechsteEbene[REPORT_GESAMTKALKULATION_GESTWERT];
+
+							// Wenns eine Stkl ist, den gestpreis mal menge der
+							// stkl
+
+							if (gestwertTemp != null) {
+								gestwertStklpositionen = gestwertStklpositionen
+										.add(gestwertTemp);
 							}
 						}
-					} catch (RemoteException ex5) {
-						throwEJBExceptionLPRespectOld(ex5);
+
+						if (((Integer) zeileNaechsteEbene[REPORT_GESAMTKALKULATION_I_EBENE]) < iNaechsteEbene) {
+							break;
+						}
+
+					}
+					BigDecimal gestpreisUnterstkl = BigDecimal.ZERO;
+					if (mengeUnterstkl.doubleValue() != 0) {
+						gestpreisUnterstkl = gestwertStklpositionen.divide(
+								mengeUnterstkl, 3, BigDecimal.ROUND_HALF_EVEN);
+					}
+					zeileUnterstkl[REPORT_GESAMTKALKULATION_SUMMEGESTPREISPOSITIONENWENNSTUECKLISTE] = gestpreisUnterstkl;
+
+					// Wenn mehr wie 10% Abweichung, dann wird Flag gesetzt
+
+					BigDecimal bdGestpreis = BigDecimal.ZERO;
+
+					if (zeileUnterstkl[REPORT_GESAMTKALKULATION_GESTPREISWENNSTUECKLISTE] != null) {
+						bdGestpreis = (BigDecimal) zeileUnterstkl[REPORT_GESAMTKALKULATION_GESTPREISWENNSTUECKLISTE];
+					}
+
+					double a = bdGestpreis.doubleValue() / 100.0f; // Ein
+																	// Prozent
+																	// von A
+					double p = gestpreisUnterstkl.doubleValue() / a; // Wieviel
+																		// Prozent
+																		// von A
+																		// sind
+																		// in B?
+					if (p < 90 || p > 110) {
+						zeileUnterstkl[REPORT_GESAMTKALKULATION_GESTPREISEWEICHENAB] = new Boolean(
+								true);
+					} else {
+						zeileUnterstkl[REPORT_GESAMTKALKULATION_GESTPREISEWEICHENAB] = new Boolean(
+								false);
 					}
 
 				}
 
 			}
-			row++;
+
+			data = new Object[alDaten.size()][REPORT_GESAMTKALKULATION_ANZAHL_SPALTEN];
+			data = (Object[][]) alDaten.toArray(data);
 		}
 
 		HashMap<String, Object> reportParameter = new HashMap<String, Object>();
 		StuecklisteDto dto = getStuecklisteFac().stuecklisteFindByPrimaryKey(
 				stuecklisteIId, theClientDto);
+
+		reportParameter.put("P_MAX_ANZAHL_ARBEITSSCHRITTE", new Integer(
+				iMaxAnzahlArbeitsschritte));
 
 		reportParameter.put("P_STUECKLISTE", dto.getArtikelDto().getCNr());
 		if (dto.getArtikelDto().getSollverkaufDto() != null) {
@@ -1060,10 +1583,22 @@ public class StuecklisteReportFacBean extends LPReport implements
 				.formatBezeichnung());
 		reportParameter.put("P_EINHEIT", dto.getArtikelDto().getEinheitCNr()
 				.trim());
+
+		reportParameter.put("P_FREIGABE_ZEITPUNKT", dto.getTFreigabe());
+		if (dto.getPersonalIIdFreigabe() != null) {
+			reportParameter.put(
+					"P_FREIGABE_PERSON",
+					getPersonalFac().personalFindByPrimaryKey(
+							dto.getPersonalIIdFreigabe(), theClientDto)
+							.getCKurzzeichen());
+		}
+
 		reportParameter.put("P_EINHEITZEIT", sEinheit);
 		reportParameter.put("P_LOSGROESSE", dto.getNLosgroesse());
 		reportParameter.put("P_DURCHLAUFZEIT", dto.getNDefaultdurchlaufzeit());
 		reportParameter.put("P_WAEHRUNG", mandantenWaehrung);
+		reportParameter.put("P_UNTERSTKL_VERDICHTEN", new Boolean(
+				unterstuecklistenVerdichten));
 
 		try {
 			ParametermandantDto parameterDto = getParameterFac()
@@ -1123,151 +1658,150 @@ public class StuecklisteReportFacBean extends LPReport implements
 
 		// Mandantparameter holen
 
-		try {
-			parameter = (ParametermandantDto) getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.MATERIALGEMEINKOSTENFAKTOR);
+		parameter = (ParametermandantDto) getParameterFac()
+				.getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ALLGEMEIN,
+						ParameterFac.MATERIALGEMEINKOSTENFAKTOR,
+						new Timestamp(System.currentTimeMillis()));
 
-			double dMaterialgemeinkostenfaktor = ((Double) parameter
-					.getCWertAsObject()).doubleValue();
-			reportParameter.put(
-					"P_MATERIALGEMEINKOSTENPROZENT",
-					Helper.formatZahl(dMaterialgemeinkostenfaktor, 1,
-							theClientDto.getLocUi()) + "%");
+		double dMaterialgemeinkostenfaktor = ((Double) parameter
+				.getCWertAsObject()).doubleValue();
+		reportParameter.put(
+				"P_MATERIALGEMEINKOSTENPROZENT",
+				Helper.formatZahl(dMaterialgemeinkostenfaktor, 1,
+						theClientDto.getLocUi())
+						+ "%");
 
-			dMaterialgemeinkostenfaktor = (dMaterialgemeinkostenfaktor / 100);
+		dMaterialgemeinkostenfaktor = (dMaterialgemeinkostenfaktor / 100);
 
-			BigDecimal bdMaterialgemeinskosten = bdMaterialkosten
-					.multiply(new BigDecimal(dMaterialgemeinkostenfaktor));
+		BigDecimal bdMaterialgemeinskosten = bdMaterialkosten
+				.multiply(new BigDecimal(dMaterialgemeinkostenfaktor));
 
-			reportParameter.put("P_MATERIALGEMEINKOSTEN",
-					bdMaterialgemeinskosten);
+		reportParameter.put("P_MATERIALGEMEINKOSTEN", bdMaterialgemeinskosten);
 
-			BigDecimal bdMaterialgemeinskostenLief = bdMaterialkostenLief
-					.multiply(new BigDecimal(dMaterialgemeinkostenfaktor));
+		BigDecimal bdMaterialgemeinskostenLief = bdMaterialkostenLief
+				.multiply(new BigDecimal(dMaterialgemeinkostenfaktor));
 
-			reportParameter.put("P_MATERIALGEMEINKOSTENLIEF",
-					bdMaterialgemeinskostenLief);
+		reportParameter.put("P_MATERIALGEMEINKOSTENLIEF",
+				bdMaterialgemeinskostenLief);
 
-			parameter = (ParametermandantDto) getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.FERTIGUNGSGEMEINKOSTENFAKTOR);
+		parameter = (ParametermandantDto) getParameterFac()
+				.getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ALLGEMEIN,
+						ParameterFac.FERTIGUNGSGEMEINKOSTENFAKTOR,
+						new Timestamp(System.currentTimeMillis()));
 
-			double dFertigungsgemeinkostenfaktor = ((Double) parameter
-					.getCWertAsObject()).doubleValue();
-			reportParameter.put(
-					"P_FERTIGUNGSGEMEINKOSTENPROZENT",
-					Helper.formatZahl(dFertigungsgemeinkostenfaktor, 1,
-							theClientDto.getLocUi()) + "%");
-			dFertigungsgemeinkostenfaktor = (dFertigungsgemeinkostenfaktor / 100);
+		double dFertigungsgemeinkostenfaktor = ((Double) parameter
+				.getCWertAsObject()).doubleValue();
+		reportParameter.put(
+				"P_FERTIGUNGSGEMEINKOSTENPROZENT",
+				Helper.formatZahl(dFertigungsgemeinkostenfaktor, 1,
+						theClientDto.getLocUi()) + "%");
+		dFertigungsgemeinkostenfaktor = (dFertigungsgemeinkostenfaktor / 100);
 
-			BigDecimal bdFertigungskosten = bdMaschinenzeitkosten.add(
-					bdArbeitszeitkosten).multiply(
-					new BigDecimal(dFertigungsgemeinkostenfaktor));
+		BigDecimal bdFertigungskosten = bdMaschinenzeitkosten.add(
+				bdArbeitszeitkosten).multiply(
+				new BigDecimal(dFertigungsgemeinkostenfaktor));
 
-			reportParameter.put("P_FERTIGUNGSGEMEINKOSTEN", bdFertigungskosten);
+		reportParameter.put("P_FERTIGUNGSGEMEINKOSTEN", bdFertigungskosten);
 
-			BigDecimal herstellkosten = bdMaterialkosten
-					.add(bdArbeitszeitkosten).add(bdMaterialgemeinskosten)
-					.add(bdFertigungskosten).add(bdMaschinenzeitkosten);
-			reportParameter.put("P_HERSTELLKOSTEN", herstellkosten);
+		BigDecimal herstellkosten = bdMaterialkosten.add(bdArbeitszeitkosten)
+				.add(bdMaterialgemeinskosten).add(bdFertigungskosten)
+				.add(bdMaschinenzeitkosten);
+		reportParameter.put("P_HERSTELLKOSTEN", herstellkosten);
 
-			BigDecimal herstellkostenLief = bdMaterialkostenLief
-					.add(bdArbeitszeitkosten).add(bdMaterialgemeinskostenLief)
-					.add(bdFertigungskosten).add(bdMaschinenzeitkosten);
-			reportParameter.put("P_HERSTELLKOSTENLIEF", herstellkostenLief);
+		BigDecimal herstellkostenLief = bdMaterialkostenLief
+				.add(bdArbeitszeitkosten).add(bdMaterialgemeinskostenLief)
+				.add(bdFertigungskosten).add(bdMaschinenzeitkosten);
+		reportParameter.put("P_HERSTELLKOSTENLIEF", herstellkostenLief);
 
-			parameter = (ParametermandantDto) getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.ENTWICKLUNGSGEMEINKOSTENFAKTOR);
-			double dEntwicklungsgemeinkostenfaktor = ((Double) parameter
-					.getCWertAsObject()).doubleValue();
-			reportParameter.put(
-					"P_ENTWICKLUNGSGEMEINKOSTENPROZENT",
-					Helper.formatZahl(dEntwicklungsgemeinkostenfaktor, 1,
-							theClientDto.getLocUi()) + "%");
+		parameter = (ParametermandantDto) getParameterFac()
+				.getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ALLGEMEIN,
+						ParameterFac.ENTWICKLUNGSGEMEINKOSTENFAKTOR,
+						new Timestamp(System.currentTimeMillis()));
+		double dEntwicklungsgemeinkostenfaktor = ((Double) parameter
+				.getCWertAsObject()).doubleValue();
+		reportParameter.put(
+				"P_ENTWICKLUNGSGEMEINKOSTENPROZENT",
+				Helper.formatZahl(dEntwicklungsgemeinkostenfaktor, 1,
+						theClientDto.getLocUi()) + "%");
 
-			dEntwicklungsgemeinkostenfaktor = (dEntwicklungsgemeinkostenfaktor / 100);
+		dEntwicklungsgemeinkostenfaktor = (dEntwicklungsgemeinkostenfaktor / 100);
 
-			BigDecimal bdEntwicklungsgemeinkosten = herstellkosten
-					.multiply(new BigDecimal(dEntwicklungsgemeinkostenfaktor));
+		BigDecimal bdEntwicklungsgemeinkosten = herstellkosten
+				.multiply(new BigDecimal(dEntwicklungsgemeinkostenfaktor));
 
-			reportParameter.put("P_ENTWICKLUNGSGEMEINKOSTEN",
-					bdEntwicklungsgemeinkosten);
-			BigDecimal bdEntwicklungsgemeinkostenLief = herstellkostenLief
-					.multiply(new BigDecimal(dEntwicklungsgemeinkostenfaktor));
+		reportParameter.put("P_ENTWICKLUNGSGEMEINKOSTEN",
+				bdEntwicklungsgemeinkosten);
+		BigDecimal bdEntwicklungsgemeinkostenLief = herstellkostenLief
+				.multiply(new BigDecimal(dEntwicklungsgemeinkostenfaktor));
 
-			reportParameter.put("P_ENTWICKLUNGSGEMEINKOSTENLIEF",
-					bdEntwicklungsgemeinkostenLief);
+		reportParameter.put("P_ENTWICKLUNGSGEMEINKOSTENLIEF",
+				bdEntwicklungsgemeinkostenLief);
 
-			parameter = (ParametermandantDto) getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.VERWALTUNGSGEMEINKOSTENFAKTOR);
+		parameter = (ParametermandantDto) getParameterFac()
+				.getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ALLGEMEIN,
+						ParameterFac.VERWALTUNGSGEMEINKOSTENFAKTOR,
+						new Timestamp(System.currentTimeMillis()));
 
-			double dVerwaltungssgemeinkostenfaktor = ((Double) parameter
-					.getCWertAsObject()).doubleValue();
-			reportParameter.put(
-					"P_VERWALTUNGSGEMEINKOSTENPROZENT",
-					Helper.formatZahl(dVerwaltungssgemeinkostenfaktor, 1,
-							theClientDto.getLocUi()) + "%");
-			dVerwaltungssgemeinkostenfaktor = (dVerwaltungssgemeinkostenfaktor / 100);
+		double dVerwaltungssgemeinkostenfaktor = ((Double) parameter
+				.getCWertAsObject()).doubleValue();
+		reportParameter.put(
+				"P_VERWALTUNGSGEMEINKOSTENPROZENT",
+				Helper.formatZahl(dVerwaltungssgemeinkostenfaktor, 1,
+						theClientDto.getLocUi()) + "%");
+		dVerwaltungssgemeinkostenfaktor = (dVerwaltungssgemeinkostenfaktor / 100);
 
-			BigDecimal bdVerwaltungsgemeinkosten = herstellkosten
-					.multiply(new BigDecimal(dVerwaltungssgemeinkostenfaktor));
+		BigDecimal bdVerwaltungsgemeinkosten = herstellkosten
+				.multiply(new BigDecimal(dVerwaltungssgemeinkostenfaktor));
 
-			reportParameter.put("P_VERWALTUNGSGEMEINKOSTEN",
-					bdVerwaltungsgemeinkosten);
+		reportParameter.put("P_VERWALTUNGSGEMEINKOSTEN",
+				bdVerwaltungsgemeinkosten);
 
-			BigDecimal bdVerwaltungsgemeinkostenLief = herstellkostenLief
-					.multiply(new BigDecimal(dVerwaltungssgemeinkostenfaktor));
+		BigDecimal bdVerwaltungsgemeinkostenLief = herstellkostenLief
+				.multiply(new BigDecimal(dVerwaltungssgemeinkostenfaktor));
 
-			reportParameter.put("P_VERWALTUNGSGEMEINKOSTENLIEF",
-					bdVerwaltungsgemeinkostenLief);
-			parameter = (ParametermandantDto) getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.VERTRIEBSGEMEINKOSTENFAKTOR);
+		reportParameter.put("P_VERWALTUNGSGEMEINKOSTENLIEF",
+				bdVerwaltungsgemeinkostenLief);
+		parameter = (ParametermandantDto) getParameterFac()
+				.getMandantparameter(theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_ALLGEMEIN,
+						ParameterFac.VERTRIEBSGEMEINKOSTENFAKTOR,
+						new Timestamp(System.currentTimeMillis()));
 
-			double dVertriebsgemeinkostenfaktor = ((Double) parameter
-					.getCWertAsObject()).doubleValue();
-			reportParameter.put(
-					"P_VERTRIEBSGEMEINKOSTENPROZENT",
-					Helper.formatZahl(dVertriebsgemeinkostenfaktor, 1,
-							theClientDto.getLocUi()) + "%");
+		double dVertriebsgemeinkostenfaktor = ((Double) parameter
+				.getCWertAsObject()).doubleValue();
+		reportParameter.put(
+				"P_VERTRIEBSGEMEINKOSTENPROZENT",
+				Helper.formatZahl(dVertriebsgemeinkostenfaktor, 1,
+						theClientDto.getLocUi())
+						+ "%");
 
-			dVertriebsgemeinkostenfaktor = (dVertriebsgemeinkostenfaktor / 100);
+		dVertriebsgemeinkostenfaktor = (dVertriebsgemeinkostenfaktor / 100);
 
-			BigDecimal bdVertriebsgemeinkosten = herstellkosten
-					.multiply(new BigDecimal(dVertriebsgemeinkostenfaktor));
+		BigDecimal bdVertriebsgemeinkosten = herstellkosten
+				.multiply(new BigDecimal(dVertriebsgemeinkostenfaktor));
 
-			reportParameter.put("P_VERTRIEBSGEMEINKOSTEN",
-					bdVertriebsgemeinkosten);
+		reportParameter.put("P_VERTRIEBSGEMEINKOSTEN", bdVertriebsgemeinkosten);
 
-			BigDecimal bdVertriebsgemeinkostenLief = herstellkostenLief
-					.multiply(new BigDecimal(dVertriebsgemeinkostenfaktor));
+		BigDecimal bdVertriebsgemeinkostenLief = herstellkostenLief
+				.multiply(new BigDecimal(dVertriebsgemeinkostenfaktor));
 
-			reportParameter.put("P_VERTRIEBSGEMEINKOSTENLIEF",
-					bdVertriebsgemeinkostenLief);
+		reportParameter.put("P_VERTRIEBSGEMEINKOSTENLIEF",
+				bdVertriebsgemeinkostenLief);
 
-			BigDecimal selbstkosten = herstellkosten
-					.add(bdEntwicklungsgemeinkosten)
-					.add(bdVerwaltungsgemeinkosten)
-					.add(bdVertriebsgemeinkosten);
-			reportParameter.put("P_SELBSTKOSTEN", selbstkosten);
+		BigDecimal selbstkosten = herstellkosten
+				.add(bdEntwicklungsgemeinkosten).add(bdVerwaltungsgemeinkosten)
+				.add(bdVertriebsgemeinkosten);
+		reportParameter.put("P_SELBSTKOSTEN", selbstkosten);
 
-			BigDecimal selbstkostenLief = herstellkostenLief
-					.add(bdEntwicklungsgemeinkostenLief)
-					.add(bdVerwaltungsgemeinkostenLief)
-					.add(bdVertriebsgemeinkostenLief);
-			reportParameter.put("P_SELBSTKOSTENLIEF", selbstkostenLief);
-
-		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
-		}
+		BigDecimal selbstkostenLief = herstellkostenLief
+				.add(bdEntwicklungsgemeinkostenLief)
+				.add(bdVerwaltungsgemeinkostenLief)
+				.add(bdVertriebsgemeinkostenLief);
+		reportParameter.put("P_SELBSTKOSTENLIEF", selbstkostenLief);
 
 		BigDecimal durchlaufzeitGesamt = new BigDecimal(0);
 		if (dto.getNDefaultdurchlaufzeit() != null) {
@@ -1283,6 +1817,10 @@ public class StuecklisteReportFacBean extends LPReport implements
 		}
 
 		reportParameter.put("P_DURCHLAUFZEITGESAMT", durchlaufzeitGesamt);
+
+		reportParameter.put(
+				"P_MIT_KLEINSTEM_GROESSTEN_EK_PREIS_DER_LETZTEN_2_JAHRE",
+				new Boolean(bMitPreisenDerLetzten2Jahre));
 
 		initJRDS(reportParameter, StuecklisteReportFac.REPORT_MODUL,
 				StuecklisteReportFac.REPORT_STUECKLISTE_GESAMTKALKULATION,
@@ -1462,8 +2000,8 @@ public class StuecklisteReportFacBean extends LPReport implements
 				dStueckzeit = lStueckzeit / 60000;
 				dRuestzeit = lRuestzeit / 60000;
 			} else if (sEinheit.equals(SystemFac.EINHEIT_SEKUNDE.trim())) {
-				dStueckzeit = lStueckzeit / 100;
-				dRuestzeit = lRuestzeit / 100;
+				dStueckzeit = lStueckzeit / 1000;
+				dRuestzeit = lRuestzeit / 1000;
 			}
 
 			data[row][REPORT_ARBEITSPLAN_RUESTZEIT] = Helper
@@ -1473,13 +2011,13 @@ public class StuecklisteReportFacBean extends LPReport implements
 			data[row][REPORT_ARBEITSPLAN_PREIS] = new BigDecimal(0);
 			if (stuecklistearbeitsplan.getFlrstueckliste().getN_losgroesse() != null) {
 
-				BigDecimal dGesamt = (new BigDecimal(dStueckzeit)
-						.multiply(stuecklistearbeitsplan.getFlrstueckliste()
-								.getN_losgroesse())).add(new BigDecimal(
-						dRuestzeit));
-
 				data[row][REPORT_ARBEITSPLAN_GESAMTZEIT] = Helper
-						.rundeKaufmaennisch(dGesamt, 5);
+						.berechneGesamtzeitInStunden((long) lRuestzeit,
+								(long) lStueckzeit, stuecklistearbeitsplan
+										.getFlrstueckliste().getN_losgroesse(),
+								stuecklistearbeitsplan.getFlrstueckliste()
+										.getI_erfassungsfaktor(),
+								stuecklistearbeitsplan.getI_aufspannung());
 
 				try {
 					ArtikellieferantDto artikellieferantDto = getArtikelFac()
@@ -1515,6 +2053,8 @@ public class StuecklisteReportFacBean extends LPReport implements
 		reportParameter.put("P_REVISION", dto.getArtikelDto().getCRevision());
 		reportParameter.put("P_REFERENZNUMMER", dto.getArtikelDto()
 				.getCReferenznr());
+
+		reportParameter.put("P_ARBEITSPLAN_ZEITEINHEIT", sEinheit);
 
 		if (dto.getArtikelDto().getArtikelsprDto() != null) {
 			reportParameter.put("P_BEZEICHNUNG", dto.getArtikelDto()
@@ -1666,7 +2206,10 @@ public class StuecklisteReportFacBean extends LPReport implements
 
 				data[row][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_I_EBENE] = struktur
 						.getIEbene();
-
+				data[row][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_FREIGABE_PERSON] = struktur
+						.getCKurzzeichenPersonFreigabe();
+				data[row][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_FREIGABE_ZEITPUNKT] = struktur
+						.getTFreigabe();
 				data[row][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_STUECKLISTEPOSITION_I_ID] = position
 						.getIId();
 				data[row][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_AUF_BELEG_MITDRUCKEN] = Helper
@@ -1695,6 +2238,23 @@ public class StuecklisteReportFacBean extends LPReport implements
 				} else {
 					data[row][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ARTIKEL] = einrueckung
 							+ artikelDto.getCNr();
+
+					if (kdDto != null) {
+						// KundeArtikelnr gueltig zu jett
+						KundesokoDto kundeSokoDto_gueltig = this
+								.getKundesokoFac()
+								.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
+										kdDto.getIId(),
+										artikelDto.getIId(),
+										Helper.cutDate(new java.sql.Date(System
+												.currentTimeMillis())));
+						if (kundeSokoDto_gueltig != null) {
+							data[row][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_KUNDENARTIKELNUMMER] = kundeSokoDto_gueltig
+									.getCKundeartikelnummer();
+							data[row][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_KUNDENARTIKELBEZEICHNUNG] = kundeSokoDto_gueltig
+									.getCKundeartikelbez();
+						}
+					}
 
 					Image imageKommentar = null;
 					// Artikelkommentar kann Text oder Bild sein
@@ -1736,6 +2296,11 @@ public class StuecklisteReportFacBean extends LPReport implements
 						.getArtikelsprDto().getCZbez2();
 				data[row][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_REFERENZNUMMER] = artikelDto
 						.getCReferenznr();
+
+				data[row][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ARTIKEL_HERSTELLERNUMMER] = artikelDto
+						.getCArtikelnrhersteller();
+				data[row][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ARTIKEL_HERSTELLERBEZEICHNUNG] = artikelDto
+						.getCArtikelbezhersteller();
 
 				data[row][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_POSITION] = position
 						.getCPosition();
@@ -1906,10 +2471,29 @@ public class StuecklisteReportFacBean extends LPReport implements
 					Object[] a1 = (Object[]) data[j];
 					Object[] a2 = (Object[]) data[j + 1];
 
-					if (((String) a1[REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ARTIKEL])
-							.compareTo((String) a2[REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ARTIKEL]) > 0) {
-						data[j] = a2;
-						data[j + 1] = a1;
+					if (iOptionSortierungUnterstuecklisten == StuecklisteReportFac.REPORT_STUECKLISTE_OPTION_SORTIERUNG_ARTIKELNR) {
+						if (((String) a1[REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ARTIKEL])
+								.compareTo((String) a2[REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ARTIKEL]) > 0) {
+							data[j] = a2;
+							data[j + 1] = a1;
+
+						}
+					} else if (iOptionSortierungUnterstuecklisten == StuecklisteReportFac.REPORT_STUECKLISTE_OPTION_SORTIERUNG_POSITION) {
+
+						String s1 = (String) a1[REPORT_STUECKLISTE_ALLGEMEINMITPREIS_POSITION];
+						if (s1 == null) {
+							s1 = "";
+						}
+						String s2 = (String) a2[REPORT_STUECKLISTE_ALLGEMEINMITPREIS_POSITION];
+						if (s2 == null) {
+							s2 = "";
+						}
+
+						if (s1.compareTo(s2) > 0) {
+							data[j] = a2;
+							data[j + 1] = a1;
+
+						}
 
 					}
 
@@ -1939,6 +2523,18 @@ public class StuecklisteReportFacBean extends LPReport implements
 		}
 		parameter.put("P_ANLEGEN", dto.getTAnlegen());
 		parameter.put("P_AENDERN", dto.getTAendern());
+		parameter.put("P_AENDERN_POSITION", dto.getTAendernposition());
+		parameter.put("P_AENDERN_ARBEITSPLAN", dto.getTAendernarbeitsplan());
+
+		parameter.put("P_FREIGABE_ZEITPUNKT", dto.getTFreigabe());
+		if (dto.getPersonalIIdFreigabe() != null) {
+			parameter.put(
+					"P_FREIGABE_PERSON",
+					getPersonalFac().personalFindByPrimaryKey(
+							dto.getPersonalIIdFreigabe(), theClientDto)
+							.getCKurzzeichen());
+		}
+
 		try {
 			if (dto.getArtikelDto().getLandIIdUrsprungsland() != null) {
 				LandDto landDto = getSystemFac().landFindByPrimaryKey(
@@ -2022,6 +2618,11 @@ public class StuecklisteReportFacBean extends LPReport implements
 
 					neueZeile[REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ERSATZARTIKEL_BEZEICHNUNG] = artikelDto
 							.formatBezeichnung();
+
+					neueZeile[REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ERSATZARTIKEL_HERSTELLERNUMMER] = artikelDto
+							.getCArtikelnrhersteller();
+					neueZeile[REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ERSATZARTIKEL_HERSTELLERBEZEICHNUNG] = artikelDto
+							.getCArtikelbezhersteller();
 
 					if (artikelDto.getArtikelsprDto() != null) {
 						neueZeile[REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ERSATZARTIKEL_ZUSATZBEZEICHNUNG] = artikelDto
@@ -2111,6 +2712,23 @@ public class StuecklisteReportFacBean extends LPReport implements
 							"bUnterstuecklistenEinbinden.booleanValue()==true && iOptionSortierungUnterstuecklisten==null"));
 		}
 
+		StuecklisteDto dto = getStuecklisteFac().stuecklisteFindByPrimaryKey(
+				stuecklisteIId, theClientDto);
+
+		KundeDto kdDto = null;
+
+		try {
+			if (dto.getPartnerIId() != null) {
+				kdDto = getKundeFac().kundeFindByiIdPartnercNrMandantOhneExc(
+						dto.getPartnerIId(), theClientDto.getMandant(),
+						theClientDto);
+
+			}
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
 		index = -1;
 		sAktuellerReport = StuecklisteReportFac.REPORT_STUECKLISTE_ALLGEMEIN_OHNEPREIS;
 
@@ -2156,6 +2774,11 @@ public class StuecklisteReportFacBean extends LPReport implements
 				data[row][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_I_EBENE] = struktur
 						.getIEbene();
 
+				data[row][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_FREIGABE_PERSON] = struktur
+						.getCKurzzeichenPersonFreigabe();
+				data[row][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_FREIGABE_ZEITPUNKT] = struktur
+						.getTFreigabe();
+
 				data[row][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_STUECKLISTEPOSITION_I_ID] = position
 						.getIId();
 
@@ -2178,6 +2801,23 @@ public class StuecklisteReportFacBean extends LPReport implements
 				} else {
 					data[row][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ARTIKEL] = einrueckung
 							+ artikelDto.getCNr();
+
+					if (kdDto != null) {
+						// KundeArtikelnr gueltig zu Belegdatum
+						KundesokoDto kundeSokoDto_gueltig = this
+								.getKundesokoFac()
+								.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
+										kdDto.getIId(),
+										artikelDto.getIId(),
+										Helper.cutDate(new java.sql.Date(System
+												.currentTimeMillis())));
+						if (kundeSokoDto_gueltig != null) {
+							data[row][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_KUNDENARTIKELNUMMER] = kundeSokoDto_gueltig
+									.getCKundeartikelnummer();
+							data[row][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_KUNDENARTIKELBEZEICHNUNG] = kundeSokoDto_gueltig
+									.getCKundeartikelbez();
+						}
+					}
 
 					Image imageKommentar = null;
 					// Artikelkommentar kann Text oder Bild sein
@@ -2205,6 +2845,11 @@ public class StuecklisteReportFacBean extends LPReport implements
 					}
 
 				}
+
+				data[row][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ARTIKEL_HERSTELLERNUMMER] = artikelDto
+						.getCArtikelnrhersteller();
+				data[row][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ARTIKEL_HERSTELLERBEZEICHNUNG] = artikelDto
+						.getCArtikelbezhersteller();
 
 				data[row][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_INDEX] = artikelDto
 						.getCIndex();
@@ -2262,14 +2907,16 @@ public class StuecklisteReportFacBean extends LPReport implements
 				if (dimension == 1) {
 					data[row][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_DIMENSION] = "L"
 							+ Helper.formatZahl(position.getFDimension1(), 2,
-									theClientDto.getLocUi());
+									theClientDto.getLocUi())
+							+ einheitDto.getCNr();
 				} else if (dimension == 2) {
 					data[row][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_DIMENSION] = "B"
 							+ Helper.formatZahl(position.getFDimension1(), 2,
 									theClientDto.getLocUi())
 							+ "/T"
 							+ Helper.formatZahl(position.getFDimension2(), 2,
-									theClientDto.getLocUi());
+									theClientDto.getLocUi())
+							+ einheitDto.getCNr();
 
 				} else if (dimension == 3) {
 					data[row][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_DIMENSION] = "B"
@@ -2280,7 +2927,8 @@ public class StuecklisteReportFacBean extends LPReport implements
 									theClientDto.getLocUi())
 							+ "/H"
 							+ Helper.formatZahl(position.getFDimension3(), 2,
-									theClientDto.getLocUi());
+									theClientDto.getLocUi())
+							+ einheitDto.getCNr();
 
 				}
 
@@ -2367,8 +3015,17 @@ public class StuecklisteReportFacBean extends LPReport implements
 
 						}
 					} else if (iOptionSortierungUnterstuecklisten == StuecklisteReportFac.REPORT_STUECKLISTE_OPTION_SORTIERUNG_POSITION) {
-						if (((String) a1[REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_POSITION])
-								.compareTo((String) a2[REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_POSITION]) > 0) {
+
+						String s1 = (String) a1[REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_POSITION];
+						if (s1 == null) {
+							s1 = "";
+						}
+						String s2 = (String) a2[REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_POSITION];
+						if (s2 == null) {
+							s2 = "";
+						}
+
+						if (s1.compareTo(s2) > 0) {
 							data[j] = a2;
 							data[j + 1] = a1;
 
@@ -2382,13 +3039,29 @@ public class StuecklisteReportFacBean extends LPReport implements
 		}
 
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
-		StuecklisteDto dto = getStuecklisteFac().stuecklisteFindByPrimaryKey(
-				stuecklisteIId, theClientDto);
+
+		if (kdDto != null) {
+
+			PartnerDto pDto = getPartnerFac().partnerFindByPrimaryKey(
+					kdDto.getPartnerIId(), theClientDto);
+			parameter.put("P_KUNDE", pDto.formatFixTitelName1Name2());
+		}
 
 		parameter.put("P_STUECKLISTE", dto.getArtikelDto().getCNr());
 		parameter.put("P_ERFASSUNGSFAKTOR", dto.getIErfassungsfaktor());
 		parameter.put("P_ANLEGEN", dto.getTAnlegen());
 		parameter.put("P_AENDERN", dto.getTAendern());
+		parameter.put("P_AENDERN_POSITION", dto.getTAendernposition());
+		parameter.put("P_AENDERN_ARBEITSPLAN", dto.getTAendernarbeitsplan());
+
+		parameter.put("P_FREIGABE_ZEITPUNKT", dto.getTFreigabe());
+		if (dto.getPersonalIIdFreigabe() != null) {
+			parameter.put(
+					"P_FREIGABE_PERSON",
+					getPersonalFac().personalFindByPrimaryKey(
+							dto.getPersonalIIdFreigabe(), theClientDto)
+							.getCKurzzeichen());
+		}
 
 		parameter.put("P_STUECKLISTEBEZEICHNUNG", dto.getArtikelDto()
 				.formatBezeichnung());
@@ -2471,6 +3144,11 @@ public class StuecklisteReportFacBean extends LPReport implements
 
 					neueZeile[REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ERSATZARTIKEL_BEZEICHNUNG] = artikelDto
 							.formatBezeichnung();
+
+					neueZeile[REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ERSATZARTIKEL_HERSTELLERNUMMER] = artikelDto
+							.getCArtikelnrhersteller();
+					neueZeile[REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ERSATZARTIKEL_HERSTELLERBEZEICHNUNG] = artikelDto
+							.getCArtikelbezhersteller();
 
 					if (artikelDto.getArtikelsprDto() != null) {
 						neueZeile[REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ERSATZARTIKEL_ZUSATZBEZEICHNUNG] = artikelDto
@@ -2662,6 +3340,22 @@ public class StuecklisteReportFacBean extends LPReport implements
 				value = data[index][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ERSATZARTIKEL_ZUSATZBEZEICHNUNG2];
 			} else if ("Artikelgewicht".equals(fieldName)) {
 				value = data[index][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_GEWICHT];
+			} else if ("ArtikelHerstellernummer".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ARTIKEL_HERSTELLERNUMMER];
+			} else if ("ArtikelHerstellerbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ARTIKEL_HERSTELLERBEZEICHNUNG];
+			} else if ("ErsatzartikelHerstellernummer".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ERSATZARTIKEL_HERSTELLERNUMMER];
+			} else if ("ErsatzartikelHerstellerbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ERSATZARTIKEL_HERSTELLERBEZEICHNUNG];
+			} else if ("FreigabePerson".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_FREIGABE_PERSON];
+			} else if ("FreigabeZeitpunkt".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_FREIGABE_ZEITPUNKT];
+			} else if ("Kundenartikelnummer".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_KUNDENARTIKELNUMMER];
+			} else if ("Kundenartikelbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_KUNDENARTIKELBEZEICHNUNG];
 			}
 		} else if (sAktuellerReport
 				.equals(StuecklisteReportFac.REPORT_STUECKLISTE_ALLGEMEIN_MITPREIS)) {
@@ -2737,6 +3431,22 @@ public class StuecklisteReportFacBean extends LPReport implements
 				value = data[index][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_KALK_PREIS];
 			} else if ("KommentarPosition".equals(fieldName)) {
 				value = data[index][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_KOMMENTAR_POSITION];
+			} else if ("ArtikelHerstellernummer".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ARTIKEL_HERSTELLERNUMMER];
+			} else if ("ArtikelHerstellerbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ARTIKEL_HERSTELLERBEZEICHNUNG];
+			} else if ("ErsatzartikelHerstellernummer".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ERSATZARTIKEL_HERSTELLERNUMMER];
+			} else if ("ErsatzartikelHerstellerbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ERSATZARTIKEL_HERSTELLERBEZEICHNUNG];
+			} else if ("FreigabePerson".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_FREIGABE_PERSON];
+			} else if ("FreigabeZeitpunkt".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_FREIGABE_ZEITPUNKT];
+			} else if ("Kundenartikelnummer".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_KUNDENARTIKELNUMMER];
+			} else if ("Kundenartikelbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_ALLGEMEINMITPREIS_KUNDENARTIKELBEZEICHNUNG];
 			}
 
 		} else if (sAktuellerReport
@@ -2816,6 +3526,8 @@ public class StuecklisteReportFacBean extends LPReport implements
 				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ZIELMENGENEINHEIT];
 			} else if ("Lagerstand".equals(fieldName)) {
 				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_LAGERSTAND];
+			} else if ("LagerstandZiellager".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_LAGERSTAND_ZIELLAGER];
 			} else if ("Verfuegbar".equals(fieldName)) {
 				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_VERFUEGBAR];
 			} else if ("Bestellt".equals(fieldName)) {
@@ -2832,19 +3544,44 @@ public class StuecklisteReportFacBean extends LPReport implements
 				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ERSATZARTIKEL_BEZEICHNUNG];
 			} else if ("InFertigung".equals(fieldName)) {
 				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_IN_FERTIGUNG];
+			} else if ("ArtikelHerstellernummer".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ARTIKEL_HERSTELLERNUMMER];
+			} else if ("ArtikelHerstellerbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ARTIKEL_HERSTELLERBEZEICHNUNG];
+			} else if ("ErsatzartikelHerstellernummer".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ERSATZARTIKEL_HERSTELLERNUMMER];
+			} else if ("ErsatzartikelHerstellerbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_ERSATZARTIKEL_HERSTELLERBEZEICHNUNG];
+			} else if ("FreigabePerson".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_FREIGABE_PERSON];
+			} else if ("FreigabeZeitpunkt".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_FREIGABE_ZEITPUNKT];
+			} else if ("Kundenartikelnummer".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_KUNDENARTIKELNUMMER];
+			} else if ("Kundenartikelbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_STUECKLISTE_AUSGABESTUECKLISTE_KUNDENARTIKELBEZEICHNUNG];
 			}
+
 		} else if (sAktuellerReport
 				.equals(StuecklisteReportFac.REPORT_STUECKLISTE_GESAMTKALKULATION)) {
 			if ("Artikel".equals(fieldName)) {
 				value = data[index][REPORT_GESAMTKALKULATION_ARTIKEL];
 			} else if ("Artikelbezeichnung".equals(fieldName)) {
 				value = data[index][REPORT_GESAMTKALKULATION_ARTIKELBEZEICHNUNG];
+			} else if ("Artikelzusatzbezeichnung".equals(fieldName)) {
+				value = data[index][REPORT_GESAMTKALKULATION_ARTIKELZUSATZBEZEICHNUNG];
+			} else if ("Artikelzusatzbezeichnung2".equals(fieldName)) {
+				value = data[index][REPORT_GESAMTKALKULATION_ARTIKELZUSATZBEZEICHNUNG2];
 			} else if ("Gestpreis".equals(fieldName)) {
 				value = data[index][REPORT_GESAMTKALKULATION_GESTPREIS];
 			} else if ("Gestwert".equals(fieldName)) {
 				value = data[index][REPORT_GESAMTKALKULATION_GESTWERT];
 			} else if ("Lief1preis".equals(fieldName)) {
 				value = data[index][REPORT_GESAMTKALKULATION_LIEF1PREIS];
+			} else if ("KleinsterLief1preis2Jahre".equals(fieldName)) {
+				value = data[index][REPORT_GESAMTKALKULATION_KLEINSTER_LIEF1PREIS_2JAHRE];
+			} else if ("GroessterLief1preis2Jahre".equals(fieldName)) {
+				value = data[index][REPORT_GESAMTKALKULATION_GROESSTER_LIEF1PREIS_2JAHRE];
 			} else if ("Fixkosten".equals(fieldName)) {
 				value = data[index][REPORT_GESAMTKALKULATION_FIXKOSTEN];
 			} else if ("Liefwert".equals(fieldName)) {
@@ -2885,6 +3622,18 @@ public class StuecklisteReportFacBean extends LPReport implements
 				value = data[index][REPORT_GESAMTKALKULATION_GEWICHT];
 			} else if ("ArtikelMaterialgewicht".equals(fieldName)) {
 				value = data[index][REPORT_GESAMTKALKULATION_MATERIALGEWICHT];
+			} else if ("Kommentar".equals(fieldName)) {
+				value = data[index][REPORT_GESAMTKALKULATION_KOMMENTAR];
+			} else if ("AG".equals(fieldName)) {
+				value = data[index][REPORT_GESAMTKALKULATION_AG];
+			} else if ("UAG".equals(fieldName)) {
+				value = data[index][REPORT_GESAMTKALKULATION_UAG];
+			} else if ("FreigabeZeitpunkt".equals(fieldName)) {
+				value = data[index][REPORT_GESAMTKALKULATION_FREIGABE_ZEITPUNKT];
+			} else if ("FreigabePerson".equals(fieldName)) {
+				value = data[index][REPORT_GESAMTKALKULATION_FREIGABE_PERSON];
+			} else if ("AnzahlArbeitsschritte".equals(fieldName)) {
+				value = data[index][REPORT_GESAMTKALKULATION_ANZAHL_ARBEITSSCHRITTE];
 			}
 		} else if (sAktuellerReport
 				.equals(StuecklisteReportFac.REPORT_STUECKLISTE_LOSEAKTUALISIERT)) {
@@ -2918,7 +3667,8 @@ public class StuecklisteReportFacBean extends LPReport implements
 	 *            Integer StuecklisteId
 	 * @param sMandantCNr
 	 *            String
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param theClientDto
+	 *            der aktuelle Benutzer
 	 * @return Hashtable
 	 * @throws EJBExceptionLP
 	 */

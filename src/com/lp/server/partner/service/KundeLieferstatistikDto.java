@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -78,14 +78,7 @@ public class KundeLieferstatistikDto {
 	private BigDecimal nMenge = null;
 	private BigDecimal nPreis = null;
 	private BigDecimal nMaterialzuschlag = null;
-	public BigDecimal getNMaterialzuschlag() {
-		return nMaterialzuschlag;
-	}
-
-	public void setNMaterialzuschlag(BigDecimal nMaterialzuschlag) {
-		this.nMaterialzuschlag = nMaterialzuschlag;
-	}
-
+	
 	private String sWarenausgangverursacher = null;
 	private BigDecimal nMwstsatz = null;
 	private String sKonto;
@@ -102,6 +95,8 @@ public class KundeLieferstatistikDto {
 	private String sPlzStatistikadresse;
 	private String sLandStatistikadresse;
 	private String sSetartikelTyp;
+	private BigDecimal nWert ;
+	
 	public String getSSetartikelTyp() {
 		return sSetartikelTyp;
 	}
@@ -313,5 +308,22 @@ public class KundeLieferstatistikDto {
 	public void setSLandStatistikadresse(String sLandStatistikadresse) {
 		this.sLandStatistikadresse = sLandStatistikadresse;
 	}
+
+	public BigDecimal getNMaterialzuschlag() {
+		return nMaterialzuschlag;
+	}
+
+	public void setNMaterialzuschlag(BigDecimal nMaterialzuschlag) {
+		this.nMaterialzuschlag = nMaterialzuschlag;
+	}
+
+	public BigDecimal getNWert() {
+		return nWert;
+	}
+
+	public void setNWert(BigDecimal nWert) {
+		this.nWert = nWert;
+	}
+
 
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.benutzer.fastlanereader;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -43,12 +44,12 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.benutzer.fastlanereader.generated.FLRNachrichtart;
 import com.lp.server.benutzer.service.BenutzerFac;
-import com.lp.server.personal.fastlanereader.generated.FLRBeruf;
 import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -314,26 +315,29 @@ public class NachrichtartHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-
+			String mandantCNr = theClientDto.getMandant();
+			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
 					String.class, String.class, String.class, Boolean.class,
-					Boolean.class },
-					new String[] {
-							"Id",
-							getTextRespectUISpr("lp.kennung", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.bezeichnung", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.thema", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.archivieren", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.popup", theClientDto
-									.getMandant(), theClientDto.getLocUi()) },
-					new String[] { "i_id", "c_nr", "c_bez",
-							BenutzerFac.FLR_NACHRICHTART_FLRTHEMA + ".c_nr",
-							BenutzerFac.FLR_NACHRICHTART_B_ARCHIVIEREN,
-							BenutzerFac.FLR_NACHRICHTART_B_POPUP }));
+					Boolean.class }, new String[] { "Id",
+					getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
+					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+					getTextRespectUISpr("lp.thema", mandantCNr, locUI),
+					getTextRespectUISpr("lp.archivieren", mandantCNr, locUI),
+					getTextRespectUISpr("lp.popup", mandantCNr, locUI) },
+
+			new int[] {
+					-1, // diese Spalte wird ausgeblendet
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
+			new String[] { "i_id", "c_nr", "c_bez",
+					BenutzerFac.FLR_NACHRICHTART_FLRTHEMA + ".c_nr",
+					BenutzerFac.FLR_NACHRICHTART_B_ARCHIVIEREN,
+					BenutzerFac.FLR_NACHRICHTART_B_POPUP }));
 		}
 		return super.getTableInfo();
 	}

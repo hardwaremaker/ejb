@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,21 +19,22 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.anfrage.fastlanereader.generated;
 
 import com.lp.server.partner.fastlanereader.generated.FLRLieferant;
 import com.lp.server.partner.fastlanereader.generated.FLRLiefergruppe;
+import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import com.lp.server.projekt.fastlanereader.generated.FLRProjekt;
 import com.lp.server.system.fastlanereader.generated.FLRKostenstelle;
 import java.io.Serializable;
@@ -99,8 +100,14 @@ public class FLRAnfrage implements Serializable {
     /** nullable persistent field */
     private FLRProjekt flrprojekt;
 
+    /** nullable persistent field */
+    private FLRPersonal flrpersonalanleger;
+
+    /** nullable persistent field */
+    private FLRPersonal flrpersonalaenderer;
+
     /** full constructor */
-    public FLRAnfrage(String mandant_c_nr, String c_nr, String anfrageart_c_nr, String c_bez, Date t_belegdatum, Integer lfliefergruppe_i_id, String anfragestatus_c_nr, String waehrung_c_nr_anfragewaehrung, Double f_wechselkursmandantwaehrungzuanfragewaehrung, BigDecimal n_gesamtanfragewertinanfragewaehrung, Date t_versandzeitpunkt, String c_versandtype, Integer projekt_i_id, FLRLieferant flrlieferant, FLRLiefergruppe flrliefergruppe, FLRKostenstelle flrkostenstelle, FLRProjekt flrprojekt) {
+    public FLRAnfrage(String mandant_c_nr, String c_nr, String anfrageart_c_nr, String c_bez, Date t_belegdatum, Integer lfliefergruppe_i_id, String anfragestatus_c_nr, String waehrung_c_nr_anfragewaehrung, Double f_wechselkursmandantwaehrungzuanfragewaehrung, BigDecimal n_gesamtanfragewertinanfragewaehrung, Date t_versandzeitpunkt, String c_versandtype, Integer projekt_i_id, FLRLieferant flrlieferant, FLRLiefergruppe flrliefergruppe, FLRKostenstelle flrkostenstelle, FLRProjekt flrprojekt, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
         this.anfrageart_c_nr = anfrageart_c_nr;
@@ -118,6 +125,8 @@ public class FLRAnfrage implements Serializable {
         this.flrliefergruppe = flrliefergruppe;
         this.flrkostenstelle = flrkostenstelle;
         this.flrprojekt = flrprojekt;
+        this.flrpersonalanleger = flrpersonalanleger;
+        this.flrpersonalaenderer = flrpersonalaenderer;
     }
 
     /** default constructor */
@@ -266,6 +275,22 @@ public class FLRAnfrage implements Serializable {
 
     public void setFlrprojekt(FLRProjekt flrprojekt) {
         this.flrprojekt = flrprojekt;
+    }
+
+    public FLRPersonal getFlrpersonalanleger() {
+        return this.flrpersonalanleger;
+    }
+
+    public void setFlrpersonalanleger(FLRPersonal flrpersonalanleger) {
+        this.flrpersonalanleger = flrpersonalanleger;
+    }
+
+    public FLRPersonal getFlrpersonalaenderer() {
+        return this.flrpersonalaenderer;
+    }
+
+    public void setFlrpersonalaenderer(FLRPersonal flrpersonalaenderer) {
+        this.flrpersonalaenderer = flrpersonalaenderer;
     }
 
     public String toString() {

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -42,6 +42,7 @@ import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
@@ -76,12 +77,14 @@ import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.lieferschein.service.LieferscheinpositionFac;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.stueckliste.service.StuecklisteDto;
-import com.lp.server.system.ejbfac.BelegAktivierungController;
+import com.lp.server.system.ejbfac.BelegAktivierungFac;
 import com.lp.server.system.ejbfac.IAktivierbar;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.format.LpBelegnummer;
 import com.lp.server.system.pkgenerator.format.LpBelegnummerFormat;
+import com.lp.server.system.service.BelegPruefungDto;
 import com.lp.server.system.service.BelegartDto;
+import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MediaFac;
 import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.ParameterFac;
@@ -89,7 +92,10 @@ import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.Validator;
+import com.lp.server.util.ZwsPositionMapper;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.service.BelegDto;
+import com.lp.service.BelegpositionDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
@@ -98,6 +104,9 @@ public class AngebotFacBean extends Facade implements AngebotFac, IAktivierbar {
 	@PersistenceContext
 	private EntityManager em;
 
+	@EJB
+	private BelegAktivierungFac belegAktivierungFac ;
+	
 	/**
 	 * Ein neues Angebot anlegen.
 	 * 
@@ -887,7 +896,7 @@ public class AngebotFacBean extends Facade implements AngebotFac, IAktivierbar {
 	}
 	
 	@Override
-	public void berechneBeleg(Integer iid, TheClientDto theClientDto)
+	public Timestamp berechneBeleg(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
 
 		Angebot angebot = em.find(Angebot.class, iid);
@@ -901,7 +910,10 @@ public class AngebotFacBean extends Facade implements AngebotFac, IAktivierbar {
 			}
 
 			angebot.setNGesamtangebotswertinangebotswaehrung(nNettowertGesamt);
+			em.merge(angebot);
+			em.flush();
 		}
+		return getTimestamp();
 	}
 
 	public AngebotDto[] angebotFindByKundeIIdAngebotsadresseMandantCNr(
@@ -1296,6 +1308,14 @@ public class AngebotFacBean extends Facade implements AngebotFac, IAktivierbar {
 		return bdVerkaufswertSollO;
 	}
 	
+	
+	public void korrekturbetragZuruecknehmen(Integer iIdAngebotI){
+		Angebot angebot = em.find(Angebot.class, iIdAngebotI);
+		angebot.setNKorrekturbetrag(null);
+		em.merge(angebot);
+		em.flush();
+	}
+	
 	/**
 	 * Berechne den Gesamtwert eines bestimmten Angebots in der
 	 * Angebotswaehrung. <br>
@@ -1309,6 +1329,7 @@ public class AngebotFacBean extends Facade implements AngebotFac, IAktivierbar {
 	 *             Ausnahme
 	 * @return BigDecimal der Gesamtwert des Angebots
 	 */
+	
 	public BigDecimal berechneNettowertGesamt(Integer iIdAngebotI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkAngebotIId(iIdAngebotI);
@@ -1495,21 +1516,25 @@ public class AngebotFacBean extends Facade implements AngebotFac, IAktivierbar {
 							.getNNettoeinzelpreis().add(mwstBetrag));
 				}
 
-				if (aAngebotpositionBasis[i]
-						.getPositionsartCNr()
-						.equals(AuftragServiceFac.AUFTRAGPOSITIONART_INTELLIGENTE_ZWISCHENSUMME)) {
-					Integer von = getAngebotpositionFac().getPositionNummer(
-							aAngebotpositionBasis[i].getZwsVonPosition());
-					angebotpositionDto
-							.setZwsVonPosition(getAngebotpositionFac()
-									.getPositionIIdFromPositionNummer(
-											iIdAngebotKopie, von));
-					Integer bis = getAngebotpositionFac().getPositionNummer(
-							aAngebotpositionBasis[i].getZwsBisPosition());
-					angebotpositionDto
-							.setZwsBisPosition(getAngebotpositionFac()
-									.getPositionIIdFromPositionNummer(
-											iIdAngebotKopie, bis));
+				if (aAngebotpositionBasis[i].isIntelligenteZwischensumme()) {
+					ZwsPositionMapper mapper = new ZwsPositionMapper(
+							getAngebotpositionFac(), getAngebotpositionFac()) ;
+					mapper.map(aAngebotpositionBasis[i], angebotpositionDto, iIdAngebotKopie) ;
+//					
+//					angebotpositionDto.setBZwsPositionspreisDrucken(
+//							aAngebotpositionBasis[i].getBZwsPositionspreisZeigen());
+//					Integer von = getAngebotpositionFac().getPositionNummer(
+//							aAngebotpositionBasis[i].getZwsVonPosition());
+//					angebotpositionDto
+//							.setZwsVonPosition(getAngebotpositionFac()
+//									.getPositionIIdFromPositionNummer(
+//											iIdAngebotKopie, von));
+//					Integer bis = getAngebotpositionFac().getPositionNummer(
+//							aAngebotpositionBasis[i].getZwsBisPosition());
+//					angebotpositionDto
+//							.setZwsBisPosition(getAngebotpositionFac()
+//									.getPositionIIdFromPositionNummer(
+//											iIdAngebotKopie, bis));
 				}
 
 				if (aAngebotpositionBasis[i].getPositioniIdArtikelset() != null) {
@@ -1550,7 +1575,7 @@ public class AngebotFacBean extends Facade implements AngebotFac, IAktivierbar {
 	 *             Ausnahme
 	 */
 	public Integer erzeugeAuftragAusAngebot(Integer iIdAngebotI,
-			boolean bMitZeitDaten, TheClientDto theClientDto)
+			boolean bMitZeitDaten,boolean bRahmenauftrag, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		checkAngebotIId(iIdAngebotI);
 		AngebotDto angebotBasisDto = null;
@@ -1576,6 +1601,11 @@ public class AngebotFacBean extends Facade implements AngebotFac, IAktivierbar {
 			AuftragDto auftragDto = (AuftragDto) angebotBasisDto
 					.cloneAsAuftragDto(defaultLieferzeitAuftrag * 24);
 
+			//PJ18581
+			if(bRahmenauftrag){
+				auftragDto.setAuftragartCNr(AuftragServiceFac.AUFTRAGART_RAHMEN);
+			}
+			
 			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
 					angebotBasisDto.getKundeIIdAngebotsadresse(), theClientDto);
 
@@ -1665,21 +1695,24 @@ public class AngebotFacBean extends Facade implements AngebotFac, IAktivierbar {
 							.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN);
 				}
 
-				if (aAngebotpositionBasis[i]
-						.getPositionsartCNr()
-						.equals(AngebotServiceFac.ANGEBOTPOSITIONART_INTELLIGENTE_ZWISCHENSUMME)) {
-					Integer von = getAngebotpositionFac().getPositionNummer(
-							aAngebotpositionBasis[i].getZwsVonPosition());
-					auftragpositionDto
-							.setZwsVonPosition(getAuftragpositionFac()
-									.getPositionIIdFromPositionNummer(
-											iIdAuftrag, von));
-					Integer bis = getAngebotpositionFac().getPositionNummer(
-							aAngebotpositionBasis[i].getZwsBisPosition());
-					auftragpositionDto
-							.setZwsBisPosition(getAuftragpositionFac()
-									.getPositionIIdFromPositionNummer(
-											iIdAuftrag, bis));
+				if (aAngebotpositionBasis[i].isIntelligenteZwischensumme()) {
+					ZwsPositionMapper mapper = new ZwsPositionMapper(getAngebotpositionFac(), getAuftragpositionFac()) ;
+					mapper.map(aAngebotpositionBasis[i], auftragpositionDto, iIdAuftrag) ;
+//					
+//					auftragpositionDto.setBZwsPositionspreisDrucken(
+//							aAngebotpositionBasis[i].getBZwsPositionspreisZeigen());
+//					Integer von = getAngebotpositionFac().getPositionNummer(
+//							aAngebotpositionBasis[i].getZwsVonPosition());
+//					auftragpositionDto
+//							.setZwsVonPosition(getAuftragpositionFac()
+//									.getPositionIIdFromPositionNummer(
+//											iIdAuftrag, von));
+//					Integer bis = getAngebotpositionFac().getPositionNummer(
+//							aAngebotpositionBasis[i].getZwsBisPosition());
+//					auftragpositionDto
+//							.setZwsBisPosition(getAuftragpositionFac()
+//									.getPositionIIdFromPositionNummer(
+//											iIdAuftrag, bis));
 				}
 
 				// damit werden auch die Reservierungen angelegt
@@ -1740,7 +1773,7 @@ public class AngebotFacBean extends Facade implements AngebotFac, IAktivierbar {
 					.angebotFindByPrimaryKey(iIdAngebotI, theClientDto);
 
 			// Schritt 1: Den Auftrag zum Angebot erzeugen
-			Integer auftragIId = erzeugeAuftragAusAngebot(iIdAngebotI, false,
+			Integer auftragIId = erzeugeAuftragAusAngebot(iIdAngebotI, false,false,
 					theClientDto);
 
 			// Schritt 2: Den Auftrag automatisch verarbeiten -> Status Offen
@@ -1802,19 +1835,19 @@ public class AngebotFacBean extends Facade implements AngebotFac, IAktivierbar {
 	 * @throws EJBExceptionLP
 	 *             Ausnahme
 	 */
-	public Integer erzeugeRechnungAusAngebot(Integer iIdAngebotI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
-		checkAngebotIId(iIdAngebotI);
-		AngebotDto angebotBasisDto = null;
-		try {
-			angebotBasisDto = getAngebotFac().angebotFindByPrimaryKey(
-					iIdAngebotI, theClientDto);
-		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
-		}
-		Integer iIdRechnung = null;
-		return iIdRechnung;
-	}
+//	public Integer erzeugeRechnungAusAngebot(Integer iIdAngebotI,
+//			TheClientDto theClientDto) throws EJBExceptionLP {
+//		checkAngebotIId(iIdAngebotI);
+//		AngebotDto angebotBasisDto = null;
+//		try {
+//			angebotBasisDto = getAngebotFac().angebotFindByPrimaryKey(
+//					iIdAngebotI, theClientDto);
+//		} catch (RemoteException ex) {
+//			throwEJBExceptionLPRespectOld(ex);
+//		}
+//		Integer iIdRechnung = null;
+//		return iIdRechnung;
+//	}
 
 	/**
 	 * Ueber Hibernate alle berechnungsrelevanten Positionen eines Angebots
@@ -1905,28 +1938,55 @@ public class AngebotFacBean extends Facade implements AngebotFac, IAktivierbar {
 	}
 
 	@Override
-	public void aktiviereBelegControlled(Integer iid, Timestamp t,
+	public BelegPruefungDto aktiviereBelegControlled(Integer iid, Timestamp t,
 			TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException {
-		new BelegAktivierungController(this).aktiviereBelegControlled(iid, t, theClientDto);
+		return belegAktivierungFac.aktiviereBelegControlled(this, iid, t, theClientDto) ;
+//		new BelegAktivierungController(this).aktiviereBelegControlled(iid, t, theClientDto);
 	}
 	
 	@Override
-	public Timestamp berechneBelegControlled(Integer iid,
+	public BelegPruefungDto berechneBelegControlled(Integer iid,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		return new BelegAktivierungController(this).berechneBelegControlled(iid, theClientDto);
+		return belegAktivierungFac.berechneBelegControlled(this, iid, theClientDto) ;
+//		return new BelegAktivierungController(this).berechneBelegControlled(iid, theClientDto);
 	}
 
 	@Override
-	public boolean hatAenderungenNach(Integer iid, Timestamp t)
+	public List<Timestamp> getAenderungsZeitpunkte(Integer iid)
 			throws EJBExceptionLP, RemoteException {
 		Angebot angebot = em.find(Angebot.class, iid);
-		if(angebot.getTAendern() != null && angebot.getTAendern().after(t))
-			return true;
-		if(angebot.getTManuellerledigt() != null && angebot.getTManuellerledigt().after(t))
-			return true;
-		if(angebot.getTStorniert() != null && angebot.getTStorniert().after(t))
-			return true;
-		return false;
+		List<Timestamp> timestamps = new ArrayList<Timestamp>();
+		timestamps.add(angebot.getTAendern());
+		timestamps.add(angebot.getTManuellerledigt());
+		timestamps.add(angebot.getTStorniert());
+		return timestamps;
+	}
+	
+	@Override
+	public BelegPruefungDto berechneAktiviereBelegControlled(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return belegAktivierungFac.berechneAktiviereControlled(this, iid, theClientDto) ;
+//		new BelegAktivierungController(this).berechneAktiviereControlled(iid, theClientDto);
+	}
+	
+	@Override
+	public BelegDto getBelegDto(Integer iid, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
+		BelegDto belegDto = angebotFindByPrimaryKey(iid, theClientDto) ;
+		belegDto.setBelegartCNr(LocaleFac.BELEGART_ANGEBOT);
+		return belegDto ;
+	}
+	
+	@Override
+	public BelegpositionDto[] getBelegPositionDtos(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return getAngebotpositionFac().angebotpositionFindByAngebotIIdOhneAlternative(iid, theClientDto); 
+	}
+	
+	@Override
+	public Integer getKundeIdDesBelegs(BelegDto belegDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return ((AngebotDto)belegDto).getKundeIIdAngebotsadresse() ;
 	}
 }

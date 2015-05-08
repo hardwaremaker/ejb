@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -48,6 +48,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -94,10 +95,9 @@ public class TheClientHandler extends UseCaseHandler {
 						.next();
 				// flr: 2
 				rows[row][col++] = theClient.getCnr();
-				rows[row][col++] = theClient.getC_benutzername();
+				rows[row][col++] = theClient.getC_benutzername().trim();
 				rows[row][col++] = theClient.getC_mandant();
-				rows[row][col++] = theClient.getC_uisprache();
-				rows[row][col++] = theClient.getC_konzernsprache();
+				rows[row][col++] = theClient.getFlrsystemrolle() != null ? theClient.getFlrsystemrolle().getC_bez() : "";
 				rows[row][col++] = theClient.getT_loggedin() == null ? null
 						: new java.sql.Timestamp(theClient.getT_loggedin()
 								.getTime());
@@ -264,9 +264,9 @@ public class TheClientHandler extends UseCaseHandler {
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
 			// flr: 6 die javadatentypen der aller spalten
-					new Class[] { String.class, String.class, String.class,
-							Locale.class, Locale.class,
-							java.sql.Timestamp.class, java.sql.Timestamp.class },
+					new Class[] { String.class, String.class, Locale.class,
+							Locale.class, java.sql.Timestamp.class,
+							java.sql.Timestamp.class },
 					// flr: 7 die spaltenueberschriften - clienttabelle
 					new String[] {
 							"User-ID",
@@ -274,19 +274,26 @@ public class TheClientHandler extends UseCaseHandler {
 									mandantCNr, locUI),
 							getTextRespectUISpr("report.mandant", mandantCNr,
 									locUI),
-							getTextRespectUISpr("client.uisprache", mandantCNr,
+							getTextRespectUISpr("lp.systemrolle", mandantCNr,
 									locUI),
-							getTextRespectUISpr("client.konzernsprache",
-									mandantCNr, locUI),
 							getTextRespectUISpr("client.logondatum",
 									mandantCNr, locUI),
 							getTextRespectUISpr("client.logoutdatum",
 									mandantCNr, locUI), },
+
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
 					// flr: 8 die hibernatespaltenname
 					new String[] { "cnr",
 							TheClientFac.FLRSPALTE_C_BENUTZERNAME,
-							"mandant_c_nr", TheClientFac.FLRSPALTE_C_UILOCALE,
-							TheClientFac.FLRSPALTE_C_KONZERNLOCALE,
+							"c_mandant",
+							TheClientFac.FLRSPALTE_SYSTEMROLLE_C_BEZ,
 							TheClientFac.FLRSPALTE_T_LOGGEDIN,
 							TheClientFac.FLRSPALTE_T_LOGGEDOUT }));
 		}
@@ -321,7 +328,6 @@ public class TheClientHandler extends UseCaseHandler {
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-				boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -59,15 +59,24 @@ public class AnsprechpartnerDto implements Serializable {
 
 	private String cEmail;
 
-	
+	private String cAbteilung;
+
+	public String getCAbteilung() {
+		return cAbteilung;
+	}
+
+	public void setCAbteilung(String cAbteilung) {
+		this.cAbteilung = cAbteilung;
+	}
+
 	public boolean isNewsletterEmpfaenger() {
 		return newsletterEmpfaenger;
 	}
-	
+
 	public void setNewsletterEmpfaenger(boolean newsletterEmpfaenger) {
 		this.newsletterEmpfaenger = newsletterEmpfaenger;
 	}
-	
+
 	public String getCFax() {
 		return cFax;
 	}
@@ -181,7 +190,15 @@ public class AnsprechpartnerDto implements Serializable {
 		return ansprechpartnerfunktionIId;
 	}
 
+	private String cKennwort;
 
+	public String getCKennwort() {
+		return this.cKennwort;
+	}
+
+	public void setCKennwort(String cKennwort) {
+		this.cKennwort = cKennwort;
+	}
 
 	public String getXBemerkung() {
 		return xBemerkung;
@@ -198,8 +215,6 @@ public class AnsprechpartnerDto implements Serializable {
 	public void setAnsprechpartnerfunktionIId(Integer ansprechpartnerfunktionIId) {
 		this.ansprechpartnerfunktionIId = ansprechpartnerfunktionIId;
 	}
-
-	
 
 	public void setXBemerkung(String xBemerkung) {
 		this.xBemerkung = xBemerkung;
@@ -241,7 +256,7 @@ public class AnsprechpartnerDto implements Serializable {
 				: that.personalIIdAendern.equals(this.personalIIdAendern))) {
 			return false;
 		}
-		if(that.newsletterEmpfaenger != this.newsletterEmpfaenger) {
+		if (that.newsletterEmpfaenger != this.newsletterEmpfaenger) {
 			return false;
 		}
 		return true;
@@ -278,13 +293,9 @@ public class AnsprechpartnerDto implements Serializable {
 		partnerDto = new PartnerDto();
 	}
 
-
-
 	public void setBVersteckt(Short bVersteckt) {
 		this.bVersteckt = bVersteckt;
 	}
-
-	
 
 	public Short getBVersteckt() {
 		return bVersteckt;

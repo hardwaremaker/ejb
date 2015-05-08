@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -52,6 +52,26 @@ public class ZeitmodellDto implements Serializable {
 	private ZeitmodellsprDto zeitmodellsprDto;
 	private Short bVersteckt;
 	private Double fUrlaubstageprowoche;
+
+	private BigDecimal nMaximalesWochenist;
+
+	public BigDecimal getNMaximalesWochenist() {
+		return nMaximalesWochenist;
+	}
+
+	public void setNMaximalesWochenist(BigDecimal nMaximalesWochenist) {
+		this.nMaximalesWochenist = nMaximalesWochenist;
+	}
+
+	private Short bFeiertagssollAddieren;
+
+	public Short getBFeiertagssollAddieren() {
+		return bFeiertagssollAddieren;
+	}
+
+	public void setBFeiertagssollAddieren(Short bFeiertagssollAddieren) {
+		this.bFeiertagssollAddieren = bFeiertagssollAddieren;
+	}
 
 	private Integer iMinutenabzug;
 
@@ -122,7 +142,15 @@ public class ZeitmodellDto implements Serializable {
 	public void setBTeilzeit(Short bTeilzeit) {
 		this.bTeilzeit = bTeilzeit;
 	}
+	private Short bFixepauseTrotzkommtgeht;
+	
+	public Short getBFixepauseTrotzkommtgeht() {
+		return bFixepauseTrotzkommtgeht;
+	}
 
+	public void setBFixepauseTrotzkommtgeht(Short bFixepauseTrotzkommtgeht) {
+		this.bFixepauseTrotzkommtgeht = bFixepauseTrotzkommtgeht;
+	}
 	public Integer getPersonalIIdAendern() {
 		return personalIIdAendern;
 	}

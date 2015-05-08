@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -56,6 +56,45 @@ public class BestellvorschlagDto implements Serializable {
 	private Double dRabattsatz;
 	private Integer iBelegartpositionid;
 	private Short bNettopreisuebersteuert;
+	
+	private Integer personalIIdVormerkung;
+	
+	private Timestamp tVormerkung;
+
+	public Integer getPersonalIIdVormerkung() {
+		return personalIIdVormerkung;
+	}
+
+	public void setPersonalIIdVormerkung(Integer personalIIdVormerkung) {
+		this.personalIIdVormerkung = personalIIdVormerkung;
+	}
+
+	public Timestamp getTVormerkung() {
+		return tVormerkung;
+	}
+
+	public void setTVormerkung(Timestamp tVormerkung) {
+		this.tVormerkung = tVormerkung;
+	}
+	
+	private String xTextinhalt;
+	public final String getXTextinhalt() {
+		return this.xTextinhalt;
+	}
+
+	public final void setXTextinhalt(String xTextinhalt) {
+		this.xTextinhalt = xTextinhalt;
+	}
+
+	private Short bVormerkung;
+
+	public Short getBVormerkung() {
+		return bVormerkung;
+	}
+
+	public void setBVormerkung(Short bVormerkung) {
+		this.bVormerkung = bVormerkung;
+	}
 	
 	private Integer projektIId;
 

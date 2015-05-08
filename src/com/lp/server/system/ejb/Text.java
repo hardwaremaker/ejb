@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -43,6 +43,7 @@ import javax.persistence.Table;
 
 @NamedQueries({
 		@NamedQuery(name = "TextfindByMandantCNrLocaleCNr", query = "SELECT OBJECT (o) FROM Text o WHERE o.pk.mandantCNr = ?1 AND  o.pk.localeCNr = ?2"),
+		@NamedQuery(name = "TextfindByMandantCNrLocaleCNrCToken", query = "SELECT OBJECT (o) FROM Text o WHERE o.pk.mandantCNr = ?1 AND  o.pk.localeCNr = ?2 AND  o.pk.cToken = ?3"),
 		@NamedQuery(name = "TextfindAll", query = "SELECT OBJECT (o) FROM Text o") })
 @Entity
 @Table(name = "LP_TEXT")

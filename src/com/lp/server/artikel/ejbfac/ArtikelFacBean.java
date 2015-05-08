@@ -1,33 +1,33 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.artikel.ejbfac;
@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -74,6 +75,7 @@ import jxl.Cell;
 import jxl.CellType;
 import jxl.Sheet;
 import jxl.Workbook;
+import jxl.WorkbookSettings;
 import jxl.biff.CellReferenceHelper;
 import jxl.read.biff.BiffException;
 import jxl.write.DateFormat;
@@ -92,7 +94,6 @@ import org.apache.xerces.dom.DocumentImpl;
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
-import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import org.jboss.annotation.ejb.TransactionTimeout;
@@ -100,13 +101,19 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
+import com.lp.server.anfrage.ejb.Anfrageposition;
 import com.lp.server.anfrage.fastlanereader.generated.FLRAnfragepositionlieferdaten;
 import com.lp.server.anfrage.service.AnfragepositionDto;
 import com.lp.server.anfrage.service.AnfragepositionlieferdatenDto;
+import com.lp.server.angebot.ejb.Angebotposition;
+import com.lp.server.angebot.service.AngebotServiceFac;
+import com.lp.server.angebot.service.AngebotpositionDto;
+import com.lp.server.artikel.ejb.Alergen;
 import com.lp.server.artikel.ejb.Artgru;
 import com.lp.server.artikel.ejb.Artgruspr;
 import com.lp.server.artikel.ejb.ArtgrusprPK;
 import com.lp.server.artikel.ejb.Artikel;
+import com.lp.server.artikel.ejb.Artikelalergen;
 import com.lp.server.artikel.ejb.Artikelart;
 import com.lp.server.artikel.ejb.Artikelartspr;
 import com.lp.server.artikel.ejb.ArtikelartsprPK;
@@ -122,13 +129,17 @@ import com.lp.server.artikel.ejb.ArtikelsprPK;
 import com.lp.server.artikel.ejb.Artkla;
 import com.lp.server.artikel.ejb.Artklaspr;
 import com.lp.server.artikel.ejb.ArtklasprPK;
+import com.lp.server.artikel.ejb.Automotive;
 import com.lp.server.artikel.ejb.Einkaufsean;
 import com.lp.server.artikel.ejb.Farbcode;
 import com.lp.server.artikel.ejb.Geometrie;
 import com.lp.server.artikel.ejb.Handlagerbewegung;
 import com.lp.server.artikel.ejb.Hersteller;
 import com.lp.server.artikel.ejb.Katalog;
+import com.lp.server.artikel.ejb.Medical;
 import com.lp.server.artikel.ejb.Montage;
+import com.lp.server.artikel.ejb.Reach;
+import com.lp.server.artikel.ejb.Rohs;
 import com.lp.server.artikel.ejb.Shopgruppe;
 import com.lp.server.artikel.ejb.ShopgruppeISort;
 import com.lp.server.artikel.ejb.Shopgruppespr;
@@ -142,9 +153,10 @@ import com.lp.server.artikel.ejb.Verpackung;
 import com.lp.server.artikel.ejb.VkPreisfindungEinzelverkaufspreis;
 import com.lp.server.artikel.ejb.VkPreisfindungPreisliste;
 import com.lp.server.artikel.ejb.Vorschlagstext;
+import com.lp.server.artikel.ejb.Vorzug;
 import com.lp.server.artikel.ejb.Webshop;
 import com.lp.server.artikel.ejb.Zugehoerige;
-import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikellieferant;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikellieferantstaffel;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste;
@@ -152,6 +164,8 @@ import com.lp.server.artikel.fastlanereader.generated.FLRArtikellistespr;
 import com.lp.server.artikel.fastlanereader.generated.FLRTrumphtopslog;
 import com.lp.server.artikel.fastlanereader.generated.FLRVkpfartikelpreis;
 import com.lp.server.artikel.fastlanereader.generated.FLRVorschlagstext;
+import com.lp.server.artikel.service.AlergenDto;
+import com.lp.server.artikel.service.AlergenDtoAssembler;
 import com.lp.server.artikel.service.ArtgruDto;
 import com.lp.server.artikel.service.ArtgruDtoAssembler;
 import com.lp.server.artikel.service.ArtgrusprDto;
@@ -159,7 +173,10 @@ import com.lp.server.artikel.service.ArtgrusprDtoAssembler;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelDtoAssembler;
 import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.artikel.service.ArtikelFilterComboBoxEntry;
 import com.lp.server.artikel.service.ArtikelImportDto;
+import com.lp.server.artikel.service.ArtikelalergenDto;
+import com.lp.server.artikel.service.ArtikelalergenDtoAssembler;
 import com.lp.server.artikel.service.ArtikelartDto;
 import com.lp.server.artikel.service.ArtikelartDtoAssembler;
 import com.lp.server.artikel.service.ArtikelartsprDto;
@@ -171,6 +188,7 @@ import com.lp.server.artikel.service.ArtikellieferantDto;
 import com.lp.server.artikel.service.ArtikellieferantDtoAssembler;
 import com.lp.server.artikel.service.ArtikellieferantstaffelDto;
 import com.lp.server.artikel.service.ArtikellieferantstaffelDtoAssembler;
+import com.lp.server.artikel.service.ArtikelreservierungDto;
 import com.lp.server.artikel.service.ArtikelshopgruppeDto;
 import com.lp.server.artikel.service.ArtikelshopgruppeDtoAssembler;
 import com.lp.server.artikel.service.ArtikelsperrenDto;
@@ -181,6 +199,8 @@ import com.lp.server.artikel.service.ArtklaDto;
 import com.lp.server.artikel.service.ArtklaDtoAssembler;
 import com.lp.server.artikel.service.ArtklasprDto;
 import com.lp.server.artikel.service.ArtklasprDtoAssembler;
+import com.lp.server.artikel.service.AutomotiveDto;
+import com.lp.server.artikel.service.AutomotiveDtoAssembler;
 import com.lp.server.artikel.service.EinkaufseanDto;
 import com.lp.server.artikel.service.EinkaufseanDtoAssembler;
 import com.lp.server.artikel.service.FarbcodeDto;
@@ -198,9 +218,14 @@ import com.lp.server.artikel.service.LagerFac;
 import com.lp.server.artikel.service.LagerabgangursprungDto;
 import com.lp.server.artikel.service.LagerbewegungDto;
 import com.lp.server.artikel.service.LagerplatzDto;
+import com.lp.server.artikel.service.MedicalDto;
+import com.lp.server.artikel.service.MedicalDtoAssembler;
 import com.lp.server.artikel.service.MontageDto;
 import com.lp.server.artikel.service.MontageDtoAssembler;
-import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
+import com.lp.server.artikel.service.ReachDto;
+import com.lp.server.artikel.service.ReachDtoAssembler;
+import com.lp.server.artikel.service.RohsDto;
+import com.lp.server.artikel.service.RohsDtoAssembler;
 import com.lp.server.artikel.service.ShopgruppeDto;
 import com.lp.server.artikel.service.ShopgruppeDtoAssembler;
 import com.lp.server.artikel.service.ShopgruppesprDto;
@@ -218,23 +243,28 @@ import com.lp.server.artikel.service.VerleihDtoAssembler;
 import com.lp.server.artikel.service.VerpackungDto;
 import com.lp.server.artikel.service.VerpackungDtoAssembler;
 import com.lp.server.artikel.service.VkPreisfindungEinzelverkaufspreisDto;
+import com.lp.server.artikel.service.VkPreisfindungEinzelverkaufspreisDtoAssembler;
 import com.lp.server.artikel.service.VkPreisfindungPreislisteDto;
+import com.lp.server.artikel.service.VkPreisfindungPreislisteDtoAssembler;
 import com.lp.server.artikel.service.VkpfMengenstaffelDto;
 import com.lp.server.artikel.service.VkpfartikelpreislisteDto;
 import com.lp.server.artikel.service.VorschlagstextDto;
 import com.lp.server.artikel.service.VorschlagstextDtoAssembler;
+import com.lp.server.artikel.service.VorzugDto;
+import com.lp.server.artikel.service.VorzugDtoAssembler;
 import com.lp.server.artikel.service.WebshopDto;
 import com.lp.server.artikel.service.WebshopDtoAssembler;
 import com.lp.server.artikel.service.ZugehoerigeDto;
 import com.lp.server.artikel.service.ZugehoerigeDtoAssembler;
+import com.lp.server.auftrag.ejb.Auftragposition;
+import com.lp.server.auftrag.service.AuftragpositionDto;
+import com.lp.server.bestellung.service.BestellvorschlagDto;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosistmaterial;
 import com.lp.server.partner.ejb.HvTypedQuery;
-import com.lp.server.partner.service.KundesokoDto;
-import com.lp.server.partner.service.KundesokomengenstaffelDto;
 import com.lp.server.partner.service.LfliefergruppeDto;
 import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.partner.service.PartnerDto;
-import com.lp.server.partner.service.PartnerFac;
+import com.lp.server.stueckliste.service.IStklImportResult;
 import com.lp.server.system.ejb.Mwstsatzbez;
 import com.lp.server.system.ejbfac.ServerDruckerFacBean;
 import com.lp.server.system.pkgenerator.PKConst;
@@ -243,6 +273,7 @@ import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.MwstsatzbezDto;
 import com.lp.server.system.service.PanelFac;
+import com.lp.server.system.service.PanelbeschreibungDto;
 import com.lp.server.system.service.PaneldatenDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
@@ -250,12 +281,14 @@ import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.HelperServer;
+import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.logger.HvDtoLogger;
 import com.lp.server.util.report.JasperPrintLP;
+import com.lp.service.StklImportSpezifikation;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
-import com.lp.util.siprefixparser.BigDecimalSI;
+import com.lp.util.SiWertParser;
 
 /**
  * <p>
@@ -279,13 +312,12 @@ import com.lp.util.siprefixparser.BigDecimalSI;
 @SOAPBinding(style = SOAPBinding.Style.RPC)
 @Stateless
 public class ArtikelFacBean extends Facade implements ArtikelFac {
-
 	@PersistenceContext
 	private EntityManager em;
 
 	public Object[] kopiereArtikel(Integer artikelIId, String artikelnummerNeu,
 			java.util.HashMap zuKopieren, Integer herstellerIIdNeu,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		ArtikelDto artikelDto = artikelFindByPrimaryKey(artikelIId,
 				theClientDto);
 
@@ -588,21 +620,56 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 			}
 		}
 
+		boolean bEsSindZukuenftigePreisevorhanden = false;
+
 		// VK-Preise
 		if (zuKopieren.containsKey(ArtikelFac.ARTIKEL_KOPIEREN_VKPREISE)) {
 			try {
+
 				VkPreisfindungEinzelverkaufspreisDto[] dtos = getVkPreisfindungFac()
 						.vkpfartikelverkaufspreisbasisFindByArtikelIId(
 								artikelIId, theClientDto);
 
 				for (int i = 0; i < dtos.length; i++) {
 					VkPreisfindungEinzelverkaufspreisDto dto = dtos[i];
-					dto.setIId(null);
-					dto.setArtikelIId(artikelIId_Neu);
-					getVkPreisfindungFac()
-							.createVkPreisfindungEinzelverkaufspreis(dto,
-									theClientDto);
+					if (dto.getTVerkaufspreisbasisgueltigab().after(
+							new Date(System.currentTimeMillis()))) {
+						bEsSindZukuenftigePreisevorhanden = true;
+					}
 				}
+				
+				// SP3021 Es werden nur Preise des angemeldeten Mandanten
+				// kopiert
+				// PJ18634 Nur die letztgueltige VK-Basis mit Gueltigkeit =
+				// Heute anlegen
+
+				Query query = em
+						.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByMandantCNrArtikelIIdBisGueltigab");
+				query.setParameter(1, theClientDto.getMandant());
+				query.setParameter(2, artikelIId);
+				query.setParameter(3, Helper
+						.cutTimestamp(new java.sql.Timestamp(System
+								.currentTimeMillis())));
+				Collection<?> cl = query.getResultList();
+
+				if (cl.size() > 0) {
+
+					VkPreisfindungEinzelverkaufspreis basis = (VkPreisfindungEinzelverkaufspreis) cl
+							.iterator().next();
+
+					VkPreisfindungEinzelverkaufspreisDto basisDto = VkPreisfindungEinzelverkaufspreisDtoAssembler
+							.createDto(basis);
+					basisDto.setIId(null);
+					basisDto.setArtikelIId(artikelIId_Neu);
+					basisDto.setTVerkaufspreisbasisgueltigab(Helper
+							.cutDate(new Date(System.currentTimeMillis())));
+					getVkPreisfindungFac()
+							.createVkPreisfindungEinzelverkaufspreis(basisDto,
+									theClientDto);
+
+				}
+
+			
 
 				// Vorher Artikelpreislisten loeschen, da bei createArtikel
 				// schon
@@ -615,16 +682,57 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 							vkPreisfindungPreislisteDtos[i]);
 				}
 
+				// Nun fuer jede aktive Preisliste den letzen Preis holen und
+				// mit gueltigektie heute anlegen
+
+				VkpfartikelpreislisteDto[] vkpreislistenDtos = getVkPreisfindungFac()
+						.getAlleAktivenPreislisten(Helper.boolean2Short(true),
+								theClientDto);
+
+				for (int i = 0; i < vkpreislistenDtos.length; i++) {
+
+					Query ejbquery = em
+							.createNamedQuery("VkPreisfindungPreislistefindByArtikelIIdVkpfartikelpreislisteIIdBisTPreisgueltigab");
+					ejbquery.setParameter(1, artikelIId);
+					ejbquery.setParameter(2, vkpreislistenDtos[i].getIId());
+					ejbquery.setParameter(3, Helper.cutTimestamp(new Timestamp(
+							System.currentTimeMillis())));
+
+					Collection c = ejbquery.getResultList();
+
+					if (c.size() > 0) {
+
+						VkPreisfindungPreisliste vkPreisfindungPreisliste = (VkPreisfindungPreisliste) c
+								.iterator().next();
+
+						VkPreisfindungPreislisteDto artikelpreislisteDto = VkPreisfindungPreislisteDtoAssembler
+								.createDto(vkPreisfindungPreisliste);
+
+						artikelpreislisteDto.setArtikelIId(artikelIId_Neu);
+						artikelpreislisteDto.setTPreisgueltigab(Helper
+								.cutDate(new Date(System.currentTimeMillis())));
+
+						getVkPreisfindungFac().createVkPreisfindungPreisliste(
+								artikelpreislisteDto, theClientDto);
+
+					}
+
+				}
+
 				vkPreisfindungPreislisteDtos = getVkPreisfindungFac()
 						.vkPreisfindungPreislisteFindByArtikelIId(artikelIId);
 
 				for (int i = 0; i < vkPreisfindungPreislisteDtos.length; i++) {
 					VkPreisfindungPreislisteDto dto = vkPreisfindungPreislisteDtos[i];
-					dto.setIId(null);
-					dto.setArtikelIId(artikelIId_Neu);
-					getVkPreisfindungFac().createVkPreisfindungPreisliste(dto,
-							theClientDto);
+
+					if (dto.getTPreisgueltigab().after(
+							new Date(System.currentTimeMillis()))) {
+						bEsSindZukuenftigePreisevorhanden = true;
+					}
+
 				}
+
+				// Mengenstaffeln
 
 				VkpfMengenstaffelDto[] vkpfMengenstaffelDtos = getVkPreisfindungFac()
 						.vkpfMengenstaffelFindByArtikelIIdGueltigkeitsdatum(
@@ -636,6 +744,7 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 					VkpfMengenstaffelDto dto = vkpfMengenstaffelDtos[i];
 					dto.setIId(null);
 					dto.setArtikelIId(artikelIId_Neu);
+					dto.setTPreisgueltigab(new Date(System.currentTimeMillis()));
 					getVkPreisfindungFac().createVkpfMengenstaffel(dto,
 							theClientDto);
 				}
@@ -644,7 +753,54 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 				throwEJBExceptionLPRespectOld(ex);
 			}
 		}
-		return new Object[] { artikelIId_Neu, bAndereSprachenKopiert };
+		return new Object[] { artikelIId_Neu, bAndereSprachenKopiert,
+				bEsSindZukuenftigePreisevorhanden };
+	}
+
+	// private BigDecimal berechneSIWert(ArtikelsprDto artikelsprDto,
+	// TheClientDto theClientDto)
+	// throws EJBExceptionLP, RemoteException {
+	//
+	// ParametermandantDto p =
+	// getParameterFac().parametermandantFindByPrimaryKey(
+	// ParameterFac.PARAMETER_SI_EINHEITEN,
+	// ParameterFac.KATEGORIE_ARTIKEL, theClientDto.getMandant());
+	// String einheiten = p.getCWert();
+	// p = getParameterFac().parametermandantFindByPrimaryKey(
+	// ParameterFac.PARAMETER_SI_OHNE_EINHEIT,
+	// ParameterFac.KATEGORIE_ARTIKEL, theClientDto.getMandant());
+	// boolean ohneEinheit = (Boolean)p.getCWertAsObject();
+	// return Helper.berechneSiWertAusBezeichnung(ohneEinheit, einheiten,
+	// artikelsprDto.getCBez(),
+	// artikelsprDto.getCZbez(),
+	// artikelsprDto.getCZbez2());
+	// }
+
+	private SiWertParser createSiWertParser(TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
+		ParametermandantDto p = getParameterFac()
+				.parametermandantFindByPrimaryKey(
+						ParameterFac.PARAMETER_SI_EINHEITEN,
+						ParameterFac.KATEGORIE_ARTIKEL,
+						theClientDto.getMandant());
+		String einheiten = p.getCWert();
+		p = getParameterFac().parametermandantFindByPrimaryKey(
+				ParameterFac.PARAMETER_SI_OHNE_EINHEIT,
+				ParameterFac.KATEGORIE_ARTIKEL, theClientDto.getMandant());
+		boolean ohneEinheit = (Boolean) p.getCWertAsObject();
+
+		return new SiWertParser(ohneEinheit, einheiten);
+	}
+
+	private BigDecimal berechneSIWert(SiWertParser parser,
+			ArtikelsprDto artikelsprDto) {
+		return parser.berechneSiWertAusBezeichnung(artikelsprDto.getCBez(),
+				artikelsprDto.getCZbez(), artikelsprDto.getCZbez2());
+	}
+
+	private BigDecimal berechneSIWert(SiWertParser parser, Artikelspr artikelspr) {
+		return parser.berechneSiWertAusBezeichnung(artikelspr.getCBez(),
+				artikelspr.getCZbez(), artikelspr.getCZbez2());
 	}
 
 	/**
@@ -658,9 +814,10 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 	 *            String
 	 * @throws EJBExceptionLP
 	 * @return Integer
+	 * @throws RemoteException
 	 */
 	public Integer createArtikel(ArtikelDto artikelDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		if (artikelDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("artikelDto == null"));
@@ -692,13 +849,11 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
 					MandantFac.ZUSATZFUNKTION_SI_WERT, theClientDto)
 					&& artikelDto.getArtikelsprDto() != null) {
-				artikelDto.getArtikelsprDto().setNSiwert(
-						Helper.berechneSiWertAusBezeichnung(artikelDto
-								.getArtikelsprDto().getCBez(), artikelDto
-								.getArtikelsprDto().getCZbez(), artikelDto
-								.getArtikelsprDto().getCZbez2()));
-			}
 
+				SiWertParser parser = createSiWertParser(theClientDto);
+				artikelDto.getArtikelsprDto().setNSiwert(
+						berechneSIWert(parser, artikelDto.getArtikelsprDto()));
+			}
 		}
 
 		if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
@@ -743,6 +898,10 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		if (artikelDto.getEinheitCNrBestellung() == null) {
 			artikelDto.setNUmrechnungsfaktor(null);
 		}
+		if (artikelDto.getNUmrechnungsfaktor() == null) {
+			artikelDto.setEinheitCNrBestellung(null);
+		}
+
 		try {
 			try {
 				// Default Mindestdeckungsbeitrag
@@ -990,6 +1149,9 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 						artikelDto.getGeometrieDto());
 			}
 
+			artikeleigenschaftenDefaultwerteAnlegen(artikelDto.getIId(),
+					artikelDto.getArtgruIId(), theClientDto);
+
 			return artikelDto.getIId();
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
@@ -1160,34 +1322,273 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		return tmArten;
 	}
 
-	public Map getAllSprArtgru(TheClientDto theClientDto) {
+	private List<FLRArtikelgruppe> holeAlleArtikelgruppen(Session session) {
 
-		myLogger.entry();
-		TreeMap<Object, Object> tmArten = new TreeMap<Object, Object>();
+		String hbnString = "SELECT ag.i_id, ag.artgru_i_id FROM FLRArtikelgruppe AS ag WHERE ag.artgru_i_id IS NOT NULL";
 
-		Query query = em.createNamedQuery("ArtgrufindByMandantCNr");
-		query.setParameter(1, theClientDto.getMandant());
-		Collection<?> clArten = query.getResultList();
+		@SuppressWarnings("unchecked")
+		List<Object[]> hbnQueryList = session.createQuery(hbnString).list();
 
-		Iterator<?> itArten = clArten.iterator();
-		while (itArten.hasNext()) {
-			Artgru artgruTemp = (Artgru) itArten.next();
-			Object key = artgruTemp.getIId();
-			Object value = null;
-			// try {
-			Artgruspr artgruspr = em.find(Artgruspr.class, new ArtgrusprPK(
-					theClientDto.getLocUiAsString(), artgruTemp.getIId()));
-			if (artgruspr != null && artgruspr.getCBez() != null) {
+		List<FLRArtikelgruppe> allArtikelgruppeEntries = new ArrayList<FLRArtikelgruppe>();
 
-				value = artgruspr.getCBez();
-			} else {
-				value = artgruTemp.getCNr();
-			}
-
-			tmArten.put(key, value);
+		for (Object[] object : hbnQueryList) {
+			// i_id, artgru_i_id
+			allArtikelgruppeEntries.add(new FLRArtikelgruppe(
+					(Integer) object[0], (Integer) object[1]));
 		}
 
-		return tmArten;
+		return allArtikelgruppeEntries;
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public Map getAllSprArtgru(TheClientDto theClientDto) {
+
+		int iNurVatergruppenAnzeigen = 0;
+		boolean bSorierungNachCNr = false;
+		try {
+			ParametermandantDto parameter = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ARTIKEL,
+							ParameterFac.PARAMETER_ARTIKELGRUPPE_NUR_VATERGRUPPEN_ANZEIGEN);
+			iNurVatergruppenAnzeigen = (Integer) parameter.getCWertAsObject();
+
+			parameter = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ARTIKEL,
+							ParameterFac.PARAMETER_ARTIKELGRUPPE_NACH_CBEZ_ODER_CNR_ANZEIGEN);
+			bSorierungNachCNr = (Boolean) parameter.getCWertAsObject();
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		if (iNurVatergruppenAnzeigen == 2) {
+
+			ArrayList<ArtikelFilterComboBoxEntry> al = new ArrayList();
+
+			Session session = FLRSessionFactory.getFactory().openSession();
+
+			session.enableFilter("filterLocale").setParameter("paramLocale",
+					Helper.locale2String(theClientDto.getLocUi()));
+
+			String sQuery = "SELECT ag.i_id, ag.c_nr, aspr.c_bez"
+					+ " FROM FLRArtikelgruppe as ag"
+					+ " LEFT OUTER JOIN ag.artikelgruppesprset AS aspr"
+					+ " WHERE ag.artgru_i_id IS NULL ";
+
+			org.hibernate.Query query = session.createQuery(sQuery);
+
+			List<?> resultList = query.list();
+
+			Iterator<?> resultListIterator = resultList.iterator();
+			while (resultListIterator.hasNext()) {
+				Object o[] = (Object[]) resultListIterator.next();
+				Integer id = (Integer) o[0];
+				String key = (String) o[1];
+				String c_bez = (String) o[2];
+				String value = null;
+				if (c_bez != null) {
+					value = c_bez;
+				} else {
+					value = key;
+				}
+
+				ArtikelFilterComboBoxEntry entry = new ArtikelFilterComboBoxEntry();
+
+				entry.setCnr(key);
+				entry.setCbez(value);
+
+				entry.setUntergruppen(holeUntergruppenEingerueckt(id));
+				entry.setFilterExpression("(" + id + ")");
+				al.add(entry);
+
+			}
+			session.close();
+
+			return ArtikelFilterComboBoxEntry.getSortierteListe(al,
+					bSorierungNachCNr);
+		} else if (iNurVatergruppenAnzeigen == 1) {
+
+			ArrayList<ArtikelFilterComboBoxEntry> al = new ArrayList();
+
+			Session session = FLRSessionFactory.getFactory().openSession();
+
+			session.enableFilter("filterLocale").setParameter("paramLocale",
+					Helper.locale2String(theClientDto.getLocUi()));
+
+			String sQuery = "SELECT ag.i_id, ag.c_nr, aspr.c_bez"
+					+ " FROM FLRArtikelgruppe as ag"
+					+ " LEFT OUTER JOIN ag.artikelgruppesprset AS aspr"
+					+ " WHERE ag.artgru_i_id IS NULL ";
+
+			org.hibernate.Query query = session.createQuery(sQuery);
+
+			List<?> resultList = query.list();
+
+			Iterator<?> resultListIterator = resultList.iterator();
+			while (resultListIterator.hasNext()) {
+				Object o[] = (Object[]) resultListIterator.next();
+				Integer id = (Integer) o[0];
+				String key = (String) o[1];
+				String c_bez = (String) o[2];
+				String value = null;
+				if (c_bez != null) {
+					value = c_bez;
+				} else {
+					value = key;
+				}
+
+				ArtikelFilterComboBoxEntry entry = new ArtikelFilterComboBoxEntry();
+
+				entry.setCnr(key);
+				entry.setCbez(value);
+
+				// PJ18638
+				HashSet<Integer> hs = new HashSet<Integer>();
+
+				hs.add(id);
+
+				hs = holeUntergruppen(id, hs);
+
+				String inClause = "(";
+
+				Iterator it = hs.iterator();
+				while (it.hasNext()) {
+					inClause += it.next() + "";
+					if (it.hasNext()) {
+						inClause += ",";
+					}
+				}
+
+				inClause += ")";
+
+				entry.setFilterExpression(inClause);
+				al.add(entry);
+
+			}
+			session.close();
+
+			return ArtikelFilterComboBoxEntry.getSortierteListe(al,
+					bSorierungNachCNr);
+		} else {
+			ArrayList<ArtikelFilterComboBoxEntry> al = new ArrayList();
+
+			Session session = FLRSessionFactory.getFactory().openSession();
+
+			session.enableFilter("filterLocale").setParameter("paramLocale",
+					Helper.locale2String(theClientDto.getLocUi()));
+
+			String sQuery = "SELECT ag.i_id, ag.c_nr, aspr.c_bez"
+					+ " FROM FLRArtikelgruppe as ag"
+					+ " LEFT OUTER JOIN ag.artikelgruppesprset AS aspr ";
+
+			org.hibernate.Query query = session.createQuery(sQuery);
+
+			List<?> resultList = query.list();
+
+			Iterator<?> resultListIterator = resultList.iterator();
+			while (resultListIterator.hasNext()) {
+				Object o[] = (Object[]) resultListIterator.next();
+				Integer id = (Integer) o[0];
+				String key = (String) o[1];
+				String c_bez = (String) o[2];
+				String value = null;
+				if (c_bez != null) {
+					value = c_bez;
+				} else {
+					value = key;
+				}
+
+				ArtikelFilterComboBoxEntry entry = new ArtikelFilterComboBoxEntry();
+
+				entry.setCnr(key);
+				entry.setCbez(value);
+				entry.setFilterExpression("(" + id + ")");
+
+				al.add(entry);
+
+			}
+			session.close();
+
+			return ArtikelFilterComboBoxEntry.getSortierteListe(al,
+					bSorierungNachCNr);
+		}
+	}
+
+	private HashSet<Integer> holeUntergruppen(Integer id, HashSet<Integer> hs) {
+		// Nun alle Untergruppen holen
+		Session sessionUntegruppen = FLRSessionFactory.getFactory()
+				.openSession();
+		String sQueryUntegruppen = "SELECT ag FROM FLRArtikelgruppe as ag WHERE ag.artgru_i_id="
+				+ id;
+		org.hibernate.Query queryUntergruppen = sessionUntegruppen
+				.createQuery(sQueryUntegruppen);
+
+		List<?> resultListUntegruppen = queryUntergruppen.list();
+
+		Iterator<?> resultListIteratorUntegruppen = resultListUntegruppen
+				.iterator();
+		while (resultListIteratorUntegruppen.hasNext()) {
+			FLRArtikelgruppe flrArtikelgruppe = (FLRArtikelgruppe) resultListIteratorUntegruppen
+					.next();
+			hs.add(flrArtikelgruppe.getI_id());
+
+			hs = holeUntergruppen(flrArtikelgruppe.getI_id(), hs);
+
+		}
+
+		return hs;
+	}
+
+	private ArrayList<ArtikelFilterComboBoxEntry> holeUntergruppenEingerueckt(
+			Integer vatergeruppe_id) {
+		// Nun alle Untergruppen holen
+		Session sessionUntegruppen = FLRSessionFactory.getFactory()
+				.openSession();
+
+		String sQueryUntegruppen = "SELECT ag.i_id, ag.c_nr, aspr.c_bez"
+				+ " FROM FLRArtikelgruppe as ag"
+				+ " LEFT OUTER JOIN ag.artikelgruppesprset AS aspr WHERE ag.artgru_i_id="
+				+ vatergeruppe_id;
+
+		org.hibernate.Query queryUntergruppen = sessionUntegruppen
+				.createQuery(sQueryUntegruppen);
+
+		ArrayList<ArtikelFilterComboBoxEntry> al = new ArrayList<ArtikelFilterComboBoxEntry>();
+
+		List<?> resultListUntegruppen = queryUntergruppen.list();
+
+		Iterator<?> resultListIteratorUntegruppen = resultListUntegruppen
+				.iterator();
+		while (resultListIteratorUntegruppen.hasNext()) {
+
+			Object o[] = (Object[]) resultListIteratorUntegruppen.next();
+			Integer id = (Integer) o[0];
+			String key = (String) o[1];
+			String c_bez = (String) o[2];
+			String value = null;
+			if (c_bez != null) {
+				value = c_bez;
+			} else {
+				value = key;
+			}
+
+			System.out.println(id + " " + value);
+
+			ArtikelFilterComboBoxEntry entrySub = new ArtikelFilterComboBoxEntry();
+			entrySub.setCnr(key);
+			entrySub.setCbez(value);
+
+			entrySub.setFilterExpression("(" + id + ")");
+
+			entrySub.setUntergruppen(holeUntergruppenEingerueckt(id));
+
+			al.add(entrySub);
+		}
+
+		return al;
 	}
 
 	public Map getAllVerleih() {
@@ -1207,6 +1608,23 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		// throw new EJBExceptionLP(EJBExceptionLP.
 		// FEHLER_BEI_FINDBYPRIMARYKEY, ex);
 		// }
+		return tmArten;
+	}
+
+	public Map getAllVorzug(TheClientDto theClientDto) {
+
+		TreeMap<Object, Object> tmArten = new TreeMap<Object, Object>();
+
+		Query query = em.createNamedQuery("VorzugfindByMandantCNr");
+		query.setParameter(1, theClientDto.getMandant());
+		Collection<?> clArten = query.getResultList();
+
+		Iterator<?> itArten = clArten.iterator();
+		while (itArten.hasNext()) {
+			Vorzug verleih = (Vorzug) itArten.next();
+			tmArten.put(verleih.getIId(), verleih.getCBez());
+		}
+
 		return tmArten;
 	}
 
@@ -1525,7 +1943,9 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 
 	}
 
-	public void alleSIwerteNachtragen(TheClientDto theClientDto) {
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public void alleSIwerteNachtragen(TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 
@@ -1543,16 +1963,9 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 					&& spr.getC_zbez2() == null) {
 
 			} else {
-				BigDecimalSI si = Helper.berechneSiWertAusBezeichnung(
-						spr.getC_bez(), spr.getC_zbez(), spr.getC_zbez2());
-
-				Artikelspr artikelspr = em.find(Artikelspr.class,
-						new ArtikelsprPK(spr.getId().getArtikelliste()
-								.getI_id(), spr.getLocale_c_nr()));
-				artikelspr.setCSiwert(HelperServer.getDBValueFromBigDecimal(si,
-						60));
-				em.merge(artikelspr);
-				em.flush();
+				getArtikelFac().siWertNachtragen(
+						spr.getId().getArtikelliste().getI_id(),
+						spr.getLocale_c_nr(), theClientDto);
 			}
 			zaehler++;
 
@@ -1560,6 +1973,18 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 					.println("Zeile " + zaehler + " von " + resultList.size());
 
 		}
+	}
+
+	public void siWertNachtragen(Integer artikelIId, String localeCNr,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		Artikelspr artikelspr = em.find(Artikelspr.class, new ArtikelsprPK(
+				artikelIId, localeCNr));
+		SiWertParser siParser = createSiWertParser(theClientDto);
+
+		BigDecimal si = berechneSIWert(siParser, artikelspr);
+		artikelspr.setCSiwert(HelperServer.getDBValueFromBigDecimal(si, 60));
+		em.merge(artikelspr);
+		em.flush();
 	}
 
 	//
@@ -1577,9 +2002,10 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 	 * @param theClientDto
 	 *            String
 	 * @throws EJBExceptionLP
+	 * @throws RemoteException
 	 */
 	public void updateArtikel(ArtikelDto artikelDto, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+			throws EJBExceptionLP, RemoteException {
 		if (artikelDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("artikelDto == null"));
@@ -1623,17 +2049,40 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
 					MandantFac.ZUSATZFUNKTION_SI_WERT, theClientDto)
 					&& artikelDto.getArtikelsprDto() != null) {
-				artikelDto.getArtikelsprDto().setNSiwert(
-						Helper.berechneSiWertAusBezeichnung(artikelDto
-								.getArtikelsprDto().getCBez(), artikelDto
-								.getArtikelsprDto().getCZbez(), artikelDto
-								.getArtikelsprDto().getCZbez2()));
+				SiWertParser siParser = createSiWertParser(theClientDto);
+				artikelDto.getArtikelsprDto()
+						.setNSiwert(
+								berechneSIWert(siParser,
+										artikelDto.getArtikelsprDto()));
 			}
-
 		}
 
 		if (artikelDto.getEinheitCNrBestellung() == null) {
 			artikelDto.setNUmrechnungsfaktor(null);
+		} else {
+			// PJ18425 Wenn Bestellmengeneinheit vorhanden, dann darf im
+			// Artikellieferant keine VPE (Bestelleinheit) definiert sein
+			Query query = em
+					.createNamedQuery("ArtikellieferantfindByArtikelIId");
+			query.setParameter(1, artikelDto.getIId());
+			Collection<?> cl = query.getResultList();
+			Iterator it = cl.iterator();
+			while (it.hasNext()) {
+				Artikellieferant al = (Artikellieferant) it.next();
+				if (al.getEinheitCNrVpe() != null) {
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_EINHEIT_C_NR_VPE_IN_ARTIKELLIEFERANT_VORHANDEN,
+							new Exception(
+									"FEHLER_EINHEIT_C_NR_VPE_IN_ARTIKELLIEFERANT_VORHANDEN"));
+
+				}
+
+			}
+
+		}
+
+		if (artikelDto.getNUmrechnungsfaktor() == null) {
+			artikelDto.setEinheitCNrBestellung(null);
 		}
 
 		if (artikelDto.getArtikelIIdErsatz() != null) {
@@ -2239,7 +2688,23 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		return assembleArtikelDto(artikel);
 	}
 
-	@TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+	public ArrayList<String> getVorgaengerArtikel(Integer artikelIId) {
+		ArrayList<String> artikel = new ArrayList<String>();
+
+		Query query = em.createNamedQuery("ArtikelfindByArtikelIIdErsatz");
+		query.setParameter(1, artikelIId);
+		Collection<?> cl = query.getResultList();
+		Iterator it = cl.iterator();
+
+		while (it.hasNext()) {
+
+			Artikel a = (Artikel) it.next();
+			artikel.add(a.getCNr());
+		}
+
+		return artikel;
+	}
+
 	public ArtikelDto artikelFindByPrimaryKeySmall(Integer iId,
 			TheClientDto theClientDto) {
 		if (iId == null) {
@@ -2916,6 +3381,16 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		artikel.setNAufschlagBetrag(artikelDto.getNAufschlagBetrag());
 		artikel.setFAufschlagProzent(artikelDto.getFAufschlagProzent());
 
+		artikel.setCUL(artikelDto.getCUL());
+		artikel.setReachIId(artikelDto.getReachIId());
+		artikel.setRohsIId(artikelDto.getRohsIId());
+		artikel.setAutomotiveIId(artikelDto.getAutomotiveIId());
+		artikel.setMedicalIId(artikelDto.getMedicalIId());
+		artikel.setFUeberproduktion(artikelDto.getFUeberproduktion());
+		artikel.setVorzugIId(artikelDto.getVorzugIId());
+		artikel.setCEccn(artikelDto.getCEccn());
+		artikel.setFFertigungsVpe(artikelDto.getFFertigungsVpe());
+
 		em.merge(artikel);
 		em.flush();
 	}
@@ -3368,487 +3843,6 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		return artklaDto;
 	}
 
-	public void importiereArtikel(ArtikelImportDto[] daten,
-			boolean bBestehendeArtikelUeberschreiben, TheClientDto theClientDto) {
-
-		String default_artikelart = null;
-		String default_artikeleinheit = null;
-		Integer default_mwstsaztIId = null;
-		VkpfartikelpreislisteDto[] vkpfartikelpreislisteDtos = null;
-		try {
-
-			vkpfartikelpreislisteDtos = getVkPreisfindungFac()
-					.getAlleAktivenPreislisten(Helper.boolean2Short(true),
-							theClientDto);
-
-			ParametermandantDto parameter = getParameterFac()
-					.getMandantparameter(theClientDto.getMandant(),
-							ParameterFac.KATEGORIE_ARTIKEL,
-							ParameterFac.PARAMETER_DEFAULT_ARTIKEL_ARTIKELART);
-
-			default_artikelart = parameter.getCWert();
-
-			parameter = getParameterFac().getMandantparameter(
-					theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
-					ParameterFac.PARAMETER_DEFAULT_ARTIKEL_EINHEIT);
-			default_artikeleinheit = parameter.getCWert();
-
-			parameter = getParameterFac().getMandantparameter(
-					theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
-					ParameterFac.PARAMETER_DEFAULT_ARTIKEL_MWSTSATZ);
-			if (parameter.getCWert() != null
-					&& parameter.getCWert().length() > 0) {
-				default_mwstsaztIId = (Integer) parameter.getCWertAsObject();
-			}
-
-		} catch (RemoteException e2) {
-			throwEJBExceptionLPRespectOld(e2);
-		}
-
-		for (int i = 0; i < daten.length; i++) {
-
-			ArtikelImportDto zeile = daten[i];
-
-			ArtikelDto artikelDto = new ArtikelDto();
-			boolean bArtikelVorhanden = false;
-			try {
-				try {
-					// duplicateunique: Pruefung: Artikelgruppe bereits
-					// vorhanden.
-					Query query = em
-							.createNamedQuery("ArtikelfindByCNrMandantCNr");
-					query.setParameter(1, zeile.getArtikelnummer());
-					query.setParameter(2, theClientDto.getMandant());
-					Artikel artikel = (Artikel) query.getSingleResult();
-					bArtikelVorhanden = true;
-					if (bBestehendeArtikelUeberschreiben == true) {
-						artikelDto = artikelFindByPrimaryKey(artikel.getIId(),
-								theClientDto);
-
-					} else {
-						continue;
-					}
-
-				} catch (NoResultException ex) {
-					//
-				}
-
-			} catch (Throwable e) {
-				// Dann ist noch kein Artikel mit der Nummer vorhanden
-			}
-
-			ArtikelsprDto artikelsprDto = new ArtikelsprDto();
-			artikelDto.setCNr(zeile.getArtikelnummer());
-			artikelDto.setBVersteckt(Helper.boolean2Short(false));
-			if (zeile.getBezeichnung().length() > 0) {
-				artikelsprDto.setCBez(zeile.getBezeichnung());
-			}
-			if (zeile.getKurzbezeichnung().length() > 0) {
-				artikelsprDto.setCKbez(zeile.getKurzbezeichnung());
-			}
-			if (zeile.getZusatzbezeichnung().length() > 0) {
-				artikelsprDto.setCZbez(zeile.getZusatzbezeichnung());
-			}
-			if (zeile.getZusatzbezeichnung2().length() > 0) {
-				artikelsprDto.setCZbez2(zeile.getZusatzbezeichnung2());
-			}
-
-			artikelDto.setArtikelsprDto(artikelsprDto);
-
-			if (zeile.getReferenznummer().length() > 0) {
-				artikelDto.setCReferenznr(zeile.getReferenznummer());
-			}
-			if (zeile.getIndex().length() > 0) {
-				artikelDto.setCIndex(zeile.getIndex());
-			}
-			if (zeile.getRevision().length() > 0) {
-				artikelDto.setCRevision(zeile.getRevision());
-			}
-
-			if (zeile.getChargenbehaftet().length() > 0) {
-				artikelDto.setBChargennrtragend(new Short(zeile
-						.getChargenbehaftet()));
-			}
-			if (zeile.getSnrbehaftet().length() > 0) {
-				artikelDto
-						.setBSeriennrtragend(new Short(zeile.getSnrbehaftet()));
-			}
-
-			if (zeile.getArtikelart().length() > 0) {
-				artikelDto.setArtikelartCNr(zeile.getArtikelart());
-
-			} else {
-				artikelDto.setArtikelartCNr(default_artikelart);
-			}
-
-			if (zeile.getEinheit().length() > 0) {
-				artikelDto.setEinheitCNr(zeile.getEinheit());
-
-			} else {
-				artikelDto.setEinheitCNr(default_artikeleinheit);
-			}
-
-			if (zeile.getArtikelgruppe().length() > 0) {
-				try {
-					// duplicateunique: Pruefung: Artikelgruppe bereits
-					// vorhanden.
-					Query query = em
-							.createNamedQuery("ArtgrufindByCNrMandantCNr");
-					query.setParameter(1, zeile.getArtikelgruppe());
-					query.setParameter(2, theClientDto.getMandant());
-					Artgru artgru = (Artgru) query.getSingleResult();
-					artikelDto.setArtgruIId(artgru.getIId());
-				} catch (NoResultException ex) {
-					//
-				}
-			}
-
-			if (zeile.getArtikelklasse().length() > 0) {
-				try {
-					// duplicateunique: Pruefung: Artikelklasse bereits
-					// vorhanden.
-					Query query = em
-							.createNamedQuery("ArtklafindByCNrMandantCNr");
-					query.setParameter(1, zeile.getArtikelklasse());
-					query.setParameter(2, theClientDto.getMandant());
-
-					Artkla artkla = (Artkla) query.getSingleResult();
-					artikelDto.setArtklaIId(artkla.getIId());
-				} catch (NoResultException ex) {
-					//
-				}
-			}
-
-			if (zeile.getMwstsatz().length() > 0) {
-				try {
-					// duplicateunique: Pruefung: Artikelklasse bereits
-					// vorhanden.
-					Query query = em
-							.createNamedQuery("MwstsatzbezfindByMandantCBezeichnung");
-					query.setParameter(1, theClientDto.getMandant());
-					query.setParameter(2, zeile.getMwstsatz());
-					Mwstsatzbez mwstsatz = (Mwstsatzbez) query
-							.getSingleResult();
-					artikelDto.setMwstsatzbezIId(mwstsatz.getIId());
-				} catch (NoResultException ex) {
-					//
-				}
-			} else {
-				// Parameter
-				if (default_mwstsaztIId != null) {
-					artikelDto.setMwstsatzbezIId(default_mwstsaztIId);
-				}
-			}
-			Integer artikelIId = null;
-			if (bArtikelVorhanden == true
-					&& bBestehendeArtikelUeberschreiben == true) {
-				updateArtikel(artikelDto, theClientDto);
-				artikelIId = artikelDto.getIId();
-			} else {
-				artikelIId = createArtikel(artikelDto, theClientDto);
-			}
-
-			if (zeile.getVkpreisbasis().length() > 0) {
-				java.sql.Date date = null;
-				SimpleDateFormat format = new SimpleDateFormat("dd.MM.yyyy");
-				try {
-
-					date = new java.sql.Date(format.parse(
-							zeile.getVkpreisbasisgueltigab()).getTime());
-
-				} catch (ParseException e) {
-					//
-				}
-
-				try {
-					BigDecimal bdvkpreisbasis = new BigDecimal(
-							zeile.getVkpreisbasis());
-
-				} catch (NumberFormatException e) {
-					//
-				}
-
-				Query query = em
-						.createNamedQuery("VkPreisfindungEinzelverkaufspreisfindByMandantCNrArtikelIIdGueltigab");
-				query.setParameter(1, theClientDto.getMandant());
-				query.setParameter(2, artikelIId);
-				query.setParameter(3, date);
-
-				try {
-					VkPreisfindungEinzelverkaufspreis preis = (VkPreisfindungEinzelverkaufspreis) query
-							.getSingleResult();
-
-					try {
-						preis.setNVerkaufspreisbasis(new BigDecimal(zeile
-								.getVkpreisbasis()));
-
-					} catch (NumberFormatException e) {
-						//
-					}
-
-				} catch (NoResultException ex) {
-					VkPreisfindungEinzelverkaufspreisDto vkPreisfindungEinzelverkaufspreisDto = new VkPreisfindungEinzelverkaufspreisDto();
-					vkPreisfindungEinzelverkaufspreisDto
-							.setArtikelIId(artikelIId);
-					vkPreisfindungEinzelverkaufspreisDto
-							.setMandantCNr(theClientDto.getMandant());
-					vkPreisfindungEinzelverkaufspreisDto
-							.setNVerkaufspreisbasis(new BigDecimal(zeile
-									.getVkpreisbasis()));
-					vkPreisfindungEinzelverkaufspreisDto
-							.setTVerkaufspreisbasisgueltigab(date);
-					try {
-
-						getVkPreisfindungFac()
-								.createVkPreisfindungEinzelverkaufspreis(
-										vkPreisfindungEinzelverkaufspreisDto,
-										theClientDto);
-					} catch (RemoteException e1) {
-						throwEJBExceptionLPRespectOld(e1);
-					}
-
-				}
-
-				if (vkpfartikelpreislisteDtos.length > 0) {
-
-					if (zeile.getFixpreispreisliste1().length() > 0
-							|| zeile.getRabattsatzpreisliste1().length() > 0) {
-
-						VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto = new VkPreisfindungPreislisteDto();
-						vkPreisfindungPreislisteDto
-								.setVkpfartikelpreislisteIId(vkpfartikelpreislisteDtos[0]
-										.getIId());
-						vkPreisfindungPreislisteDto.setArtikelIId(artikelIId);
-						vkPreisfindungPreislisteDto
-								.setNArtikelstandardrabattsatz(new BigDecimal(0));
-
-						if (zeile.getFixpreispreisliste1().length() > 0) {
-							try {
-								BigDecimal bdFixpreis = new BigDecimal(
-										zeile.getFixpreispreisliste1());
-								vkPreisfindungPreislisteDto
-										.setNArtikelfixpreis(bdFixpreis);
-							} catch (NumberFormatException e) {
-								//
-							}
-						} else {
-							try {
-								BigDecimal bdRabattsatz = new BigDecimal(
-										zeile.getRabattsatzpreisliste1());
-								vkPreisfindungPreislisteDto
-										.setNArtikelstandardrabattsatz(bdRabattsatz);
-							} catch (NumberFormatException e) {
-								//
-							}
-						}
-
-						try {
-							java.sql.Date date1 = new java.sql.Date(format
-									.parse(zeile.getGueltigabpreisliste1())
-									.getTime());
-							vkPreisfindungPreislisteDto
-									.setTPreisgueltigab(date1);
-						} catch (ParseException e) {
-							//
-						}
-
-						try {
-
-							try {
-								Query queryPreisliste = em
-										.createNamedQuery("VkPreisfindungPreislistefindByVkpfartikelpreislisteIIdArtikelIIdPreisgueltigab");
-								queryPreisliste.setParameter(1,
-										vkPreisfindungPreislisteDto
-												.getVkpfartikelpreislisteIId());
-								queryPreisliste.setParameter(2,
-										vkPreisfindungPreislisteDto
-												.getArtikelIId());
-								queryPreisliste.setParameter(3,
-										vkPreisfindungPreislisteDto
-												.getTPreisgueltigab());
-								VkPreisfindungPreisliste preisliste = (VkPreisfindungPreisliste) queryPreisliste
-										.getSingleResult();
-
-								preisliste
-										.setNArtikelfixpreis(vkPreisfindungPreislisteDto
-												.getNArtikelfixpreis());
-								preisliste
-										.setNArtikelstandardrabattsatz(vkPreisfindungPreislisteDto
-												.getNArtikelstandardrabattsatz());
-
-							} catch (NoResultException ex) {
-								getVkPreisfindungFac()
-										.createVkPreisfindungPreisliste(
-												vkPreisfindungPreislisteDto,
-												theClientDto);
-							}
-
-						} catch (RemoteException e) {
-							throwEJBExceptionLPRespectOld(e);
-						}
-
-					}
-				}
-
-				// Preisliste2
-				if (vkpfartikelpreislisteDtos.length > 1) {
-					if (zeile.getFixpreispreisliste2().length() > 0
-							|| zeile.getRabattsatzpreisliste2().length() > 0) {
-
-						VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto = new VkPreisfindungPreislisteDto();
-						vkPreisfindungPreislisteDto
-								.setVkpfartikelpreislisteIId(vkpfartikelpreislisteDtos[1]
-										.getIId());
-						vkPreisfindungPreislisteDto.setArtikelIId(artikelIId);
-						vkPreisfindungPreislisteDto
-								.setNArtikelstandardrabattsatz(new BigDecimal(0));
-
-						if (zeile.getFixpreispreisliste2().length() > 0) {
-							try {
-								BigDecimal bdFixpreis = new BigDecimal(
-										zeile.getFixpreispreisliste2());
-								vkPreisfindungPreislisteDto
-										.setNArtikelfixpreis(bdFixpreis);
-							} catch (NumberFormatException e) {
-								//
-							}
-						} else {
-							try {
-								BigDecimal bdRabattsatz = new BigDecimal(
-										zeile.getRabattsatzpreisliste2());
-								vkPreisfindungPreislisteDto
-										.setNArtikelstandardrabattsatz(bdRabattsatz);
-							} catch (NumberFormatException e) {
-								//
-							}
-						}
-
-						try {
-							java.sql.Date date2 = new java.sql.Date(format
-									.parse(zeile.getGueltigabpreisliste2())
-									.getTime());
-							vkPreisfindungPreislisteDto
-									.setTPreisgueltigab(date2);
-						} catch (ParseException e) {
-							//
-						}
-						try {
-							try {
-								Query queryPreisliste = em
-										.createNamedQuery("VkPreisfindungPreislistefindByVkpfartikelpreislisteIIdArtikelIIdPreisgueltigab");
-								queryPreisliste.setParameter(1,
-										vkPreisfindungPreislisteDto
-												.getVkpfartikelpreislisteIId());
-								queryPreisliste.setParameter(2,
-										vkPreisfindungPreislisteDto
-												.getArtikelIId());
-								queryPreisliste.setParameter(3,
-										vkPreisfindungPreislisteDto
-												.getTPreisgueltigab());
-								VkPreisfindungPreisliste preisliste = (VkPreisfindungPreisliste) queryPreisliste
-										.getSingleResult();
-
-								preisliste
-										.setNArtikelfixpreis(vkPreisfindungPreislisteDto
-												.getNArtikelfixpreis());
-								preisliste
-										.setNArtikelstandardrabattsatz(vkPreisfindungPreislisteDto
-												.getNArtikelstandardrabattsatz());
-
-							} catch (NoResultException ex) {
-								getVkPreisfindungFac()
-										.createVkPreisfindungPreisliste(
-												vkPreisfindungPreislisteDto,
-												theClientDto);
-							}
-						} catch (RemoteException e) {
-							throwEJBExceptionLPRespectOld(e);
-						}
-					}
-				}
-				if (vkpfartikelpreislisteDtos.length > 2) {
-					// Preisliste3
-
-					if (zeile.getFixpreispreisliste3().length() > 0
-							|| zeile.getRabattsatzpreisliste3().length() > 0) {
-
-						VkPreisfindungPreislisteDto vkPreisfindungPreislisteDto = new VkPreisfindungPreislisteDto();
-						vkPreisfindungPreislisteDto
-								.setVkpfartikelpreislisteIId(vkpfartikelpreislisteDtos[2]
-										.getIId());
-						vkPreisfindungPreislisteDto.setArtikelIId(artikelIId);
-						vkPreisfindungPreislisteDto
-								.setNArtikelstandardrabattsatz(new BigDecimal(0));
-
-						if (zeile.getFixpreispreisliste3().length() > 0) {
-							try {
-								BigDecimal bdFixpreis = new BigDecimal(
-										zeile.getFixpreispreisliste3());
-								vkPreisfindungPreislisteDto
-										.setNArtikelfixpreis(bdFixpreis);
-							} catch (NumberFormatException e) {
-								//
-							}
-						} else {
-							try {
-								BigDecimal bdRabattsatz = new BigDecimal(
-										zeile.getRabattsatzpreisliste3());
-								vkPreisfindungPreislisteDto
-										.setNArtikelstandardrabattsatz(bdRabattsatz);
-							} catch (NumberFormatException e) {
-								//
-							}
-						}
-
-						try {
-							java.sql.Date date3 = new java.sql.Date(format
-									.parse(zeile.getGueltigabpreisliste3())
-									.getTime());
-							vkPreisfindungPreislisteDto
-									.setTPreisgueltigab(date3);
-						} catch (ParseException e) {
-							//
-						}
-						try {
-							try {
-								Query queryPreisliste = em
-										.createNamedQuery("VkPreisfindungPreislistefindByVkpfartikelpreislisteIIdArtikelIIdPreisgueltigab");
-								queryPreisliste.setParameter(1,
-										vkPreisfindungPreislisteDto
-												.getVkpfartikelpreislisteIId());
-								queryPreisliste.setParameter(2,
-										vkPreisfindungPreislisteDto
-												.getArtikelIId());
-								queryPreisliste.setParameter(3,
-										vkPreisfindungPreislisteDto
-												.getTPreisgueltigab());
-								VkPreisfindungPreisliste preisliste = (VkPreisfindungPreisliste) queryPreisliste
-										.getSingleResult();
-
-								preisliste
-										.setNArtikelfixpreis(vkPreisfindungPreislisteDto
-												.getNArtikelfixpreis());
-								preisliste
-										.setNArtikelstandardrabattsatz(vkPreisfindungPreislisteDto
-												.getNArtikelstandardrabattsatz());
-
-							} catch (NoResultException ex) {
-								getVkPreisfindungFac()
-										.createVkPreisfindungPreisliste(
-												vkPreisfindungPreislisteDto,
-												theClientDto);
-							}
-						} catch (RemoteException e) {
-							throwEJBExceptionLPRespectOld(e);
-						}
-					}
-				}
-
-			}
-
-		}
-	}
-
 	public ArtklaDto artklaFindByPrimaryKey(Integer iId,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (iId == null) {
@@ -4018,9 +4012,44 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		}
 	}
 
+	public Integer createArtikelallergen(ArtikelalergenDto dto,
+			TheClientDto theClientDto) {
+
+		try {
+			Query query = em
+					.createNamedQuery("ArtikelalergenfindByArtikelIIdAlergenIId");
+			query.setParameter(1, dto.getArtikelIId());
+			query.setParameter(2, dto.getAlergenIId());
+			query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("WW_ARTIKELALERGEN.UK"));
+		} catch (NoResultException ex1) {
+			// nothing here
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ARTIKELALERGEN);
+			dto.setIId(pk);
+
+			Artikelalergen bean = new Artikelalergen(dto.getIId(),
+					dto.getArtikelIId(), dto.getAlergenIId());
+			setArtikelalergenFromArtikelalergenDto(bean, dto);
+			return dto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+	}
+
 	public ArtikelshopgruppeDto artikelshopgruppeFindByPrimaryKey(Integer iId) {
 		Artikelshopgruppe ialle = em.find(Artikelshopgruppe.class, iId);
 		return ArtikelshopgruppeDtoAssembler.createDto(ialle);
+	}
+
+	public ArtikelalergenDto artikelallergenFindByPrimaryKey(Integer iId) {
+		Artikelalergen ialle = em.find(Artikelalergen.class, iId);
+		return ArtikelalergenDtoAssembler.createDto(ialle);
 	}
 
 	public WebshopDto webshopFindByPrimaryKey(Integer iId) {
@@ -4077,6 +4106,30 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		setArtikelshopgruppeFromArtikelshopgruppeDto(ialle, dto);
 	}
 
+	public void updateArtikelallergen(ArtikelalergenDto dto,
+			TheClientDto theClientDto) {
+		Artikelalergen ialle = em.find(Artikelalergen.class, dto.getIId());
+
+		try {
+			Query query = em
+					.createNamedQuery("ArtikelalergenfindByArtikelIIdAlergenIId");
+			query.setParameter(1, dto.getArtikelIId());
+			query.setParameter(2, dto.getAlergenIId());
+			// @todo getSingleResult oder getResultList ?
+			Integer iIdVorhanden = ((Artikelalergen) query.getSingleResult())
+					.getIId();
+			if (ialle.getIId().equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"WW_ARTIKELALERGEN.UK"));
+			}
+		} catch (NoResultException ex) {
+
+		}
+
+		setArtikelalergenFromArtikelalergenDto(ialle, dto);
+	}
+
 	public void removeWebshop(WebshopDto dto) {
 		Webshop toRemove = em.find(Webshop.class, dto.getIId());
 		try {
@@ -4091,6 +4144,17 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 	public void removeArtikelshopgruppe(ArtikelshopgruppeDto dto) {
 		Artikelshopgruppe toRemove = em.find(Artikelshopgruppe.class,
 				dto.getIId());
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+
+	}
+
+	public void removeArtikelallergen(ArtikelalergenDto dto) {
+		Artikelalergen toRemove = em.find(Artikelalergen.class, dto.getIId());
 		try {
 			em.remove(toRemove);
 			em.flush();
@@ -4115,6 +4179,15 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		bean.setPersonalIIdAnlegen(dto.getPersonalIIdAnlegen());
 		bean.setTAendern(dto.getTAendern());
 		bean.setTAnlegen(dto.getTAnlegen());
+
+		em.merge(bean);
+		em.flush();
+	}
+
+	private void setArtikelalergenFromArtikelalergenDto(Artikelalergen bean,
+			ArtikelalergenDto dto) {
+		bean.setAlergenIId(dto.getAlergenIId());
+		bean.setArtikelIId(dto.getArtikelIId());
 
 		em.merge(bean);
 		em.flush();
@@ -5152,6 +5225,36 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 
 	}
 
+	private void artikeleigenschaftenDefaultwerteAnlegen(Integer artikelIId,
+			Integer artgruIId, TheClientDto theClientDto) {
+
+		ArrayList<PaneldatenDto> alDaten = new ArrayList<PaneldatenDto>();
+		PanelbeschreibungDto[] pbesDtos = getPanelFac()
+				.panelbeschreibungFindByPanelCNrMandantCNr(
+						PanelFac.PANEL_ARTIKELEIGENSCHAFTEN,
+						theClientDto.getMandant(), artgruIId);
+		for (int i = 0; i < pbesDtos.length; i++) {
+
+			if (pbesDtos[i].getCDefault() != null) {
+				PaneldatenDto pdDto = new PaneldatenDto();
+				pdDto.setPanelCNr(PanelFac.PANEL_ARTIKELEIGENSCHAFTEN);
+				pdDto.setCKey(artikelIId + "");
+				pdDto.setCDatentypkey("java.lang.String");
+				if (pbesDtos[i].getCTyp().equals(PanelFac.TYP_WRAPPERCHECKBOX)) {
+					pdDto.setCDatentypkey("java.lang.Short");
+				}
+				pdDto.setPanelbeschreibungIId(pbesDtos[i].getIId());
+				pdDto.setXInhalt(pbesDtos[i].getCDefault());
+				alDaten.add(pdDto);
+			}
+
+		}
+
+		getPanelFac().createPaneldaten(
+				alDaten.toArray(new PaneldatenDto[alDaten.size()]));
+
+	}
+
 	public void preiseAusAnfrageRueckpflegen(Integer anfrageIId,
 			Integer anfragepositionlieferdatenIId, boolean bStaffelnLoeschen,
 			boolean bLieferantVorreihen, TheClientDto theClientDto) {
@@ -5706,6 +5809,19 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 
 	}
 
+	public void vertauscheAlergen(Integer iId1, Integer iId2) {
+
+		Alergen o1 = em.find(Alergen.class, iId1);
+		Alergen o2 = em.find(Alergen.class, iId2);
+		Integer iSort1 = o1.getISort();
+		Integer iSort2 = o2.getISort();
+
+		o2.setISort(new Integer(-1));
+		o1.setISort(iSort2);
+		o2.setISort(iSort1);
+
+	}
+
 	/**
 	 * Wenn der Einzelpreis geaendert wird, muessen auch die zugehoerigen
 	 * Staffelpreise upgedatet werden
@@ -5758,7 +5874,7 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		// SP2009
 		if (artikellieferant.getNEinzelpreis() != null
 				&& artLiefDtoI.getNEinzelpreis() == null) {
-			// Einzelpreis kann nu gelöscht werden, wenn keine Staffekn
+			// Einzelpreis kann nur geloescht werden, wenn keine Staffekn
 			// vorhanden
 
 			Query query = em
@@ -5974,6 +6090,351 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		// }
 	}
 
+	public ArrayList<Map<Integer, String>> getListeDerArtikellieferanten(
+			Integer bestellvorschlagIId, BigDecimal nMenge,
+			TheClientDto theClientDto) {
+
+		ArrayList<Map<Integer, String>> m = new ArrayList<Map<Integer, String>>();
+
+		BestellvorschlagDto bvDto = null;
+
+		int iGesamtstellenPreis = 10;
+		int iNachkommastellenPreis = 2;
+		try {
+			bvDto = getBestellvorschlagFac().bestellvorschlagFindByPrimaryKey(
+					bestellvorschlagIId);
+			iNachkommastellenPreis = getMandantFac()
+					.getNachkommastellenPreisEK(theClientDto.getMandant());
+
+			iGesamtstellenPreis = 6 + iNachkommastellenPreis;
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		ArtikellieferantDto[] artikellieferantDtos = artikellieferantFindByArtikelIId(
+				bvDto.getIArtikelId(), theClientDto);
+
+		ArrayList liste = new ArrayList();
+
+		for (int i = 0; i < artikellieferantDtos.length; i++) {
+			ArtikellieferantDto artikellieferantDto = artikellieferantDtos[i];
+			LieferantDto lfDto = getLieferantFac()
+					.lieferantFindByPrimaryKeySmall(
+							artikellieferantDto.getLieferantIId());
+			if (!lfDto.getMandantCNr().equals(theClientDto.getMandant())) {
+				continue;
+			}
+
+			// Fuer jeden Artikellieferant den Einzelpreis holen:
+
+			ArtikellieferantDto alDto = getArtikelEinkaufspreis(
+					bvDto.getIArtikelId(),
+					artikellieferantDto.getLieferantIId(), BigDecimal.ONE,
+					theClientDto.getSMandantenwaehrung(),
+					new Date(System.currentTimeMillis()), theClientDto);
+			// Wenn enizelpreis vorhanden
+
+			if (alDto == null) {
+				alDto = artikellieferantFindByArtikellIIdLieferantIIdTPreisgueltigabKleiner(
+						bvDto.getIArtikelId(),
+						artikellieferantDto.getLieferantIId(),
+						new Date(System.currentTimeMillis()), theClientDto);
+			}
+
+			if (alDto != null) {
+				// Fuer jeden Artikellieferant den Preis vor der aktuellen
+				// Staffelmenge und nach der aktuellen Staffelmenge holen
+				ArtikellieferantDto alDtoLinks = null;
+				ArtikellieferantDto alDtoRechts = null;
+				alDtoLinks = alDto;
+				// Naechste Staffelmenge holen
+
+				if (nMenge.doubleValue() > 1) {
+					// Links ist Einzelpreis
+					// Suche nach einer Staffelmenge <= Menge
+					ArtikellieferantDto alDtoLinksTemp = getArtikelEinkaufspreis(
+							bvDto.getIArtikelId(),
+							artikellieferantDto.getLieferantIId(), nMenge,
+							theClientDto.getSMandantenwaehrung(), new Date(
+									System.currentTimeMillis()), theClientDto);
+
+					if (alDtoLinksTemp != null
+							&& alDtoLinksTemp.getNStaffelmenge() != null) {
+						alDtoLinks = alDtoLinksTemp;
+					}
+				}
+
+				// NaechsthoehereStaffel
+				Query q = em
+						.createNamedQuery("ArtikellieferantstaffelfindByArtikellieferantIIdFMengeGroesser");
+				q.setParameter(1, alDto.getIId());
+				q.setParameter(2, nMenge);
+				q.setParameter(3, Helper.cutTimestamp(new Timestamp(System
+						.currentTimeMillis())));
+
+				Collection c = q.getResultList();
+
+				if (c.size() > 0) {
+					Artikellieferantstaffel als = (Artikellieferantstaffel) c
+							.iterator().next();
+
+					alDtoRechts = getArtikelEinkaufspreis(
+							bvDto.getIArtikelId(),
+							artikellieferantDto.getLieferantIId(),
+							als.getNMenge(),
+							theClientDto.getSMandantenwaehrung(), new Date(
+									System.currentTimeMillis()), theClientDto);
+
+					if (alDtoRechts != null
+							&& alDtoRechts.getNStaffelmenge() != null) {
+
+					} else {
+						alDtoRechts = null;
+					}
+
+				}
+
+				Object[] o = new Object[2];
+				o[0] = alDtoLinks;
+				o[1] = alDtoRechts;
+
+				liste.add(o);
+
+			}
+
+		}
+
+		int iZeileGuenstigsterPreis = -1;
+		int iZeileSchnellsteWBZ = -1;
+		Integer schnellstewbz = null;
+		BigDecimal guenstigsterPreis = null;
+		for (int i = 0; i < liste.size(); i++) {
+
+			Object[] oZeile = (Object[]) liste.get(i);
+			ArtikellieferantDto alDtoLinks = (ArtikellieferantDto) oZeile[0];
+
+			// WBZ
+			if (schnellstewbz == null
+					&& alDtoLinks.getIWiederbeschaffungszeit() != null) {
+				iZeileSchnellsteWBZ = i;
+				schnellstewbz = alDtoLinks.getIWiederbeschaffungszeit();
+			}
+
+			if (schnellstewbz != null
+					&& alDtoLinks.getIWiederbeschaffungszeit() != null
+					&& alDtoLinks.getIWiederbeschaffungszeit() < schnellstewbz) {
+				iZeileSchnellsteWBZ = i;
+				schnellstewbz = alDtoLinks.getIWiederbeschaffungszeit();
+			}
+			// Guenstigster Preis
+
+			if (guenstigsterPreis == null) {
+
+				if (alDtoLinks.getNNettopreis() != null) {
+
+					guenstigsterPreis = alDtoLinks.getNNettopreis();
+					iZeileGuenstigsterPreis = i;
+				}
+			} else {
+				if (alDtoLinks.getNNettopreis() != null) {
+
+					if (alDtoLinks.getNNettopreis().doubleValue() < guenstigsterPreis
+							.doubleValue()) {
+						guenstigsterPreis = alDtoLinks.getNNettopreis();
+						iZeileGuenstigsterPreis = i;
+					}
+				}
+			}
+
+		}
+
+		int iZeileGuenstigsterMoeglicherWert = -1;
+		if (guenstigsterPreis != null) {
+
+			BigDecimal guenstigsterRealerWert = bvDto.getNZubestellendeMenge()
+					.multiply(guenstigsterPreis);
+
+			BigDecimal guenstigsterMoegicherWert = null;
+
+			for (int i = 0; i < liste.size(); i++) {
+
+				Object[] oZeile = (Object[]) liste.get(i);
+
+				ArtikellieferantDto alDtoRechts = (ArtikellieferantDto) oZeile[1];
+
+				if (alDtoRechts != null
+						&& alDtoRechts.getNStaffelmenge() != null
+						&& alDtoRechts.getNNettopreis() != null) {
+
+					BigDecimal temp = alDtoRechts.getNStaffelmenge().multiply(
+							alDtoRechts.getNNettopreis());
+
+					if (guenstigsterMoegicherWert == null
+							&& temp.doubleValue() < guenstigsterRealerWert
+									.doubleValue()) {
+						guenstigsterMoegicherWert = temp;
+						iZeileGuenstigsterMoeglicherWert = i;
+					} else {
+						if (temp.doubleValue() < guenstigsterRealerWert
+								.doubleValue()
+								&& temp.doubleValue() < guenstigsterMoegicherWert
+										.doubleValue()) {
+							guenstigsterMoegicherWert = temp;
+							iZeileGuenstigsterMoeglicherWert = i;
+						}
+					}
+
+				}
+
+			}
+
+		}
+
+		// Nun liste zusammenbauen
+
+		for (int i = 0; i < liste.size(); i++) {
+
+			Object[] oZeile = (Object[]) liste.get(i);
+			ArtikellieferantDto alDtoLinks = (ArtikellieferantDto) oZeile[0];
+
+			LieferantDto lDto = getLieferantFac().lieferantFindByPrimaryKey(
+					alDtoLinks.getLieferantIId(), theClientDto);
+
+			String lieferant = Helper
+					.fitString2LengthHTMLBefuelltMitLeerzeichen(lDto
+							.getPartnerDto().getCKbez(), 20);
+			if (bvDto.getILieferantId() != null
+					&& bvDto.getILieferantId().equals(lDto.getIId())) {
+
+				lieferant = "<span style=\"background-color: #C0C0C0\">"
+						+ lieferant + "</span>";
+
+			}
+
+			String vpe = "";
+			if (alDtoLinks.getNVerpackungseinheit() != null) {
+				vpe = Helper.formatZahl(alDtoLinks.getNVerpackungseinheit(), 0,
+						theClientDto.getLocUi());
+
+			}
+
+			vpe = Helper.fitString2LengthHTMLBefuelltMitLeerzeichen(vpe, 5,
+					true);
+
+			String mindbestmenge = "";
+			if (alDtoLinks.getFMindestbestelmenge() != null) {
+				mindbestmenge = Helper.formatZahl(
+						alDtoLinks.getFMindestbestelmenge(), 0,
+						theClientDto.getLocUi());
+
+			}
+
+			mindbestmenge = Helper.fitString2LengthHTMLBefuelltMitLeerzeichen(
+					mindbestmenge, 6, true);
+
+			// Menge links
+			String mengeLinks = null;
+
+			if (alDtoLinks.getNStaffelmenge() != null) {
+				mengeLinks = Helper.fitString2LengthHTMLBefuelltMitLeerzeichen(
+						Helper.formatZahl(alDtoLinks.getNStaffelmenge(), 0,
+								theClientDto.getLocUi()), 6, true);
+			} else {
+				mengeLinks = Helper.fitString2LengthHTMLBefuelltMitLeerzeichen(
+						Helper.formatZahl(BigDecimal.ONE, 0,
+								theClientDto.getLocUi()), 6, true);
+			}
+
+			// Preis
+
+			String preisLinks = "";
+
+			if (alDtoLinks.getNNettopreis() == null) {
+				preisLinks = Helper.fitString2LengthHTMLBefuelltMitLeerzeichen(
+						"", iGesamtstellenPreis, true);
+			} else {
+				preisLinks = Helper
+						.fitString2LengthHTMLBefuelltMitLeerzeichen(Helper
+								.formatZahl(alDtoLinks.getNNettopreis(),
+										iNachkommastellenPreis,
+										theClientDto.getLocUi()),
+								iGesamtstellenPreis, true);
+			}
+
+			if (i == iZeileGuenstigsterPreis) {
+				preisLinks = "<span style=\"background-color: #00FF00\">"
+						+ preisLinks + "</span>";
+			}
+
+			// Wiedebeschaffungszeit
+			String wbzLinks = "";
+
+			if (alDtoLinks.getIWiederbeschaffungszeit() != null) {
+				wbzLinks = alDtoLinks.getIWiederbeschaffungszeit() + "";
+			}
+			wbzLinks = Helper.fitString2LengthHTMLBefuelltMitLeerzeichen(
+					wbzLinks, 2, true);
+
+			if (i == iZeileSchnellsteWBZ) {
+				wbzLinks = "<span style=\"background-color: #00FF00\">"
+						+ wbzLinks + "</span>";
+			}
+
+			String sZeile = lieferant + " VPE:" + vpe + " Min:" + mindbestmenge
+					+ " Mng:" + mengeLinks + " Prs:" + preisLinks + " WBZ:"
+					+ wbzLinks;
+
+			ArtikellieferantDto alDtoRechts = (ArtikellieferantDto) oZeile[1];
+
+			if (alDtoRechts != null) {
+
+				// Menge links
+				String mengeRechts = Helper
+						.fitString2LengthHTMLBefuelltMitLeerzeichen(Helper
+								.formatZahl(alDtoRechts.getNStaffelmenge(), 0,
+										theClientDto.getLocUi()), 6, true);
+
+				// Preis
+
+				String preisRechts = Helper
+						.fitString2LengthHTMLBefuelltMitLeerzeichen(Helper
+								.formatZahl(alDtoRechts.getNNettopreis(),
+										iNachkommastellenPreis,
+										theClientDto.getLocUi()),
+								iGesamtstellenPreis, true);
+
+				if (i == iZeileGuenstigsterMoeglicherWert) {
+					preisRechts = "<span style=\"background-color: #FFFF00\">"
+							+ preisRechts + "</span>";
+				}
+
+				// Wiedebeschaffungszeit
+				String wbzRechts = "";
+
+				if (alDtoRechts.getIWiederbeschaffungszeit() != null) {
+					wbzRechts = alDtoRechts.getIWiederbeschaffungszeit() + "";
+				}
+				wbzRechts = Helper.fitString2LengthHTMLBefuelltMitLeerzeichen(
+						wbzRechts, 2, true);
+
+				sZeile += " Mng:" + mengeRechts + " Prs:" + preisRechts
+						+ " WBZ:" + wbzRechts;
+
+			}
+
+			String s = "<html><body><font color=\"#000000\">" + sZeile
+					+ "</font></body></html>";
+
+			Map<Integer, String> mZeile = new LinkedHashMap<Integer, String>();
+			mZeile.put(alDtoLinks.getIId(), s);
+
+			m.add(mZeile);
+
+		}
+		return m;
+	}
+
 	public ArtikellieferantDto[] artikellieferantFindByLieferantIId(
 			Integer lieferantIId, TheClientDto theClientDto)
 			throws EJBExceptionLP {
@@ -6017,59 +6478,105 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		// }
 	}
 
-	public ArtikellieferantDto artikellieferantFindByArtikellIIdLieferantIIdOhneExc(
-			Integer artikelIId, Integer lieferantIId, TheClientDto theClientDto) {
-		ArtikellieferantDto artikellieferantDto = null;
+	public void wandleHandeingabeInArtikelUm(Integer positionIId, int iArt,
+			String neueArtikelnummer, TheClientDto theClientDto) {
 
 		try {
-			artikellieferantDto = artikellieferantFindByArtikellIIdLieferantIId(
-					artikelIId, lieferantIId, theClientDto);
-		} catch (Throwable t) {
-			// do nothing
+			if (iArt == HANDARTIKEL_UMWANDELN_ANGEBOT) {
+				AngebotpositionDto posDto = getAngebotpositionFac()
+						.angebotpositionFindByPrimaryKey(positionIId,
+								theClientDto);
+				Integer artikelIIdNeu = artikelUmwandeln(theClientDto,
+						neueArtikelnummer, posDto.getArtikelIId());
+				// ArtikelId austauschen
+				Angebotposition ap = em
+						.find(Angebotposition.class, positionIId);
+				ap.setArtikelIId(artikelIIdNeu);
+				ap.setAngebotpositionartCNr(AngebotServiceFac.ANGEBOTPOSITIONART_IDENT);
+				em.flush();
+			} else if (iArt == HANDARTIKEL_UMWANDELN_ANFRAGE) {
+				AnfragepositionDto posDto = getAnfragepositionFac()
+						.anfragepositionFindByPrimaryKey(positionIId,
+								theClientDto);
+				Integer artikelIIdNeu = artikelUmwandeln(theClientDto,
+						neueArtikelnummer, posDto.getArtikelIId());
+				// ArtikelId austauschen
+				Anfrageposition ap = em
+						.find(Anfrageposition.class, positionIId);
+				ap.setArtikelIId(artikelIIdNeu);
+				ap.setAnfragepositionartCNr(AngebotServiceFac.ANGEBOTPOSITIONART_IDENT);
+				em.flush();
+			} else if (iArt == HANDARTIKEL_UMWANDELN_AUFTRAG) {
+				AuftragpositionDto posDto = getAuftragpositionFac()
+						.auftragpositionFindByPrimaryKey(positionIId);
+				Integer artikelIIdNeu = artikelUmwandeln(theClientDto,
+						neueArtikelnummer, posDto.getArtikelIId());
+				// ArtikelId austauschen
+				Auftragposition ap = em
+						.find(Auftragposition.class, positionIId);
+				ap.setArtikelIId(artikelIIdNeu);
+				ap.setAuftragpositionartCNr(AngebotServiceFac.ANGEBOTPOSITIONART_IDENT);
+				em.flush();
+
+				ArtikelreservierungDto reservierungDto = new ArtikelreservierungDto();
+				reservierungDto.setCBelegartnr(LocaleFac.BELEGART_AUFTRAG);
+				reservierungDto.setIBelegartpositionid(ap.getIId());
+				reservierungDto.setArtikelIId(ap.getArtikelIId());
+				reservierungDto.setTLiefertermin(ap
+						.getTUebersteuerterliefertermin());
+				reservierungDto.setNMenge(ap.getNOffeneMenge());
+				getReservierungFac().createArtikelreservierung(reservierungDto);
+			}
+		} catch (RemoteException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
 
-		return artikellieferantDto;
 	}
 
-	public ArtikellieferantDto artikellieferantFindByArtikellIIdLieferantIId(
-			Integer artikelIId, Integer lieferantIId, TheClientDto theClientDto)
-			throws EJBExceptionLP {
-		if (artikelIId == null || lieferantIId == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
-					new Exception("artikelIId == null || lieferantIId == null"));
-		}
-		try {
+	private Integer artikelUmwandeln(TheClientDto theClientDto,
+			String artikelnummer, Integer artikelIIdHandeingabe) {
+		ArtikelDto artikelDtoHandeingabe = artikelFindByPrimaryKey(
+				artikelIIdHandeingabe, theClientDto);
 
+		ArtikelDto artikelDto = new ArtikelDto();
+		artikelDto.setArtikelartCNr(ArtikelFac.ARTIKELART_ARTIKEL);
+		artikelDto.setCNr(artikelnummer);
+
+		ArtikelsprDto asprDto = new ArtikelsprDto();
+		if (artikelDtoHandeingabe.getArtikelsprDto() != null) {
+			asprDto.setCBez(artikelDtoHandeingabe.getArtikelsprDto().getCBez());
+			asprDto.setCZbez(artikelDtoHandeingabe.getArtikelsprDto()
+					.getCZbez());
+		}
+		artikelDto.setArtikelsprDto(asprDto);
+		artikelDto.setEinheitCNr(artikelDtoHandeingabe.getEinheitCNr());
+
+		artikelDto.setBVersteckt(Helper.boolean2Short(false));
+
+		try {
+			return createArtikel(artikelDto, theClientDto);
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+		return null;
+	}
+
+	public ArtikellieferantDto artikellieferantfindByArtikellIIdLieferantIIdTPreisgueltigabOhneExc(
+			Integer artikelIId, Integer lieferantIId,
+			java.sql.Timestamp tPreisgueltigab, TheClientDto theClientDto) {
+		try {
 			Query query = em
-					.createNamedQuery("ArtikellieferantfindByArtikellIIdLieferantIId");
+					.createNamedQuery("ArtikellieferantfindByArtikellIIdLieferantIIdTPreisgueltigab");
 			query.setParameter(1, artikelIId);
 			query.setParameter(2, lieferantIId);
-			// @todo getSingleResult oder getResultList ?
-			Artikellieferant artikellieferant = (Artikellieferant) query
-					.getSingleResult();
-			// if (artikellieferant == null) {
-			// throw new EJBExceptionLP(EJBExceptionLP.
-			// FEHLER_BEI_FINDBYPRIMARYKEY,
-			// null);
-			// }
-			ArtikellieferantDto artikellieferantDto = assembleArtikellieferantDto(artikellieferant);
+			query.setParameter(3, tPreisgueltigab);
+			Artikellieferant al = (Artikellieferant) query.getSingleResult();
 
-			artikellieferantDto
-					.setLieferantDto(getLieferantFac()
-							.lieferantFindByPrimaryKey(
-									artikellieferantDto.getLieferantIId(),
-									theClientDto));
-			return artikellieferantDto;
-		} catch (NoResultException e) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					new Exception(e));
-		} catch (NonUniqueResultException e1) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT,
-					"Fehler bei artikellieferantFindByArtikellIIdLieferantIId. Es gibt mehr als ein Ergebnis f\u00FCr artikelIId "
-							+ artikelIId + " und lieferantiid " + lieferantIId);
+			return assembleArtikellieferantDto(al);
+
+		} catch (NoResultException ex) {
+			return null;
 		}
 	}
 
@@ -6197,7 +6704,11 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 			TheClientDto theClientDto) {
 		ByteArrayInputStream is = new ByteArrayInputStream(xlsFile);
 		try {
-			Workbook workbook = Workbook.getWorkbook(is);
+
+			WorkbookSettings ws = new WorkbookSettings();
+			ws.setEncoding("Cp1252");
+
+			Workbook workbook = Workbook.getWorkbook(is, ws);
 
 			Sheet sheet = workbook.getSheet(0);
 
@@ -6546,7 +7057,10 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		ByteArrayOutputStream os = new ByteArrayOutputStream();
 		WritableWorkbook workbook = null;
 		try {
-			workbook = Workbook.createWorkbook(os);
+			WorkbookSettings ws = new WorkbookSettings();
+			ws.setEncoding("Cp1252");
+
+			workbook = Workbook.createWorkbook(os, ws);
 
 		} catch (IOException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
@@ -6971,6 +7485,8 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		artikellieferant.setZertifikatartIId(artikellieferantDto
 				.getZertifikatartIId());
 		artikellieferant.setCWeblink(artikellieferantDto.getCWeblink());
+		artikellieferant.setEinheitCNrVpe(artikellieferantDto
+				.getEinheitCNrVpe());
 		em.merge(artikellieferant);
 		em.flush();
 	}
@@ -7107,10 +7623,14 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 
 	private void setArtikelsprFromArtikelsprDto(Artikelspr artikelspr,
 			ArtikelsprDto artikelsprDto) {
-		artikelspr.setCKbez(artikelsprDto.getCKbez());
-		artikelspr.setCBez(artikelsprDto.getCBez());
-		artikelspr.setCZbez(artikelsprDto.getCZbez());
-		artikelspr.setCZbez2(artikelsprDto.getCZbez2());
+		artikelspr.setCKbez(Helper.cutString(artikelsprDto.getCKbez(),
+				ArtikelFac.MAX_ARTIKEL_KURZBEZEICHNUNG));
+		artikelspr.setCBez(Helper.cutString(artikelsprDto.getCBez(),
+				ArtikelFac.MAX_ARTIKEL_ARTIKELBEZEICHNUNG));
+		artikelspr.setCZbez(Helper.cutString(artikelsprDto.getCZbez(),
+				ArtikelFac.MAX_ARTIKEL_ZUSATZBEZEICHNUNG));
+		artikelspr.setCZbez2(Helper.cutString(artikelsprDto.getCZbez2(),
+				ArtikelFac.MAX_ARTIKEL_ZUSATZBEZEICHNUNG2));
 		artikelspr.setPersonalIIdAendern(artikelsprDto.getPersonalIIdAendern());
 		artikelspr.setCSiwert(HelperServer.getDBValueFromBigDecimal(
 				artikelsprDto.getNSiwert(), 60));
@@ -8050,6 +8570,11 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 					dto.setNNettopreis(staffel.getNNettopreis());
 					dto.setArtikellieferantstaffelIId(staffel.getIId());
 					dto.setNStaffelmenge(staffel.getNMenge());
+
+					if (staffel.getIWiederbeschaffungszeit() != null) {
+						dto.setIWiederbeschaffungszeit(staffel
+								.getIWiederbeschaffungszeit());
+					}
 				}
 
 				// Von Lieferantenwaehrung in gewuenschte Waehrung umrechnen
@@ -8680,6 +9205,430 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		}
 	}
 
+	// REACH
+	public Integer createReach(ReachDto dto) {
+
+		try {
+			Query query = em.createNamedQuery("ReachfindByMandantCNrCNr");
+			query.setParameter(1, dto.getMandantCNr());
+			query.setParameter(2, dto.getCBez());
+			// @todo getSingleResult oder getResultList ?
+			Reach doppelt = (Reach) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("WW_REACH.UK"));
+		} catch (NoResultException ex1) {
+			// nothing here
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_REACH);
+			dto.setIId(pk);
+
+			Reach bean = new Reach(dto.getIId(), dto.getMandantCNr(),
+					dto.getCBez());
+			em.persist(bean);
+			em.flush();
+			setReachFromReachDto(bean, dto);
+			return dto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+	}
+
+	public Integer createVorzug(VorzugDto dto) {
+
+		try {
+			Query query = em.createNamedQuery("VorzugfindByMandantCNrCNr");
+			query.setParameter(1, dto.getMandantCNr());
+			query.setParameter(2, dto.getCNr());
+			// @todo getSingleResult oder getResultList ?
+			Vorzug doppelt = (Vorzug) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("WW_VORZUG.UK"));
+		} catch (NoResultException ex1) {
+			// nothing here
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_VORZUG);
+			dto.setIId(pk);
+
+			Vorzug bean = new Vorzug(dto.getIId(), dto.getCNr(),
+					dto.getMandantCNr(), dto.getCBez());
+			em.persist(bean);
+			em.flush();
+			setVorzugFromVorzugDto(bean, dto);
+			return dto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+	}
+
+	public Integer createAllergen(AlergenDto dto) {
+
+		try {
+			Query query = em.createNamedQuery("AlergenfindByMandantCNrCBez");
+			query.setParameter(1, dto.getMandantCNr());
+			query.setParameter(2, dto.getCBez());
+			// @todo getSingleResult oder getResultList ?
+			Alergen doppelt = (Alergen) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("WW_ALERGEN.UK"));
+		} catch (NoResultException ex1) {
+			// nothing here
+		}
+
+		Query queryNext = em.createNamedQuery("AlergenejbSelectNextReihung");
+		queryNext.setParameter(1, dto.getMandantCNr());
+
+		Integer i = (Integer) queryNext.getSingleResult();
+
+		if (i == null) {
+			i = new Integer(0);
+		}
+		i = new Integer(i.intValue() + 1);
+		dto.setISort(i);
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ALERGEN);
+			dto.setIId(pk);
+
+			Alergen bean = new Alergen(dto.getIId(), dto.getISort(),
+					dto.getMandantCNr(), dto.getCBez());
+			em.persist(bean);
+			em.flush();
+			setAlergenFromAlergenDto(bean, dto);
+			return dto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+	}
+
+	// ROHS
+	public Integer createRohs(RohsDto dto) {
+
+		try {
+			Query query = em.createNamedQuery("RohsfindByMandantCNrCNr");
+			query.setParameter(1, dto.getMandantCNr());
+			query.setParameter(2, dto.getCBez());
+			// @todo getSingleResult oder getResultList ?
+			Rohs doppelt = (Rohs) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("WW_ROHS.UK"));
+		} catch (NoResultException ex1) {
+			// nothing here
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_ROHS);
+			dto.setIId(pk);
+
+			Rohs bean = new Rohs(dto.getIId(), dto.getMandantCNr(),
+					dto.getCBez());
+			em.persist(bean);
+			em.flush();
+			setRohsFromRohsDto(bean, dto);
+			return dto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+	}
+
+	// AUTOMOTIVE
+	public Integer createAutomotive(AutomotiveDto dto) {
+
+		try {
+			Query query = em.createNamedQuery("AutomotivefindByMandantCNrCNr");
+			query.setParameter(1, dto.getMandantCNr());
+			query.setParameter(2, dto.getCBez());
+			// @todo getSingleResult oder getResultList ?
+			Automotive doppelt = (Automotive) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("WW_AUTOMOTIVE.UK"));
+		} catch (NoResultException ex1) {
+			// nothing here
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_AUTOMOTIVE);
+			dto.setIId(pk);
+
+			Automotive bean = new Automotive(dto.getIId(), dto.getMandantCNr(),
+					dto.getCBez());
+			em.persist(bean);
+			em.flush();
+			setAutomotiveFromAutomotiveDto(bean, dto);
+			return dto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+	}
+
+	// MEDICAL
+	public Integer createMedicale(MedicalDto dto) {
+
+		try {
+			Query query = em.createNamedQuery("MedicalfindByMandantCNrCNr");
+			query.setParameter(1, dto.getMandantCNr());
+			query.setParameter(2, dto.getCBez());
+			// @todo getSingleResult oder getResultList ?
+			Medical doppelt = (Medical) query.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("WW_MEDICAL.UK"));
+		} catch (NoResultException ex1) {
+			// nothing here
+		}
+
+		try {
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_MEDICAL);
+			dto.setIId(pk);
+
+			Medical bean = new Medical(dto.getIId(), dto.getMandantCNr(),
+					dto.getCBez());
+			em.persist(bean);
+			em.flush();
+			setMedicalFromMedicalDto(bean, dto);
+			return dto.getIId();
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		}
+	}
+
+	public void updateVorzug(VorzugDto dto) {
+		Vorzug bean = em.find(Vorzug.class, dto.getIId());
+
+		try {
+			Query query = em.createNamedQuery("VorzugfindByMandantCNrCNr");
+			query.setParameter(1, dto.getMandantCNr());
+			query.setParameter(2, dto.getCNr());
+			// @todo getSingleResult oder getResultList ?
+			Integer iIdVorhanden = ((Vorzug) query.getSingleResult()).getIId();
+			if (bean.getIId().equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"WW_VORZUG.UK"));
+			}
+		} catch (NoResultException ex) {
+
+		}
+
+		setVorzugFromVorzugDto(bean, dto);
+	}
+
+	public void updateAllergen(AlergenDto dto) {
+		Alergen bean = em.find(Alergen.class, dto.getIId());
+
+		try {
+			Query query = em.createNamedQuery("AlergenfindByMandantCNrCBez");
+			query.setParameter(1, dto.getMandantCNr());
+			query.setParameter(2, dto.getCBez());
+			// @todo getSingleResult oder getResultList ?
+			Integer iIdVorhanden = ((Alergen) query.getSingleResult()).getIId();
+			if (bean.getIId().equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"WW_ALERGEN.UK"));
+			}
+		} catch (NoResultException ex) {
+
+		}
+
+		setAlergenFromAlergenDto(bean, dto);
+	}
+
+	public void updateReach(ReachDto dto) {
+		Reach bean = em.find(Reach.class, dto.getIId());
+
+		try {
+			Query query = em.createNamedQuery("ReachfindByMandantCNrCNr");
+			query.setParameter(1, dto.getMandantCNr());
+			query.setParameter(2, dto.getCBez());
+			// @todo getSingleResult oder getResultList ?
+			Integer iIdVorhanden = ((Reach) query.getSingleResult()).getIId();
+			if (bean.getIId().equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"WW_REACH.UK"));
+			}
+		} catch (NoResultException ex) {
+
+		}
+
+		setReachFromReachDto(bean, dto);
+	}
+
+	public void updateRohs(RohsDto dto) {
+		Rohs bean = em.find(Rohs.class, dto.getIId());
+
+		try {
+			Query query = em.createNamedQuery("RohsfindByMandantCNrCNr");
+			query.setParameter(1, dto.getMandantCNr());
+			query.setParameter(2, dto.getCBez());
+			// @todo getSingleResult oder getResultList ?
+			Integer iIdVorhanden = ((Rohs) query.getSingleResult()).getIId();
+			if (bean.getIId().equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"WW_ROHS.UK"));
+			}
+		} catch (NoResultException ex) {
+
+		}
+
+		setRohsFromRohsDto(bean, dto);
+	}
+
+	public void updateAutomotive(AutomotiveDto dto) {
+		Automotive bean = em.find(Automotive.class, dto.getIId());
+
+		try {
+			Query query = em.createNamedQuery("AutomotivefindByMandantCNrCNr");
+			query.setParameter(1, dto.getMandantCNr());
+			query.setParameter(2, dto.getCBez());
+			// @todo getSingleResult oder getResultList ?
+			Integer iIdVorhanden = ((Automotive) query.getSingleResult())
+					.getIId();
+			if (bean.getIId().equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"WW_AUTOMOTIVE.UK"));
+			}
+		} catch (NoResultException ex) {
+
+		}
+
+		setAutomotiveFromAutomotiveDto(bean, dto);
+	}
+
+	public void updateMedical(MedicalDto dto) {
+		Medical bean = em.find(Medical.class, dto.getIId());
+
+		try {
+			Query query = em.createNamedQuery("MedicalfindByMandantCNrCNr");
+			query.setParameter(1, dto.getMandantCNr());
+			query.setParameter(2, dto.getCBez());
+			// @todo getSingleResult oder getResultList ?
+			Integer iIdVorhanden = ((Medical) query.getSingleResult()).getIId();
+			if (bean.getIId().equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"WW_MEDICAL.UK"));
+			}
+		} catch (NoResultException ex) {
+
+		}
+
+		setMedicalFromMedicalDto(bean, dto);
+	}
+
+	public void removeReach(ReachDto dto) {
+		Reach toRemove = em.find(Reach.class, dto.getIId());
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+
+	}
+
+	public void removeVorzug(VorzugDto dto) {
+		Vorzug toRemove = em.find(Vorzug.class, dto.getIId());
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+
+	}
+
+	public void removeAllergen(AlergenDto dto) {
+		Alergen toRemove = em.find(Alergen.class, dto.getIId());
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+
+	}
+
+	public void removeRohs(RohsDto dto) {
+		Rohs toRemove = em.find(Rohs.class, dto.getIId());
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+
+	}
+
+	public void removeAutomotive(AutomotiveDto dto) {
+		Automotive toRemove = em.find(Automotive.class, dto.getIId());
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+
+	}
+
+	public void removeMedical(MedicalDto dto) {
+		Medical toRemove = em.find(Medical.class, dto.getIId());
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+
+	}
+
+	public ReachDto reachFindByPrimaryKey(Integer iId) {
+		Reach bean = em.find(Reach.class, iId);
+		return ReachDtoAssembler.createDto(bean);
+	}
+
+	public VorzugDto vorzugFindByPrimaryKey(Integer iId) {
+		Vorzug bean = em.find(Vorzug.class, iId);
+		return VorzugDtoAssembler.createDto(bean);
+	}
+
+	public AlergenDto allergenFindByPrimaryKey(Integer iId) {
+		Alergen bean = em.find(Alergen.class, iId);
+		return AlergenDtoAssembler.createDto(bean);
+	}
+
+	public RohsDto rohsFindByPrimaryKey(Integer iId) {
+		Rohs bean = em.find(Rohs.class, iId);
+		return RohsDtoAssembler.createDto(bean);
+	}
+
+	public AutomotiveDto automotiveFindByPrimaryKey(Integer iId) {
+		Automotive bean = em.find(Automotive.class, iId);
+		return AutomotiveDtoAssembler.createDto(bean);
+	}
+
+	public MedicalDto medicalFindByPrimaryKey(Integer iId) {
+		Medical bean = em.find(Medical.class, iId);
+		return MedicalDtoAssembler.createDto(bean);
+	}
+
 	public Integer createVerleih(VerleihDto verleihDto) {
 		if (verleihDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
@@ -8909,6 +9858,8 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 	public String generiereNeueArtikelnummer(String beginnArtikelnummer,
 			TheClientDto theClientDto) {
 
+		boolean bLetzterZiffernblock = false;
+
 		if (beginnArtikelnummer == null) {
 
 			beginnArtikelnummer = "";
@@ -8920,64 +9871,132 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 								ParameterFac.KATEGORIE_ARTIKEL,
 								ParameterFac.PARAMETER_STARTWERT_ARTIKELNUMMER);
 				String startwert = parameter.getCWert();
-				if (startwert != null && startwert.trim().length() > 1) {
+				if (startwert != null && startwert.trim().length() > 0) {
 					beginnArtikelnummer = startwert.trim();
 				}
+
 			} catch (RemoteException e) {
 				throwEJBExceptionLPRespectOld(e);
 			}
 		}
 
+		int iLaengeArtikelnummer = 0;
+
+		try {
+			// SP2376
+			ParametermandantDto parameter = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ARTIKEL,
+							ParameterFac.PARAMETER_GENERIERE_ARTIKELNUMMER_ZIFFERNBLOCK);
+
+			bLetzterZiffernblock = (Boolean) parameter.getCWertAsObject();
+
+			parameter = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ARTIKEL,
+							ParameterFac.PARAMETER_ARTIKEL_MAXIMALELAENGE_ARTIKELNUMMER);
+			iLaengeArtikelnummer = (Integer) parameter.getCWertAsObject();
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		boolean bHerstellerkopplung = getMandantFac()
+				.hatZusatzfunktionberechtigung(
+						com.lp.server.system.service.MandantFac.ZUSATZFUNKTION_HERSTELLERKOPPLUNG,
+						theClientDto);
+
+		beginnArtikelnummer = beginnArtikelnummer.trim();
 		Session session = FLRSessionFactory.getFactory().openSession();
 
-		org.hibernate.Criteria crit = session.createCriteria(FLRArtikel.class);
-		crit.add(Restrictions
-				.like("c_nr", beginnArtikelnummer, MatchMode.START));
-		crit.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
+		String sQuery = "SELECT substring(a.c_nr,0,"
+				+ (iLaengeArtikelnummer + 1)
+				+ ") FROM FLRArtikel a WHERE a.artikelart_c_nr<>'"
+				+ ArtikelFac.ARTIKELART_HANDARTIKEL + "' AND a.mandant_c_nr='"
+				+ theClientDto.getMandant() + "' AND substring(a.c_nr,0,"
+				+ (iLaengeArtikelnummer + 1) + ") LIKE '" + beginnArtikelnummer
+				+ "%' ORDER BY substring(a.c_nr,0,"
+				+ (iLaengeArtikelnummer + 1) + ") DESC";
 
-		String[] art = new String[1];
-		art[0] = ArtikelFac.ARTIKELART_HANDARTIKEL;
-		crit.add(Restrictions.not(Restrictions.in(
-				ArtikelFac.FLR_ARTIKEL_ARTIKELART_C_NR, art)));
+		org.hibernate.Query queryS = session.createQuery(sQuery);
 
-		crit.addOrder(Order.desc("c_nr"));
-		crit.setMaxResults(1);
-		List<?> results = crit.list();
+		queryS.setMaxResults(1);
+		List<?> results = queryS.list();
 		Iterator<?> resultListIterator = results.iterator();
 
 		if (results.size() > 0) {
-			FLRArtikel flrArtikel = (FLRArtikel) resultListIterator.next();
 
-			String letzteArtikelnummer = flrArtikel.getC_nr();
+			String letzteArtikelnummer = (String) resultListIterator.next();
+
+			if (bHerstellerkopplung) {
+				// SP2660 wg. Hersteller
+				letzteArtikelnummer = letzteArtikelnummer.trim();
+			}
+
 			int iStartZahl = -1;
 			int iEndeZahl = -1;
 			boolean bEndeFound = false;
-			int i = 0;
-			while (i < letzteArtikelnummer.length()) {
 
-				char c = letzteArtikelnummer.charAt(i);
-				// wenn 0-9
-				if (c > 47 && c < 58) {
-					iStartZahl = i;
-					iEndeZahl = iStartZahl;
-					for (int j = i; j < letzteArtikelnummer.length(); j++) {
-						char d = letzteArtikelnummer.charAt(j);
-						if (d > 47 && d < 58) {
-							iEndeZahl = j;
-							if (j == letzteArtikelnummer.length() - 1) {
+			if (bLetzterZiffernblock == false) {
+				int i = 0;
+				while (i < letzteArtikelnummer.length()) {
+
+					char c = letzteArtikelnummer.charAt(i);
+					// wenn 0-9
+					if (c > 47 && c < 58) {
+						iStartZahl = i;
+						iEndeZahl = iStartZahl;
+						for (int j = i; j < letzteArtikelnummer.length(); j++) {
+							char d = letzteArtikelnummer.charAt(j);
+							if (d > 47 && d < 58) {
+								iEndeZahl = j;
+								if (j == letzteArtikelnummer.length() - 1) {
+									bEndeFound = true;
+								}
+							} else {
 								bEndeFound = true;
+								break;
 							}
-						} else {
-							bEndeFound = true;
-							break;
 						}
 					}
+					i++;
+					if (bEndeFound) {
+						break;
+					}
 				}
-				i++;
-				if (bEndeFound) {
-					break;
+			} else {
+
+				int i = letzteArtikelnummer.length() - 1;
+				while (i >= 0) {
+
+					char c = letzteArtikelnummer.charAt(i);
+					// wenn 0-9
+					if (c > 47 && c < 58) {
+						iEndeZahl = i;
+						iStartZahl = iEndeZahl;
+
+						for (int j = i; j >= 0; j--) {
+							char d = letzteArtikelnummer.charAt(j);
+							if (d > 47 && d < 58) {
+								iStartZahl = j;
+								if (j == 0) {
+									bEndeFound = true;
+								}
+							} else {
+								bEndeFound = true;
+								break;
+							}
+						}
+					}
+					i--;
+					if (bEndeFound) {
+						break;
+					}
 				}
 			}
+
 			if (iStartZahl >= 0 && iEndeZahl >= 0) {
 				String zahlenteil = letzteArtikelnummer.substring(iStartZahl,
 						iEndeZahl + 1);
@@ -9013,6 +10032,28 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 							iStartZahl)
 							+ zahlenteilNeu
 							+ letzteArtikelnummer.substring(iEndeZahl + 1);
+
+					//
+					Session session2 = FLRSessionFactory.getFactory()
+							.openSession();
+
+					String sQuery2 = "SELECT a FROM FLRArtikel a WHERE a.mandant_c_nr='"
+							+ theClientDto.getMandant()
+							+ "' AND substring(a.c_nr,0,"
+							+ (iLaengeArtikelnummer + 1)
+							+ ") = '"
+							+ Helper.fitString2Length(neueArtNr,
+									iLaengeArtikelnummer, ' ') + "'";
+
+					org.hibernate.Query query2 = session2.createQuery(sQuery2);
+					query2.setMaxResults(1);
+					List<?> results2 = query2.list();
+					if (results2.size() > 0) {
+
+						continue;
+
+					}
+					session2.close();
 
 					Query query = em
 							.createNamedQuery("ArtikelfindByCNrMandantCNr");
@@ -9099,6 +10140,51 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		farbcode.setCNr(farbcodeDto.getCNr());
 		farbcode.setCBez(farbcodeDto.getCBez());
 		em.merge(farbcode);
+		em.flush();
+	}
+
+	private void setReachFromReachDto(Reach bean, ReachDto dto) {
+		bean.setMandantCNr(dto.getMandantCNr());
+		bean.setCBez(dto.getCBez());
+		em.merge(bean);
+		em.flush();
+	}
+
+	private void setVorzugFromVorzugDto(Vorzug bean, VorzugDto dto) {
+		bean.setMandantCNr(dto.getMandantCNr());
+		bean.setCNr(dto.getCNr());
+		bean.setCBez(dto.getCBez());
+		em.merge(bean);
+		em.flush();
+	}
+
+	private void setAlergenFromAlergenDto(Alergen bean, AlergenDto dto) {
+		bean.setMandantCNr(dto.getMandantCNr());
+		bean.setISort(dto.getISort());
+		bean.setCBez(dto.getCBez());
+		em.merge(bean);
+		em.flush();
+	}
+
+	private void setRohsFromRohsDto(Rohs bean, RohsDto dto) {
+		bean.setMandantCNr(dto.getMandantCNr());
+		bean.setCBez(dto.getCBez());
+		em.merge(bean);
+		em.flush();
+	}
+
+	private void setAutomotiveFromAutomotiveDto(Automotive bean,
+			AutomotiveDto dto) {
+		bean.setMandantCNr(dto.getMandantCNr());
+		bean.setCBez(dto.getCBez());
+		em.merge(bean);
+		em.flush();
+	}
+
+	private void setMedicalFromMedicalDto(Medical bean, MedicalDto dto) {
+		bean.setMandantCNr(dto.getMandantCNr());
+		bean.setCBez(dto.getCBez());
+		em.merge(bean);
 		em.flush();
 	}
 
@@ -9596,6 +10682,17 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 			em.flush();
 			setArtikelsperrenFromArtikelsperrenDto(artikelsperren,
 					artikelsperrenDto);
+
+			Sperren spAktuell = em.find(Sperren.class,
+					artikelsperrenDto.getSperrenIId());
+
+			artikelAenderungLoggen(artikelsperrenDto.getArtikelIId(),
+					ArtikelFac.ARTIKEL_LOG_ARTIKELSPERREN_SPERRE, null,
+					spAktuell.getCBez(), theClientDto);
+			artikelAenderungLoggen(artikelsperrenDto.getArtikelIId(),
+					ArtikelFac.ARTIKEL_LOG_ARTIKELSPERREN_GRUND, null,
+					artikelsperrenDto.getCGrund(), theClientDto);
+
 			return artikelsperrenDto.getIId();
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
@@ -9603,8 +10700,8 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		}
 	}
 
-	public void removeArtikelsperren(ArtikelsperrenDto dto)
-			throws EJBExceptionLP {
+	public void removeArtikelsperren(ArtikelsperrenDto dto,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (dto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("dto == null"));
@@ -9613,7 +10710,16 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("dto.getIId() == null"));
 		}
-		// try {
+
+		Sperren spAktuell = em.find(Sperren.class, dto.getSperrenIId());
+
+		artikelAenderungLoggen(dto.getArtikelIId(),
+				ArtikelFac.ARTIKEL_LOG_ARTIKELSPERREN_SPERRE,
+				spAktuell.getCBez(), null, theClientDto);
+		artikelAenderungLoggen(dto.getArtikelIId(),
+				ArtikelFac.ARTIKEL_LOG_ARTIKELSPERREN_GRUND, dto.getCGrund(),
+				null, theClientDto);
+
 		Artikelsperren toRemove = em.find(Artikelsperren.class, dto.getIId());
 		if (toRemove == null) {
 			throw new EJBExceptionLP(
@@ -9628,6 +10734,7 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		} catch (EntityExistsException er) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
 		}
+
 		// Es muss immer einen Kunden mit der I_SORT=1 geben, daher nach dem
 		// loeschen unbedingt neu re.indizieren
 
@@ -9670,6 +10777,35 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
 					"Fehler bei updateArtikelsperren. Es gibt keine iid " + iId
 							+ "\ndto.toString: " + artikelsperrenDto.toString());
+		}
+
+		if (!artikelsperren.getSperrenIId().equals(
+				artikelsperrenDto.getSperrenIId())) {
+
+			Sperren spVorher = em.find(Sperren.class,
+					artikelsperren.getSperrenIId());
+			Sperren spAktuell = em.find(Sperren.class,
+					artikelsperrenDto.getSperrenIId());
+
+			artikelAenderungLoggen(artikelsperrenDto.getArtikelIId(),
+					ArtikelFac.ARTIKEL_LOG_ARTIKELSPERREN_SPERRE,
+					spVorher.getCBez(), spAktuell.getCBez(), theClientDto);
+		}
+
+		String grundVorher = "";
+		if (artikelsperren.getCGrund() != null) {
+			grundVorher = artikelsperren.getCGrund();
+		}
+
+		String grundAktuell = "";
+		if (artikelsperrenDto.getCGrund() != null) {
+			grundAktuell = artikelsperrenDto.getCGrund();
+		}
+
+		if (!grundVorher.equals(grundAktuell)) {
+			artikelAenderungLoggen(artikelsperrenDto.getArtikelIId(),
+					ArtikelFac.ARTIKEL_LOG_ARTIKELSPERREN_GRUND, grundVorher,
+					grundAktuell, theClientDto);
 		}
 
 		artikelsperrenDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
@@ -9760,6 +10896,21 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 
 		// }
 
+	}
+
+	public AlergenDto[] allergenFindByMandantCNr(TheClientDto theClientDto) {
+		Query query = em.createNamedQuery("AlergenfindByMandantCNr");
+		query.setParameter(1, theClientDto.getMandant());
+		Collection<?> cl = query.getResultList();
+		return AlergenDtoAssembler.createDtos(cl);
+	}
+
+	public ArtikelalergenDto[] artikelallergenFindByArtikelIId(
+			Integer artikelIId) {
+		Query query = em.createNamedQuery("ArtikelalergenfindByArtikelIId");
+		query.setParameter(1, artikelIId);
+		Collection<?> cl = query.getResultList();
+		return ArtikelalergenDtoAssembler.createDtos(cl);
 	}
 
 	public ArtikelsperrenDto artikelsperrenFindByArtikelIIdSperrenIIdOhneExc(
@@ -10126,7 +11277,7 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 														lagerbewegungDtos[0]
 																.getTBelegdatum(),
 														theClientDto, null,
-														true);
+														null, true);
 
 									}
 
@@ -10480,383 +11631,63 @@ public class ArtikelFacBean extends Facade implements ArtikelFac {
 		helper.tausche(pos1, pos2);
 	}
 
-	// einmaliger XLS Import fuer Digiraster
-	@TransactionTimeout(2000)
-	public void importiereDigiraster(byte[] xlsFile, TheClientDto theClientDto) {
-		ByteArrayInputStream is = new ByteArrayInputStream(xlsFile);
-		try {
-			Workbook workbook = Workbook.getWorkbook(is);
-
-			Sheet sheet = workbook.getSheet(0);
-
-			HashMap<Integer, Integer> hmPreislisten = new HashMap<Integer, Integer>();
-
-			VkpfartikelpreislisteDto[] vkpfartikelpreislisteDtos = null;
-			try {
-				vkpfartikelpreislisteDtos = getVkPreisfindungFac()
-						.getAlleAktivenPreislisten(Helper.boolean2Short(true),
-								theClientDto);
-			} catch (RemoteException e) {
-				throwEJBExceptionLPRespectOld(e);
-			}
-
-			Calendar c = Calendar.getInstance();
-			c.set(Calendar.YEAR, 2014);
-			c.set(Calendar.MONTH, 0);
-			c.set(Calendar.DATE, 1);
-			Timestamp tPreisgueltigab = Helper.cutTimestamp(new Timestamp(c
-					.getTimeInMillis()));
-
-			if (sheet.getRows() > 1 && sheet.getColumns() > 9) {
-
-				for (int i = 2; i < sheet.getRows(); i++) {
-
-					System.out.println(i + " von " + sheet.getRows());
-
-					Cell[] sZeile = sheet.getRow(i);
-
-					// Ev. vorher Hersteller anlegen
-					ArtikelDto artikelDto = new ArtikelDto();
-
-					String hersteller = sZeile[CellReferenceHelper
-							.getColumn("P")].getContents();
-					String partnerHersteller = sZeile[CellReferenceHelper
-							.getColumn("Q")].getContents();
-
-					String artikelnummer = sZeile[CellReferenceHelper
-							.getColumn("A")].getContents();
-
-					ArtikelDto aDtoWerbeabgabe = getArtikelFac()
-							.artikelFindByCNrMandantCNrOhneExc(artikelnummer,
-									theClientDto.getMandant());
-					if (aDtoWerbeabgabe == null) {
-
-						artikelDto.setCNr(artikelnummer);
-						if (hersteller != null && hersteller.length() > 0
-								&& partnerHersteller != null
-								&& partnerHersteller.length() > 0) {
-							Query query = em
-									.createNamedQuery("HerstellerfindByCNr");
-							query.setParameter(1, hersteller);
-							Collection<?> cl = query.getResultList();
-							if (cl.size() == 0) {
-								// Hersteller nicht vorhanden
-								HerstellerDto herstellerDto = new HerstellerDto();
-								herstellerDto.setCNr(hersteller);
-
-								// Partner ev. anglegen
-								PartnerDto[] partnerDtos = getPartnerFac()
-										.partnerFindByName1(partnerHersteller,
-												theClientDto);
-								if (partnerDtos.length > 0) {
-									herstellerDto.setPartnerIId(partnerDtos[0]
-											.getIId());
-								} else {
-									PartnerDto partnerDto = new PartnerDto();
-									partnerDto
-											.setCName1nachnamefirmazeile1(partnerHersteller);
-									partnerDto.setCKbez(partnerHersteller);
-
-									partnerDto
-											.setPartnerartCNr(PartnerFac.PARTNERART_ADRESSE);
-									partnerDto.setBVersteckt(false);
-									partnerDto
-											.setLocaleCNrKommunikation(theClientDto
-													.getLocUiAsString());
-									herstellerDto.setPartnerIId(getPartnerFac()
-											.createPartner(partnerDto,
-													theClientDto));
-								}
-
-								artikelDto
-										.setHerstellerIId(createHersteller(herstellerDto));
-
-							} else {
-								Hersteller h = (Hersteller) cl.iterator()
-										.next();
-								artikelDto.setHerstellerIId(h.getIId());
-							}
-
-							// Herstellkuerzel hinzufuegen
-							artikelDto.setCNr(Helper.fitString2Length(
-									artikelnummer, 12, ' ') + hersteller);
-						}
-
-						String bezeichnung = sZeile[CellReferenceHelper
-								.getColumn("B")].getContents();
-
-						if (bezeichnung != null) {
-							if (bezeichnung.length() > 40) {
-								bezeichnung = bezeichnung.substring(0, 40);
-							}
-
-						}
-
-						String zusatzbezeichnung = sZeile[CellReferenceHelper
-								.getColumn("D")].getContents();
-						String zusatzbezeichnung2 = sZeile[CellReferenceHelper
-								.getColumn("E")].getContents();
-
-						ArtikelsprDto spr = new ArtikelsprDto();
-						spr.setCBez(bezeichnung);
-						spr.setCZbez(zusatzbezeichnung);
-						if (zusatzbezeichnung2 != null) {
-							if (zusatzbezeichnung2.length() > 40) {
-								zusatzbezeichnung2 = zusatzbezeichnung2
-										.substring(0, 40);
-							}
-
-						}
-						spr.setCZbez2(zusatzbezeichnung2);
-						artikelDto.setArtikelsprDto(spr);
-
-						artikelDto.setMwstsatzbezIId(13);
-						artikelDto
-								.setArtikelartCNr(ArtikelFac.ARTIKELART_ARTIKEL);
-						artikelDto.setEinheitCNr(SystemFac.EINHEIT_STUECK);
-						artikelDto.setBVersteckt(Helper.boolean2Short(false));
-
-						VerpackungDto vDto = new VerpackungDto();
-
-						String bauform = sZeile[CellReferenceHelper
-								.getColumn("O")].getContents();
-						if (bauform != null) {
-							if (bauform.length() > 20) {
-								bauform = bauform.substring(0, 20);
-							}
-
-						}
-
-						vDto.setCBauform(bauform);
-						artikelDto.setVerpackungDto(vDto);
-
-						String herstellerbez = sZeile[CellReferenceHelper
-								.getColumn("R")].getContents();
-						if (herstellerbez != null) {
-							if (herstellerbez.length() > 40) {
-								herstellerbez = herstellerbez.substring(0, 40);
-							}
-						}
-						artikelDto.setCArtikelbezhersteller(herstellerbez);
-						artikelDto.setArtgruIId(25);
-
-						Integer artikelIId = createArtikel(artikelDto,
-								theClientDto);
-
-						// Nun Lieferanten suchen, bzw. anlegen
-
-						String lieferant = sZeile[CellReferenceHelper
-								.getColumn("S")].getContents();
-
-						// EK-Preis
-						BigDecimal ekPreis = null;
-						if (sZeile[CellReferenceHelper.getColumn("U")]
-								.getType() == CellType.NUMBER) {
-							ekPreis = new BigDecimal(
-									((jxl.NumberCell) sZeile[CellReferenceHelper
-											.getColumn("U")]).getValue());
-						}
-
-						if (lieferant != null && lieferant.length() > 0
-								&& ekPreis != null) {
-							// Nun Artikellieferant anlegen
-							ArtikellieferantDto alDto = new ArtikellieferantDto();
-							alDto.setArtikelIId(artikelIId);
-
-							Integer lieferantIId = null;
-							PartnerDto[] partnerDtos = getPartnerFac()
-									.partnerFindByName1(partnerHersteller,
-											theClientDto);
-
-							Integer partnerIId = null;
-							if (partnerDtos.length > 0) {
-
-								partnerIId = partnerDtos[0].getIId();
-
-							} else {
-
-								PartnerDto partnerDto = new PartnerDto();
-								partnerDto
-										.setCName1nachnamefirmazeile1(lieferant);
-								partnerDto.setCKbez(lieferant);
-								partnerDto
-										.setPartnerartCNr(PartnerFac.PARTNERART_ADRESSE);
-								partnerDto.setBVersteckt(false);
-								partnerDto
-										.setLocaleCNrKommunikation(theClientDto
-												.getLocUiAsString());
-								partnerIId = getPartnerFac().createPartner(
-										partnerDto, theClientDto);
-
-							}
-
-							LieferantDto lfDto = getLieferantFac()
-									.lieferantFindByiIdPartnercNrMandantOhneExc(
-											partnerIId,
-											theClientDto.getMandant(),
-											theClientDto);
-							if (lfDto != null) {
-								lieferantIId = lfDto.getIId();
-							} else {
-								// Lieferant anlegen
-								lfDto = new LieferantDto();
-								lfDto.setMandantCNr(theClientDto.getMandant());
-								lfDto.setWaehrungCNr(theClientDto
-										.getSMandantenwaehrung());
-								lfDto.setPartnerDto(getPartnerFac()
-										.partnerFindByPrimaryKey(partnerIId,
-												theClientDto));
-								lfDto.setPartnerIId(partnerIId);
-								lfDto.setLieferartIId(11);
-								lfDto.setZahlungszielIId(11);
-								lfDto.setIdSpediteur(11);
-								lfDto.setBIgErwerb(false);
-								lieferantIId = getLieferantFac()
-										.createLieferant(lfDto, theClientDto);
-
-							}
-
-							alDto.setLieferantIId(lieferantIId);
-							alDto.setNEinzelpreis(ekPreis);
-							alDto.setFRabatt(0D);
-							alDto.setNNettopreis(ekPreis);
-							alDto.setTPreisgueltigab(tPreisgueltigab);
-							alDto.setBRabattbehalten(Helper
-									.boolean2Short(false));
-
-							alDto.setCArtikelnrlieferant(sZeile[CellReferenceHelper
-									.getColumn("T")].getContents());
-
-							if (sZeile.length > CellReferenceHelper
-									.getColumn("W")) {
-
-								String zeit = sZeile[CellReferenceHelper
-										.getColumn("W")].getContents();
-								if (zeit != null && zeit.length() > 0) {
-									alDto.setIWiederbeschaffungszeit(new Integer(
-											zeit));
-								}
-							}
-
-							createArtikellieferant(alDto, theClientDto);
-
-						}
-
-						// Porschenummer (Kunde-ID=21)
-						if (sZeile.length > CellReferenceHelper.getColumn("X")) {
-							String porschenummer = sZeile[CellReferenceHelper
-									.getColumn("X")].getContents();
-							if (porschenummer != null
-									&& porschenummer.length() > 0) {
-								KundesokoDto kdSokoDto = new KundesokoDto();
-								kdSokoDto.setKundeIId(21);
-								kdSokoDto.setArtikelIId(artikelIId);
-								kdSokoDto.setCKundeartikelnummer(porschenummer);
-								kdSokoDto.setTPreisgueltigab(new java.sql.Date(
-										tPreisgueltigab.getTime()));
-								kdSokoDto.setBBemerkungdrucken(Helper
-										.boolean2Short(false));
-								kdSokoDto.setBRabattsichtbar(Helper
-										.boolean2Short(false));
-								kdSokoDto.setBDrucken(Helper
-										.boolean2Short(false));
-								KundesokomengenstaffelDto defaultMengenstaffelDtoI = new KundesokomengenstaffelDto();
-
-								defaultMengenstaffelDtoI
-										.setNMenge(BigDecimal.ONE);
-								defaultMengenstaffelDtoI
-										.setFArtikelstandardrabattsatz(0D);
-
-								Integer kundesokoIId = getKundesokoFac()
-										.createKundesoko(kdSokoDto,
-												defaultMengenstaffelDtoI,
-												theClientDto);
-
-							}
-						}
-
-						// Boschnummer (Kunde-ID=65)
-						if (sZeile.length > CellReferenceHelper.getColumn("Z")) {
-							String boschnummer = sZeile[CellReferenceHelper
-									.getColumn("Z")].getContents();
-							if (boschnummer != null && boschnummer.length() > 0) {
-								KundesokoDto kdSokoDto = new KundesokoDto();
-								kdSokoDto.setKundeIId(65);
-								kdSokoDto.setArtikelIId(artikelIId);
-								kdSokoDto.setCKundeartikelnummer(boschnummer);
-								kdSokoDto.setTPreisgueltigab(new java.sql.Date(
-										tPreisgueltigab.getTime()));
-								kdSokoDto.setBBemerkungdrucken(Helper
-										.boolean2Short(false));
-								kdSokoDto.setBRabattsichtbar(Helper
-										.boolean2Short(false));
-								kdSokoDto.setBDrucken(Helper
-										.boolean2Short(false));
-								KundesokomengenstaffelDto defaultMengenstaffelDtoI = new KundesokomengenstaffelDto();
-
-								defaultMengenstaffelDtoI
-										.setNMenge(BigDecimal.ONE);
-								defaultMengenstaffelDtoI
-										.setFArtikelstandardrabattsatz(0D);
-								Integer kundesokoIId = getKundesokoFac()
-										.createKundesoko(kdSokoDto,
-												defaultMengenstaffelDtoI,
-												theClientDto);
-
-							}
-						}
-
-						// Lagerstand zubuchen
-						if (sZeile.length > CellReferenceHelper.getColumn("AA")) {
-							if (sZeile[CellReferenceHelper.getColumn("AA")]
-									.getType() == CellType.NUMBER) {
-								BigDecimal lagerstand = new BigDecimal(
-										((jxl.NumberCell) sZeile[CellReferenceHelper
-												.getColumn("AA")]).getValue());
-
-								if (lagerstand.doubleValue() > 0) {
-									HandlagerbewegungDto handlagerbewegungDto = new HandlagerbewegungDto();
-									handlagerbewegungDto
-											.setArtikelIId(artikelIId);
-									handlagerbewegungDto.setLagerIId(12);
-									handlagerbewegungDto.setBAbgang(new Short(
-											(short) 0));
-									handlagerbewegungDto
-											.setCKommentar("Anfangslagerstand");
-
-									// VKPreis kommt aus Artikellager, wenn
-									// keiner
-									// angegeben
-									if (ekPreis != null) {
-										handlagerbewegungDto
-												.setNEinstandspreis(ekPreis);
-									} else {
-										handlagerbewegungDto
-												.setNEinstandspreis(BigDecimal.ZERO);
-									}
-
-									handlagerbewegungDto.setNMenge(lagerstand);
-
-									getLagerFac().createHandlagerbewegung(
-											handlagerbewegungDto, theClientDto);
-								}
-							}
-						}
-					}
-
-				}
-
-				//
-
-				// Zuerst alle PreislistenIds holen
-				Cell[] zeileUeberschrift = sheet.getRow(0);
-				int iSpalteStart = 11;
-			}
-
-		} catch (BiffException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
-		} catch (IOException e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
+	@Override
+	public void updateArtikelAusImportResult(IStklImportResult result,
+			TheClientDto theClientDto) throws RemoteException {
+		if (result == null || result.getSelectedArtikelDto() == null)
+			return;
+
+		ArtikelDto artikelDtoDB = artikelFindByPrimaryKeySmall(result
+				.getSelectedArtikelDto().getIId(), theClientDto);
+
+		boolean artikelNeedsUpdate = false;
+		String herstellerArtNr = result.getValues().get(
+				StklImportSpezifikation.HERSTELLERARTIKELNUMMER);
+		if (updateNeeded(herstellerArtNr,
+				artikelDtoDB.getCArtikelnrhersteller())) {
+			artikelNeedsUpdate = true;
+			artikelDtoDB.setCArtikelnrhersteller(herstellerArtNr);
+		}
+
+		String herstellerCBez = result.getValues().get(
+				StklImportSpezifikation.HERSTELLERBEZ);
+		if (updateNeeded(herstellerCBez,
+				artikelDtoDB.getCArtikelbezhersteller())) {
+			artikelNeedsUpdate = true;
+			artikelDtoDB.setCArtikelbezhersteller(Helper.cutString(
+					herstellerCBez,
+					ArtikelFac.MAX_ARTIKEL_HERSTELLERBEZEICHNUNG));
+		}
+
+		if (artikelNeedsUpdate) {
+			updateArtikel(artikelDtoDB, theClientDto);
 		}
 	}
+
+	/**
+	 * Vergleicht zwei Strings miteinander, um zu &uuml;berpr&uuml;fen, ob ein
+	 * Update des DB-Eintrags n&ouml;tig ist.
+	 * 
+	 * @param newValue
+	 *            neuer zu vergleichender Wert
+	 * @param dbValue
+	 *            Basiswert aus DB
+	 * @return true, wenn ein Update durchgef&uuml;hrt werden soll
+	 */
+	private boolean updateNeeded(String newValue, String dbValue) {
+		if (newValue == null)
+			return false; // kein neuer wert -> false
+		newValue = newValue.trim();
+		if (newValue.isEmpty())
+			return false;// kein neuer wert -> false
+		if (dbValue == null)
+			return true; // kein alter wert -> true
+		dbValue = dbValue.trim();
+		if (dbValue.isEmpty())
+			return true; // kein alter wert -> true
+		if (newValue.equals(dbValue))
+			return false;// alter wert == neuer wert -> false
+		return true; // alter wert != neuer wert -> true
+	}
+
 }

@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,17 +19,17 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.lieferschein.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRLager;
@@ -174,8 +174,14 @@ public class FLRLieferschein implements Serializable {
     /** persistent field */
     private Set flrlieferscheinpositionen;
 
+    /** persistent field */
+    private Set flrverkettet;
+
+    /** persistent field */
+    private Set flrverkettet2;
+
     /** full constructor */
-    public FLRLieferschein(String mandant_c_nr, String c_nr, String lieferscheinart_c_nr, String c_bez_projektbezeichnung, String c_lieferartort, Date t_liefertermin, Date d_belegdatum, String lieferscheinstatus_status_c_nr, Integer lager_i_id, Integer ziellager_i_id, String waehrung_c_nr_lieferscheinwaehrung, Double f_wechselkursmandantwaehrungzulieferscheinwaehrung, Short b_verrechenbar, Integer kunde_i_id_lieferadresse, Integer kunde_i_id_rechnungsadresse, Integer zahlungsziel_i_id, Integer kostenstelle_i_id, Integer spediteur_i_id, Integer lieferart_i_id, Integer personal_i_id_vertreter, BigDecimal n_gesamtwertinlieferscheinwaehrung, String c_bestellnummer, String c_kommission, Integer auftrag_i_id, Integer projekt_i_id, Date t_versandzeitpunkt, String c_versandtype, Date t_aendern, Date t_zollexportpapier, FLRAuftrag flrauftrag, FLRRechnung flrrechnung, FLRKunde flrkunde, FLRKunde flrkunderechnungsadresse, FLRKostenstelle flrkostenstelle, FLRPersonal flrvertreter, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer, FLRLager flrlager, FLRLager flrziellager, com.lp.server.lieferschein.fastlanereader.generated.FLRBegruendung flrbegruendung, Set flrlieferscheinpositionen) {
+    public FLRLieferschein(String mandant_c_nr, String c_nr, String lieferscheinart_c_nr, String c_bez_projektbezeichnung, String c_lieferartort, Date t_liefertermin, Date d_belegdatum, String lieferscheinstatus_status_c_nr, Integer lager_i_id, Integer ziellager_i_id, String waehrung_c_nr_lieferscheinwaehrung, Double f_wechselkursmandantwaehrungzulieferscheinwaehrung, Short b_verrechenbar, Integer kunde_i_id_lieferadresse, Integer kunde_i_id_rechnungsadresse, Integer zahlungsziel_i_id, Integer kostenstelle_i_id, Integer spediteur_i_id, Integer lieferart_i_id, Integer personal_i_id_vertreter, BigDecimal n_gesamtwertinlieferscheinwaehrung, String c_bestellnummer, String c_kommission, Integer auftrag_i_id, Integer projekt_i_id, Date t_versandzeitpunkt, String c_versandtype, Date t_aendern, Date t_zollexportpapier, FLRAuftrag flrauftrag, FLRRechnung flrrechnung, FLRKunde flrkunde, FLRKunde flrkunderechnungsadresse, FLRKostenstelle flrkostenstelle, FLRPersonal flrvertreter, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer, FLRLager flrlager, FLRLager flrziellager, com.lp.server.lieferschein.fastlanereader.generated.FLRBegruendung flrbegruendung, Set flrlieferscheinpositionen, Set flrverkettet, Set flrverkettet2) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
         this.lieferscheinart_c_nr = lieferscheinart_c_nr;
@@ -217,6 +223,8 @@ public class FLRLieferschein implements Serializable {
         this.flrziellager = flrziellager;
         this.flrbegruendung = flrbegruendung;
         this.flrlieferscheinpositionen = flrlieferscheinpositionen;
+        this.flrverkettet = flrverkettet;
+        this.flrverkettet2 = flrverkettet2;
     }
 
     /** default constructor */
@@ -224,8 +232,10 @@ public class FLRLieferschein implements Serializable {
     }
 
     /** minimal constructor */
-    public FLRLieferschein(Set flrlieferscheinpositionen) {
+    public FLRLieferschein(Set flrlieferscheinpositionen, Set flrverkettet, Set flrverkettet2) {
         this.flrlieferscheinpositionen = flrlieferscheinpositionen;
+        this.flrverkettet = flrverkettet;
+        this.flrverkettet2 = flrverkettet2;
     }
 
     public Integer getI_id() {
@@ -562,6 +572,22 @@ public class FLRLieferschein implements Serializable {
 
     public void setFlrlieferscheinpositionen(Set flrlieferscheinpositionen) {
         this.flrlieferscheinpositionen = flrlieferscheinpositionen;
+    }
+
+    public Set getFlrverkettet() {
+        return this.flrverkettet;
+    }
+
+    public void setFlrverkettet(Set flrverkettet) {
+        this.flrverkettet = flrverkettet;
+    }
+
+    public Set getFlrverkettet2() {
+        return this.flrverkettet2;
+    }
+
+    public void setFlrverkettet2(Set flrverkettet2) {
+        this.flrverkettet2 = flrverkettet2;
     }
 
     public String toString() {

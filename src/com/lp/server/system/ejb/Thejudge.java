@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -42,7 +42,10 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "TheJudgefindByWerWas", query = "SELECT OBJECT (o) FROM Thejudge o WHERE o.pk.cWer=?1 AND o.pk.cWas=?2") })
+@NamedQueries(
+		{ @NamedQuery(name = "TheJudgefindByWerWas", query = "SELECT OBJECT (o) FROM Thejudge o WHERE o.pk.cWer=?1 AND o.pk.cWas=?2"),
+		  @NamedQuery(name = "TheJudgefindByUsernr", query = "SELECT OBJECT (o) FROM Thejudge o WHERE o.pk.cUsernr = :usernr")
+		})
 @Entity
 @Table(name = "LP_THEJUDGE")
 public class Thejudge implements Serializable {

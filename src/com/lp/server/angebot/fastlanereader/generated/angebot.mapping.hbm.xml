@@ -145,28 +145,29 @@
 	<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
 	<property name="einheit_c_nr" column="EINHEIT_C_NR" type="java.lang.String" />
 	<property name="c_bez" column="C_BEZ" type="java.lang.String" />
-        <property name="c_zbez" column="C_ZBEZ" type="java.lang.String" />
-      	<property name="n_nettoeinzelpreisplusversteckteraufschlag" column="N_NETTOEINZELPREISPLUSVERSTECKTERAUFSCHLAG" type="java.math.BigDecimal" />
+    <property name="c_zbez" column="C_ZBEZ" type="java.lang.String" />
+    <property name="n_nettoeinzelpreisplusversteckteraufschlag" column="N_NETTOEINZELPREISPLUSVERSTECKTERAUFSCHLAG" type="java.math.BigDecimal" />
 	<property name="n_nettogesamtpreisplusversteckteraufschlag" column="N_NETTOGESAMTPREISPLUSVERSTECKTERAUFSCHLAG" type="java.math.BigDecimal" />
 	<property name="n_nettogesamtpreisplusversteckteraufschlagminusrabatte" column="N_NETTOGESAMTPREISPLUSVERSTECKTERAUFSCHLAGMINUSRABATTE" type="java.math.BigDecimal" />
 	<property name="n_nettogesamtpreis" column="N_NETTOGESAMTPREIS" type="java.math.BigDecimal" />
 	<property name="x_textinhalt" column="X_TEXTINHALT" type="java.lang.String" />
 	<property name="agstkl_i_id" column="AGSTKL_I_ID" type="java.lang.Integer" />
-        <property name="b_alternative" column="B_ALTERNATIVE" type="java.lang.Short" />
-        <property name="angebot_i_id" column="ANGEBOT_I_ID" type="java.lang.Integer" />
-        <property name="position_i_id" column="POSITION_I_ID" type="java.lang.Integer" />
-        <property name="typ_c_nr" column="TYP_C_NR" type="java.lang.String" />
-        <property name="position_i_id_artikelset" column="POSITION_I_ID_ARTIKELSET" type="java.lang.Integer" />
+    <property name="b_alternative" column="B_ALTERNATIVE" type="java.lang.Short" />
+    <property name="angebot_i_id" column="ANGEBOT_I_ID" type="java.lang.Integer" />
+    <property name="position_i_id" column="POSITION_I_ID" type="java.lang.Integer" />
+    <property name="typ_c_nr" column="TYP_C_NR" type="java.lang.String" />
+    <property name="position_i_id_artikelset" column="POSITION_I_ID_ARTIKELSET" type="java.lang.Integer" />
 
-        <many-to-one name="flrangebot" class="com.lp.server.angebot.fastlanereader.generated.FLRAngebot" column="ANGEBOT_I_ID" unique="true" insert="false" update="false" />
-        <many-to-one name="flrverleih" class="com.lp.server.artikel.fastlanereader.generated.FLRVerleih" column="VERLEIH_I_ID" unique="true" insert="false" update="false" />
-        <many-to-one name="flrartikel" class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel" column="ARTIKEL_I_ID" unique="true" />
-        <many-to-one name="flrmediastandard" class="com.lp.server.system.fastlanereader.generated.FLRMediastandard" column="MEDIASTANDARD_I_ID" unique="true" />
-        <many-to-one name="flragstkl" class="com.lp.server.angebotstkl.fastlanereader.generated.FLRAgstkl" column="AGSTKL_I_ID" unique="true" insert="false" update="false" />
+    <many-to-one name="flrangebot" class="com.lp.server.angebot.fastlanereader.generated.FLRAngebot" column="ANGEBOT_I_ID" unique="true" insert="false" update="false" />
+    <many-to-one name="flrverleih" class="com.lp.server.artikel.fastlanereader.generated.FLRVerleih" column="VERLEIH_I_ID" unique="true" insert="false" update="false" />
+    <many-to-one name="flrartikel" class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel" column="ARTIKEL_I_ID" unique="true" />
+    <many-to-one name="flrmediastandard" class="com.lp.server.system.fastlanereader.generated.FLRMediastandard" column="MEDIASTANDARD_I_ID" unique="true" />
+    <many-to-one name="flragstkl" class="com.lp.server.angebotstkl.fastlanereader.generated.FLRAgstkl" column="AGSTKL_I_ID" unique="true" insert="false" update="false" />
 
-		<property name="zwsvonposition_i_id" column="ZWSVONPOSITION_I_ID" type="java.lang.Integer" />
-		<property name="zwsbisposition_i_id" column="ZWSBISPOSITION_I_ID" type="java.lang.Integer" />
-		<property name="zwsnettosumme" column="N_ZWSNETTOSUMME" type="java.math.BigDecimal" />
+	<property name="zwsvonposition_i_id" column="ZWSVONPOSITION_I_ID" type="java.lang.Integer" />
+	<property name="zwsbisposition_i_id" column="ZWSBISPOSITION_I_ID" type="java.lang.Integer" />
+	<property name="zwsnettosumme" column="N_ZWSNETTOSUMME" type="java.math.BigDecimal" />
+	<property name="b_zwspositionspreiszeigen" column="B_ZWSPOSITIONSPREISZEIGEN" type="java.lang.Short" />
 </class>
 
 <class name="FLRAngebotpositionart" table="ANGB_ANGEBOTPOSITIONART">
@@ -202,6 +203,8 @@
     <property name="mwstsatz_i_id" column="MWSTSATZ_I_ID" type="java.lang.Integer" />
 	<property name="n_mwstbetrag" column="N_MWSTBETRAG" type="java.math.BigDecimal" />
 	<property name="x_textinhalt" column="X_TEXTINHALT" type="java.lang.String" />
+	<property name="lieferant_i_id" column="LIEFERANT_I_ID" type="java.lang.Integer" />
+	<property name="n_einkaufpreis" column="N_EINKAUFPREIS" type="java.math.BigDecimal" />
 	<property name="position_i_id" column="POSITION_I_ID" type="java.lang.Integer" />
 	<property name="position_i_id_artikelset" column="POSITION_I_ID_ARTIKELSET" type="java.lang.Integer" />
     <property name="typ_c_nr" column="TYP_C_NR" type="java.lang.String" />
@@ -215,5 +218,6 @@
 	<property name="zwsvonposition_i_id" column="ZWSVONPOSITION_I_ID" type="java.lang.Integer" />
 	<property name="zwsbisposition_i_id" column="ZWSBISPOSITION_I_ID" type="java.lang.Integer" />
 	<property name="zwsnettosumme" column="N_ZWSNETTOSUMME" type="java.math.BigDecimal" />
+	<property name="b_zwspositionspreiszeigen" column="B_ZWSPOSITIONSPREISZEIGEN" type="java.lang.Short" />
 </class>
 </hibernate-mapping>

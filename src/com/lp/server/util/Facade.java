@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -36,16 +36,11 @@ import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.StringTokenizer;
 
-import javax.jms.JMSException;
-import javax.jms.Queue;
-import javax.jms.QueueConnection;
-import javax.jms.QueueConnectionFactory;
-import javax.jms.QueueSender;
-import javax.jms.QueueSession;
-import javax.jms.TextMessage;
 import javax.naming.Context;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
@@ -70,6 +65,7 @@ import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikelReportFac;
 import com.lp.server.artikel.service.ArtikelbestelltFac;
+import com.lp.server.artikel.service.ArtikelimportFac;
 import com.lp.server.artikel.service.ArtikelkommentarFac;
 import com.lp.server.artikel.service.FehlmengeFac;
 import com.lp.server.artikel.service.InventurFac;
@@ -123,6 +119,8 @@ import com.lp.server.lieferschein.service.LieferscheinReportFac;
 import com.lp.server.lieferschein.service.LieferscheinServiceFac;
 import com.lp.server.lieferschein.service.LieferscheinpositionDto;
 import com.lp.server.lieferschein.service.LieferscheinpositionFac;
+import com.lp.server.media.ejbfac.EmailMediaLocalFac;
+import com.lp.server.media.service.EmailMediaFac;
 import com.lp.server.partner.ejbfac.WebshopCustomerServiceFacLocal;
 import com.lp.server.partner.service.AnredesprDto;
 import com.lp.server.partner.service.AnsprechpartnerDto;
@@ -133,12 +131,15 @@ import com.lp.server.partner.service.KundeFac;
 import com.lp.server.partner.service.KundeReportFac;
 import com.lp.server.partner.service.KundesachbearbeiterFac;
 import com.lp.server.partner.service.KundesokoFac;
+import com.lp.server.partner.service.LfliefergruppeDto;
 import com.lp.server.partner.service.LieferantFac;
 import com.lp.server.partner.service.LieferantServicesFac;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.partner.service.PartnerReportFac;
 import com.lp.server.partner.service.PartnerServicesFac;
+import com.lp.server.personal.service.MaschineFac;
+import com.lp.server.personal.service.PersonalApiFac;
 import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.personal.service.ZeiterfassungReportFac;
@@ -153,8 +154,10 @@ import com.lp.server.reklamation.service.ReklamationFac;
 import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.stueckliste.service.StuecklisteReportFac;
 import com.lp.server.system.ejbfac.BatcherFac;
+import com.lp.server.system.ejbfac.BatcherSingleTransactionFac;
 import com.lp.server.system.fastlanereader.service.FastLaneReader;
 import com.lp.server.system.jcr.service.JCRDocFac;
+import com.lp.server.system.jcr.service.JCRMediaFac;
 import com.lp.server.system.pkgenerator.bl.BelegnummerGeneratorObj;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.AutoBestellvorschlagFac;
@@ -169,6 +172,7 @@ import com.lp.server.system.service.AutomatiktimerFac;
 import com.lp.server.system.service.BelegpositionkonvertierungFac;
 import com.lp.server.system.service.DokumenteFac;
 import com.lp.server.system.service.DruckerFac;
+import com.lp.server.system.service.IntelligenterStklImportFac;
 import com.lp.server.system.service.LandDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
@@ -178,10 +182,12 @@ import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.PanelFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
+import com.lp.server.system.service.PflegeFac;
 import com.lp.server.system.service.ProtokollDto;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.SystemMultilanguageFac;
 import com.lp.server.system.service.SystemReportFac;
+import com.lp.server.system.service.SystemServicesFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.system.service.TheClientFac;
 import com.lp.server.system.service.TheJudgeFac;
@@ -192,6 +198,7 @@ import com.lp.service.BelegpositionDto;
 import com.lp.service.BelegpositionVerkaufDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
+import com.lp.util.LPDatenSubreport;
 
 /**
  * 
@@ -220,46 +227,8 @@ public class Facade {
 
 	public final static String NICHT_SORTIERBAR = " X";
 
-	private QueueConnectionFactory queueFactory = null;
-	private QueueConnection queueConnection = null;
-	private QueueSession queueSession = null;
-	private Queue queue = null;
-	private QueueSender queueSender = null;
-
 	public Facade() {
 		oFacadeBeauftragter = new FacadeBeauftragter();
-
-		// try {
-		// queueFactory = (QueueConnectionFactory)
-		// getInitialContext().lookup("ConnectionFactory") ;
-		// queueConnection = queueFactory.createQueueConnection() ;
-		// queueSession = queueConnection.createQueueSession(false,
-		// QueueSession.AUTO_ACKNOWLEDGE) ;
-		//
-		// try {
-		// queue = (Queue) getInitialContext().lookup("queue/testQueue") ;
-		// } catch(NamingException e) {
-		// queue = queueSession.createQueue("queue/testQueue") ;
-		// getInitialContext().bind("queue/testQueue", queue) ;
-		// }
-		//
-		// queueSender = queueSession.createSender(queue) ;
-		// queueConnection.start() ;
-		// } catch(NamingException ne) {
-		//
-		// } catch(JMSException je) {
-		//
-		// }
-	}
-
-	protected void sendToQueue(String message) {
-		if (null == queueSender)
-			return;
-		try {
-			TextMessage msg = queueSession.createTextMessage(message);
-			queueSender.send(msg);
-		} catch (JMSException e) {
-		}
 	}
 
 	public Context getInitialContext() {
@@ -309,7 +278,7 @@ public class Facade {
 
 	public String getLPStackTrace(StackTraceElement[] trace) {
 		String str = "";
-		ArrayList al = new ArrayList();
+		ArrayList<String> al = new ArrayList<String>();
 		for (int i = 0; i < trace.length; i++) {
 			StackTraceElement el = trace[i];
 			if (el.getClassName().startsWith("com.lp.")) {
@@ -482,6 +451,11 @@ public class Facade {
 	 */
 	protected final ArtikelFac getArtikelFac() throws EJBExceptionLP {
 		return oFacadeBeauftragter.getArtikelFac();
+	}
+
+	protected final ArtikelimportFac getArtikelimportFac()
+			throws EJBExceptionLP {
+		return oFacadeBeauftragter.getArtikelimportFac();
 	}
 
 	/**
@@ -692,6 +666,10 @@ public class Facade {
 		return oFacadeBeauftragter.getPanelFac();
 	}
 
+	protected final PflegeFac getPflegeFac() throws EJBExceptionLP {
+		return oFacadeBeauftragter.getPflegeFac();
+	}
+
 	protected final PartnerReportFac getPartnerReportFac()
 			throws EJBExceptionLP {
 		return oFacadeBeauftragter.getPartnerReportFac();
@@ -723,6 +701,10 @@ public class Facade {
 	 */
 	protected final StuecklisteFac getStuecklisteFac() throws EJBExceptionLP {
 		return oFacadeBeauftragter.getStuecklisteFac();
+	}
+	
+	protected final IntelligenterStklImportFac getIntelligenterStklImportFac() throws EJBExceptionLP {
+		return oFacadeBeauftragter.getIntelligenterStklImportFac();
 	}
 
 	/**
@@ -974,6 +956,11 @@ public class Facade {
 		return oFacadeBeauftragter.getSystemReportFac();
 	}
 
+	protected final SystemServicesFac getSystemServicesFac()
+			throws EJBExceptionLP {
+		return oFacadeBeauftragter.getSystemServicesFac();
+	}
+
 	/**
 	 * SessionFacade fuer VkPreisfindung holen.
 	 * 
@@ -1039,12 +1026,15 @@ public class Facade {
 		return oFacadeBeauftragter.getZeiterfassungFac();
 	}
 
+	protected final MaschineFac getMaschineFac() throws EJBExceptionLP {
+		return oFacadeBeauftragter.getMaschineFac();
+	}
+
 	protected final ZeiterfassungReportFac getZeiterfassungReportFac()
 			throws EJBExceptionLP {
 		return oFacadeBeauftragter.getZeiterfassungReportFac();
 	}
 
-	
 	/**
 	 * SessionFacade fuer Zeiterfassung holen.
 	 * 
@@ -1305,9 +1295,9 @@ public class Facade {
 		return getBenutzerServicesFac().getTextRespectUISpr(sTokenI,
 				mandantCNr, loI);
 	}
-	
+
 	public String getTextRespectUISpr(String sTokenI, String mandantCNr,
-			Locale loI, Object ... replacements) throws EJBExceptionLP {
+			Locale loI, Object... replacements) throws EJBExceptionLP {
 		String msg = getBenutzerServicesFac().getTextRespectUISpr(sTokenI,
 				mandantCNr, loI);
 		return MessageFormat.format(msg, replacements);
@@ -1320,9 +1310,11 @@ public class Facade {
 				theClientDto);
 
 		if (pDto.getAnredeCNr() != null
-				&& (pDto.getAnredeCNr().equals(PartnerFac.PARTNER_ANREDE_HERR) || pDto
-						.getAnredeCNr().equals(PartnerFac.PARTNER_ANREDE_FRAU)|| pDto
-						.getAnredeCNr().equals(PartnerFac.PARTNER_ANREDE_FAMILIE))) {
+				&& (pDto.getAnredeCNr().equals(PartnerFac.PARTNER_ANREDE_HERR)
+						|| pDto.getAnredeCNr().equals(
+								PartnerFac.PARTNER_ANREDE_FRAU) || pDto
+						.getAnredeCNr().equals(
+								PartnerFac.PARTNER_ANREDE_FAMILIE))) {
 			try {
 				return getPartnerFac().formatBriefAnrede(pDto, locDruck,
 						theClientDto);
@@ -1574,19 +1566,26 @@ public class Facade {
 	public String formatAdresseFuerAusdruck(PartnerDto partnerDto,
 			AnsprechpartnerDto anspDto, MandantDto mandantDto, Locale locale) {
 		return formatAdresseFuerAusdruck(partnerDto, anspDto, mandantDto,
-				locale, false, null);
+				locale, false, null,false);
 	}
 
+	public String formatAdresseFuerAusdruck(PartnerDto partnerDto,
+			AnsprechpartnerDto anspDto, MandantDto mandantDto, Locale locale,
+			String belegartCNr,boolean postfachIgnorieren) {
+		return formatAdresseFuerAusdruck(partnerDto, anspDto, mandantDto,
+				locale, false, belegartCNr,postfachIgnorieren);
+	}
+	
 	public String formatAdresseFuerAusdruck(PartnerDto partnerDto,
 			AnsprechpartnerDto anspDto, MandantDto mandantDto, Locale locale,
 			String belegartCNr) {
 		return formatAdresseFuerAusdruck(partnerDto, anspDto, mandantDto,
-				locale, false, belegartCNr);
+				locale, false, belegartCNr,false);
 	}
 
 	public String formatAdresseFuerAusdruck(PartnerDto partnerDto,
 			AnsprechpartnerDto anspDto, MandantDto mandantDto, Locale locale,
-			boolean bLandImmerAnhaengen, String belegartCNr) {
+			boolean bLandImmerAnhaengen, String belegartCNr, boolean postfachIgnorieren) {
 		StringBuffer sbAdressblock = new StringBuffer("");
 		try {
 			String[] sZeilen = new String[7];
@@ -1646,11 +1645,18 @@ public class Facade {
 							+ getBlankSuffixed(partnerDto
 									.getCName1nachnamefirmazeile1()) + ntitel;
 					sZeilen[1] = partnerDto.getCName2vornamefirmazeile2();
-					sZeilen[2] = partnerDto.getCName3vorname2abteilung();
+
+					if (anspDto != null && anspDto.getCAbteilung() != null) {
+						sZeilen[2] = anspDto.getCAbteilung();
+					} else {
+						sZeilen[2] = partnerDto.getCName3vorname2abteilung();
+					}
+
 				}
 
 				String postfach = getTrimmed(partnerDto.getCPostfach());
-				if (postfach.length() > 0) {
+				//PJ18752
+				if (postfach.length() > 0 && postfachIgnorieren == false) {
 					sZeilen[4] = getBlankSuffixed(getTextRespectUISpr(
 							"lp.postfach", mandantDto.getCNr(), locale))
 							+ partnerDto.getCPostfach();
@@ -1970,6 +1976,64 @@ public class Facade {
 			}
 		}
 
+	}
+
+	// PJ18659
+	protected LPDatenSubreport getSubreportLiefergruppenTexte(
+			BelegpositionDto[] belegpositionDtos, TheClientDto theClientDto) {
+
+		String[] fieldnames = new String[] { "F_LIEFERGRUPPE", "F_TEXT" };
+		HashSet hsBereitsGefunden = new HashSet();
+
+		ArrayList alDaten = new ArrayList();
+
+		for (int i = 0; i < belegpositionDtos.length; i++) {
+
+			if (belegpositionDtos[i].getArtikelIId() != null) {
+				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
+						belegpositionDtos[i].getArtikelIId(), theClientDto);
+				if (aDto.getLfliefergruppeIId() != null) {
+
+					if (!hsBereitsGefunden
+							.contains(aDto.getLfliefergruppeIId())) {
+
+						LfliefergruppeDto lflieferguppeDto = getLieferantServicesFac()
+								.lfliefergruppeFindByPrimaryKey(
+										aDto.getLfliefergruppeIId(),
+										theClientDto);
+						if (lflieferguppeDto.getLfliefergruppesprDto() != null
+								&& lflieferguppeDto.getLfliefergruppesprDto()
+										.getXText() != null && lflieferguppeDto.getLfliefergruppesprDto()
+												.getXText().length()>0) {
+
+							Object[] oZeile = new Object[2];
+
+							if (lflieferguppeDto.getLfliefergruppesprDto()
+									.getCBez() != null) {
+								oZeile[0] = lflieferguppeDto
+										.getLfliefergruppesprDto().getCBez();
+							} else {
+								oZeile[0] = lflieferguppeDto.getCNr();
+
+							}
+
+							oZeile[1] = lflieferguppeDto
+									.getLfliefergruppesprDto().getXText();
+							alDaten.add(oZeile);
+							hsBereitsGefunden.add(aDto.getLfliefergruppeIId());
+						}
+
+					}
+
+				}
+			}
+
+		}
+
+		Object[][] dataSub = new Object[alDaten.size()][fieldnames.length];
+		dataSub = (Object[][]) alDaten.toArray(dataSub);
+
+		return new LPDatenSubreport(dataSub, fieldnames);
 	}
 
 	protected BelegpositionVerkaufDto befuellePreisfelderAnhandVKPreisfindung(
@@ -2428,5 +2492,27 @@ public class Facade {
 	protected final WebshopCustomerServiceFacLocal getWebshopCustomerServiceFac()
 			throws EJBExceptionLP {
 		return oFacadeBeauftragter.getWebshopCustomerServiceFac();
+	}
+
+	protected final JCRMediaFac getJCRMediaFac() throws EJBExceptionLP {
+		return oFacadeBeauftragter.getJCRMediaFac();
+	}
+
+	protected final EmailMediaFac getEmailMediaFac() throws EJBExceptionLP {
+		return oFacadeBeauftragter.getEmailMediaFac();
+	}
+
+	protected final EmailMediaLocalFac getEMailMediaLocalFac()
+			throws EJBExceptionLP {
+		return oFacadeBeauftragter.getEmailMediaLocalFac();
+	}
+
+	protected final BatcherSingleTransactionFac getBatcherSingleTransactionFac()
+			throws EJBExceptionLP {
+		return oFacadeBeauftragter.getBatcherSingleTransactionFac();
+	}
+	
+	protected final PersonalApiFac getPersonalApiFac() throws EJBExceptionLP {
+		return oFacadeBeauftragter.getPersonalApiFac() ;
 	}
 }

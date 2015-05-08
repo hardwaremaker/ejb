@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -64,8 +64,8 @@ import com.lp.util.EJBExceptionLP;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Montageart implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Montageart implementiert.
+ * Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur GmbH (c) 2004
@@ -163,6 +163,14 @@ public class StuecklistearbeitsplanHandler extends UseCaseHandler {
 				} else if (sEinheit.equals(SystemFac.EINHEIT_SEKUNDE.trim())) {
 					dStueckzeit = lStueckzeit / 100;
 					dRuestzeit = lRuestzeit / 100;
+				}
+
+				if (stuecklistearbeitsplan.getFlrstueckliste()
+						.getI_erfassungsfaktor() != 0) {
+					dStueckzeit = dStueckzeit
+							/ ((double) stuecklistearbeitsplan
+									.getFlrstueckliste()
+									.getI_erfassungsfaktor());
 				}
 
 				rows[row][col++] = new BigDecimal(dRuestzeit);
@@ -360,7 +368,7 @@ public class StuecklistearbeitsplanHandler extends UseCaseHandler {
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-				boolean idFound = false;
+//				boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {

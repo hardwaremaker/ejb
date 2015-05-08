@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.rechnung.service;
 
 import java.io.Serializable;
 
+import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.service.BelegpositionVerkaufDto;
 
 public class RechnungPositionDto extends BelegpositionVerkaufDto implements
@@ -259,6 +260,8 @@ public class RechnungPositionDto extends BelegpositionVerkaufDto implements
 		return true;
 	}
 
+	// TODO: Diese hashCode Methode ist massiv defekt. Verlagerung in BelegVerkauf..
+	// Derzeit wird auf null Werte zugegriffen!
 	public int hashCode() {
 		int result = 17;
 		result = 37 * result + this.getIId().hashCode();
@@ -333,4 +336,37 @@ public class RechnungPositionDto extends BelegpositionVerkaufDto implements
 		returnString += ", " + getFZusatzrabattsatz();
 		return returnString;
 	}
+	/**
+	 * Handelt es sich um eine Ident-Position?
+	 * @return true wenn es eine Artikelposition ist
+	 */
+	public boolean isIdent() {
+		return RechnungFac.POSITIONSART_RECHNUNG_IDENT.equalsIgnoreCase(getPositionsartCNr()) ;
+	}
+	
+	/**
+	 * Handelt es sich um eine Handeingabe?
+	 * @return true wenn es sich um eine Handeingabe handelt
+	 */
+	public boolean isHandeingabe() {
+		return RechnungFac.POSITIONSART_RECHNUNG_HANDEINGABE.equalsIgnoreCase(getPositionsartCNr()) ;
+	}
+	
+	/**
+	 * Handelt es sich um eine Position?
+	 * @return true wenn es eine "POSITION" ist
+	 */
+	public boolean isPosition() {
+		return RechnungFac.POSITIONSART_RECHNUNG_POSITION.equalsIgnoreCase(getPositionsartCNr()) ;		
+	}
+	
+//	/**
+//	 * Handelt es sich um eine Intelligente Zwischensumme?
+//	 * @return true wenn es eine intelligente Zwischensumme ist
+//	 */
+//	public boolean isIntelligenteZwischensumme() {
+//		return RechnungFac.POSITIONSART_RECHNUNG_INTELLIGENTE_ZWISCHENSUMME
+//				.equalsIgnoreCase(getPositionsartCNr()) ;	
+//	}
+	
 }

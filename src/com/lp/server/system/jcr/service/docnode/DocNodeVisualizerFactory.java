@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,26 +32,31 @@
  ******************************************************************************/
 package com.lp.server.system.jcr.service.docnode;
 
-import java.util.HashMap;
 
 public class DocNodeVisualizerFactory {
-	private static HashMap<String, DocNodeVisualizer> hashMap = new HashMap<String, DocNodeVisualizer>() {
-		private static final long serialVersionUID = 1L;
-
-		{
-			hashMap.put(DocNodeBase.BELEGART_AUFTRAG,
-					new DocNodeStandardVisualizer());
-			hashMap.put(DocNodeBase.BELEGART_RECHNUNG,
-					new DocNodeRechnungVisualizer());
-		}
-	};
+//	private static HashMap<String, DocNodeVisualizer> hashMap = new HashMap<String, DocNodeVisualizer>() {
+//		private static final long serialVersionUID = 1L;
+//
+//		{
+//			hashMap.put(DocNodeBase.BELEGART_AUFTRAG,
+//					new DocNodeStandardVisualizer());
+//			hashMap.put(DocNodeBase.BELEGART_RECHNUNG,
+//					new DocNodeRechnungVisualizer());
+//		}
+//	};
 	
 	private DocNodeVisualizerFactory() {
 	}
 
 	public static DocNodeVisualizer getVisualizer(DocNodeBase node) {
-		DocNodeVisualizer dnv = hashMap.get(node.getNodeType());
-		return (dnv == null ? new DocNodeStandardVisualizer() : dnv)
-				.setDocNode(node);
+		return new DocNodeStandardVisualizer(node) ;
+// FIXME: Die HashMap<String, xxx> hat als Key einen String. Damit
+//        wird ein get(int) nie etwas finden. S&auml;tliche
+//		  &Uuml;berschreibungen in der hashmap gehen auf den 
+//		  StandardVisualizer -> kann also weg.
+		
+//		DocNodeVisualizer dnv = hashMap.get(node.getNodeType());
+//		return (dnv == null ? new DocNodeStandardVisualizer() : dnv)
+//				.setDocNode(node);
 	}
 }

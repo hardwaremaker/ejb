@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,6 +35,25 @@ package com.lp.server.personal.service;
 public class ZeitdatenDtoBelegzeiten {
 	private static final long serialVersionUID = 1L;
 
+	private Integer arbeitsgang=null;
+	private Integer unterarbeitsgang=null;
+	
+	public Integer getArbeitsgang() {
+		return arbeitsgang;
+	}
+
+	public void setArbeitsgang(Integer arbeitsgang) {
+		this.arbeitsgang = arbeitsgang;
+	}
+
+	public Integer getUnterarbeitsgang() {
+		return unterarbeitsgang;
+	}
+
+	public void setUnterarbeitsgang(Integer unterarbeitsgang) {
+		this.unterarbeitsgang = unterarbeitsgang;
+	}
+
 	public String getPerson() {
 		return person;
 	}
@@ -51,6 +70,16 @@ public class ZeitdatenDtoBelegzeiten {
 		this.artikel = artikel;
 	}
 
+	private String sPersonalKurzzeichen;
+	
+	public String getSPersonalKurzzeichen() {
+		return sPersonalKurzzeichen;
+	}
+
+	public void setSPersonalKurzzeichen(String sPersonalKurzzeichen) {
+		this.sPersonalKurzzeichen = sPersonalKurzzeichen;
+	}
+	
 	public String getPersonalnummer() {
 		return personalnummer;
 	}

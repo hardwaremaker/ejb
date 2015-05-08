@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,17 +19,17 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.auftrag.fastlanereader.generated;
 
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
@@ -116,6 +116,9 @@ public class FLRAuftragOD implements Serializable {
     private Date t_verrechenbar;
 
     /** nullable persistent field */
+    private String waehrung_c_nr_auftragswaehrung;
+
+    /** nullable persistent field */
     private FLRPersonal flrpersonalverrechenbar;
 
     /** nullable persistent field */
@@ -134,7 +137,7 @@ public class FLRAuftragOD implements Serializable {
     private Set flrauftragpositionen;
 
     /** full constructor */
-    public FLRAuftragOD(String mandant_c_nr, String c_nr, String c_bez, String c_bestellnummer, String auftragart_c_nr, String auftragstatus_c_nr, Integer kunde_i_id_auftragsadresse, Integer kunde_i_id_lieferadresse, Integer kostenstelle_i_id, Integer vertreter_i_id, Date t_erledigt, Date t_liefertermin, Date t_finaltermin, Date t_belegdatum, Short b_poenale, Short b_rohs, BigDecimal n_gesamtauftragswertinauftragswaehrung, Double f_wechselkursmandantwaehrungzuauftragswaehrung, String x_internerkommentar, String x_externerkommentar, Short b_lieferterminunverbindlich, Date t_verrechenbar, FLRPersonal flrpersonalverrechenbar, FLRKunde flrkunde, FLRPersonal flrvertreter, FLRKostenstelle flrkostenstelle, FLRSpediteur flrspediteur, Set flrauftragpositionen) {
+    public FLRAuftragOD(String mandant_c_nr, String c_nr, String c_bez, String c_bestellnummer, String auftragart_c_nr, String auftragstatus_c_nr, Integer kunde_i_id_auftragsadresse, Integer kunde_i_id_lieferadresse, Integer kostenstelle_i_id, Integer vertreter_i_id, Date t_erledigt, Date t_liefertermin, Date t_finaltermin, Date t_belegdatum, Short b_poenale, Short b_rohs, BigDecimal n_gesamtauftragswertinauftragswaehrung, Double f_wechselkursmandantwaehrungzuauftragswaehrung, String x_internerkommentar, String x_externerkommentar, Short b_lieferterminunverbindlich, Date t_verrechenbar, String waehrung_c_nr_auftragswaehrung, FLRPersonal flrpersonalverrechenbar, FLRKunde flrkunde, FLRPersonal flrvertreter, FLRKostenstelle flrkostenstelle, FLRSpediteur flrspediteur, Set flrauftragpositionen) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
         this.c_bez = c_bez;
@@ -157,6 +160,7 @@ public class FLRAuftragOD implements Serializable {
         this.x_externerkommentar = x_externerkommentar;
         this.b_lieferterminunverbindlich = b_lieferterminunverbindlich;
         this.t_verrechenbar = t_verrechenbar;
+        this.waehrung_c_nr_auftragswaehrung = waehrung_c_nr_auftragswaehrung;
         this.flrpersonalverrechenbar = flrpersonalverrechenbar;
         this.flrkunde = flrkunde;
         this.flrvertreter = flrvertreter;
@@ -356,6 +360,14 @@ public class FLRAuftragOD implements Serializable {
 
     public void setT_verrechenbar(Date t_verrechenbar) {
         this.t_verrechenbar = t_verrechenbar;
+    }
+
+    public String getWaehrung_c_nr_auftragswaehrung() {
+        return this.waehrung_c_nr_auftragswaehrung;
+    }
+
+    public void setWaehrung_c_nr_auftragswaehrung(String waehrung_c_nr_auftragswaehrung) {
+        this.waehrung_c_nr_auftragswaehrung = waehrung_c_nr_auftragswaehrung;
     }
 
     public FLRPersonal getFlrpersonalverrechenbar() {

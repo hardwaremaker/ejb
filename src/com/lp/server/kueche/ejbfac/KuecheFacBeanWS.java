@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -396,6 +396,8 @@ public class KuecheFacBeanWS extends KuecheFacBean {
 				}
 			}
 		}
+		//PJ 18572 Vorwoche entfaellt
+		/*
 		if (!bLieferschein) {
 			// Daten um Verbrauch Vorwoche ergaenzen
 			Date[] aDate = getLastWeek();
@@ -417,6 +419,7 @@ public class KuecheFacBeanWS extends KuecheFacBean {
 				o[7] = nVerbrauch;
 			}
 		}
+		*/
 		resultList = sort(resultList, 2);
 		return resultList.toCSV();
 	}

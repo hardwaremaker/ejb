@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,17 +19,17 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.system.fastlanereader.generated;
 
 import java.io.Serializable;
@@ -72,8 +72,11 @@ public class FLRPanelbeschreibung implements Serializable {
     /** nullable persistent field */
     private Integer artgru_i_id;
 
+    /** nullable persistent field */
+    private String c_default;
+
     /** full constructor */
-    public FLRPanelbeschreibung(String mandant_c_nr, String c_name, String c_typ, String c_fill, String c_anchor, String panel_c_nr, Integer i_gridx, Integer i_gridy, Short b_mandantory, Integer artgru_i_id) {
+    public FLRPanelbeschreibung(String mandant_c_nr, String c_name, String c_typ, String c_fill, String c_anchor, String panel_c_nr, Integer i_gridx, Integer i_gridy, Short b_mandantory, Integer artgru_i_id, String c_default) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_name = c_name;
         this.c_typ = c_typ;
@@ -84,6 +87,7 @@ public class FLRPanelbeschreibung implements Serializable {
         this.i_gridy = i_gridy;
         this.b_mandantory = b_mandantory;
         this.artgru_i_id = artgru_i_id;
+        this.c_default = c_default;
     }
 
     /** default constructor */
@@ -176,6 +180,14 @@ public class FLRPanelbeschreibung implements Serializable {
 
     public void setArtgru_i_id(Integer artgru_i_id) {
         this.artgru_i_id = artgru_i_id;
+    }
+
+    public String getC_default() {
+        return this.c_default;
+    }
+
+    public void setC_default(String c_default) {
+        this.c_default = c_default;
     }
 
     public String toString() {

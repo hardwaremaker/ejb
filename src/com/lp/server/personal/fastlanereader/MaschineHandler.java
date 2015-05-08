@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -56,7 +56,6 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
-import com.lp.util.Helper;
 
 /**
  * <p>
@@ -97,8 +96,8 @@ public class MaschineHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			int colCount = this.getTableInfo().getColumnClasses().length;
-			int pageSize = MaschineHandler.PAGE_SIZE;
-			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
+			int pageSize = getLimit() ;
+			int startIndex = getStartIndex(rowIndex, pageSize) ;
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
@@ -113,7 +112,7 @@ public class MaschineHandler extends UseCaseHandler {
 			List<?> resultList = query.list();
 			Iterator<?> resultListIterator = resultList.iterator();
 
-			Object[][] rows = new Object[resultList.size()][colCount];
+			Object[][] rows = new Object[resultList.size()][colCount + 2];
 			int row = 0;
 			int col = 0;
 
@@ -124,8 +123,7 @@ public class MaschineHandler extends UseCaseHandler {
 				rows[row][col++] = flrmaschine.getI_id();
 				rows[row][col++] = flrmaschine.getC_inventarnummer();
 				rows[row][col++] = flrmaschine.getC_bez();
-				rows[row][col++] = flrmaschine.getC_identifikationsnr();
-				rows[row][col++] = flrmaschine.getF_verfuegbarkeitinprozent();
+				rows[row][col++] = flrmaschine.getC_identifikationsnr();				
 
 				String starter = "";
 				Timestamp tUm = null;
@@ -157,6 +155,9 @@ public class MaschineHandler extends UseCaseHandler {
 
 				s2.close();
 
+				rows[row][col++] = flrmaschine.getMaschinengruppe_i_id() ;
+				rows[row][col++] = flrmaschine.getFlrmaschinengruppe().getC_bez() ;
+				
 				row++;
 				col = 0;
 			}
@@ -167,11 +168,7 @@ public class MaschineHandler extends UseCaseHandler {
 		catch (HibernateException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-			}
+			closeSession(session);
 		}
 		return result;
 	}
@@ -373,7 +370,7 @@ public class MaschineHandler extends UseCaseHandler {
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
-							String.class, Double.class, String.class,
+							String.class, String.class,
 							Timestamp.class },
 					new String[] {
 							"Id",
@@ -383,8 +380,7 @@ public class MaschineHandler extends UseCaseHandler {
 							getTextRespectUISpr(
 									"pers.zeiterfassung.identifikationsnr",
 									mandantCNr, locUI),
-							getTextRespectUISpr("lp.verfuegbarkeit",
-									mandantCNr, locUI),
+						
 							getTextRespectUISpr("lp.zuletztgestartetvon",
 									mandantCNr, locUI),
 							getTextRespectUISpr("lp.um", mandantCNr, locUI) }
@@ -395,7 +391,7 @@ public class MaschineHandler extends UseCaseHandler {
 							15,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							15,
-							QueryParameters.FLR_BREITE_M,
+							
 							QueryParameters.FLR_BREITE_L,
 							QueryParameters.FLR_BREITE_L }
 
@@ -405,7 +401,7 @@ public class MaschineHandler extends UseCaseHandler {
 							ZeiterfassungFac.FLR_MASCHINE_C_INVENTARNUMMER,
 							"c_bez",
 							ZeiterfassungFac.FLR_MASCHINE_C_IDENTIFIKATIONSNR,
-							ZeiterfassungFac.FLR_MASCHINE_F_VERFUEGBARKEITINPROZENT,
+						
 							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR }));
 
 		}

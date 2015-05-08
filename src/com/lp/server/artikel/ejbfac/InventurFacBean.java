@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -44,6 +44,7 @@ import org.jboss.annotation.ejb.TransactionTimeout;
 import com.lp.server.artikel.ejb.*;
 import com.lp.server.artikel.fastlanereader.generated.*;
 import com.lp.server.artikel.service.*;
+import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.system.pkgenerator.*;
 import com.lp.server.system.pkgenerator.bl.*;
 import com.lp.server.system.service.*;
@@ -93,7 +94,10 @@ public class InventurFacBean extends LPReport implements InventurFac,
 	private static int REPORT_INVENTURLISTE_LAGER = 5;
 	private static int REPORT_INVENTURLISTE_INVENTURWERT = 6;
 	private static int REPORT_INVENTURLISTE_LIEF1PREIS_ZUM_INVENTURDATUM = 7;
-	private static int REPORT_INVENTURLISTE_LIEF1PREIS_AKTUELL = 8;
+	private static int REPORT_INVENTURLISTE_PERSON = 8;
+	private static int REPORT_INVENTURLISTE_LIEF1PREIS_AKTUELL = 9;
+	private static int REPORT_INVENTURLISTE_T_AENDERN = 10;
+	private static int REPORT_INVENTURLISTE_ANZAHL_SPALTEN = 11;
 
 	private static int REPORT_INVENTURSTAND_ARTIKELNUMMER = 0;
 	private static int REPORT_INVENTURSTAND_ARTIKELBEZEICHNUNG = 1;
@@ -110,6 +114,11 @@ public class InventurFacBean extends LPReport implements InventurFac,
 	private static int REPORT_INVENTURSTAND_ARTIKELGRUPPE = 12;
 	private static int REPORT_INVENTURSTAND_ARTIKELKLASSE = 13;
 	private static int REPORT_INVENTURSTAND_STUECKLISTE = 14;
+	private static int REPORT_INVENTURSTAND_BASISPREIS = 15;
+	private static int REPORT_INVENTURSTAND_ABWERTUNG = 16;
+	private static int REPORT_INVENTURSTAND_KOMMENTAR = 17;
+	private static int REPORT_INVENTURSTAND_LAGERPLATZ = 18;
+	private static int REPORT_INVENTURSTAND_ANZAHL_SPALTEN = 19;
 
 	private static int REPORT_INVENTURPROTOKOLL_ARTIKELNUMMER = 0;
 	private static int REPORT_INVENTURPROTOKOLL_ARTIKELBEZEICHNUNG = 1;
@@ -119,12 +128,15 @@ public class InventurFacBean extends LPReport implements InventurFac,
 	private static int REPORT_INVENTURPROTOKOLL_INVENTURMENGE = 5;
 	private static int REPORT_INVENTURPROTOKOLL_ARTIKELART = 6;
 	private static int REPORT_INVENTURPROTOKOLL_LAGERSTAND = 7;
+	private static int REPORT_INVENTURPROTOKOLL_LAGERPLATZ = 8;
+	private static int REPORT_INVENTURPROTOKOLL_ANZAHL_SPALTEN = 9;
 
 	private static int REPORT_NICHTERFASSTEARTIKEL_ARTIKELNUMMER = 0;
 	private static int REPORT_NICHTERFASSTEARTIKEL_ARTIKELBEZEICHNUNG = 1;
 	private static int REPORT_NICHTERFASSTEARTIKEL_SERIENNUMMERCHARGENNUMMER = 2;
 	private static int REPORT_NICHTERFASSTEARTIKEL_LAGER = 3;
 	private static int REPORT_NICHTERFASSTEARTIKEL_LAGERSTAND = 4;
+	private static int REPORT_NICHTERFASSTEARTIKEL_LAGERPLATZ = 5;
 
 	public Integer createInventur(InventurDto inventurDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
@@ -181,6 +193,11 @@ public class InventurFacBean extends LPReport implements InventurFac,
 			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_INVENTUR);
 			inventurDto.setIId(pk);
 
+			if (inventurDto.getBNichtinventierteartikelabbuchen() == null) {
+				inventurDto.setBNichtinventierteartikelabbuchen(Helper
+						.boolean2Short(false));
+			}
+
 			inventurDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
 			inventurDto.setTAendern(new Timestamp(System.currentTimeMillis()));
 			Inventur inventur = new Inventur(inventurDto.getIId(),
@@ -188,7 +205,8 @@ public class InventurFacBean extends LPReport implements InventurFac,
 					inventurDto.getBInventurdurchgefuehrt(),
 					inventurDto.getBAbwertungdurchgefuehrt(),
 					inventurDto.getCBez(), inventurDto.getPersonalIIdAendern(),
-					inventurDto.getMandantCNr());
+					inventurDto.getMandantCNr(),
+					inventurDto.getBNichtinventierteartikelabbuchen());
 			em.persist(inventur);
 			em.flush();
 			setInventurFromInventurDto(inventur, inventurDto);
@@ -455,6 +473,8 @@ public class InventurFacBean extends LPReport implements InventurFac,
 				.getTInventurdurchgefuehrt());
 		inventur.setMandantCNr(inventurDto.getMandantCNr());
 		inventur.setLagerIId(inventurDto.getLagerIId());
+		inventur.setBNichtinventierteartikelabbuchen(inventurDto
+				.getBNichtinventierteartikelabbuchen());
 		em.merge(inventur);
 		em.flush();
 	}
@@ -830,7 +850,7 @@ public class InventurFacBean extends LPReport implements InventurFac,
 						inventurlisteDto.getLagerIId(),
 						inventurlisteDto.getCSeriennrchargennr(),
 						new java.sql.Timestamp(System.currentTimeMillis()),
-						theClientDto, null, true);
+						theClientDto, null, null, true);
 				createInventurprotokoll(inventurprotokollDto, theClientDto);
 
 			}
@@ -1113,7 +1133,7 @@ public class InventurFacBean extends LPReport implements InventurFac,
 						inventurlisteDto.getLagerIId(),
 						inventurlisteDto.getCSeriennrchargennr(),
 						new java.sql.Timestamp(System.currentTimeMillis()),
-						theClientDto, null, true);
+						theClientDto, null, null, true);
 				createInventurprotokoll(inventurprotokollDto, theClientDto);
 
 			}
@@ -1127,7 +1147,9 @@ public class InventurFacBean extends LPReport implements InventurFac,
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printInventurprotokoll(Integer inventurIId,
-			Integer lagerIId, TheClientDto theClientDto) {
+			Integer lagerIId, boolean bSortiertNachLagerplatz,
+			String lagerplatzVon, String lagerplatzBis,
+			TheClientDto theClientDto) {
 		index = -1;
 		sAktuellerReport = InventurFac.REPORT_INVENTURPROTOKOLL;
 
@@ -1151,6 +1173,31 @@ public class InventurFacBean extends LPReport implements InventurFac,
 				+ "' AND inventurprotokoll.flrinventurliste.flrinventur.i_id="
 				+ inventurIId;
 
+		if (lagerplatzVon != null || lagerplatzBis != null) {
+			// Artikel vorfiltern
+
+			sQuery += " AND inventurprotokoll.flrinventurliste.flrartikel.i_id IN(  SELECT lagerplaetze.artikel_i_id FROM FLRArtikellagerplaetze lagerplaetze WHERE ";
+
+			if (lagerplatzVon != null) {
+				sQuery += " lagerplaetze.flrlagerplatz.c_lagerplatz >='"
+						+ lagerplatzVon + "' ";
+			}
+			if (lagerplatzBis != null) {
+
+				if (lagerplatzVon != null) {
+					sQuery += " AND ";
+				}
+
+				String lagerplatzBis_Gefuellt = Helper.fitString2Length(
+						lagerplatzBis, 25, '_');
+				sQuery += " lagerplaetze.flrlagerplatz.c_lagerplatz <='"
+						+ lagerplatzBis_Gefuellt + "' ";
+
+			}
+
+			sQuery += " ) ";
+		}
+
 		if (lagerIId != null) {
 			sQuery = sQuery
 					+ " AND inventurprotokoll.flrinventurliste.flrlager.i_id="
@@ -1164,7 +1211,7 @@ public class InventurFacBean extends LPReport implements InventurFac,
 		Iterator<?> resultListIterator = resultList.iterator();
 		int row = 0;
 
-		data = new Object[resultList.size()][8];
+		data = new Object[resultList.size()][REPORT_INVENTURPROTOKOLL_ANZAHL_SPALTEN];
 		while (resultListIterator.hasNext()) {
 			Object[] o = (Object[]) resultListIterator.next();
 			FLRInventurprotokoll flrinventurprotokoll = (FLRInventurprotokoll) o[0];
@@ -1184,10 +1231,47 @@ public class InventurFacBean extends LPReport implements InventurFac,
 			data[row][REPORT_INVENTURPROTOKOLL_ARTIKELART] = flrinventurprotokoll
 					.getFlrinventurliste().getFlrartikel().getArtikelart_c_nr();
 
+			try {
+				data[row][REPORT_INVENTURPROTOKOLL_LAGERPLATZ] = getLagerFac()
+						.getLagerplaezteEinesArtikels(
+								flrinventurprotokoll.getFlrinventurliste()
+										.getFlrartikel().getI_id(), lagerIId);
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+
 			row++;
 		}
 
 		session.close();
+
+		if (bSortiertNachLagerplatz == true) {
+			// Nach Lagerplatz sortieren
+
+			for (int i = data.length - 1; i > 0; --i) {
+				for (int j = 0; j < i; ++j) {
+					Object[] o = data[j];
+					Object[] o1 = data[j + 1];
+
+					String wert = (String) o[REPORT_INVENTURPROTOKOLL_LAGERPLATZ];
+
+					if (wert == null) {
+						wert = "";
+					}
+
+					String wert1 = (String) o1[REPORT_INVENTURPROTOKOLL_LAGERPLATZ];
+					if (wert1 == null) {
+						wert1 = "";
+					}
+
+					if (wert.compareTo(wert1) > 0) {
+						data[j] = o1;
+						data[j + 1] = o;
+					}
+				}
+			}
+		}
+
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
 		index = -1;
 		sAktuellerReport = InventurFac.REPORT_INVENTURPROTOKOLL;
@@ -1217,6 +1301,9 @@ public class InventurFacBean extends LPReport implements InventurFac,
 
 		parameter.put("P_INVENTUR", inventurDto.getCBez());
 		parameter.put("P_INVENTURDATUM", inventurDto.getTInventurdatum());
+		parameter.put("P_SORTIERT_NACH_LAGERPLATZ", bSortiertNachLagerplatz);
+		parameter.put("P_LAGERPLATZ_VON", lagerplatzVon);
+		parameter.put("P_LAGERPLATZ_BIS", lagerplatzBis);
 		initJRDS(parameter, InventurFac.REPORT_MODUL,
 				InventurFac.REPORT_INVENTURPROTOKOLL,
 				theClientDto.getMandant(), theClientDto.getLocUi(),
@@ -1244,6 +1331,9 @@ public class InventurFacBean extends LPReport implements InventurFac,
 		sAktuellerReport = InventurFac.REPORT_INVENTURSTAND;
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
 
+		InventurDto inventurDto = inventurFindByPrimaryKey(inventurIId,
+				theClientDto);
+
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = factory.openSession();
 
@@ -1254,6 +1344,22 @@ public class InventurFacBean extends LPReport implements InventurFac,
 
 		String subQueryLager = "(SELECT SUM(al.n_lagerstand) FROM FLRArtikellager al WHERE compId.artikel_i_id=inventurstand.flrartikel.i_id ";
 
+		String subQueryLagerplatz = " (SELECT alp.flrlagerplatz.c_lagerplatz FROM FLRArtikellagerplaetze alp WHERE alp.artikel_i_id=inventurstand.flrartikel.i_id ";
+
+		if (lagerIId != null) {
+			subQueryLagerplatz += " AND alp.flrlagerplatz.flrlager.i_id = "
+					+ lagerIId;
+		}
+
+		subQueryLagerplatz += " AND alp.i_sort= (SELECT min(alpsub.i_sort) FROM FLRArtikellagerplaetze alpsub WHERE alpsub.artikel_i_id=inventurstand.flrartikel.i_id ";
+
+		if (lagerIId != null) {
+			subQueryLagerplatz += " AND alpsub.flrlagerplatz.flrlager.i_id = "
+					+ lagerIId;
+		}
+
+		subQueryLagerplatz += "   ) )  ";
+
 		if (lagerIId != null) {
 			subQueryLager += " AND compId.lager_i_id=" + lagerIId;
 		}
@@ -1262,7 +1368,9 @@ public class InventurFacBean extends LPReport implements InventurFac,
 
 		String sQuery = "SELECT inventurstand, aspr.c_bez , "
 				+ subQueryLager
-				+ ",aspr.c_kbez,aspr.c_zbez,aspr.c_zbez2,(SELECT stkl FROM FLRStueckliste stkl WHERE stkl.artikel_i_id=inventurstand.flrartikel.i_id)  from FLRInventurstand as inventurstand LEFT OUTER JOIN inventurstand.flrartikel.artikelsprset AS aspr LEFT OUTER JOIN inventurstand.flrartikel.flrartikelgruppe as ag LEFT OUTER JOIN inventurstand.flrartikel.flrartikelklasse as ak WHERE inventurstand.flrlager.mandant_c_nr='"
+				+ ",aspr.c_kbez,aspr.c_zbez,aspr.c_zbez2,(SELECT stkl FROM FLRStueckliste stkl WHERE stkl.artikel_i_id=inventurstand.flrartikel.i_id), "
+				+ subQueryLagerplatz
+				+ " from FLRInventurstand as inventurstand LEFT OUTER JOIN inventurstand.flrartikel.artikelsprset AS aspr LEFT OUTER JOIN inventurstand.flrartikel.flrartikelgruppe as ag LEFT OUTER JOIN inventurstand.flrartikel.flrartikelklasse as ak WHERE inventurstand.flrlager.mandant_c_nr='"
 				+ theClientDto.getMandant()
 				+ "' AND inventurstand.flrinventur.i_id=" + inventurIId;
 
@@ -1295,6 +1403,12 @@ public class InventurFacBean extends LPReport implements InventurFac,
 									theClientDto.getMandant(),
 									theClientDto.getLocUi()));
 
+		} else if (iSortierung == InventurFac.REPORT_INVENTURSTAND_SORTIERUNG_LAGERPLATZ) {
+			parameter
+			.put("P_SORTIERUNG",
+					getTextRespectUISpr("lp.lagerplatz",
+							theClientDto.getMandant(),
+							theClientDto.getLocUi()));
 		}
 
 		org.hibernate.Query inventurliste = session.createQuery(sQuery);
@@ -1302,16 +1416,20 @@ public class InventurFacBean extends LPReport implements InventurFac,
 		List<?> resultList = inventurliste.list();
 
 		Iterator<?> resultListIterator = resultList.iterator();
-		int row = 0;
+	
 
 		String letzterArtikel = null;
-		Object[][] dataHelp = new Object[resultList.size()][15];
+		TreeMap tmSortNachLagerplatz=new TreeMap();
+		ArrayList alDaten=new ArrayList();
 
 		while (resultListIterator.hasNext()) {
 			Object[] o = (Object[]) resultListIterator.next();
 
 			FLRInventurstand flrinventurstand = (FLRInventurstand) o[0];
 
+			
+			Object[] oZeile=new Object[REPORT_INVENTURSTAND_ANZAHL_SPALTEN];
+			
 			if ((!flrinventurstand.getFlrartikel().getC_nr()
 					.equals(letzterArtikel))) {
 
@@ -1337,102 +1455,139 @@ public class InventurFacBean extends LPReport implements InventurFac,
 						menge = menge.add(inventurlisteDtos[i]
 								.getNInventurmenge());
 
-						if (Helper.short2boolean(flrinventurstand
-								.getFlrartikel().getB_chargennrtragend()) == true) {
+						if (inventurlisteDtos[i].getTAendern().getTime() < Helper
+								.cutTimestamp(
+										Helper.addiereTageZuTimestamp(
+												inventurDto.getTInventurdatum(),
+												1)).getTime()) {
 
-							snrs = snrs
-									+ inventurlisteDtos[i].getNInventurmenge()
-									+ " "
-									+ flrinventurstand.getFlrartikel()
-											.getEinheit_c_nr()
-									+ " "
-									+ inventurlisteDtos[i]
-											.getCSeriennrchargennr() + ", ";
-						} else if (Helper.short2boolean(flrinventurstand
-								.getFlrartikel().getB_seriennrtragend()) == true) {
-							snrs = snrs
-									+ inventurlisteDtos[i]
-											.getCSeriennrchargennr() + ", ";
+							if (Helper.short2boolean(flrinventurstand
+									.getFlrartikel().getB_chargennrtragend()) == true) {
+
+								snrs = snrs
+										+ inventurlisteDtos[i]
+												.getNInventurmenge()
+										+ " "
+										+ flrinventurstand.getFlrartikel()
+												.getEinheit_c_nr()
+										+ " "
+										+ inventurlisteDtos[i]
+												.getCSeriennrchargennr() + ", ";
+							} else if (Helper.short2boolean(flrinventurstand
+									.getFlrartikel().getB_seriennrtragend()) == true) {
+								snrs = snrs
+										+ inventurlisteDtos[i]
+												.getCSeriennrchargennr() + ", ";
+							}
+
 						}
-
-						// }
-
-						// }
-						// catch (FinderException ex1) {
-						// dataHelp[row][REPORT_INVENTURSTAND_INVENTURMENGE] =
-						// new BigDecimal(0);
-						// }
 					}
 
-					dataHelp[row][REPORT_INVENTURSTAND_SERIENNUMMERCHARGENNUMMER] = snrs;
+					oZeile[REPORT_INVENTURSTAND_SERIENNUMMERCHARGENNUMMER] = snrs;
 
 				}
 
-				dataHelp[row][REPORT_INVENTURSTAND_INVENTURMENGE] = flrinventurstand
+				oZeile[REPORT_INVENTURSTAND_INVENTURMENGE] = flrinventurstand
 						.getN_inventurmenge();
 
-				dataHelp[row][REPORT_INVENTURSTAND_ARTIKELNUMMER] = flrinventurstand
+				oZeile[REPORT_INVENTURSTAND_ARTIKELNUMMER] = flrinventurstand
 						.getFlrartikel().getC_nr();
-				dataHelp[row][REPORT_INVENTURSTAND_ARTIKELBEZEICHNUNG] = o[1];
-				dataHelp[row][REPORT_INVENTURSTAND_ARTIKELKURZBEZEICHNUNG] = o[3];
-				dataHelp[row][REPORT_INVENTURSTAND_ARTIKELZUSATZBEZEICHNUNG] = o[4];
-				dataHelp[row][REPORT_INVENTURSTAND_ARTIKELZUSATZBEZEICHNUNG2] = o[5];
+				oZeile[REPORT_INVENTURSTAND_ARTIKELBEZEICHNUNG] = o[1];
+				oZeile[REPORT_INVENTURSTAND_ARTIKELKURZBEZEICHNUNG] = o[3];
+				oZeile[REPORT_INVENTURSTAND_ARTIKELZUSATZBEZEICHNUNG] = o[4];
+				oZeile[REPORT_INVENTURSTAND_ARTIKELZUSATZBEZEICHNUNG2] = o[5];
 
 				if (flrinventurstand.getFlrartikel().getFlrartikelklasse() != null) {
-					dataHelp[row][REPORT_INVENTURSTAND_ARTIKELKLASSE] = flrinventurstand
+					oZeile[REPORT_INVENTURSTAND_ARTIKELKLASSE] = flrinventurstand
 							.getFlrartikel().getFlrartikelklasse().getC_nr();
 
 				}
 				if (flrinventurstand.getFlrartikel().getFlrartikelgruppe() != null) {
-					dataHelp[row][REPORT_INVENTURSTAND_ARTIKELGRUPPE] = flrinventurstand
+					oZeile[REPORT_INVENTURSTAND_ARTIKELGRUPPE] = flrinventurstand
 							.getFlrartikel().getFlrartikelgruppe().getC_nr();
 
 				}
 
-				dataHelp[row][REPORT_INVENTURSTAND_LAGER] = flrinventurstand
+				oZeile[REPORT_INVENTURSTAND_LAGER] = flrinventurstand
 						.getFlrlager().getC_nr();
 
-				dataHelp[row][REPORT_INVENTURSTAND_LAGERSTAND] = o[2];
+				oZeile[REPORT_INVENTURSTAND_LAGERSTAND] = o[2];
 
 				if (o[6] == null) {
-					dataHelp[row][REPORT_INVENTURSTAND_STUECKLISTE] = new Boolean(
+					oZeile[REPORT_INVENTURSTAND_STUECKLISTE] = new Boolean(
 							false);
 				} else {
-					dataHelp[row][REPORT_INVENTURSTAND_STUECKLISTE] = new Boolean(
+					oZeile[REPORT_INVENTURSTAND_STUECKLISTE] = new Boolean(
 							true);
 				}
 
-				dataHelp[row][REPORT_INVENTURSTAND_ARTIKELART] = flrinventurstand
+				if (o[7] != null) {
+					String lagerplatz = (String) o[7];
+					oZeile[REPORT_INVENTURSTAND_LAGERPLATZ] = lagerplatz;
+
+				}
+
+				oZeile[REPORT_INVENTURSTAND_ARTIKELART] = flrinventurstand
 						.getFlrartikel().getArtikelart_c_nr();
 
 				if (flrinventurstand.getN_inventurpreis() != null) {
-					dataHelp[row][REPORT_INVENTURSTAND_INVENTURPREIS] = flrinventurstand
+					oZeile[REPORT_INVENTURSTAND_INVENTURPREIS] = flrinventurstand
 							.getN_inventurpreis();
-					dataHelp[row][REPORT_INVENTURSTAND_INVENTURWERT] = ((BigDecimal) dataHelp[row][REPORT_INVENTURSTAND_INVENTURMENGE])
+					oZeile[REPORT_INVENTURSTAND_INVENTURWERT] = ((BigDecimal) oZeile[REPORT_INVENTURSTAND_INVENTURMENGE])
 							.multiply(flrinventurstand.getN_inventurpreis());
 
 				} else {
-					dataHelp[row][REPORT_INVENTURSTAND_INVENTURWERT] = new java.math.BigDecimal(
+					oZeile[REPORT_INVENTURSTAND_INVENTURWERT] = new java.math.BigDecimal(
 							0);
-					dataHelp[row][REPORT_INVENTURSTAND_INVENTURPREIS] = new java.math.BigDecimal(
+					oZeile[REPORT_INVENTURSTAND_INVENTURPREIS] = new java.math.BigDecimal(
 							0);
 
 				}
-				row++;
+
+				oZeile[REPORT_INVENTURSTAND_BASISPREIS] = flrinventurstand
+						.getN_basispreis();
+				oZeile[REPORT_INVENTURSTAND_ABWERTUNG] = flrinventurstand
+						.getF_abwertung();
+				oZeile[REPORT_INVENTURSTAND_KOMMENTAR] = flrinventurstand
+						.getC_kommentar();
+
+				String key=(String)oZeile[REPORT_INVENTURSTAND_LAGERPLATZ];
+				if(key==null){
+					key="";
+				}
+				key =Helper.fitString2Length(key, 40, ' ')+flrinventurstand
+						.getFlrartikel().getC_nr();
+				
+				alDaten.add(oZeile);
+				tmSortNachLagerplatz.put(key,oZeile);
+				
 			}
 			letzterArtikel = flrinventurstand.getFlrartikel().getC_nr();
 
 		}
 
 		session.close();
-		data = new Object[row][7];
-		for (int i = 0; i < row; i++) {
-			data[i] = dataHelp[i];
+		data = new Object[alDaten.size()][REPORT_INVENTURSTAND_ANZAHL_SPALTEN];
+		
+		if(iSortierung==InventurFac.REPORT_INVENTURSTAND_SORTIERUNG_LAGERPLATZ){
+			
+			Iterator it=tmSortNachLagerplatz.keySet().iterator();
+			int i=0;
+			while (it.hasNext()) {
+				String key=(String)it.next();
+				data[i] = (Object[])tmSortNachLagerplatz.get(key);
+				i++;
+			}
+		} else {
+			for (int i = 0; i < alDaten.size(); i++) {
+				data[i] = (Object[])alDaten.get(i);
+			}
 		}
+		
+		
 		index = -1;
 		sAktuellerReport = InventurFac.REPORT_INVENTURSTAND;
-		parameter.put("P_INVENTUR",
-				inventurFindByPrimaryKey(inventurIId, theClientDto).getCBez());
+		parameter.put("P_INVENTUR", inventurDto.getCBez());
 		try {
 			if (lagerIId != null) {
 				LagerDto dto = getLagerFac().lagerFindByPrimaryKey(lagerIId);
@@ -1591,16 +1746,43 @@ public class InventurFacBean extends LPReport implements InventurFac,
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printInventurliste(Integer inventurIId,
-			Integer lagerIId, boolean bInventurpreis, TheClientDto theClientDto) {
+			Integer lagerIId, boolean bInventurpreis, int iSortierung,
+			Timestamp dVon, Timestamp dBis, TheClientDto theClientDto) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
+		HashMap<String, Object> parameter = new HashMap<String, Object>();
 
 		String sQuery = "SELECT inventurliste, (SELECT spr.c_bez FROM FLRArtikellistespr as spr WHERE spr.Id.artikelliste=inventurliste.flrartikel.i_id AND spr.Id.locale='"
 				+ theClientDto.getLocUiAsString()
 				+ "' )  from FLRInventurliste as inventurliste WHERE inventurliste.flrinventur.i_id="
 				+ inventurIId;
 
-		sQuery = sQuery + " ORDER BY inventurliste.flrartikel.c_nr";
+		if (dVon != null) {
+			sQuery += " AND inventurliste.t_aendern >='"
+					+ Helper.formatTimestampWithSlashes(dVon) + "'";
+			parameter.put("P_VON", dVon);
+		}
+		if (dBis != null) {
+
+			parameter.put("P_BIS", dBis);
+
+			sQuery += " AND inventurliste.t_aendern <='"
+					+ Helper.formatTimestampWithSlashes(dBis) + "'";
+
+		}
+
+		if (iSortierung == InventurFac.REPORT_INVENTURLISTE_SORTIERUNG_ARTIKELNR) {
+
+			sQuery = sQuery + " ORDER BY inventurliste.flrartikel.c_nr";
+		} else if (iSortierung == InventurFac.REPORT_INVENTURLISTE_SORTIERUNG_PERSON_ARTIKEL) {
+
+			sQuery = sQuery
+					+ " ORDER BY inventurliste.flrpersonal.flrpartner.c_name1nachnamefirmazeile1, inventurliste.flrartikel.c_nr";
+		} else if (iSortierung == InventurFac.REPORT_INVENTURLISTE_SORTIERUNG_PERSON_DATUM) {
+
+			sQuery = sQuery
+					+ " ORDER BY inventurliste.flrpersonal.flrpartner.c_name1nachnamefirmazeile1, inventurliste.t_aendern ";
+		}
 
 		org.hibernate.Query inventurliste = session.createQuery(sQuery);
 
@@ -1613,7 +1795,7 @@ public class InventurFacBean extends LPReport implements InventurFac,
 				theClientDto);
 
 		String letzterArtikel = null;
-		Object[][] dataHelp = new Object[resultList.size()][9];
+		Object[][] dataHelp = new Object[resultList.size()][REPORT_INVENTURLISTE_ANZAHL_SPALTEN];
 
 		while (resultListIterator.hasNext()) {
 
@@ -1692,6 +1874,12 @@ public class InventurFacBean extends LPReport implements InventurFac,
 				}
 				dataHelp[row][REPORT_INVENTURLISTE_LAGER] = flrinventurliste
 						.getFlrlager().getC_nr();
+
+				dataHelp[row][REPORT_INVENTURLISTE_PERSON] = HelperServer
+						.formatPersonAusFLRPartner(flrinventurliste
+								.getFlrpersonal().getFlrpartner());
+				dataHelp[row][REPORT_INVENTURLISTE_T_AENDERN] = flrinventurliste
+						.getT_aendern();
 
 				ArtikellieferantDto alDto;
 				try {
@@ -1783,7 +1971,7 @@ public class InventurFacBean extends LPReport implements InventurFac,
 		for (int i = 0; i < row; i++) {
 			data[i] = dataHelp[i];
 		}
-		HashMap<String, Object> parameter = new HashMap<String, Object>();
+
 		index = -1;
 		sAktuellerReport = InventurFac.REPORT_INVENTURLISTE;
 		parameter.put("P_INVENTUR", inventurDto.getCBez());
@@ -1833,6 +2021,29 @@ public class InventurFacBean extends LPReport implements InventurFac,
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex1);
 		}
 
+		if (iSortierung == InventurFac.REPORT_INVENTURLISTE_SORTIERUNG_ARTIKELNR) {
+			parameter
+					.put("P_SORTIERUNG",
+							getTextRespectUISpr(
+									"artikel.inventurliste.report.sortierung.artikel",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()));
+		} else if (iSortierung == InventurFac.REPORT_INVENTURLISTE_SORTIERUNG_PERSON_ARTIKEL) {
+			parameter
+					.put("P_SORTIERUNG",
+							getTextRespectUISpr(
+									"artikel.inventurliste.report.sortierung.mitarbeiterartikel",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()));
+		} else if (iSortierung == InventurFac.REPORT_INVENTURLISTE_SORTIERUNG_PERSON_DATUM) {
+			parameter
+					.put("P_SORTIERUNG",
+							getTextRespectUISpr(
+									"artikel.inventurliste.report.sortierung.mitarbeiterdatum",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()));
+		}
+
 		initJRDS(parameter, InventurFac.REPORT_MODUL,
 				InventurFac.REPORT_INVENTURLISTE, theClientDto.getMandant(),
 				theClientDto.getLocUi(), theClientDto);
@@ -1857,6 +2068,8 @@ public class InventurFacBean extends LPReport implements InventurFac,
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printNichterfassteartikel(Integer inventurIId,
 			Integer lagerIId, boolean bNurArtikelMitLagerstand,
+			boolean bSortiertNachLagerplatz, String lagerplatzVon,
+			String lagerplatzBis, boolean bMitVersteckten,
 			TheClientDto theClientDto) {
 
 		if (inventurIId == null) {
@@ -1894,9 +2107,41 @@ public class InventurFacBean extends LPReport implements InventurFac,
 					+ getLagerFac().lagerFindByCNrByMandantCNr(
 							LagerFac.LAGER_WERTGUTSCHRIFT,
 							theClientDto.getMandant()).getIId() + ") ";
+
+			if (lagerplatzVon != null || lagerplatzBis != null) {
+				// Artikel vorfiltern
+
+				queryString += " AND a.i_id IN(  SELECT lagerplaetze.artikel_i_id FROM FLRArtikellagerplaetze lagerplaetze WHERE ";
+
+				if (lagerplatzVon != null) {
+					queryString += " lagerplaetze.flrlagerplatz.c_lagerplatz >='"
+							+ lagerplatzVon + "' ";
+				}
+				if (lagerplatzBis != null) {
+
+					if (lagerplatzVon != null) {
+						queryString += " AND ";
+					}
+
+					String lagerplatzBis_Gefuellt = Helper.fitString2Length(
+							lagerplatzBis, 25, '_');
+					queryString += " lagerplaetze.flrlagerplatz.c_lagerplatz <='"
+							+ lagerplatzBis_Gefuellt + "' ";
+
+				}
+
+				queryString += " ) ";
+			}
+
 			if (lagerIId != null) {
 				queryString += " AND l.i_id=" + lagerIId + " ";
 			}
+
+			if (bMitVersteckten == false) {
+				queryString += " AND a.b_versteckt=0 ";
+			}
+
+			//
 
 			queryString += "ORDER BY a.c_nr ASC,l.c_nr ASC";
 		} catch (RemoteException ex3) {
@@ -1914,6 +2159,8 @@ public class InventurFacBean extends LPReport implements InventurFac,
 		while (resultListIterator.hasNext()) {
 			Object[] o = (Object[]) resultListIterator.next();
 
+			Integer artikelIId = (Integer) o[0];
+
 			Short b_seriennrtragend = (Short) o[9];
 			Short b_chargennrtragend = (Short) o[10];
 			java.math.BigDecimal lagerstand = (BigDecimal) o[4];
@@ -1928,18 +2175,25 @@ public class InventurFacBean extends LPReport implements InventurFac,
 				if (summeInventur != null) {
 					continue;
 				}
-				Object[] dataHelp = new Object[7];
+				Object[] dataHelp = new Object[8];
 				dataHelp[REPORT_NICHTERFASSTEARTIKEL_ARTIKELNUMMER] = o[2];
 				dataHelp[REPORT_NICHTERFASSTEARTIKEL_ARTIKELBEZEICHNUNG] = o[6];
 
 				dataHelp[REPORT_NICHTERFASSTEARTIKEL_LAGER] = o[3];
 				dataHelp[REPORT_NICHTERFASSTEARTIKEL_LAGERSTAND] = lagerstand;
 
+				try {
+					dataHelp[REPORT_NICHTERFASSTEARTIKEL_LAGERPLATZ] = getLagerFac()
+							.getLagerplaezteEinesArtikels((Integer) o[0],
+									lagerIId);
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+
 				alDaten.add(dataHelp);
 
 			} else {
 
-				Integer artikelIId = (Integer) o[0];
 				Integer lagerIId_Zeile = (Integer) o[1];
 				try {
 					SeriennrChargennrAufLagerDto[] snrChnrDtos = getLagerFac()
@@ -1980,18 +2234,28 @@ public class InventurFacBean extends LPReport implements InventurFac,
 						}
 					}
 
+					String lagerplatz = "";
+					try {
+						lagerplatz = getLagerFac()
+								.getLagerplaezteEinesArtikels((Integer) o[0],
+										lagerIId);
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+					}
+
 					Iterator<String> it = hmSnrChnr.keySet().iterator();
 
 					while (it.hasNext()) {
 
 						String chnr = it.next();
-						Object[] dataHelp = new Object[7];
+						Object[] dataHelp = new Object[8];
 						dataHelp[REPORT_NICHTERFASSTEARTIKEL_ARTIKELNUMMER] = o[2];
 						dataHelp[REPORT_NICHTERFASSTEARTIKEL_ARTIKELBEZEICHNUNG] = o[6];
 						dataHelp[REPORT_NICHTERFASSTEARTIKEL_SERIENNUMMERCHARGENNUMMER] = chnr;
 						dataHelp[REPORT_NICHTERFASSTEARTIKEL_LAGER] = o[3];
 						dataHelp[REPORT_NICHTERFASSTEARTIKEL_LAGERSTAND] = hmSnrChnr
 								.get(chnr);
+						dataHelp[REPORT_NICHTERFASSTEARTIKEL_LAGERPLATZ] = lagerplatz;
 
 						alDaten.add(dataHelp);
 					}
@@ -2002,6 +2266,33 @@ public class InventurFacBean extends LPReport implements InventurFac,
 
 			}
 
+		}
+
+		if (bSortiertNachLagerplatz == true) {
+			// Nach Lagerplatz sortieren
+
+			for (int i = alDaten.size() - 1; i > 0; --i) {
+				for (int j = 0; j < i; ++j) {
+					Object[] o = alDaten.get(j);
+					Object[] o1 = alDaten.get(j + 1);
+
+					String wert = (String) o[REPORT_NICHTERFASSTEARTIKEL_LAGERPLATZ];
+
+					if (wert == null) {
+						wert = "";
+					}
+
+					String wert1 = (String) o1[REPORT_NICHTERFASSTEARTIKEL_LAGERPLATZ];
+					if (wert1 == null) {
+						wert1 = "";
+					}
+
+					if (wert.compareTo(wert1) > 0) {
+						alDaten.set(j, o1);
+						alDaten.set(j + 1, o);
+					}
+				}
+			}
 		}
 
 		Object[][] returnArray = new Object[row][alDaten.size()];
@@ -2029,6 +2320,10 @@ public class InventurFacBean extends LPReport implements InventurFac,
 		parameter.put("P_INVENTURDATUM", inventurDto.getTInventurdatum());
 		parameter.put("P_NURMITLAGERSTAND", new Boolean(
 				bNurArtikelMitLagerstand));
+		parameter.put("P_SORTIERT_NACH_LAGERPLATZ", bSortiertNachLagerplatz);
+		parameter.put("P_LAGERPLATZ_VON", lagerplatzVon);
+		parameter.put("P_LAGERPLATZ_BIS", lagerplatzBis);
+		parameter.put("P_MITVERSTECKTEN", new Boolean(bMitVersteckten));
 
 		initJRDS(parameter, InventurFac.REPORT_MODUL,
 				InventurFac.REPORT_NICHTERFASSTEARTIKEL,
@@ -2446,7 +2741,22 @@ public class InventurFacBean extends LPReport implements InventurFac,
 
 			InventurstandDto inventurstandDto = inventurstandFindByPrimaryKey(flrInventurstand
 					.getI_id());
+
+			inventurstandDto.setNBasispreis(gestpreis);
 			inventurstandDto.setNInventurpreis(gestpreis);
+
+			// Basispreis(Gestpreis) um % abwerten und in Inventurpreis
+			// festschreiben
+			if (inventurstandDto.getFAbwertung() != null
+					&& inventurstandDto.getFAbwertung().doubleValue() != 0) {
+				BigDecimal prozentwert = Helper.getProzentWert(inventurstandDto
+						.getNBasispreis(),
+						new BigDecimal(inventurstandDto.getFAbwertung()), 4);
+
+				inventurstandDto.setNInventurpreis(inventurstandDto
+						.getNBasispreis().subtract(prozentwert));
+			}
+
 			try {
 				getInventurFac().updateInventurstand(inventurstandDto);
 			} catch (RemoteException e) {
@@ -2527,7 +2837,7 @@ public class InventurFacBean extends LPReport implements InventurFac,
 								flrInventurprotokoll.getFlrinventurliste()
 										.getC_seriennrchargennr(),
 								inventurDto.getTInventurdatum(), theClientDto,
-								null, true);
+								null, null, true);
 					} catch (RemoteException e) {
 						// Auslassen
 						continue;
@@ -2659,7 +2969,22 @@ public class InventurFacBean extends LPReport implements InventurFac,
 
 			InventurstandDto inventurstandDto = inventurstandFindByPrimaryKey(flrInventurstand
 					.getI_id());
+
+			inventurstandDto.setNBasispreis(inventurpeis);
 			inventurstandDto.setNInventurpreis(inventurpeis);
+
+			// Basispreis(Gestpreis) um % abwerten und in Inventurpreis
+			// festschreiben
+			if (inventurstandDto.getFAbwertung() != null
+					&& inventurstandDto.getFAbwertung().doubleValue() != 0) {
+				BigDecimal prozentwert = Helper.getProzentWert(inventurstandDto
+						.getNBasispreis(),
+						new BigDecimal(inventurstandDto.getFAbwertung()), 4);
+
+				inventurstandDto.setNInventurpreis(inventurstandDto
+						.getNBasispreis().subtract(prozentwert));
+			}
+
 			try {
 				getInventurFac().updateInventurstand(inventurstandDto);
 			} catch (RemoteException e) {
@@ -2683,8 +3008,26 @@ public class InventurFacBean extends LPReport implements InventurFac,
 			boolean bNichtInventierteArtikelAufNullSetzen,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 
+		int basispreisGestpreis = 0;
+		try {
+			ParametermandantDto mandantparameter = getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_ARTIKEL,
+							ParameterFac.PARAMETER_INVENTUR_BASISPREIS);
+
+			basispreisGestpreis = (Integer) mandantparameter.getCWertAsObject();
+
+		}
+
+		catch (RemoteException ex8) {
+			throwEJBExceptionLPRespectOld(ex8);
+		}
+
 		InventurDto inventurDto = inventurFindByPrimaryKey(inventurIId,
 				theClientDto);
+
+		java.sql.Date dateOriginal = new java.sql.Date(inventurDto
+				.getTInventurdatum().getTime());
 
 		myLogger.logKritisch("Inventur Start:"
 				+ new Timestamp(System.currentTimeMillis()));
@@ -2705,6 +3048,41 @@ public class InventurFacBean extends LPReport implements InventurFac,
 		}
 
 		try {
+
+			// Die letzte Inventur holen
+			Integer inventurIId_letzteInventur = null;
+			Session sessionLetzteInventur = FLRSessionFactory.getFactory()
+					.openSession();
+
+			String queryString = "SELECT i FROM FLRInventur i WHERE i.mandant_c_nr='"
+					+ theClientDto.getMandant()
+					+ "' AND i.t_inventurdatum < '"
+					+ Helper.formatDateWithSlashes(dateOriginal) + "' ";
+			if (inventurDto.getLagerIId() == null) {
+				queryString += " AND i.lager_i_id IS NULL ";
+			} else {
+				queryString += " AND i.lager_i_id = "
+						+ inventurDto.getLagerIId();
+			}
+			queryString += " ORDER BY i.t_inventurdatum DESC ";
+
+			org.hibernate.Query queryLetzteInventur = sessionLetzteInventur
+					.createQuery(queryString);
+			queryLetzteInventur.setMaxResults(1);
+			List<?> resultsLetzteInventur = queryLetzteInventur.list();
+			Iterator<?> resultListIteratorLetzteInventur = resultsLetzteInventur
+					.iterator();
+
+			if (resultListIteratorLetzteInventur.hasNext()) {
+				FLRInventur o = (FLRInventur) resultListIteratorLetzteInventur
+						.next();
+
+				if (Helper.short2boolean(o.getB_inventurdurchgefuehrt()) == true) {
+					inventurIId_letzteInventur = o.getI_id();
+				}
+
+			}
+			sessionLetzteInventur.close();
 
 			// Wenn nur ein Lager angegeben, dann Inventur auch nur fuer ein
 			// Lager durchfuehren
@@ -2775,16 +3153,17 @@ public class InventurFacBean extends LPReport implements InventurFac,
 							inventurIId, lagerDtos[i].getIId(),
 							artikel.getI_id(), theClientDto);
 					if (inventurstandDtoVorhanden == null) {
-						java.math.BigDecimal gestpreis = getLagerFac()
+						java.math.BigDecimal basispreis = getLagerFac()
 								.getGestehungspreisZumZeitpunkt(
 										artikel.getI_id(),
 										lagerDtos[i].getIId(),
 										inventurDto.getTInventurdatum(),
 										theClientDto);
 
-						if (gestpreis == null) {
-							gestpreis = new BigDecimal(0);
+						if (basispreis == null) {
+							basispreis = new BigDecimal(0);
 						}
+
 						InventurstandDto inventurstandDto = new InventurstandDto();
 						inventurstandDto.setArtikelIId(artikel.getI_id());
 						inventurstandDto.setInventurIId(inventurIId);
@@ -2793,7 +3172,72 @@ public class InventurFacBean extends LPReport implements InventurFac,
 								artikel.getI_id(), lagerDtos[i].getIId(),
 								inventurDto.getIId(),
 								inventurDto.getTInventurdatum(), theClientDto));
-						inventurstandDto.setNInventurpreis(gestpreis);
+
+						// PJ18658
+						if (basispreisGestpreis == 1) {
+							// Wenn Stueckliste fremdgefertigt und EK-Preis
+							// vorhanden, dann gilt dieser
+							StuecklisteDto stklDto = getStuecklisteFac()
+									.stuecklisteFindByMandantCNrArtikelIIdOhneExc(
+											artikel.getI_id(), theClientDto);
+							if (stklDto != null
+									&& Helper.short2boolean(stklDto
+											.getBFremdfertigung()) == true) {
+								ArtikellieferantDto alDto = getArtikelFac()
+										.getArtikelEinkaufspreis(
+												artikel.getI_id(),
+												inventurstandDto
+														.getNInventurmenge(),
+												theClientDto
+														.getSMandantenwaehrung(),
+												theClientDto);
+								if (alDto != null
+										&& alDto.getNNettopreis() != null) {
+									basispreis = alDto.getNNettopreis();
+								}
+							}
+						}
+						inventurstandDto.setNInventurpreis(basispreis);
+						inventurstandDto.setNBasispreis(basispreis);
+
+						// Abwertung + Kommentar der letzten Inventur holen
+						if (inventurIId_letzteInventur != null) {
+							InventurstandDto inventurstandDtoLetzteDurchgefuehrteInventur = inventurstandfindByInventurIIdArtikelIIdLagerIIdOhneExc(
+									inventurIId_letzteInventur,
+									lagerDtos[i].getIId(), artikel.getI_id(),
+									theClientDto);
+
+							if (inventurstandDtoLetzteDurchgefuehrteInventur != null) {
+								// Wenn 0 oder NULL, dann nicht uebernehmen
+								if (inventurstandDtoLetzteDurchgefuehrteInventur
+										.getFAbwertung() != null
+										&& inventurstandDtoLetzteDurchgefuehrteInventur
+												.getFAbwertung().doubleValue() != 0) {
+									inventurstandDto
+											.setFAbwertung(inventurstandDtoLetzteDurchgefuehrteInventur
+													.getFAbwertung());
+								}
+								inventurstandDto
+										.setCKommentar(inventurstandDtoLetzteDurchgefuehrteInventur
+												.getCKommentar());
+							}
+
+						}
+
+						// Basispreis(Gestpreis) um % abwerten und in
+						// Inventurpreis festschreiben
+						if (inventurstandDto.getFAbwertung() != null
+								&& inventurstandDto.getFAbwertung()
+										.doubleValue() != 0) {
+							BigDecimal prozentwert = Helper.getProzentWert(
+									inventurstandDto.getNBasispreis(),
+									new BigDecimal(inventurstandDto
+											.getFAbwertung()), 4);
+
+							inventurstandDto.setNInventurpreis(inventurstandDto
+									.getNBasispreis().subtract(prozentwert));
+						}
+
 						getInventurFac().createInventurstand(inventurstandDto,
 								theClientDto);
 					}
@@ -2818,6 +3262,8 @@ public class InventurFacBean extends LPReport implements InventurFac,
 				.currentTimeMillis()));
 		inventur.setPersonalIIdInventurdurchgefuehrt(theClientDto
 				.getIDPersonal());
+		inventur.setBNichtinventierteartikelabbuchen(Helper
+				.boolean2Short(bNichtInventierteArtikelAufNullSetzen));
 
 		getInventurFac().updateInventur(inventur, theClientDto);
 
@@ -2835,14 +3281,21 @@ public class InventurFacBean extends LPReport implements InventurFac,
 
 		try {
 			if (dtos != null && dtos.length > 0) {
-				BigDecimal mengeAusInventurliste = dtos[0].getNInventurmenge();
+				inventurStand = BigDecimal.ZERO;
+				for (int i = 0; i < dtos.length; i++) {
 
-				java.math.BigDecimal lagerstandVeraenderung = getLagerFac()
-						.getLagerstandsVeraenderungOhneInventurbuchungen(
-								artikelIId, lagerIId, tInventurdatum,
-								dtos[0].getTAendern(), theClientDto);
-				inventurStand = mengeAusInventurliste
-						.subtract(lagerstandVeraenderung);
+					BigDecimal mengeAusInventurliste = dtos[i]
+							.getNInventurmenge();
+
+					java.math.BigDecimal lagerstandVeraenderung = getLagerFac()
+							.getLagerstandsVeraenderungOhneInventurbuchungen(
+									artikelIId, lagerIId, tInventurdatum,
+									dtos[i].getTAendern(),
+									dtos[i].getCSeriennrchargennr(),
+									theClientDto);
+					inventurStand = inventurStand.add(mengeAusInventurliste
+							.subtract(lagerstandVeraenderung));
+				}
 			} else {
 				java.math.BigDecimal lagerstandzumInventurdatum = getLagerFac()
 						.getLagerstandZumZeitpunkt(artikelIId, lagerIId,
@@ -2917,6 +3370,11 @@ public class InventurFacBean extends LPReport implements InventurFac,
 				Integer stuecklisteIId = (Integer) o[4];
 
 				if (bMitStuecklisten == false && stuecklisteIId != null) {
+					continue;
+				}
+
+				// Es wurden nur Eintraege mit abwertung==null beruecksichtigt
+				if (flrInventurstand.getF_abwertung() != null) {
 					continue;
 				}
 
@@ -3019,6 +3477,14 @@ public class InventurFacBean extends LPReport implements InventurFac,
 				value = data[index][REPORT_INVENTURSTAND_ARTIKELKLASSE];
 			} else if ("Stueckliste".equals(fieldName)) {
 				value = data[index][REPORT_INVENTURSTAND_STUECKLISTE];
+			} else if ("Basispreis".equals(fieldName)) {
+				value = data[index][REPORT_INVENTURSTAND_BASISPREIS];
+			} else if ("AbwertungUm".equals(fieldName)) {
+				value = data[index][REPORT_INVENTURSTAND_ABWERTUNG];
+			} else if ("Kommentar".equals(fieldName)) {
+				value = data[index][REPORT_INVENTURSTAND_KOMMENTAR];
+			} else if ("Lagerplatz".equals(fieldName)) {
+				value = data[index][REPORT_INVENTURSTAND_LAGERPLATZ];
 			}
 		}
 		if (sAktuellerReport.equals(InventurFac.REPORT_INVENTURLISTE)) {
@@ -3040,6 +3506,10 @@ public class InventurFacBean extends LPReport implements InventurFac,
 				value = data[index][REPORT_INVENTURLISTE_LIEF1PREIS_ZUM_INVENTURDATUM];
 			} else if ("Lief1PreisAktuell".equals(fieldName)) {
 				value = data[index][REPORT_INVENTURLISTE_LIEF1PREIS_AKTUELL];
+			} else if ("Person".equals(fieldName)) {
+				value = data[index][REPORT_INVENTURLISTE_PERSON];
+			} else if ("Aenderungsdatum".equals(fieldName)) {
+				value = data[index][REPORT_INVENTURLISTE_T_AENDERN];
 			}
 		} else if (sAktuellerReport
 				.equals(InventurFac.REPORT_INVENTURPROTOKOLL)) {
@@ -3059,6 +3529,8 @@ public class InventurFacBean extends LPReport implements InventurFac,
 				value = data[index][REPORT_INVENTURPROTOKOLL_ARTIKELART];
 			} else if ("Lagerstand".equals(fieldName)) {
 				value = data[index][REPORT_INVENTURPROTOKOLL_LAGERSTAND];
+			} else if ("Lagerplatz".equals(fieldName)) {
+				value = data[index][REPORT_INVENTURPROTOKOLL_LAGERPLATZ];
 			}
 		} else if (sAktuellerReport
 				.equals(InventurFac.REPORT_NICHTERFASSTEARTIKEL)) {
@@ -3072,8 +3544,8 @@ public class InventurFacBean extends LPReport implements InventurFac,
 				value = data[index][REPORT_NICHTERFASSTEARTIKEL_LAGER];
 			} else if ("Lagerstand".equals(fieldName)) {
 				value = data[index][REPORT_NICHTERFASSTEARTIKEL_LAGERSTAND];
-				System.out
-						.println(data[index][REPORT_NICHTERFASSTEARTIKEL_LAGERSTAND]);
+			} else if ("Lagerplatz".equals(fieldName)) {
+				value = data[index][REPORT_NICHTERFASSTEARTIKEL_LAGERPLATZ];
 			}
 		}
 		return value;
@@ -3108,7 +3580,8 @@ public class InventurFacBean extends LPReport implements InventurFac,
 					inventurstandDto.getArtikelIId(),
 					inventurstandDto.getLagerIId(),
 					inventurstandDto.getNInventurmenge(),
-					inventurstandDto.getNInventurpreis());
+					inventurstandDto.getNInventurpreis(),
+					inventurstandDto.getNBasispreis());
 			em.persist(inventurstand);
 			em.flush();
 			setInventurstandFromInventurstandDto(inventurstand,
@@ -3197,6 +3670,11 @@ public class InventurFacBean extends LPReport implements InventurFac,
 		inventurstand.setNInventurpreis(inventurstandDto.getNInventurpreis());
 		inventurstand.setNAbgewerteterpreis(inventurstandDto
 				.getNAbgewerteterpreis());
+
+		inventurstand.setFAbwertung(inventurstandDto.getFAbwertung());
+		inventurstand.setCKommentar(inventurstandDto.getCKommentar());
+		inventurstand.setNBasispreis(inventurstandDto.getNBasispreis());
+
 		em.merge(inventurstand);
 		em.flush();
 	}

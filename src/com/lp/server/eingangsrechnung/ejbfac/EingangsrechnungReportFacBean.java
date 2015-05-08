@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -41,10 +41,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -194,7 +196,8 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 	private static int OFFENE_FELD_MAHNDATUM = 28;
 	private static int OFFENE_FELD_KREDITORENNR = 29;
 	private static int OFFENE_SUBREPORT_OFFENE_BUCHUNGEN = 30;
-	private static final int OFFENE_ANZAHL_FELDER = 31;
+	private static int OFFENE_FELD_ART = 31;
+	private static final int OFFENE_ANZAHL_FELDER = 32;
 
 	private static int KONTIERUNG_FELD_KOSTENSTELLE_C_NR = 0;
 	private static int KONTIERUNG_FELD_KOSTENSTELLE_C_BEZ = 1;
@@ -220,7 +223,11 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 	private static int KONTIERUNG_FELD_WERT_BEZAHLT_FW = 21;
 	private static int KONTIERUNG_FELD_ER_KURS = 22;
 	private static int KONTIERUNG_FELD_ER_WEARTIKEL = 23;
-	private static int KONTIERUNG_ANZAHL_FELDER = 24;
+	private static int KONTIERUNG_FELD_LAENDERART_LIEFERANT = 24;
+	private static int KONTIERUNG_FELD_UVA_ART = 25;
+	private static int KONTIERUNG_FELD_STEUERKATEGORIE = 26;
+	private static int KONTIERUNG_FELD_ART = 27;
+	private static int KONTIERUNG_ANZAHL_FELDER = 28;
 
 	private final static int FELD_ALLE_EINGANGSRECHNUNGSNUMMER = 0;
 	private final static int FELD_ALLE_LIEFERANT = 1;
@@ -250,7 +257,8 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 	private final static int FELD_ALLE_ZOLLBELEGNUMMER = 25;
 	private final static int FELD_ALLE_UST = 26;
 	private final static int FELD_ALLE_WEARTIKEL = 27;
-	private final static int ALLE_ANZAHL_FELDER = 28;
+	private final static int FELD_ALLE_ART = 28;
+	private final static int ALLE_ANZAHL_FELDER = 29;
 
 	public boolean next() throws JRException {
 		index++;
@@ -284,6 +292,8 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 				value = data[index][FELD_ALLE_TEXT];
 			} else if ("F_WE_ARTIKEL".equals(fieldName)) {
 				value = data[index][FELD_ALLE_WEARTIKEL];
+			} else if ("F_ART".equals(fieldName)) {
+				value = data[index][FELD_ALLE_ART];
 			} else if ("F_BETRAG".equals(fieldName)) {
 				value = data[index][FELD_ALLE_WERT];
 			} else if ("F_BETRAGNETTO".equals(fieldName)) {
@@ -347,9 +357,9 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 				value = data[index][KONTIERUNG_FELD_WERT_UST];
 			} else if ("ER_WERT_BEZAHLT".equals(fieldName)) {
 				value = data[index][KONTIERUNG_FELD_WERT_BEZAHLT];
-			}
-
-			else if ("ER_WERT_FW".equals(fieldName)) {
+			} else if ("ER_ART".equals(fieldName)) {
+				value = data[index][KONTIERUNG_FELD_ART];
+			} else if ("ER_WERT_FW".equals(fieldName)) {
 				value = data[index][KONTIERUNG_FELD_WERT_FW];
 			} else if ("ER_WERT_UST_FW".equals(fieldName)) {
 				value = data[index][KONTIERUNG_FELD_WERT_UST_FW];
@@ -375,7 +385,14 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 				value = data[index][KONTIERUNG_FELD_WERT_BEZAHLT_ERKURS];
 			} else if ("F_KREDITORENNUMMER".equals(fieldName)) {
 				value = data[index][KONTIERUNG_FELD_KREDITORENNUMMER];
+			} else if ("F_LAENDERART_LIEFERANT".equals(fieldName)) {
+				value = data[index][KONTIERUNG_FELD_LAENDERART_LIEFERANT];
+			} else if ("F_UVA_ART".equals(fieldName)) {
+				value = data[index][KONTIERUNG_FELD_UVA_ART];
+			} else if ("F_STEUERKATEGORIE".equals(fieldName)) {
+				value = data[index][KONTIERUNG_FELD_STEUERKATEGORIE];
 			}
+
 		}
 			break;
 
@@ -412,7 +429,7 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 				value = data[index][ERFASSTE_ZOLLPAPIERE_PERSON_ERFASST];
 			} else if ("F_WAEHRUNG".equals(fieldName)) {
 				value = data[index][ERFASSTE_ZOLLPAPIERE_WAEHRUNG];
-			}else if ("F_LSNUMMER".equals(fieldName)) {
+			} else if ("F_LSNUMMER".equals(fieldName)) {
 				value = data[index][ERFASSTE_ZOLLPAPIERE_LS_NUMMER];
 			}
 		}
@@ -428,6 +445,8 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 				value = data[index][OFFENE_FELD_MAHNDATUM];
 			} else if ("KREDITORENNR".equals(fieldName)) {
 				value = data[index][OFFENE_FELD_KREDITORENNR];
+			} else if ("F_ART".equals(fieldName)) {
+				value = data[index][OFFENE_FELD_ART];
 			} else if ("MAHNSTUFE".equals(fieldName)) {
 				value = data[index][OFFENE_FELD_MAHNSTUFE];
 			} else if ("WERT".equals(fieldName)) {
@@ -849,17 +868,17 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 		List<?> resultList = query.list();
 
 		Iterator resultListIterator = resultList.iterator();
-		
+
 		data = new Object[resultList.size()][ERFASSTE_ZOLLPAPIERE_ANZAHL_FELDER];
 
 		ArrayList alDaten = new ArrayList();
-		
+
 		while (resultListIterator.hasNext()) {
 			FLREingangsrechnung item = (FLREingangsrechnung) resultListIterator
 					.next();
 
 			Object[] oZeile = new Object[ERFASSTE_ZOLLPAPIERE_ANZAHL_FELDER];
-			
+
 			oZeile[ERFASSTE_ZOLLPAPIERE_ER_NUMMER] = item.getC_nr();
 			oZeile[ERFASSTE_ZOLLPAPIERE_BRUTTOBETRAG] = item.getN_betrag();
 			oZeile[ERFASSTE_ZOLLPAPIERE_ER_DATUM] = item.getT_belegdatum();
@@ -874,8 +893,7 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 
 				oZeile[ERFASSTE_ZOLLPAPIERE_ZOLLPAPIERNUMMER] = erDto
 						.getCZollimportpapier();
-				oZeile[ERFASSTE_ZOLLPAPIERE_WAEHRUNG] = erDto
-						.getWaehrungCNr();
+				oZeile[ERFASSTE_ZOLLPAPIERE_WAEHRUNG] = erDto.getWaehrungCNr();
 
 				if (erDto.getPersonalIIdZollimportpapier() != null) {
 					oZeile[ERFASSTE_ZOLLPAPIERE_PERSON_ERFASST] = getPersonalFac()
@@ -898,13 +916,11 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 			}
 			alDaten.add(oZeile);
 		}
-		
-		
+
 		session.close();
 		session = factory.openSession();
-		
-		
-		 s = "from FLRLieferschein ls WHERE ls.t_zollexportpapier>='"
+
+		s = "from FLRLieferschein ls WHERE ls.t_zollexportpapier>='"
 				+ Helper.formatDateWithSlashes(dVon)
 				+ "' AND ls.t_zollexportpapier<'"
 				+ Helper.formatDateWithSlashes(dBis)
@@ -912,26 +928,23 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 				+ theClientDto.getMandant()
 				+ "' ORDER BY ls.flrkunde.flrpartner.c_name1nachnamefirmazeile1, ls.c_nr";
 
-		 query = session.createQuery(s);
+		query = session.createQuery(s);
 
 		resultList = query.list();
 
 		resultListIterator = resultList.iterator();
-		
 
-		
 		while (resultListIterator.hasNext()) {
-			FLRLieferschein item = (FLRLieferschein) resultListIterator
-					.next();
+			FLRLieferschein item = (FLRLieferschein) resultListIterator.next();
 
 			Object[] oZeile = new Object[ERFASSTE_ZOLLPAPIERE_ANZAHL_FELDER];
-			
+
 			oZeile[ERFASSTE_ZOLLPAPIERE_LS_NUMMER] = item.getC_nr();
-			oZeile[ERFASSTE_ZOLLPAPIERE_BRUTTOBETRAG] = item.getN_gesamtwertinlieferscheinwaehrung();
+			oZeile[ERFASSTE_ZOLLPAPIERE_BRUTTOBETRAG] = item
+					.getN_gesamtwertinlieferscheinwaehrung();
 			oZeile[ERFASSTE_ZOLLPAPIERE_ER_DATUM] = item.getD_belegdatum();
 			oZeile[ERFASSTE_ZOLLPAPIERE_LIEFERANT] = HelperServer
-					.formatNameAusFLRPartner(item.getFlrkunde()
-							.getFlrpartner());
+					.formatNameAusFLRPartner(item.getFlrkunde().getFlrpartner());
 			oZeile[ERFASSTE_ZOLLPAPIERE_ERFASSUNGSZEITPUNKT] = item
 					.getT_zollexportpapier();
 			try {
@@ -940,8 +953,7 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 
 				oZeile[ERFASSTE_ZOLLPAPIERE_ZOLLPAPIERNUMMER] = lsDto
 						.getCZollexportpapier();
-				oZeile[ERFASSTE_ZOLLPAPIERE_WAEHRUNG] = lsDto
-						.getWaehrungCNr();
+				oZeile[ERFASSTE_ZOLLPAPIERE_WAEHRUNG] = lsDto.getWaehrungCNr();
 
 				if (lsDto.getPersonalIIdZollexportpapier() != null) {
 					oZeile[ERFASSTE_ZOLLPAPIERE_PERSON_ERFASST] = getPersonalFac()
@@ -964,12 +976,10 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 			}
 			alDaten.add(oZeile);
 		}
-		
 
-		
 		data = new Object[alDaten.size()][ERFASSTE_ZOLLPAPIERE_ANZAHL_FELDER];
 		data = (Object[][]) alDaten.toArray(data);
-		
+
 		initJRDS(
 				mapParameter,
 				EingangsrechnungReportFac.REPORT_MODUL,
@@ -1022,6 +1032,9 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 				cArten.add(EingangsrechnungFac.EINGANGSRECHNUNGART_GUTSCHRIFT);
 				cArten.add(EingangsrechnungFac.EINGANGSRECHNUNGART_SCHLUSSZAHLUNG);
 			}
+
+			MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(
+					theClientDto.getMandant(), theClientDto);
 
 			String mandantCNr = theClientDto.getMandant();
 			Criteria cEigangsrechnung = cKontierung
@@ -1137,6 +1150,7 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 						.getT_belegdatum());
 				dto.setSEingangsrechnungsnummer(item.getFlreingangsrechnung()
 						.getC_nr());
+				dto.setSArt(item.getFlreingangsrechnung().getEingangsrechnungart_c_nr());
 				dto.setSEingangsrechnungText(erDto.getCText());
 				dto.setSEingangsrechnungWeartikel(erDto.getCWeartikel());
 				dto.setSKontobezeichnung(item.getFlrkonto().getC_bez());
@@ -1155,6 +1169,31 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 									theClientDto.getLocUi(),
 									theClientDto.getLocMandant()));
 				}
+
+				// SP2121
+				PartnerDto partnerDto = getPartnerFac()
+						.partnerFindByPrimaryKey(
+								item.getFlreingangsrechnung().getFlrlieferant()
+										.getFlrpartner().getI_id(),
+								theClientDto);
+				String laenderartCNr = getFinanzServiceFac()
+						.getLaenderartZuPartner(mandantDto, partnerDto,
+								theClientDto);
+				dto.setSPartnerartLieferant(laenderartCNr);
+
+				if (item.getFlrkonto().getUvaart_i_id() != null) {
+					dto.setSUVAArt(item.getFlrkonto().getFlruvaart().getC_nr());
+				}
+
+				if (item.getFlreingangsrechnung().getFlrlieferant()
+						.getFlrkonto() != null
+						&& item.getFlreingangsrechnung().getFlrlieferant()
+								.getFlrkonto().getFlrsteuerkategorie() != null) {
+					dto.setSSteuerkategorie(item.getFlreingangsrechnung()
+							.getFlrlieferant().getFlrkonto()
+							.getFlrsteuerkategorie().getC_nr());
+				}
+
 				coll.add(dto);
 			}
 
@@ -1271,6 +1310,7 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 
 					dto.setDEingangsrechnungsdatum(item.getT_belegdatum());
 					dto.setSEingangsrechnungsnummer(item.getC_nr());
+					dto.setSArt(item.getEingangsrechnungart_c_nr());
 					dto.setSEingangsrechnungText(erDto.getCText());
 					dto.setSEingangsrechnungWeartikel(erDto.getCWeartikel());
 					dto.setSLieferantenrechnungsnummer(item
@@ -1314,6 +1354,30 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 						dto.setSKreditorennummer(null);
 					}
 
+					// SP2121
+					PartnerDto partnerDto = getPartnerFac()
+							.partnerFindByPrimaryKey(
+									item.getFlrlieferant().getFlrpartner()
+											.getI_id(), theClientDto);
+					String laenderartCNr = getFinanzServiceFac()
+							.getLaenderartZuPartner(mandantDto, partnerDto,
+									theClientDto);
+					dto.setSPartnerartLieferant(laenderartCNr);
+
+					if (item.getFlrkonto().getUvaart_i_id() != null) {
+						dto.setSUVAArt(item.getFlrkonto().getFlruvaart()
+								.getC_nr());
+					}
+
+					if (item.getFlrlieferant()
+							.getFlrkonto() != null
+							&& item.getFlrlieferant()
+									.getFlrkonto().getFlrsteuerkategorie() != null) {
+						dto.setSSteuerkategorie(item
+								.getFlrlieferant().getFlrkonto()
+								.getFlrsteuerkategorie().getC_nr());
+					}
+					
 					coll.add(dto);
 				}
 			}
@@ -1342,6 +1406,7 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 						.getDEingangsrechnungsdatum();
 				data[i][KONTIERUNG_FELD_ER_C_NR] = item
 						.getSEingangsrechnungsnummer();
+				data[i][KONTIERUNG_FELD_ART] = item.getSArt();
 				data[i][KONTIERUNG_FELD_ER_TEXT] = item
 						.getSEingangsrechnungText();
 				data[i][KONTIERUNG_FELD_ER_WEARTIKEL] = item
@@ -1355,6 +1420,11 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 				data[i][KONTIERUNG_FELD_KOSTENSTELLE_C_NR] = item
 						.getSKostenstellenummer();
 				data[i][KONTIERUNG_FELD_ER_LIEFERANT] = item.getSLieferant();
+				data[i][KONTIERUNG_FELD_LAENDERART_LIEFERANT] = item
+						.getSPartnerartLieferant();
+				data[i][KONTIERUNG_FELD_UVA_ART] = item.getSUVAArt();
+				data[i][KONTIERUNG_FELD_STEUERKATEGORIE] = item
+						.getSSteuerkategorie();
 				data[i][KONTIERUNG_FELD_LETZTES_ZAHLDATUM] = item
 						.getDLetzesZahldatum();
 				data[i][KONTIERUNG_FELD_ERRECHNETER_STEUERSATZ] = item
@@ -1497,6 +1567,7 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 								.getFlreingangsrechnung().getT_belegdatum());
 						dto.setSEingangsrechnungsnummer(item1
 								.getFlreingangsrechnung().getC_nr());
+						dto.setSArt(item1.getFlreingangsrechnung().getEingangsrechnungart_c_nr());
 						dto.setSEingangsrechnungText(erDto.getCText());
 						dto.setSEingangsrechnungWeartikel(erDto.getCWeartikel());
 						dto.setSKontobezeichnung(item1.getFlrkonto().getC_bez());
@@ -1595,48 +1666,52 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 							theClientDto.getMandant(), theClientDto);
 
 			session = factory.openSession();
-			
+
 			List<Integer> lieferantenIIds = new ArrayList<Integer>();
-			if(lieferantIId != null) {
+			if (lieferantIId != null) {
 				lieferantenIIds.add(lieferantIId);
-			} else if(iSort == EingangsrechnungReportFac.REPORT_OFFENE_SORT_LIEFERANT) {
-				Iterator<?> iter = session.createCriteria(FLRLieferant.class)
+			} else if (iSort == EingangsrechnungReportFac.REPORT_OFFENE_SORT_LIEFERANT) {
+				Iterator<?> iter = session
+						.createCriteria(FLRLieferant.class)
 						.createAlias("flrpartner", "p")
 						.addOrder(Order.asc("p.c_name1nachnamefirmazeile1"))
-						.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()))
-						
+						.add(Restrictions.eq("mandant_c_nr",
+								theClientDto.getMandant()))
+
 						.list().iterator();
-				while (iter.hasNext()){
-					lieferantenIIds.add(((FLRLieferant)iter.next()).getI_id());
+				while (iter.hasNext()) {
+					lieferantenIIds.add(((FLRLieferant) iter.next()).getI_id());
 				}
 			} else {
 				lieferantenIIds.add(null);
 			}
-			
+
+			Set<Integer> schonGedruckteKonten = new HashSet<Integer>();
 			List<Object[]> dataList = new ArrayList<Object[]>();
-			
+
 			for (Integer liefIId : lieferantenIIds) {
 				Criteria crit = session
 						.createCriteria(FLREingangsrechnungReport.class);
 				// Filter nach Mandant
-				crit.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
-	
+				crit.add(Restrictions.eq("mandant_c_nr",
+						theClientDto.getMandant()));
+
 				Collection<String> cStati = new LinkedList<String>();
 				cStati.add(EingangsrechnungFac.STATUS_TEILBEZAHLT);
 				cStati.add(EingangsrechnungFac.STATUS_ANGELEGT);
 				cStati.add(EingangsrechnungFac.STATUS_ERLEDIGT);
 				crit.add(Restrictions.in("status_c_nr", cStati));
-	
+
 				if (bZusatzkosten) {
-					crit.add(Restrictions.eq(
-							EingangsrechnungFac.FLR_ER_EINGANGSRECHNUNGART_C_NR,
-							EingangsrechnungFac.EINGANGSRECHNUNGART_ZUSATZKOSTEN));
+					crit.add(Restrictions
+							.eq(EingangsrechnungFac.FLR_ER_EINGANGSRECHNUNGART_C_NR,
+									EingangsrechnungFac.EINGANGSRECHNUNGART_ZUSATZKOSTEN));
 				} else {
-					crit.add(Restrictions.not(Restrictions.eq(
-							EingangsrechnungFac.FLR_ER_EINGANGSRECHNUNGART_C_NR,
-							EingangsrechnungFac.EINGANGSRECHNUNGART_ZUSATZKOSTEN)));
+					crit.add(Restrictions.not(Restrictions
+							.eq(EingangsrechnungFac.FLR_ER_EINGANGSRECHNUNGART_C_NR,
+									EingangsrechnungFac.EINGANGSRECHNUNGART_ZUSATZKOSTEN)));
 				}
-	
+
 				if (liefIId != null) {
 					crit.add(Restrictions.eq("lieferant_i_id", liefIId));
 				}
@@ -1651,7 +1726,7 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 				crit.add(Restrictions.or(
 						Restrictions.gt("t_manuellerledigt", dStichtag),
 						Restrictions.isNull("t_manuellerledigt")));
-	
+
 				if (iSort == EingangsrechnungReportFac.REPORT_OFFENE_SORT_RECHNUNGSNUMMER) {
 					crit.addOrder(Order.asc("c_nr"));
 				} else if (iSort == EingangsrechnungReportFac.REPORT_OFFENE_SORT_LIEFERANT) {
@@ -1671,48 +1746,51 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 					mitNichtZugeordnetenBelegen = false;
 				}
 				List<?> resultList = crit.list();
-	
+
 				Iterator<?> resultListIterator = resultList.iterator();
 				int row = 0;
-	
+
 				Object[][] tempData = new Object[resultList.size()][OFFENE_ANZAHL_FELDER];
-				
+
 				if (mitNichtZugeordnetenBelegen) {
 					LieferantDto liefDto = getLieferantFac()
-							.lieferantFindByPrimaryKey(liefIId,
-									theClientDto);
+							.lieferantFindByPrimaryKey(liefIId, theClientDto);
 
-					if(liefDto.getKontoIIdKreditorenkonto() != null) {
+					if (liefDto.getKontoIIdKreditorenkonto() != null
+							&& !schonGedruckteKonten.contains(liefDto.getKontoIIdKreditorenkonto())) {
+						
+						schonGedruckteKonten.add(liefDto.getKontoIIdKreditorenkonto());
 						// TODO: nur FLRFinanzBuchungDetail holen
 						Query query = session
 								.createQuery("SELECT buchungdetail from FLRFinanzBuchungDetail buchungdetail LEFT OUTER JOIN buchungdetail.flrbuchung AS buchung"
 										+ " WHERE"
 										+ BuchungDetailQueryBuilder
-												.buildNurOffeneBuchungDetails("buchungdetail")
+												.buildNurOffeneBuchungDetails("buchungdetail", new Timestamp(dStichtag.getTime()))
 										+ "AND"
-										+ BuchungDetailQueryBuilder
-												.buildNichtZuordenbareVonKonto(
-														"buchungdetail",
-														"buchung",
-														liefDto.getKontoIIdKreditorenkonto())
+										+ BuchungDetailQueryBuilder.buildNichtZuordenbareVonKonto(
+												"buchungdetail",
+												"buchung",
+												liefDto.getKontoIIdKreditorenkonto())
 										+ (dStichtag == null ? ""
 												: ("AND buchung.d_buchungsdatum<='"
 														+ Helper.formatDateWithSlashes(dStichtag) + "'")));
-	
+
 						@SuppressWarnings("unchecked")
 						List<FLRFinanzBuchungDetail> bdList = query.list();
-						if(bdList.size() > 0) {
-							if(tempData.length < 1) {
+						if (bdList.size() > 0) {
+							if (tempData.length < 1) {
 								tempData = new Object[1][OFFENE_ANZAHL_FELDER];
 								String sFirma = liefDto.getPartnerDto()
 										.formatFixTitelName1Name2();
 								tempData[0][OFFENE_FELD_FIRMA] = sFirma;
 								tempData[0][OFFENE_FELD_KREDITORENNR] = getFinanzFac()
 										.kontoFindByPrimaryKeySmall(
-												liefDto.getKontoIIdKreditorenkonto()).getCNr();
+												liefDto.getKontoIIdKreditorenkonto())
+										.getCNr();
 							}
 							tempData[0][OFFENE_SUBREPORT_OFFENE_BUCHUNGEN] = FinanzSubreportGenerator
-									.createBuchungsdetailSubreport(bdList, false);
+									.createBuchungsdetailSubreport(bdList,
+											false);
 						}
 					}
 
@@ -1725,29 +1803,35 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 					LieferantDto liefDto = getLieferantFac()
 							.lieferantFindByPrimaryKey(erDto.getLieferantIId(),
 									theClientDto);
-					
+
 					String sErCNr = erDto.getCNr();
 					String sFirma = liefDto.getPartnerDto()
 							.formatFixTitelName1Name2();
 					ZahlungszielDto zzDto = mZahlungsziel.get(erDto
 							.getZahlungszielIId());
 					tempData[row][OFFENE_FELD_ER_C_NR] = sErCNr;
+					tempData[row][OFFENE_FELD_ART] = erDto.getEingangsrechnungartCNr();
 					tempData[row][OFFENE_FELD_FIRMA] = sFirma;
 					tempData[row][OFFENE_FELD_ERDATUM] = er.getT_belegdatum();
-					tempData[row][OFFENE_FELD_MAHNDATUM] = erDto.getTMahndatum();
+					tempData[row][OFFENE_FELD_MAHNDATUM] = erDto
+							.getTMahndatum();
+					tempData[row][OFFENE_FELD_ART] = er.getEingangsrechnungart_c_nr();
 					tempData[row][OFFENE_FELD_KREDITORENNR] = liefDto
 							.getKontoIIdKreditorenkonto() != null ? getFinanzFac()
 							.kontoFindByPrimaryKeySmall(
-									liefDto.getKontoIIdKreditorenkonto()).getCNr()
-							: null;
-					tempData[row][OFFENE_FELD_MAHNSTUFE] = er.getMahnstufe_i_id();
-					tempData[row][OFFENE_FELD_FREIGABEDATUM] = er.getT_freigabedatum();
+									liefDto.getKontoIIdKreditorenkonto())
+							.getCNr() : null;
+					tempData[row][OFFENE_FELD_MAHNSTUFE] = er
+							.getMahnstufe_i_id();
+					tempData[row][OFFENE_FELD_FREIGABEDATUM] = er
+							.getT_freigabedatum();
 					tempData[row][OFFENE_FELD_WERT] = erDto.getNBetrag();
 					tempData[row][OFFENE_FELD_LIEFERANTENRECHNUNGSNUMMER] = erDto
 							.getCLieferantenrechnungsnummer();
 					tempData[row][OFFENE_FELD_TEXT] = erDto.getCText();
 					if (zzDto != null) {
-						tempData[row][OFFENE_FELD_ZAHLUNGSZIEL] = zzDto.getCBez();
+						tempData[row][OFFENE_FELD_ZAHLUNGSZIEL] = zzDto
+								.getCBez();
 						tempData[row][OFFENE_FELD_SKONTOTAGE1] = zzDto
 								.getSkontoAnzahlTage1();
 						tempData[row][OFFENE_FELD_SKONTOTAGE2] = zzDto
@@ -1773,7 +1857,7 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 							}
 						}
 					}
-	
+
 					// datum der letzten zahlung bis zum stichtag ermitteln
 					EingangsrechnungzahlungDto[] zahlungen = getEingangsrechnungFac()
 							.eingangsrechnungzahlungFindByEingangsrechnungIId(
@@ -1782,7 +1866,8 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 					for (int i = 0; i < zahlungen.length; i++) {
 						if ((dZahldatum == null || zahlungen[i].getTZahldatum()
 								.after(dZahldatum))
-								&& !zahlungen[i].getTZahldatum().after(dStichtag)) {
+								&& !zahlungen[i].getTZahldatum().after(
+										dStichtag)) {
 							dZahldatum = new Date(zahlungen[i].getTZahldatum()
 									.getTime());
 						}
@@ -1800,7 +1885,16 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 											erDto.getNKurs()));
 						}
 					}
-	
+					
+					// anzahlungen dazusummieren
+					if(er.getEingangsrechnungart_c_nr().equals(EingangsrechnungFac.EINGANGSRECHNUNGART_SCHLUSSZAHLUNG)) {
+						BigDecimal bezahltAnzahlungenFw = getEingangsrechnungFac().getAnzahlungenBezahltZuSchlussrechnungFw(er.getI_id());
+						bdBezahltFw = bdBezahltFw.add(bezahltAnzahlungenFw);
+						bdBezahltKursBelegdatum = bdBezahltKursBelegdatum
+								.add(bezahltAnzahlungenFw.multiply(
+										erDto.getNKurs()));
+					}
+					
 					tempData[row][OFFENE_FELD_BETRAG] = getLocaleFac()
 							.rechneUmInAndereWaehrungZuDatum(bdBezahltFw,
 									erDto.getWaehrungCNr(),
@@ -1817,18 +1911,20 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 									dStichtag, theClientDto);
 					tempData[row][OFFENE_FELD_OFFEN_KURS_BELEGDATUM] = erDto
 							.getNBetrag().subtract(bdBezahltKursBelegdatum);
-	
+
 					tempData[row][OFFENE_FELD_BETRAG_FW] = bdBezahltFw;
 					tempData[row][OFFENE_FELD_OFFEN_FW] = erDto.getNBetragfw()
 							.subtract(bdBezahltFw);
-					tempData[row][OFFENE_FELD_ERWAEHRUNG] = erDto.getWaehrungCNr();
+					tempData[row][OFFENE_FELD_ERWAEHRUNG] = erDto
+							.getWaehrungCNr();
 					tempData[row][OFFENE_FELD_WERT_FW] = erDto.getNBetragfw();
 					tempData[row][OFFENE_FELD_ERKURS] = erDto.getNKurs();
 					WechselkursDto wkDto = getLocaleFac().getKursZuDatum(
 							erDto.getWaehrungCNr(),
 							theClientDto.getSMandantenwaehrung(), dStichtag,
 							theClientDto);
-					tempData[row][OFFENE_FELD_KURS_STICHTAG] = wkDto.getNKurs()
+					tempData[row][OFFENE_FELD_KURS_STICHTAG] = wkDto
+							.getNKurs()
 							.setScale(
 									LocaleFac.ANZAHL_NACHKOMMASTELLEN_WECHSELKURS,
 									RoundingMode.HALF_EVEN);
@@ -1836,7 +1932,7 @@ public class EingangsrechnungReportFacBean extends LPReport implements
 				}
 				dataList.addAll(Arrays.asList(tempData));
 			}
-			
+
 			data = dataList.toArray(new Object[0][]);
 			Map<String, Object> mapParameter = new TreeMap<String, Object>();
 			mapParameter.put("P_DATUM", dStichtag);

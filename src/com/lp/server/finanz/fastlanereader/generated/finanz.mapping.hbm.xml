@@ -71,6 +71,7 @@
 			type="java.lang.String" insert="false" update="false" />
 		<property name="d_eb_anlegen" column="T_EB_ANLEGEN" type="java.sql.Timestamp" />
 		<property name="i_eb_geschaeftsjahr" column="I_GJ_EB" type="java.lang.Integer" />
+		<property name="c_steuerart" column="C_STEUERART" type="java.lang.String" />
 			
 		<many-to-one name="flrkontoust"
 			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"

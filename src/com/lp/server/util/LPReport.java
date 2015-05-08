@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -78,6 +78,7 @@ import com.lp.service.BelegDto;
 import com.lp.service.BelegpositionDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
+import com.lp.util.report.ReportPatch;
 
 /**
  * <p>
@@ -430,10 +431,12 @@ public abstract class LPReport extends Facade implements JRDataSource {
 
 						Iterator<?> iterator2 = jasperPrint.getPages()
 								.iterator();
+						int iPage=0;
 						while (iterator2.hasNext()) {
 							JRPrintPage x = (JRPrintPage) iterator2.next();
 							x.addElement(bild);
-							jasperPrint.getPages().set(0, x);
+							jasperPrint.getPages().set(iPage, x);
+							iPage++;
 						}
 
 					} catch (Exception e) {
@@ -442,6 +445,9 @@ public abstract class LPReport extends Facade implements JRDataSource {
 					}
 				}
 
+				ReportPatch reportPatch = new ReportPatch(jasperPrint) ;
+				reportPatch.apply();
+				
 				jasperPrintLP.setPrint(jasperPrint);
 			} catch (JRException ex) {
 				// File not found abfangen, damit eine eigene meldung kommt
@@ -544,6 +550,7 @@ public abstract class LPReport extends Facade implements JRDataSource {
 		}
 	}
 
+	
 	/**
 	 * 
 	 * @param parameterI
@@ -912,8 +919,7 @@ public abstract class LPReport extends Facade implements JRDataSource {
 	 * @return String
 	 */
 	static public String getReportDir() {
-		return HelperServer.getLPResourceBundle().getString(
-				"drucken.root.formular.dir");
+		return ServerConfiguration.getReportDir();
 	}
 
 	/**
@@ -1081,6 +1087,9 @@ public abstract class LPReport extends Facade implements JRDataSource {
 					// Warenverkehrsnummer fuer Artikel
 					dto.setSWarenverkehrsnummer(artikelDto
 							.getCWarenverkehrsnummer());
+					// Eccn
+					dto.setSEccn(artikelDto
+							.getCEccn());
 					// Verpackungs und Verkaufs EAN Nr.
 					dto.setSVerpackungseannr(artikelDto.getCVerpackungseannr());
 					dto.setSVerkaufseannr(artikelDto.getCVerkaufseannr());

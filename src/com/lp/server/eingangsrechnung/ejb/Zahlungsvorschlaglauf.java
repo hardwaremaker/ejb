@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -71,6 +71,27 @@ public class Zahlungsvorschlaglauf implements Serializable {
 
 	@Column(name = "PERSONAL_I_ID_ANLEGEN")
 	private Integer personalIIdAnlegen;
+	
+	@Column(name = "PERSONAL_I_ID_GESPEICHERT")
+	private Integer personalIIdGespeichert;
+	@Column(name = "T_GESPEICHERT")
+	private Timestamp tGespeichert;
+
+	public Integer getPersonalIIdGespeichert() {
+		return personalIIdGespeichert;
+	}
+
+	public void setPersonalIIdGespeichert(Integer personalIIdGespeichert) {
+		this.personalIIdGespeichert = personalIIdGespeichert;
+	}
+
+	public Timestamp getTGespeichert() {
+		return tGespeichert;
+	}
+
+	public void setTGespeichert(Timestamp tGespeichert) {
+		this.tGespeichert = tGespeichert;
+	}
 
 	private static final long serialVersionUID = 1L;
 

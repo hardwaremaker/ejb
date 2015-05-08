@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,13 +32,18 @@
  ******************************************************************************/
 package com.lp.server.benutzer.ejbfac;
 
+import java.rmi.RemoteException;
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
 import javax.ejb.Stateless;
@@ -55,6 +60,7 @@ import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JRField;
 
 import org.hibernate.Session;
+import org.hibernate.criterion.Restrictions;
 
 import com.lp.server.benutzer.ejb.Benutzer;
 import com.lp.server.benutzer.ejb.Benutzermandantsystemrolle;
@@ -65,6 +71,7 @@ import com.lp.server.benutzer.ejb.Nachrichtart;
 import com.lp.server.benutzer.ejb.Systemrolle;
 import com.lp.server.benutzer.ejb.Thema;
 import com.lp.server.benutzer.ejb.Themarolle;
+import com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle;
 import com.lp.server.benutzer.service.BenutzerDto;
 import com.lp.server.benutzer.service.BenutzerDtoAssembler;
 import com.lp.server.benutzer.service.BenutzerFac;
@@ -84,6 +91,7 @@ import com.lp.server.benutzer.service.ThemaDto;
 import com.lp.server.benutzer.service.ThemaDtoAssembler;
 import com.lp.server.benutzer.service.ThemarolleDto;
 import com.lp.server.benutzer.service.ThemarolleDtoAssembler;
+import com.lp.server.partner.ejb.HvTypedCriteria;
 import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.system.fastlanereader.generated.FLRUsercount;
 import com.lp.server.system.pkgenerator.PKConst;
@@ -101,9 +109,10 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	@PersistenceContext
 	private EntityManager em;
 
-	private static int REPORT_BENUTZERSTATISTIK_DATUM = 0;
-	private static int REPORT_BENUTZERSTATISTIK_MAX_ANZAHL = 1;
-	private static int REPORT_BENUTZERSTATISTIK_ANZAHL_SPALTEN = 2;
+	private static int REPORT_BENUTZERSTATISTIK_ROLLE = 0;
+	private static int REPORT_BENUTZERSTATISTIK_DATUM = 1;
+	private static int REPORT_BENUTZERSTATISTIK_ANZAHL = 2;
+	private static int REPORT_BENUTZERSTATISTIK_ANZAHL_SPALTEN = 3;
 
 	private Object[][] data = null;
 
@@ -164,8 +173,8 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	}
 
 	/**
-	 * L&ouml;scht einen Bneutzer, wenn dieser nicht mehr in Verwendung ist, anhand
-	 * seiner eindeutigen ID
+	 * L&ouml;scht einen Bneutzer, wenn dieser nicht mehr in Verwendung ist,
+	 * anhand seiner eindeutigen ID
 	 * 
 	 * @param iId
 	 *            Integer
@@ -331,18 +340,18 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("iId == null"));
 		}
-		
+
 		BenutzerDto benutzerDto = benutzerFindByPrimaryKeyOhneExc(iId);
-		
+
 		if (benutzerDto == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return benutzerDto;
 	}
-	
+
 	public BenutzerDto benutzerFindByPrimaryKeyOhneExc(Integer iId) {
-		
+
 		Benutzer benutzer = em.find(Benutzer.class, iId);
 		if (benutzer == null) {
 			return null;
@@ -385,11 +394,11 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 
 	public BenutzermandantsystemrolleDto[] benutzermandantsystemrolleFindByBenutzerIIdOhneExc(
 			Integer benutzerIId) {
-		
+
 		Query query = em
 				.createNamedQuery("BenutzermandantsystemrollefindByBenutzerIId");
 		query.setParameter(1, benutzerIId);
-		
+
 		Collection<?> cl = query.getResultList();
 
 		return assembleBenutzermandantsystemrolleDtos(cl);
@@ -406,8 +415,10 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 
 		if ("Datum".equals(fieldName)) {
 			value = data[index][REPORT_BENUTZERSTATISTIK_DATUM];
-		} else if ("MaxAnzahl".equals(fieldName)) {
-			value = data[index][REPORT_BENUTZERSTATISTIK_MAX_ANZAHL];
+		} else if ("Rolle".equals(fieldName)) {
+			value = data[index][REPORT_BENUTZERSTATISTIK_ROLLE];
+		} else if ("Anzahl".equals(fieldName)) {
+			value = data[index][REPORT_BENUTZERSTATISTIK_ANZAHL];
 		}
 		return value;
 	}
@@ -459,6 +470,16 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 
 	public String[] getThemenDesAngemeldetenBenutzers(TheClientDto theClientDto) {
 
+		//*** wp ***
+		//***
+		
+		// Verhindert NullpointerException wenn gleich nach dem Starten wieder beendet Wird
+		if (theClientDto == null)
+			return new String[]{};
+		
+		//***
+		//*** wp ***
+		
 		Integer systemrolleIId = getTheJudgeFac().getSystemrolleIId(
 				theClientDto);
 
@@ -528,48 +549,51 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 		}
 
 	}
-	
-	public BenutzerDto benutzerFindByCBenutzerkennungOhneExc(String cBenutzerkennung) {
+
+	public BenutzerDto benutzerFindByCBenutzerkennungOhneExc(
+			String cBenutzerkennung) {
 		Query query = em.createNamedQuery("BenutzerfindByCBenutzerkennung");
 		query.setParameter(1, cBenutzerkennung);
 		try {
 			Benutzer benutzer = (Benutzer) query.getSingleResult();
 			return assembleBenutzerDto(benutzer);
-		} catch(NoResultException ex) {
+		} catch (NoResultException ex) {
 			return null;
 		}
 	}
 
 	public BenutzerDto benutzerFindByCBenutzerkennungOhneEx(
 			String cBenutzerkennung, String cKennwort) throws EJBExceptionLP {
-		if (cBenutzerkennung == null) return null ;
+		if (cBenutzerkennung == null)
+			return null;
 
-		BenutzerDto benutzerDto = null ;
-		
+		BenutzerDto benutzerDto = null;
+
 		try {
 			Query query = em.createNamedQuery("BenutzerfindByCBenutzerkennung");
 			query.setParameter(1, cBenutzerkennung);
 			Benutzer benutzer = (Benutzer) query.getSingleResult();
 			benutzerDto = assembleBenutzerDto(benutzer);
 
-			if(null == cKennwort && null != benutzerDto.getCKennwort()) return null ;
-			
+			if (null == cKennwort && null != benutzerDto.getCKennwort())
+				return null;
+
 			if (cKennwort.equals(new String(benutzerDto.getCKennwort()))) {
 				return benutzerDto;
 			}
-			
-			benutzerDto = null ;
+
+			benutzerDto = null;
 		} catch (NoResultException e) {
 		} catch (NonUniqueResultException e1) {
 		}
 
-		return benutzerDto ;
-		
-//		try {
-//			return benutzerFindByCBenutzerkennung(cBenutzerkennung, cKennwort);
-//		} catch (Exception e) {
-//			return null;
-//		}
+		return benutzerDto;
+
+		// try {
+		// return benutzerFindByCBenutzerkennung(cBenutzerkennung, cKennwort);
+		// } catch (Exception e) {
+		// return null;
+		// }
 	}
 
 	private void setBenutzerFromBenutzerDto(Benutzer benutzer,
@@ -618,7 +642,6 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	 */
 	public Integer createSystemrolle(SystemrolleDto systemrolleDto)
 			throws EJBExceptionLP {
-		myLogger.entry();
 		if (systemrolleDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("systemrolleDto == null"));
@@ -739,7 +762,8 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 			query.setParameter(1, dto.getSystemrolleIId());
 			query.setParameter(2, dto.getFertigungsgruppeIId());
 			// @todo getSingleResult oder getResultList ?
-			Fertigungsgrupperolle temp = (Fertigungsgrupperolle) query.getSingleResult();
+			Fertigungsgrupperolle temp = (Fertigungsgrupperolle) query
+					.getSingleResult();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 					new Exception("PERS_FERTIGUNGSGRUPPEROLLE.UK"));
 		} catch (NoResultException ex1) {
@@ -750,8 +774,8 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 		Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_FERTIGUNGSGRUPPEROLLE);
 		dto.setIId(pk);
 		try {
-			Fertigungsgrupperolle bean = new Fertigungsgrupperolle(dto.getIId(),
-					dto.getSystemrolleIId(),
+			Fertigungsgrupperolle bean = new Fertigungsgrupperolle(
+					dto.getIId(), dto.getSystemrolleIId(),
 					dto.getFertigungsgruppeIId());
 			em.persist(bean);
 			em.flush();
@@ -762,6 +786,7 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
 	}
+
 	public Integer createNachrichtarchiv(NachrichtarchivDto nachrichtarchivDto,
 			TheClientDto theClientDto) {
 		if (nachrichtarchivDto == null) {
@@ -883,7 +908,6 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	 * @throws EJBExceptionLP
 	 */
 	public void removeSystemrolle(Integer iId) throws EJBExceptionLP {
-		myLogger.entry();
 		if (iId == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("iId == null"));
@@ -955,7 +979,8 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 		}
 		try {
 
-			Fertigungsgrupperolle fertigungsgrupperolle = em.find(Fertigungsgrupperolle.class, iId);
+			Fertigungsgrupperolle fertigungsgrupperolle = em.find(
+					Fertigungsgrupperolle.class, iId);
 			if (fertigungsgrupperolle == null) {
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
@@ -977,7 +1002,6 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	 */
 	public void updateSystemrolle(SystemrolleDto systemrolleDto)
 			throws EJBExceptionLP {
-		myLogger.entry();
 		if (systemrolleDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("systemrolleDto == null"));
@@ -1053,38 +1077,49 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
-	public JasperPrintLP printBenutzerstatistik(java.sql.Date dVon,
-			java.sql.Date dBis, TheClientDto theClientDto) {
+	public JasperPrintLP printBenutzerstatistik(Date dVon,
+			Date dBis, TheClientDto theClientDto) {
 
 		dVon = Helper.cutDate(dVon);
 
 		Session session = FLRSessionFactory.getFactory().openSession();
-		String sQuery = "SELECT uc FROM FLRUsercount AS uc WHERE uc.t_zeitpunkt>='"
-				+ Helper.formatDateWithSlashes(dVon)
-				+ "' AND uc.t_zeitpunkt<='"
-				+ Helper.formatDateWithSlashes(dBis) + "'";
+		
+		HvTypedCriteria<FLRSystemrolle> critRolle = new HvTypedCriteria<FLRSystemrolle>(
+				session.createCriteria(FLRSystemrolle.class))
+				.add(Restrictions.isNotNull("i_max_users"));
+		List<FLRSystemrolle> rollen = critRolle.list();
+		
+		HvTypedCriteria<FLRUsercount> critCount = new HvTypedCriteria<FLRUsercount>(
+				session.createCriteria(FLRUsercount.class));
+		critCount.add(Restrictions.ge("t_zeitpunkt", dVon)).add(
+				Restrictions.le("t_zeitpunkt", dBis));
 
-		org.hibernate.Query inventurliste = session.createQuery(sQuery);
-		List<?> resultList = inventurliste.list();
-		Iterator<?> resultListIterator = resultList.iterator();
-
-		TreeMap<java.sql.Timestamp, Integer> tmTage = new TreeMap<java.sql.Timestamp, Integer>();
-		while (resultListIterator.hasNext()) {
-			FLRUsercount uc = (FLRUsercount) resultListIterator.next();
-
-			java.sql.Timestamp t = new java.sql.Timestamp(Helper.cutDate(
+		Map<String, Map<Timestamp, Integer>> rolleTageAnzahl = new HashMap<String, Map<Timestamp, Integer>>();
+		Map<Timestamp, Integer> hvTageAnzahl = new TreeMap<Timestamp, Integer>();
+		
+		for (FLRUsercount uc : critCount.list()) {
+			Timestamp t = new Timestamp(Helper.cutDate(
 					uc.getT_zeitpunkt()).getTime());
 
-			if (tmTage.containsKey(t)) {
-				Integer iAnzahlVorhanden = tmTage.get(t);
-				if (uc.getI_anzahl().intValue() > iAnzahlVorhanden.intValue()) {
-					tmTage.put(t, uc.getI_anzahl());
-				}
-
+			Map<Timestamp, Integer> tageAnzahl;
+			
+			if(uc.getFlrsystemrolle() == null 
+					|| uc.getFlrsystemrolle().getI_max_users() == null) {
+				// zaehlt zu allgemein
+				tageAnzahl = hvTageAnzahl; 
 			} else {
-				tmTage.put(t, uc.getI_anzahl());
+				// zaehlt zu rolle
+				String rolle = uc.getFlrsystemrolle().getC_bez();
+				tageAnzahl = rolleTageAnzahl.get(rolle);
+				if(tageAnzahl == null) {
+					tageAnzahl = new TreeMap<Timestamp, Integer>();
+					rolleTageAnzahl.put(rolle, tageAnzahl);
+				}
 			}
-
+			
+			if(tageAnzahl.get(t) == null || uc.getI_anzahl() > tageAnzahl.get(t)) {
+				tageAnzahl.put(t, uc.getI_anzahl());
+			}
 		}
 
 		Calendar c = Calendar.getInstance();
@@ -1092,36 +1127,80 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 
 		while (c.getTimeInMillis() <= dBis.getTime()) {
 
-			java.sql.Timestamp t = new java.sql.Timestamp(Helper.cutDate(
+			Timestamp t = new Timestamp(Helper.cutDate(
 					c.getTime()).getTime());
-			if (!tmTage.containsKey(t)) {
-				tmTage.put(t, new Integer(0));
+			
+			if(hvTageAnzahl.get(t) == null)
+				hvTageAnzahl.put(t, 0);
+			
+			for(FLRSystemrolle flrRolle : rollen) {
+				String rolle = flrRolle.getC_bez();
+				Map<Timestamp, Integer> tageAnzahl = rolleTageAnzahl.get(rolle);
+				if(tageAnzahl == null) {
+					tageAnzahl = new TreeMap<Timestamp, Integer>();
+					rolleTageAnzahl.put(rolle, tageAnzahl);
+				}
+				
+				if(tageAnzahl.get(t) == null)
+					tageAnzahl.put(t, 0);
 			}
 			c.add(Calendar.DATE, 1);
 		}
 
-		ArrayList alDaten = new ArrayList();
-		Iterator it = tmTage.keySet().iterator();
-		while (it.hasNext()) {
-			java.sql.Timestamp t = (java.sql.Timestamp) it.next();
-
-			Object[] oZeile = new Object[REPORT_BENUTZERSTATISTIK_ANZAHL_SPALTEN];
-			oZeile[REPORT_BENUTZERSTATISTIK_DATUM] = t;
-			oZeile[REPORT_BENUTZERSTATISTIK_MAX_ANZAHL] = tmTage.get(t);
-			alDaten.add(oZeile);
+		List<Object[]> alDaten = new ArrayList<Object[]>();
+		
+		alDaten.addAll(createZeilen("Datum", hvTageAnzahl, true));
+		
+		alDaten.addAll(createZeilen("<keine Rolle>", hvTageAnzahl));
+		
+		for(Map.Entry<String, Map<Timestamp, Integer>> entry : rolleTageAnzahl.entrySet()) {
+			alDaten.addAll(createZeilen(entry.getKey(), entry.getValue()));
 		}
+		
+		Collections.sort(alDaten, new Comparator<Object[]>() {
 
-		Object[][] dataTemp = new Object[1][2];
-		data = (Object[][]) alDaten.toArray(dataTemp);
+			@Override
+			public int compare(Object[] o1, Object[] o2) {
+				Timestamp t1 = (Timestamp)o1[REPORT_BENUTZERSTATISTIK_DATUM];
+				Timestamp t2 = (Timestamp)o2[REPORT_BENUTZERSTATISTIK_DATUM];
+				
+				Calendar c1 = Calendar.getInstance();
+				Calendar c2 = Calendar.getInstance();
+				c1.setTime(t1);
+				c2.setTime(t2);
+				if(c1.get(Calendar.YEAR) != c2.get(Calendar.YEAR))
+					return new Integer(c1.get(Calendar.YEAR)).compareTo(c2.get(Calendar.YEAR));
+				return new Integer(c1.get(Calendar.MONTH)).compareTo(c2.get(Calendar.MONTH));
+			}
+		});
+
+		data = alDaten.toArray(new Object[0][]);
 
 		HashMap<String, Object> parameter = new HashMap<String, Object>();
-		parameter.put("P_VON", new java.sql.Timestamp(dVon.getTime()));
-		parameter.put("P_BIS", new java.sql.Timestamp(dBis.getTime()));
+		parameter.put("P_VON", new Timestamp(dVon.getTime()));
+		parameter.put("P_BIS", new Timestamp(dBis.getTime()));
 		initJRDS(parameter, PersonalFac.REPORT_MODUL,
 				BenutzerFac.REPORT_BENUTZERSTATISTIK,
 				theClientDto.getMandant(), theClientDto.getLocMandant(),
 				theClientDto);
 		return getReportPrint();
+	}
+
+	private List<Object[]> createZeilen(String rolle, Map<Timestamp, Integer> datumAnzahl) {
+		return createZeilen(rolle, datumAnzahl, false);
+		
+	}
+	private List<Object[]> createZeilen(String rolle, Map<Timestamp, Integer> datumAnzahl, boolean ohneAnzahl) {
+		List<Object[]>  zeilen = new ArrayList<Object[]>();
+		for(Map.Entry<Timestamp, Integer> entry : datumAnzahl.entrySet()) {
+			Object[] oZeile = new Object[REPORT_BENUTZERSTATISTIK_ANZAHL_SPALTEN];
+			oZeile[REPORT_BENUTZERSTATISTIK_ROLLE] = rolle;
+			oZeile[REPORT_BENUTZERSTATISTIK_DATUM] = entry.getKey();
+			if(!ohneAnzahl)
+				oZeile[REPORT_BENUTZERSTATISTIK_ANZAHL] = entry.getValue();
+			zeilen.add(oZeile);
+		}
+		return zeilen;
 	}
 
 	public void updateLagerrolle(LagerrolleDto lagerrolleDto) {
@@ -1160,12 +1239,13 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 
 	}
 
-	public void updateFertigungsgrupperolle(FertigungsgrupperolleDto fertigungsgrupperolleDto) {
-		
+	public void updateFertigungsgrupperolle(
+			FertigungsgrupperolleDto fertigungsgrupperolleDto) {
 
 		Integer iId = fertigungsgrupperolleDto.getIId();
 		// try {
-		Fertigungsgrupperolle themarolle = em.find(Fertigungsgrupperolle.class, iId);
+		Fertigungsgrupperolle themarolle = em.find(Fertigungsgrupperolle.class,
+				iId);
 		if (themarolle == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, "");
 		}
@@ -1173,9 +1253,10 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 			Query query = em
 					.createNamedQuery("FertigungsgrupperollefindBySystemrolleIIdFertigungsgruppeIId");
 			query.setParameter(1, fertigungsgrupperolleDto.getSystemrolleIId());
-			query.setParameter(2, fertigungsgrupperolleDto.getFertigungsgruppeIId());
-			Integer iIdVorhanden = ((Fertigungsgrupperolle) query.getSingleResult())
-					.getIId();
+			query.setParameter(2,
+					fertigungsgrupperolleDto.getFertigungsgruppeIId());
+			Integer iIdVorhanden = ((Fertigungsgrupperolle) query
+					.getSingleResult()).getIId();
 			if (iId.equals(iIdVorhanden) == false) {
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
@@ -1185,7 +1266,8 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 		} catch (NoResultException ex) {
 
 		}
-		setFertigungsgrupperolleFromFertigungsgrupperolleDto(themarolle, fertigungsgrupperolleDto);
+		setFertigungsgrupperolleFromFertigungsgrupperolleDto(themarolle,
+				fertigungsgrupperolleDto);
 
 	}
 
@@ -1345,13 +1427,16 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 		}
 		return assembleLagerrolleDto(lagerrolle);
 	}
-	public FertigungsgrupperolleDto fertigungsgrupperolleFindByPrimaryKey(Integer iId) {
+
+	public FertigungsgrupperolleDto fertigungsgrupperolleFindByPrimaryKey(
+			Integer iId) {
 		if (iId == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("cNr == null"));
 		}
 
-		Fertigungsgrupperolle fertigungsgrupperolle = em.find(Fertigungsgrupperolle.class, iId);
+		Fertigungsgrupperolle fertigungsgrupperolle = em.find(
+				Fertigungsgrupperolle.class, iId);
 		if (fertigungsgrupperolle == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
@@ -1385,7 +1470,6 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	 */
 	public SystemrolleDto systemrolleFindByCBez(String cBez)
 			throws EJBExceptionLP {
-		myLogger.entry();
 		if (cBez == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
@@ -1405,7 +1489,6 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 
 	public SystemrolleDto systemrolleFindByCBezOhneExc(String cBez)
 			throws EJBExceptionLP {
-		myLogger.entry();
 		if (cBez == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
@@ -1433,6 +1516,7 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	private void setSystemrolleFromSystemrolleDto(Systemrolle systemrolle,
 			SystemrolleDto systemrolleDto) {
 		systemrolle.setCBez(systemrolleDto.getCBez());
+		systemrolle.setIMaxUsers(systemrolleDto.getIMaxUsers());
 		em.merge(systemrolle);
 		em.flush();
 	}
@@ -1487,10 +1571,13 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 		em.flush();
 	}
 
-	private void setFertigungsgrupperolleFromFertigungsgrupperolleDto(Fertigungsgrupperolle fertigungsgrupperolle,
+	private void setFertigungsgrupperolleFromFertigungsgrupperolleDto(
+			Fertigungsgrupperolle fertigungsgrupperolle,
 			FertigungsgrupperolleDto fertigungsgrupperolleDto) {
-		fertigungsgrupperolle.setFertigungsgruppeIId(fertigungsgrupperolleDto.getFertigungsgruppeIId());
-		fertigungsgrupperolle.setSystemrolleIId(fertigungsgrupperolleDto.getSystemrolleIId());
+		fertigungsgrupperolle.setFertigungsgruppeIId(fertigungsgrupperolleDto
+				.getFertigungsgruppeIId());
+		fertigungsgrupperolle.setSystemrolleIId(fertigungsgrupperolleDto
+				.getSystemrolleIId());
 
 		em.merge(fertigungsgrupperolle);
 		em.flush();
@@ -1513,29 +1600,32 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 		return ThemarolleDtoAssembler.createDto(themarolle);
 	}
 
-	private FertigungsgrupperolleDto assembleFertigungsgrupperolleDto(Fertigungsgrupperolle fertigungsgrupperolle) {
-		return FertigungsgrupperolleDtoAssembler.createDto(fertigungsgrupperolle);
+	private FertigungsgrupperolleDto assembleFertigungsgrupperolleDto(
+			Fertigungsgrupperolle fertigungsgrupperolle) {
+		return FertigungsgrupperolleDtoAssembler
+				.createDto(fertigungsgrupperolle);
 	}
+
 	private LagerrolleDto assembleLagerrolleDto(Lagerrolle lagerrolle) {
 		return LagerrolleDtoAssembler.createDto(lagerrolle);
 	}
 
-	
-	public Integer[] getBerechtigteLagerIIdsEinerSystemrolle(Integer systemrolleIId){
+	public Integer[] getBerechtigteLagerIIdsEinerSystemrolle(
+			Integer systemrolleIId) {
 		Query query = em.createNamedQuery("LagerrollefindBySystemrolleIId");
 		query.setParameter(1, systemrolleIId);
 		LagerrolleDto[] lagerrolleDtos = assembleLagerrolleDtos(query
 				.getResultList());
-		Integer[] ids=new Integer[lagerrolleDtos.length];
+		Integer[] ids = new Integer[lagerrolleDtos.length];
 		for (int i = 0; i < lagerrolleDtos.length; i++) {
-			ids[i]=lagerrolleDtos[i].getLagerIId();
+			ids[i] = lagerrolleDtos[i].getLagerIId();
 		}
 		return ids;
 	}
-	
 
 	public void kopiereLagerRechteEinerRolle(Integer systemrolleIIdQuelle,
-			Integer systemrolleIIdZiel, TheClientDto theClientDto) {
+			Integer systemrolleIIdZiel, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
 		Query query = em.createNamedQuery("LagerrollefindBySystemrolleIId");
 		query.setParameter(1, systemrolleIIdQuelle);
 		LagerrolleDto[] lagerrolleDtos = assembleLagerrolleDtos(query
@@ -1557,7 +1647,6 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 		getBenutzerServicesFac().reloadRolleRechte();
 	}
 
-	
 	private SystemrolleDto[] assembleSystemrolleDtos(Collection<?> systemrolles) {
 		List<SystemrolleDto> list = new ArrayList<SystemrolleDto>();
 		if (systemrolles != null) {
@@ -1665,8 +1754,8 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	}
 
 	/**
-	 * L&ouml;sche eine vorhandene Benutzermandantsystemrolle aus der DB, wenn diese
-	 * nicht mehr verwendet wird
+	 * L&ouml;sche eine vorhandene Benutzermandantsystemrolle aus der DB, wenn
+	 * diese nicht mehr verwendet wird
 	 * 
 	 * @param iId
 	 *            Integer
@@ -1674,7 +1763,6 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	 */
 	public void removeBenutzermandantsystemrolle(Integer iId)
 			throws EJBExceptionLP {
-		myLogger.entry();
 		if (iId == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("iId == null"));
@@ -1803,7 +1891,8 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	}
 
 	/**
-	 * Findet eine Benutzermandantsystemrolle anhand des eindeutigen Schl&uuml;ssels
+	 * Findet eine Benutzermandantsystemrolle anhand des eindeutigen
+	 * Schl&uuml;ssels
 	 * 
 	 * @param benutzerIId
 	 *            Integer
@@ -1814,7 +1903,6 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	 */
 	public BenutzermandantsystemrolleDto benutzermandantsystemrolleFindByBenutzerIIdMandantCNr(
 			Integer benutzerIId, String mandantCNr) throws EJBExceptionLP {
-		myLogger.entry();
 		if (benutzerIId == null || mandantCNr == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("benutzerIId == null || mandantCNr == null"));
@@ -1854,7 +1942,8 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	}
 
 	/**
-	 * Findet eine Benutzermandantsystemrolle anhand des eindeutigen Schl&uuml;ssels
+	 * Findet eine Benutzermandantsystemrolle anhand des eindeutigen
+	 * Schl&uuml;ssels
 	 * 
 	 * @param benutzerCNr
 	 *            Integer
@@ -1865,7 +1954,6 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 	 */
 	public BenutzermandantsystemrolleDto benutzermandantsystemrolleFindByBenutzerCNrMandantCNr(
 			String benutzerCNr, String mandantCNr) throws EJBExceptionLP {
-		myLogger.entry();
 		if (benutzerCNr == null || mandantCNr == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("benutzerCNr == null || mandantCNr == null"));
@@ -1886,13 +1974,16 @@ public class BenutzerFacBean extends LPReport implements BenutzerFac {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, e);
 		}
 	}
-	public BenutzermandantsystemrolleDto[] benutzermandantsystemrolleFindByMandantCNrOhneExc(String mandantCNr) {
-		Query query = em.createNamedQuery(Benutzermandantsystemrolle.FindByMandantCnr);
+
+	public BenutzermandantsystemrolleDto[] benutzermandantsystemrolleFindByMandantCNrOhneExc(
+			String mandantCNr) {
+		Query query = em
+				.createNamedQuery(Benutzermandantsystemrolle.FindByMandantCnr);
 		query.setParameter(1, mandantCNr);
 		try {
 			Collection<?> result = query.getResultList();
 			return assembleBenutzermandantsystemrolleDtos(result);
-		} catch(NoResultException ex) {
+		} catch (NoResultException ex) {
 			return null;
 		}
 	}

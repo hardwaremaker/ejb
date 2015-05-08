@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -45,7 +45,9 @@ import org.hibernate.Query;
 import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-
+import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport;
+import com.lp.server.auftrag.service.AuftragDto;
+import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragpositionFac;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungPosition;
@@ -115,73 +117,38 @@ public class AuftraegeEinerRechnungHandler extends UseCaseHandler {
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			
+			String queryString = "SELECT auftrag FROM FLRAuftragReport AS auftrag"
+					+ " WHERE auftrag.i_id IN"
+							+ " (" + getSelectFromClauseRechnungPosition()
+							+ buildWhereClauseRechnungPosition() + ")"
+					+ " OR auftrag.i_id IN"
+							+ " (" + getSelectFromClauseRechnung()
+							+ buildWhereClauseRechnung() + ")"
+					+ buildOrderByClause();
+
 			// myLogger.info("HQL: " + queryString);
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
 			List<?> resultList = query.list();
-			Iterator<?> resultListIterator = resultList.iterator();
 
 			HashMap<?, ?> hmStatus = getSystemMultilanguageFac()
 					.getAllStatiMitUebersetzung(
 							theClientDto.getLocUi(), theClientDto);
-
-			// verdichten
-			TreeMap<String, Integer> hm = new TreeMap<String, Integer>();
-			while (resultListIterator.hasNext()) {
-				FLRRechnungPosition pos = (FLRRechnungPosition) resultListIterator
-						.next();
-				if (pos.getFlrpositionensichtauftrag() != null) {
-					hm.put(
-							pos.getFlrpositionensichtauftrag()
-									.getFlrauftrag().getC_nr(), pos
-									.getFlrpositionensichtauftrag()
-									.getAuftrag_i_id());
-				}
-			}
-			// jetzt noch den Kopfauftrag dazu suchen (der koennte evtl. eh
-			// schon dabei sein)
-			if (this.getQuery() != null
-					&& this.getQuery().getFilterBlock() != null
-					&& this.getQuery().getFilterBlock().filterKrit != null) {
-				FilterBlock filterBlock = this.getQuery().getFilterBlock();
-				FilterKriterium[] filterKriterien = this.getQuery()
-						.getFilterBlock().filterKrit;
-				for (int i = 0; i < filterKriterien.length; i++) {
-					if (filterKriterien[i].isKrit) {
-						if (filterKriterien[i].kritName
-								.equals(RechnungFac.FLR_RECHNUNGPOSITION_FLRRECHNUNG
-										+ "." + RechnungFac.FLR_RECHNUNG_I_ID)) {
-							Integer rechnungIId = new Integer(
-									filterKriterien[i].value);
-							RechnungDto reDto = getRechnungFac()
-									.rechnungFindByPrimaryKey(rechnungIId);
-							if (reDto.getAuftragIId() != null) {
-								AuftragDto auftragDto = getAuftragFac()
-								.auftragFindByPrimaryKey(reDto.getAuftragIId());
-								hm.put(auftragDto.getCNr(), reDto
-										.getAuftragIId());
-							}
-						}
-					}
-				}
-			}
 			int row = 0;
 			int col = 0;
-			Object[][] rows = new Object[hm.size()][colCount];
-			for (Iterator<String> iter = hm.keySet().iterator(); iter.hasNext();) {
-				String item = (String) iter.next();
-				Integer auftragIId=hm.get(item);
+			Object[][] rows = new Object[resultList.size()][colCount];
+			Iterator<?> resultListIterator = resultList.iterator();
+
+			while(resultListIterator.hasNext()) {
+				FLRAuftragReport flrauftrag = (FLRAuftragReport) resultListIterator.next();
 				
-				AuftragDto auftragDto = getAuftragFac()
-						.auftragFindByPrimaryKey(auftragIId);
-				rows[row][col++] = auftragDto.getIId();
-				rows[row][col++] = auftragDto.getCNr();
-				rows[row][col++] = auftragDto.getCBezProjektbezeichnung();
-				rows[row++][col++] = hmStatus.get(auftragDto
-						.getAuftragstatusCNr());
+				rows[row][col++] = flrauftrag.getI_id();
+				rows[row][col++] = flrauftrag.getC_nr();
+				rows[row][col++] = flrauftrag.getC_bez();
+				rows[row++][col++] = hmStatus.get(flrauftrag.getAuftragstatus_c_nr());
+
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
@@ -210,44 +177,17 @@ public class AuftraegeEinerRechnungHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			session = factory.openSession();
-			String queryString = "select distinct "
-					+ RechnungFac.FLR_RECHNUNGPOSITION_FLRPOSITIONENSICHTAUFTRAG
-					+ "." + AuftragpositionFac.FLR_AUFTRAGPOSITION_AUFTRAG_I_ID
-					+ this.getFromClause() + this.buildWhereClause();
+			String queryString = "SELECT auftrag.i_id FROM FLRAuftragReport AS auftrag"
+					+ " WHERE auftrag.i_id IN"
+							+ " (" + getSelectFromClauseRechnungPosition()
+							+ buildWhereClauseRechnungPosition() + ")"
+					+ " OR auftrag.i_id IN"
+							+ " (" + getSelectFromClauseRechnung()
+							+ buildWhereClauseRechnung() + ")"
+					+ buildOrderByClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
-			// Auftrags-ID's in die HashMap geben
-			HashMap<Integer, Integer> hm = new HashMap<Integer, Integer>();
-			for (Iterator<?> iter = rowCountResult.iterator(); iter.hasNext();) {
-				Integer item = (Integer) iter.next();
-				hm.put(item, item);
-			}
-			// jetzt noch den Kopfauftrag dazu suchen (der koennte evtl. eh
-			// schon dabei sein)
-			if (this.getQuery() != null
-					&& this.getQuery().getFilterBlock() != null
-					&& this.getQuery().getFilterBlock().filterKrit != null) {
-				FilterBlock filterBlock = this.getQuery().getFilterBlock();
-				FilterKriterium[] filterKriterien = this.getQuery()
-						.getFilterBlock().filterKrit;
-				for (int i = 0; i < filterKriterien.length; i++) {
-					if (filterKriterien[i].isKrit) {
-						if (filterKriterien[i].kritName
-								.equals(RechnungFac.FLR_RECHNUNGPOSITION_FLRRECHNUNG
-										+ "." + RechnungFac.FLR_RECHNUNG_I_ID)) {
-							Integer rechnungIId = new Integer(
-									filterKriterien[i].value);
-							RechnungDto reDto = getRechnungFac()
-									.rechnungFindByPrimaryKey(rechnungIId);
-							if (reDto.getAuftragIId() != null) {
-								hm.put(reDto.getAuftragIId(), reDto
-										.getAuftragIId());
-							}
-						}
-					}
-				}
-			}
-			rowCount = hm.size();
+			rowCount = rowCountResult.size();
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -264,12 +204,12 @@ public class AuftraegeEinerRechnungHandler extends UseCaseHandler {
 	}
 
 	/**
-	 * builds the where clause of the HQL (Hibernate Query Language) statement
+	 * builds the where clause for the RechnungPosition part of the HQL statement
 	 * using the current query.
 	 * 
 	 * @return the HQL where clause.
 	 */
-	private String buildWhereClause() {
+	private String buildWhereClauseRechnungPosition() {
 		StringBuffer where = new StringBuffer("");
 
 		if (this.getQuery() != null && this.getQuery().getFilterBlock() != null
@@ -287,14 +227,37 @@ public class AuftraegeEinerRechnungHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(" " + FLR_LIEFERSCHEINPOSITION
-							+ filterKriterien[i].kritName);
+					where.append(" rechposition." + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
 			}
 			if (filterAdded) {
 				where.insert(0, " WHERE");
+			}
+		}
+		return where.toString();
+	}
+
+	/**
+	 * builds the where clause for the Rechnung part of the HQL statement
+	 * using the current query.
+	 * 
+	 * @return the HQL where clause.
+	 */
+	private String buildWhereClauseRechnung() {
+		StringBuffer where = new StringBuffer("");
+
+		if (this.getQuery() != null && this.getQuery().getFilterBlock() != null
+				&& this.getQuery().getFilterBlock().filterKrit != null) {
+
+			FilterKriterium[] filterKriterien = this.getQuery()
+					.getFilterBlock().filterKrit;
+
+			if (filterKriterien.length > 0 && filterKriterien[0].isKrit) {
+				where.append(" WHERE rechnung.i_id"
+								+ " " + filterKriterien[0].operator
+								+ " " + filterKriterien[0].value);
 			}
 		}
 		return where.toString();
@@ -359,16 +322,33 @@ public class AuftraegeEinerRechnungHandler extends UseCaseHandler {
 		// orderBy.insert(0, " ORDER BY ");
 		// }
 		// }
+		orderBy.append(" ORDER BY ");
+		orderBy.append("auftrag.c_nr");
 		return orderBy.toString();
 	}
 
 	/**
-	 * get the basic from clause for the HQL statement.
+	 * get the basic select from clause for the RechnungPosition part
+	 * of the HQL statement.
 	 * 
-	 * @return the from clause.
+	 * @return the select from clause.
 	 */
-	private String getFromClause() {
-		return FLR_LIEFERSCHEINPOSITION_FROM_CLAUSE;
+	private String getSelectFromClauseRechnungPosition() {
+		
+		return "SELECT flrauftrag.i_id FROM FLRRechnungPosition rechposition"
+				+ " LEFT JOIN rechposition.flrpositionensichtauftrag.flrauftrag AS flrauftrag";
+	}
+
+	/**
+	 * get the basic from clause for the Rechnung part
+	 * of the HQL statement.
+	 * 
+	 * @return the select from clause.
+	 */
+	private String getSelectFromClauseRechnung() {
+		
+		return "SELECT flrauftrag.i_id FROM FLRRechnungReport AS rechnung"
+				+ " LEFT JOIN rechnung.flrauftrag AS flrauftrag";
 	}
 
 	/**
@@ -397,12 +377,15 @@ public class AuftraegeEinerRechnungHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select distinct "
-						+ RechnungFac.FLR_RECHNUNGPOSITION_FLRPOSITIONENSICHTAUFTRAG
-						+ "."
-						+ AuftragpositionFac.FLR_AUFTRAGPOSITION_AUFTRAG_I_ID
-						+ FLR_LIEFERSCHEINPOSITION_FROM_CLAUSE
-						+ this.buildWhereClause() + this.buildOrderByClause();
+				String queryString = "SELECT auftrag.i_id FROM FLRAuftragReport AS auftrag"
+						+ " WHERE auftrag.i_id IN"
+								+ " (" + getSelectFromClauseRechnungPosition()
+								+ buildWhereClauseRechnungPosition() + ")"
+						+ " OR auftrag.i_id IN"
+								+ " (" + getSelectFromClauseRechnung()
+								+ buildWhereClauseRechnung() + ")"
+						+ buildOrderByClause();
+
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {

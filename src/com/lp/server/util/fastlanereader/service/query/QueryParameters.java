@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -148,7 +148,12 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_FAHRZEUG = 64;
 	public static final int UC_ID_FAHRZEUGKOSTEN = 65;
 	public static final int UC_ID_PROJEKTTELEFONZEITEN = 66;
-
+	public static final int UC_ID_ZEITERFASSUNG_FAVORITEN = 67;
+	public static final int UC_ID_ZEITDATEN_VON_BIS = 68;
+	public static final int UC_ID_ZEITABSCHLUSS = 69;
+	public static final int UC_ID_MASCHINEMASCHINENZM = 70;
+	public static final int UC_ID_MASCHINEZM = 71;
+	public static final int UC_ID_MASCHINENZMTAGESART = 72;
 
 	// Benutzer 500-999
 	public static final int UC_ID_BENUZTER = 500;
@@ -181,6 +186,10 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_AUFTRAGBEGRUENDUNG = 1014;
 	public static final int UC_ID_AUFTRAGSICHTLSRE = 1015;
 	public static final int UC_ID_AUFTRAGEINGANGSRECHNUNGEN = 1016;
+	public static final int UC_ID_MEILENSTEIN = 1017;
+	public static final int UC_ID_ZEITPLAN = 1018;
+	public static final int UC_ID_ZAHLUNGSPLAN = 1019;
+	public static final int UC_ID_ZAHLUNGSPLANMEILENSTEIN = 1020;
 
 	// Artikel: 2000-2999
 	public static final int UC_ID_ARTIKEL = 2001;
@@ -232,6 +241,16 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_LAGERCOCKPIT_LOSSOLLMATERIAL = 2048;
 	public static final int UC_ID_ARTIEKLSHOPGRUPPE = 2049;
 	public static final int UC_ID_LAGERCOCKPIT_NICHTLAGERBEWIRTSCHAFTETE_ARTIKEL = 2050;
+	public static final int UC_ID_REACH = 2051;
+	public static final int UC_ID_ROHS = 2052;
+	public static final int UC_ID_AUTOMOTIVE = 2053;
+	public static final int UC_ID_MEDICAL = 2054;
+	public static final int UC_ID_ARTIKELKOMMENTARSUCHE = 2055;
+	public static final int UC_ID_VORZUG = 2056;
+	public static final int UC_ID_ALERGEN = 2057;
+	public static final int UC_ID_ARTIKELALERGEN = 2058;
+	public static final int UC_ID_LAGER_MIT_MANDANT = 2059;
+	
 
 	// Rechnung: 3000-3999
 	public static final int UC_ID_RECHNUNG = 3000;
@@ -334,6 +353,8 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_DOKUMENTGRUPPE = 5036;
 	public static final int UC_ID_DOKUMENTENLINK = 5037;
 	public static final int UC_ID_KOSTENTRAEGER = 5038;
+	public static final int UC_ID_REPORTVARIANTE = 5039;
+	public static final int UC_ID_PARAMETERMANDANTGUELTIGAB = 5040;
 
 	// Partner (Kunde, Sachbearbeiter, Ansprechpartner, Lieferant) 6000-6999
 	public static final int UC_ID_PARTNER = 6000;
@@ -366,6 +387,9 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_WIEDERVORLAGE = 6030;
 	public static final int UC_ID_ANSPRECHPARTNERPARTNER = 6031;
 	public static final int UC_ID_REFERENZ_ZU = 6032;
+	public static final int UC_ID_SERIENBRIEFSELEKTIONNEGATIV = 6033;
+	public static final int UC_ID_PARTNERKOMMENTARART = 6034;
+	public static final int UC_ID_PARTNERKOMMENTAR = 6035;
 
 	// Lieferschein 7000-7499 MB 01.09.07 keine falschen verwendungen
 	public static final int UC_ID_LIEFERSCHEIN = 7000;
@@ -382,6 +406,7 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_LIEFERSCHEINPOSITIONART = 7009;
 	public static final int UC_ID_AUFTRAEGE_EINES_LIEFERSCHEINS = 7010;
 	public static final int UC_ID_BEGRUENDUNG = 7011;
+	public static final int UC_ID_VERKETTET = 7012;
 
 	// Angebotsstuecklisten 7500-7999 MB 01.09.07 keine falschen verwendungen
 	public static final int UC_ID_AGSTKL = 7500;
@@ -389,6 +414,8 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_EINKAUFSANGEBOT = 7502;
 	public static final int UC_ID_EINKAUFSANGEBOTPOSITIONEN = 7503;
 	public static final int UC_ID_AUFSCHLAG = 7504;
+	public static final int UC_ID_AGSTKLARBEITSPLAN = 7505;
+	public static final int UC_ID_AGSTKLMENGENSTAFFEL = 7506;
 
 	// Bestellung 8000-8499 MB 01.09.07 keine falschen verwendungen (ausser die
 	// depr.)
@@ -444,6 +471,7 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_ANFRAGEPOSITIONART = 9504;
 	public static final int UC_ID_ANFRAGEART = 9505;
 	public static final int UC_ID_ZERTIFIKATART = 9506;
+	public static final int UC_ID_ANFRAGEERLEDIGUNGSGRUND = 9507;
 
 	// Fertigung 10000-10499 MB 01.09.07 keine falschen verwendungen
 	public static final int UC_ID_LOS = 10000;
@@ -466,6 +494,7 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_LOSGUTSCHLECHT = 10017;
 	public static final int UC_ID_LOSTECHNIKER = 10018;
 	public static final int UC_ID_LOSBEREICH = 10019;
+	public static final int UC_ID_OFFENE_AGS = 10020;
 
 	// Kueche 10500-10999 MB 01.09.07 keine falschen verwendungen
 	public static final int UC_ID_SPEISEPLAN = 10500;
@@ -486,6 +515,7 @@ public class QueryParameters implements Serializable {
 	public static final int UC_ID_POSERSATZ = 11007;
 	public static final int UC_ID_KOMMENTARIMPORT = 11008;
 	public static final int UC_ID_FERTIGUNGSGRUPPE_EINGESCHRAENKT = 11009;
+	public static final int UC_ID_STKLAGERENTNAHME = 11010;
 
 	// Projekt 12000-12999 MB 01.09.07 keine falschen verwendungen
 	public static final int UC_ID_PROJEKT = 12000;
@@ -537,6 +567,10 @@ public class QueryParameters implements Serializable {
 
 	public static final int UC_ID_EINGANGSRECHNUNGEN_EINES_INSERATES = 16005;
 
+	// Kommunikation Email ... 17000 - 17999
+	public static final int UC_ID_MEDIA_INBOX = 17000 ;
+	public static final int UC_ID_MEDIA_BELEG = 17001 ;
+	
 	// Alle FLR-Breitendefinitionen; die zentrale Stelle!
 	// flrspalte: 0 fixe Spaltenbreite fuer die Anzeige einer FLR Liste am
 	// Client
@@ -577,7 +611,8 @@ public class QueryParameters implements Serializable {
 	public static final String MENGE = "Menge";
 	public static final String PREIS = "Preis";
 
-	public static final String FEATURE_PREFIX = "FEATURE:" ;
+	public static final String FEATURE_PREFIX = "FEATURE:";
+	public static final String FEATUREVALUE_PREFIX = "FEATUREVALUE:" ;
 	
 	public static String getModulForUseCase(int iUseCaseId) {
 		if (iUseCaseId < 500) {
@@ -629,7 +664,7 @@ public class QueryParameters implements Serializable {
 	private SortierKriterium[] sortKrit = null;
 
 	/**
-	 * the filter criterias (WHERE claus).
+	 * the filter criterias (WHERE clause).
 	 */
 	private FilterBlock filterBlock = null;
 
@@ -643,6 +678,8 @@ public class QueryParameters implements Serializable {
 	private ArrayList<?> listOfExtraData = null;
 
 	private Integer limit;
+	
+	private boolean isApi ;
 
 	/**
 	 * creates a new QueryParameters instance.
@@ -778,4 +815,12 @@ public class QueryParameters implements Serializable {
 	public void setLimit(Integer limit) {
 		this.limit = limit;
 	}
+
+	public boolean getIsApi() {
+		return isApi;
+	}
+
+	public void setIsApi(boolean isApi) {
+		this.isApi = isApi;
+	}	
 }

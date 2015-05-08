@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -45,7 +45,9 @@ import javax.persistence.Table;
 
 @NamedQueries( {
 		@NamedQuery(name = "StuecklistefindByArtikelIIdMandantCNr", query = "SELECT OBJECT(o) FROM Stueckliste o WHERE o.artikelIId=?1 AND o.mandantCNr = ?2"),
-		@NamedQuery(name = "StuecklistefindByPartnerIIdMandantCNr", query = "SELECT OBJECT(O) FROM Stueckliste o WHERE o.partnerIId=?1 AND o.mandantCNr = ?2") })
+		@NamedQuery(name = "StuecklistefindByPartnerIIdMandantCNr", query = "SELECT OBJECT(O) FROM Stueckliste o WHERE o.partnerIId=?1 AND o.mandantCNr = ?2"), 
+		@NamedQuery(name = "StuecklistefindCountByPartnerIIdMandantCNr", query = "SELECT COUNT(O) FROM Stueckliste o WHERE o.partnerIId=?1 AND o.mandantCNr = ?2") 
+})
 @Entity
 @Table(name = "STK_STUECKLISTE")
 public class Stueckliste implements Serializable {
@@ -55,6 +57,19 @@ public class Stueckliste implements Serializable {
 
 	@Column(name = "B_FREMDFERTIGUNG")
 	private Short bFremdfertigung;
+
+	@Column(name = "B_KEINE_AUTOMATISCHE_MATERIALBUCHUNG")
+	private Short bKeineAutomatischeMaterialbuchung;
+	
+	
+	public Short getBKeineAutomatischeMaterialbuchung() {
+		return bKeineAutomatischeMaterialbuchung;
+	}
+
+	public void setBKeineAutomatischeMaterialbuchung(
+			Short bKeineAutomatischeMaterialbuchung) {
+		this.bKeineAutomatischeMaterialbuchung = bKeineAutomatischeMaterialbuchung;
+	}
 
 	@Column(name = "B_UEBERLIEFERBAR")
 	private Short bUeberlieferbar;
@@ -169,6 +184,31 @@ public class Stueckliste implements Serializable {
 		iErfassungsfaktor = erfassungsfaktor;
 	}
 
+	
+	@Column(name = "PERSONAL_I_ID_FREIGABE")
+	private Integer personalIIdFreigabe;
+	
+	@Column(name = "T_FREIGABE")
+	private Timestamp tFreigabe;
+	
+	
+	
+	public Integer getPersonalIIdFreigabe() {
+		return personalIIdFreigabe;
+	}
+
+	public void setPersonalIIdFreigabe(Integer personalIIdFreigabe) {
+		this.personalIIdFreigabe = personalIIdFreigabe;
+	}
+
+	public Timestamp getTFreigabe() {
+		return tFreigabe;
+	}
+
+	public void setTFreigabe(Timestamp tFreigabe) {
+		this.tFreigabe = tFreigabe;
+	}
+
 	private static final long serialVersionUID = 1L;
 
 	public Stueckliste() {
@@ -190,7 +230,7 @@ public class Stueckliste implements Serializable {
 			String stuecklisteartCNr,
 			Short materialbuchungbeiablieferung, 
 			Short ausgabeunterstueckliste, Short ueberlieferbar,
-			Integer erfassungsfaktor,Integer lagerIIdZiellager,Short bDruckeinlagerstandsdetail) {
+			Integer erfassungsfaktor,Integer lagerIIdZiellager,Short bDruckeinlagerstandsdetail,Short bKeineAutomatischeMaterialbuchung) {
 		setIId(id);
 		setArtikelIId(artikelIId);
 		setBFremdfertigung(fremdfertigung);
@@ -213,6 +253,7 @@ public class Stueckliste implements Serializable {
 		setIErfassungsfaktor(erfassungsfaktor);
 		setLagerIIdZiellager(lagerIIdZiellager);
 		setBDruckeinlagerstandsdetail(bDruckeinlagerstandsdetail);
+		setBKeineAutomatischeMaterialbuchung(bKeineAutomatischeMaterialbuchung);
 	}
 
 	public Integer getIId() {

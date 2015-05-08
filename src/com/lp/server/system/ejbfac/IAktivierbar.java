@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,9 +34,12 @@ package com.lp.server.system.ejbfac;
 
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
+import java.util.List;
 
 import com.lp.server.rechnung.ejbfac.RechnungFacBean;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.service.BelegDto;
+import com.lp.service.BelegpositionDto;
 import com.lp.util.EJBExceptionLP;
 
 /**
@@ -75,10 +78,14 @@ public interface IAktivierbar {
 	 * @param iid
 	 * 	die IId des Beleges (zb Auftrag, Rechnung...)
 	 * @param theClientDto
+	 * @return den Zeitpunkt tAendern des Beleges, 
+	 * wenn dieser im Zuge der Berechnung gesetzt wird 
+	 * (muss frisch aus der Datenbank kommen!).
+	 * Sonst den aktuellen Zeitpunkt.
 	 * @throws EJBExceptionLP
 	 * @throws RemoteException
 	 */
-	void berechneBeleg(Integer iid, TheClientDto theClientDto) 
+	Timestamp berechneBeleg(Integer iid, TheClientDto theClientDto) 
 			throws EJBExceptionLP, RemoteException;
 	
 	/**
@@ -97,16 +104,22 @@ public interface IAktivierbar {
 			throws EJBExceptionLP, RemoteException;
 	
 	/**
-	 * Wird vom {@link BelegAktivierungController} verwendet.
-	 * Wurde der Beleg in den Kopfdaten, eine seiner Positionen oder eine
-	 * andere Abh&auml;ngigkeit <b>nach</b> dem Zeitpunkt <code>t</code> ge&auml;ndert?
+	 * Wird vom {@link BelegAktivierungController} verwendet.<br>
+	 * Gibt alle Timestamps des Beleges in eine Liste zur&uuml;ck,
+	 * welche einen &Auml;nderungszeitpunkt darstellen. Dazu geh&ouml;ren
+	 * zB. auch Storierungszeitpunkt und tManuellErledigt.
 	 * @param iid
 	 * 	die IId des Beleges (zb Auftrag, Rechnung...)
-	 * @param t der Zeitpunkt
-	 * @return true wenn es eine sp&auml;tere &Auml;nderung gibt
+	 * @return eine Liste mit allen &Auml;nderungszeitpunkten. Darf nicht null und auch nicht leer sein.
 	 * @throws EJBExceptionLP
 	 * @throws RemoteException
 	 */
-	boolean hatAenderungenNach(Integer iid, Timestamp t)
+	List<Timestamp> getAenderungsZeitpunkte(Integer iid)
 			throws EJBExceptionLP, RemoteException;
+	
+	BelegDto getBelegDto(Integer iid, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException ;
+	
+	BelegpositionDto[] getBelegPositionDtos(Integer iid, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException ;
+	
+	Integer getKundeIdDesBelegs(BelegDto belegDto, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException ;
 }

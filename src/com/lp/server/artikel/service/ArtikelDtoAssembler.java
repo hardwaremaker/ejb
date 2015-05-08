@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -124,6 +124,16 @@ public class ArtikelDtoAssembler {
 			artikelDto.setBKalkulatorisch(artikel.getBKalkulatorisch());
 			artikelDto.setNAufschlagBetrag(artikel.getNAufschlagBetrag());
 			artikelDto.setFAufschlagProzent(artikel.getFAufschlagProzent());
+			artikelDto.setCUL(artikel.getCUL());
+			artikelDto.setReachIId(artikel.getReachIId());
+			artikelDto.setRohsIId(artikel.getRohsIId());
+			artikelDto.setAutomotiveIId(artikel.getAutomotiveIId());
+			artikelDto.setMedicalIId(artikel.getMedicalIId());
+			artikelDto.setFUeberproduktion(artikel.getFUeberproduktion());
+			artikelDto.setVorzugIId(artikel.getVorzugIId());
+			artikelDto.setCEccn(artikel.getCEccn());
+			artikelDto.setFFertigungsVpe(artikel.getFFertigungsVpe());
+			
 		}
 		return artikelDto;
 	}

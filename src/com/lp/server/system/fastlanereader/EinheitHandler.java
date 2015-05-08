@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -291,13 +291,14 @@ public class EinheitHandler extends UseCaseHandler {
 					getTextRespectUISpr("lp.dimension", mandantCNr, locUI),
 
 			}, new int[] {
-					QueryParameters.FLR_BREITE_M, // c_nr
+					-1, // c_nr
 					QueryParameters.FLR_BREITE_M,
 					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 					QueryParameters.FLR_BREITE_M },
 
 					new String[] { "einheit.c_nr", "einheit.c_nr",
-							"einheit.einheit_einheit_set.c_bez",
+//					"einheit.einheit_einheit_set.c_bez",
+							"einheit_einheit_set.c_bez",
 							"einheit.i_dimension" }));
 
 		}

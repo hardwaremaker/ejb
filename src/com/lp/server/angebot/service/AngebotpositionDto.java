@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -46,33 +46,40 @@ public class AngebotpositionDto extends BelegpositionVerkaufDto implements
 	 */
 	private static final long serialVersionUID = 1L;
 	private BigDecimal nGestehungspreis;
-	
-	
+
 	private Integer agstklIId;
 	private BigDecimal nGesamtwertagstklinangebotswaehrung;
 	private Short bAlternative;
-	
-	public AngebotpositionDto(){
+
+	public AngebotpositionDto() {
 		super();
 	}
-	
-	
-	public AngebotpositionDto(BelegpositionVerkaufDto belegpositionVerkaufDto){
+
+	public AngebotpositionDto(BelegpositionVerkaufDto belegpositionVerkaufDto) {
 		super();
 		this.setFRabattsatz(belegpositionVerkaufDto.getFRabattsatz());
-		this.setBRabattsatzuebersteuert(belegpositionVerkaufDto.getBRabattsatzuebersteuert());
-		this.setFZusatzrabattsatz(belegpositionVerkaufDto.getFZusatzrabattsatz());
+		this.setBRabattsatzuebersteuert(belegpositionVerkaufDto
+				.getBRabattsatzuebersteuert());
+		this.setFZusatzrabattsatz(belegpositionVerkaufDto
+				.getFZusatzrabattsatz());
 		this.setMwstsatzIId(belegpositionVerkaufDto.getMwstsatzIId());
-		this.setBMwstsatzuebersteuert(belegpositionVerkaufDto.getBMwstsatzuebersteuert());
+		this.setBMwstsatzuebersteuert(belegpositionVerkaufDto
+				.getBMwstsatzuebersteuert());
 		this.setNEinzelpreis(belegpositionVerkaufDto.getNEinzelpreis());
-		this.setNEinzelpreisplusversteckteraufschlag(belegpositionVerkaufDto.getNEinzelpreisplusversteckteraufschlag());
-		this.setNNettoeinzelpreis(belegpositionVerkaufDto.getNNettoeinzelpreis());
-		this.setNNettoeinzelpreisplusversteckteraufschlag(belegpositionVerkaufDto.getNNettoeinzelpreisplusversteckteraufschlag());
-		this.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(belegpositionVerkaufDto.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
-		this.setNBruttoeinzelpreis(belegpositionVerkaufDto.getNBruttoeinzelpreis());
+		this.setNEinzelpreisplusversteckteraufschlag(belegpositionVerkaufDto
+				.getNEinzelpreisplusversteckteraufschlag());
+		this.setNNettoeinzelpreis(belegpositionVerkaufDto
+				.getNNettoeinzelpreis());
+		this.setNNettoeinzelpreisplusversteckteraufschlag(belegpositionVerkaufDto
+				.getNNettoeinzelpreisplusversteckteraufschlag());
+		this.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(belegpositionVerkaufDto
+				.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+		this.setNBruttoeinzelpreis(belegpositionVerkaufDto
+				.getNBruttoeinzelpreis());
 		this.setPositioniId(belegpositionVerkaufDto.getPositioniId());
 		this.setTypCNr(belegpositionVerkaufDto.getTypCNr());
-		this.setBNettopreisuebersteuert(belegpositionVerkaufDto.getBNettopreisuebersteuert());
+		this.setBNettopreisuebersteuert(belegpositionVerkaufDto
+				.getBNettopreisuebersteuert());
 		this.setIId(belegpositionVerkaufDto.getIId());
 		this.setBelegIId(belegpositionVerkaufDto.getBelegIId());
 		this.setISort(belegpositionVerkaufDto.getISort());
@@ -80,12 +87,26 @@ public class AngebotpositionDto extends BelegpositionVerkaufDto implements
 		this.setArtikelIId(belegpositionVerkaufDto.getArtikelIId());
 		this.setCBez(belegpositionVerkaufDto.getCBez());
 		this.setCZusatzbez(belegpositionVerkaufDto.getCZusatzbez());
-		this.setBArtikelbezeichnunguebersteuert(belegpositionVerkaufDto.getBArtikelbezeichnunguebersteuert());
+		this.setBArtikelbezeichnunguebersteuert(belegpositionVerkaufDto
+				.getBArtikelbezeichnunguebersteuert());
 		this.setXTextinhalt(belegpositionVerkaufDto.getXTextinhalt());
 		this.setMediastandardIId(belegpositionVerkaufDto.getMediastandardIId());
 		this.setNMenge(belegpositionVerkaufDto.getNMenge());
 		this.setEinheitCNr(belegpositionVerkaufDto.getEinheitCNr());
-		this.setVerleihIId(belegpositionVerkaufDto.getVerleihIId());		
+		this.setVerleihIId(belegpositionVerkaufDto.getVerleihIId());
+		this.setNMaterialzuschlagKurs(belegpositionVerkaufDto.getNMaterialzuschlagKurs());
+		this.setTMaterialzuschlagDatum(belegpositionVerkaufDto.getTMaterialzuschlagDatum());
+		
+	}
+
+	private BigDecimal nEinkaufpreis;
+
+	public BigDecimal getNEinkaufpreis() {
+		return nEinkaufpreis;
+	}
+
+	public void setNEinkaufpreis(BigDecimal bdEinkaufpreis) {
+		this.nEinkaufpreis = bdEinkaufpreis;
 	}
 
 	public BigDecimal getNGestehungspreis() {
@@ -147,7 +168,8 @@ public class AngebotpositionDto extends BelegpositionVerkaufDto implements
 		positionDto.setFZusatzrabattsatz(super.getFZusatzrabattsatz());
 		positionDto.setMwstsatzIId(super.getMwstsatzIId());
 		positionDto.setBMwstsatzuebersteuert(super.getBMwstsatzuebersteuert());
-		positionDto.setBNettopreisuebersteuert(super.getBNettopreisuebersteuert());
+		positionDto.setBNettopreisuebersteuert(super
+				.getBNettopreisuebersteuert());
 		positionDto.setNEinzelpreis(super.getNEinzelpreis());
 		positionDto.setNEinzelpreisplusversteckteraufschlag(super
 				.getNEinzelpreisplusversteckteraufschlag());
@@ -164,16 +186,17 @@ public class AngebotpositionDto extends BelegpositionVerkaufDto implements
 		positionDto.agstklIId = this.agstklIId;
 		positionDto.nGesamtwertagstklinangebotswaehrung = this.nGesamtwertagstklinangebotswaehrung;
 		positionDto.bAlternative = this.bAlternative;
+		positionDto.setLieferantIId(this.getLieferantIId());
 
 		return positionDto;
 	}
 
-	private static String[] positionsartMitStatusOffen = new String[]{
-		AngebotServiceFac.ANGEBOTPOSITIONART_IDENT,
-		AngebotServiceFac.ANGEBOTPOSITIONART_HANDEINGABE,
-		AngebotServiceFac.ANGEBOTPOSITIONART_POSITION,
-		AngebotServiceFac.ANGEBOTPOSITIONART_INTELLIGENTE_ZWISCHENSUMME} ;
-	
+	private static String[] positionsartMitStatusOffen = new String[] {
+			AngebotServiceFac.ANGEBOTPOSITIONART_IDENT,
+			AngebotServiceFac.ANGEBOTPOSITIONART_HANDEINGABE,
+			AngebotServiceFac.ANGEBOTPOSITIONART_POSITION,
+			AngebotServiceFac.ANGEBOTPOSITIONART_INTELLIGENTE_ZWISCHENSUMME };
+
 	/**
 	 * @deprecated MB ->BelegpositionkonvertierungFacBean
 	 * 
@@ -188,31 +211,36 @@ public class AngebotpositionDto extends BelegpositionVerkaufDto implements
 		auftragpositionDto.setISort(this.getISort());
 		auftragpositionDto.setPositionsartCNr(this.getPositionsartCNr());
 
-		if(Helper.isOneOf(getPositionsartCNr(), positionsartMitStatusOffen)) {
+		if (Helper.isOneOf(getPositionsartCNr(), positionsartMitStatusOffen)) {
 			auftragpositionDto
-			.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN);			
+					.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN);
 		}
-		
-//		String positionsartCNr = getPositionsartCNr() ;
-//		if (positionsartCNr.equals(AngebotServiceFac.ANGEBOTPOSITIONART_IDENT)
-//			|| positionsartCNr.equals(AngebotServiceFac.ANGEBOTPOSITIONART_HANDEINGABE)
-//			|| positionsartCNr.equals(AngebotServiceFac.ANGEBOTPOSITIONART_POSITION)
-//			|| positionsartCNr.equals(AngebotServiceFac.ANGEBOTPOSITIONART_INTELLIGENTE_ZWISCHENSUMME)
-//		) {
-//			auftragpositionDto
-//					.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN);
-//		}
+
+		// String positionsartCNr = getPositionsartCNr() ;
+		// if
+		// (positionsartCNr.equals(AngebotServiceFac.ANGEBOTPOSITIONART_IDENT)
+		// ||
+		// positionsartCNr.equals(AngebotServiceFac.ANGEBOTPOSITIONART_HANDEINGABE)
+		// ||
+		// positionsartCNr.equals(AngebotServiceFac.ANGEBOTPOSITIONART_POSITION)
+		// ||
+		// positionsartCNr.equals(AngebotServiceFac.ANGEBOTPOSITIONART_INTELLIGENTE_ZWISCHENSUMME)
+		// ) {
+		// auftragpositionDto
+		// .setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN);
+		// }
 
 		auftragpositionDto.setArtikelIId(this.getArtikelIId());
 		auftragpositionDto.setCBez(this.getCBez());
 		auftragpositionDto.setCZusatzbez(this.getCZusatzbez());
-		if(this.getCBez()!=null || this.getCZusatzbez()!=null)
-		auftragpositionDto.setBArtikelbezeichnunguebersteuert(new Short(
-				(short) 1)); // UW 27.04.06 Das Feld gibt es im AG nicht mehr
+		if (this.getCBez() != null || this.getCZusatzbez() != null)
+			auftragpositionDto.setBArtikelbezeichnunguebersteuert(new Short(
+					(short) 1)); // UW 27.04.06 Das Feld gibt es im AG nicht
+									// mehr
 		else
-		auftragpositionDto.setBArtikelbezeichnunguebersteuert(new Short(
-					(short) 0));		
-		
+			auftragpositionDto.setBArtikelbezeichnunguebersteuert(new Short(
+					(short) 0));
+
 		auftragpositionDto.setXTextinhalt(this.getXTextinhalt());
 		auftragpositionDto.setMediastandardIId(this.getMediastandardIId());
 		auftragpositionDto.setNMenge(this.getNMenge());
@@ -244,8 +272,21 @@ public class AngebotpositionDto extends BelegpositionVerkaufDto implements
 		auftragpositionDto.setTypCNr(this.getTypCNr());
 		auftragpositionDto.setVerleihIId(this.getVerleihIId());
 		auftragpositionDto.setNMaterialzuschlag(this.getNMaterialzuschlag());
+		auftragpositionDto.setLieferantIId(this.getLieferantIId());
+		auftragpositionDto.setBdEinkaufpreis(this.getNEinkaufpreis());
+		auftragpositionDto.setNMaterialzuschlagKurs(this.getNMaterialzuschlagKurs());
+		auftragpositionDto.setTMaterialzuschlagDatum(this.getTMaterialzuschlagDatum());
 		// tUebersteuerbarerLiefertermin, bDrucken null
 
 		return auftragpositionDto;
+	}
+	
+	/**
+	 * Handelt es sich um eine Intelligente Zwischensumme?
+	 * @return true wenn es eine intelligente Zwischensumme ist
+	 */
+	public boolean isIntelligenteZwischensumme() {
+		return AngebotServiceFac.ANGEBOTPOSITIONART_INTELLIGENTE_ZWISCHENSUMME
+				.equalsIgnoreCase(getPositionsartCNr()) ;	
 	}	
 }

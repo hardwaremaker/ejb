@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.lp.server.angebot.ejb.Angebotposition;
+import com.lp.util.Helper;
 
 public class AngebotpositionDtoAssembler {
 	public static AngebotpositionDto createDto(Angebotposition angebotposition) {
@@ -106,7 +107,13 @@ public class AngebotpositionDtoAssembler {
 			angebotpositionDto.setZwsVonPosition(angebotposition.getZwsVonPosition()) ;
 			angebotpositionDto.setZwsBisPosition(angebotposition.getZwsBisPosition()) ;
 			angebotpositionDto.setZwsNettoSumme(angebotposition.getZwsNettoSumme()) ;	
+			angebotpositionDto.setBZwsPositionspreisDrucken(
+					angebotposition.getBZwsPositionspreisZeigen());
 			angebotpositionDto.setNMaterialzuschlag(angebotposition.getNMaterialzuschlag());
+			angebotpositionDto.setLieferantIId(angebotposition.getLieferantIId());
+			angebotpositionDto.setNEinkaufpreis(angebotposition.getNEinkaufpreis());
+			angebotpositionDto.setNMaterialzuschlagKurs(angebotposition.getNMaterialzuschlagKurs());
+			angebotpositionDto.setTMaterialzuschlagDatum(angebotposition.getTMaterialzuschlagDatum());
 		}
 		
 		return angebotpositionDto;

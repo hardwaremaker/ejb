@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -68,7 +68,11 @@ public class ReiseKomplettDto implements Serializable {
 		if (bdkmKosten != null) {
 
 			if (tmReiseBeginn.size() == 1) {
-				return bdkmKosten;
+				BigDecimal bdkmKostenInklSpesen=bdkmKosten;
+				if(getReiseEnde().getNSpesen()!=null){
+					bdkmKostenInklSpesen=bdkmKostenInklSpesen.add(getReiseEnde().getNSpesen());
+				}
+				return bdkmKostenInklSpesen;
 			} else if (tmReiseBeginn.size() > 1) {
 
 				int iAnzahlKeinFaktorAngegeben = 0;

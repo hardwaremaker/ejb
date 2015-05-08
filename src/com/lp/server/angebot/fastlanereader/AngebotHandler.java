@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -313,13 +313,13 @@ public class AngebotHandler extends UseCaseHandler {
 						}
 					} else if (filterKriterien[i].kritName.equals("c_bez")) {
 
-						where.append(" ( upper(" + FLR_ANGEBOT + "c_bez) "
+						where.append(" ( lower(" + FLR_ANGEBOT + "c_bez) "
 								+ filterKriterien[i].operator + " "
-								+ filterKriterien[i].value.toUpperCase()
-								+ " OR upper(" + FLR_ANGEBOT
+								+ filterKriterien[i].value.toLowerCase()
+								+ " OR lower(" + FLR_ANGEBOT
 								+ "c_kundenanfrage) "
 								+ filterKriterien[i].operator + " "
-								+ filterKriterien[i].value.toUpperCase()
+								+ filterKriterien[i].value.toLowerCase()
 								+ ") ");
 					} else if (filterKriterien[i].kritName
 							.equals(AngebotFac.FLR_ANGEBOT_FLRKUNDE
@@ -341,18 +341,18 @@ public class AngebotHandler extends UseCaseHandler {
 								.getCWertAsObject();
 						if (bSuchenInklusiveKbez) {
 							if (filterKriterien[i].isBIgnoreCase()) {
-								where.append(" ( upper(" + FLR_ANGEBOT
+								where.append(" ( lower(" + FLR_ANGEBOT
 										+ filterKriterien[i].kritName + ")");
 								where.append(" " + filterKriterien[i].operator);
 								where.append(" "
 										+ filterKriterien[i].value
-												.toUpperCase());
-								where.append(" OR upper(" + FLR_ANGEBOT
+												.toLowerCase());
+								where.append(" OR lower(" + FLR_ANGEBOT
 										+ "flrkunde.flrpartner.c_kbez" + ") ");
 								where.append(" " + filterKriterien[i].operator);
 								where.append(" "
 										+ filterKriterien[i].value
-												.toUpperCase() + ") ");
+												.toLowerCase() + ") ");
 							} else {
 								where.append(" " + FLR_ANGEBOT
 										+ filterKriterien[i].kritName);
@@ -365,7 +365,7 @@ public class AngebotHandler extends UseCaseHandler {
 							}
 						} else {
 							if (filterKriterien[i].isBIgnoreCase()) {
-								where.append(" upper(" + FLR_ANGEBOT
+								where.append(" lower(" + FLR_ANGEBOT
 										+ filterKriterien[i].kritName + ")");
 							} else {
 								where.append(" " + FLR_ANGEBOT
@@ -377,7 +377,7 @@ public class AngebotHandler extends UseCaseHandler {
 							if (filterKriterien[i].isBIgnoreCase()) {
 								where.append(" "
 										+ filterKriterien[i].value
-												.toUpperCase());
+												.toLowerCase());
 							} else {
 								where.append(" " + filterKriterien[i].value);
 							}

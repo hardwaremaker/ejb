@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -47,7 +47,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import javax.annotation.Resource;
 import javax.ejb.SessionContext;
@@ -106,6 +109,10 @@ import com.lp.server.auftrag.service.AuftragzeitenDto;
 import com.lp.server.benutzer.service.BenutzerFac;
 import com.lp.server.bestellung.ejb.Bestellposition;
 import com.lp.server.bestellung.ejb.Bestellung;
+import com.lp.server.bestellung.service.BestellpositionDto;
+import com.lp.server.bestellung.service.BestellpositionFac;
+import com.lp.server.bestellung.service.BestellungDto;
+import com.lp.server.bestellung.service.BestellungFac;
 import com.lp.server.fertigung.ejb.Erledigtermaterialwert;
 import com.lp.server.fertigung.ejb.Los;
 import com.lp.server.fertigung.ejb.Losablieferung;
@@ -124,6 +131,7 @@ import com.lp.server.fertigung.fastlanereader.generated.FLRLosReport;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosablieferung;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosgutschlecht;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLossollarbeitsplan;
+import com.lp.server.fertigung.fastlanereader.generated.FLROffeneags;
 import com.lp.server.fertigung.fastlanereader.generated.FLRWiederholendelose;
 import com.lp.server.fertigung.service.BucheSerienChnrAufLosDto;
 import com.lp.server.fertigung.service.FertigungFac;
@@ -132,7 +140,6 @@ import com.lp.server.fertigung.service.KapazitaetsvorschauDto;
 import com.lp.server.fertigung.service.LosAusAuftragDto;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.fertigung.service.LosDtoAssembler;
-import com.lp.server.fertigung.service.LosStatistikDto;
 import com.lp.server.fertigung.service.LosablieferungDto;
 import com.lp.server.fertigung.service.LosablieferungDtoAssembler;
 import com.lp.server.fertigung.service.LosgutschlechtDto;
@@ -167,14 +174,17 @@ import com.lp.server.personal.service.SollverfuegbarkeitDto;
 import com.lp.server.personal.service.ZeitdatenDto;
 import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.stueckliste.ejb.Fertigungsgruppe;
+import com.lp.server.stueckliste.ejb.Posersatz;
 import com.lp.server.stueckliste.service.FertigungsgruppeDto;
 import com.lp.server.stueckliste.service.PosersatzDto;
+import com.lp.server.stueckliste.service.StklagerentnahmeDto;
 import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.stueckliste.service.StuecklisteMitStrukturDto;
 import com.lp.server.stueckliste.service.StuecklisteReportFac;
 import com.lp.server.stueckliste.service.StuecklistearbeitsplanDto;
 import com.lp.server.stueckliste.service.StuecklistepositionDto;
+import com.lp.server.system.ejb.Status;
 import com.lp.server.system.jcr.service.JCRDocDto;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.pkgenerator.PKConst;
@@ -211,14 +221,11 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 		try {
 			AuftragDto auftragDto = getAuftragFac().auftragFindByPrimaryKey(
 					auftragIId);
-
 			KundeDto kdDto = getKundeFac().kundeFindByPrimaryKey(
 					auftragDto.getKundeIIdAuftragsadresse(), theClientDto);
-			if (auftragDto.getAuftragstatusCNr().equals(
-					LocaleFac.STATUS_ANGELEGT)
-					|| auftragDto.getAuftragstatusCNr().equals(
-							LocaleFac.STATUS_OFFEN)
-					|| auftragDto.getAuftragstatusCNr().equals(
+			if (auftragDto.getStatusCNr().equals(LocaleFac.STATUS_ANGELEGT)
+					|| auftragDto.getStatusCNr().equals(LocaleFac.STATUS_OFFEN)
+					|| auftragDto.getStatusCNr().equals(
 							LocaleFac.STATUS_TEILERLEDIGT)) {
 				AuftragpositionDto[] dtos = getAuftragpositionFac()
 						.auftragpositionFindByAuftrag(auftragIId);
@@ -288,7 +295,9 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 
 			if (stuecklisteDto != null
 					&& !stuecklisteDto.getStuecklisteartCNr().equals(
-							StuecklisteFac.STUECKLISTEART_HILFSSTUECKLISTE)) {
+							StuecklisteFac.STUECKLISTEART_HILFSSTUECKLISTE)
+					&& Helper
+							.short2boolean(stuecklisteDto.getBFremdfertigung()) == false) {
 				ArrayList<?> stuecklisteAufegloest = getStuecklisteFac()
 						.getStrukturDatenEinerStueckliste(
 								stuecklisteDto.getIId(),
@@ -313,6 +322,12 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 						.getTime()));
 				losDto.setTProduktionsende(new java.sql.Date(tEnde.getTime()));
 				losDto.setStuecklisteIId(stuecklisteDto.getIId());
+
+				// PJ18596 hole alle bereits vorhandenen Unterlose zu der
+				// Stueckliste und dem Auftrag
+				laDto.setBereitsVorhandeneLose(losFindByAuftragIIdStuecklisteIId(
+						auftragDto.getIId(), stuecklisteDto.getIId()));
+
 				losDto.setLagerIIdZiel(stuecklisteDto.getLagerIIdZiellager());
 				losDto.setFertigungsgruppeIId(stuecklisteDto
 						.getFertigungsgruppeIId());
@@ -360,9 +375,10 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 
 						losDtos = holeAlleMoeglichenUnterloseEinerStueckliste(
 								strukt.getStuecklistepositionDto()
-										.getArtikelIId(), strukt
+										.getArtikelIId(),
+								Helper.rundeKaufmaennisch(strukt
 										.getStuecklistepositionDto()
-										.getNZielmenge().multiply(zielmenge),
+										.getNZielmenge().multiply(zielmenge), 4),
 								stdVorlaufzeit, tBeginn, losDtos, auftragDto,
 								bdLosgroesse, theClientDto);
 
@@ -422,7 +438,7 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 			MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(
 					theClientDto.getMandant(), theClientDto);
 
-			int iUnterlose = 999;
+			// int iUnterlose = 999;
 
 			for (int i = 0; i < losAusAuftragDto.size(); i++) {
 
@@ -440,10 +456,11 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 						losDto.setAuftragpositionIId(losAusAuftragDto.get(i)
 								.getAuftragpositionDto().getIId());
 					}
-					if (losDto.getAuftragpositionIId() == null) {
-						losDto.setISortFuerUnterlos(iUnterlose);
-						iUnterlose = iUnterlose - 1;
-					}
+					/*
+					 * if (losDto.getAuftragpositionIId() == null) {
+					 * losDto.setISortFuerUnterlos(iUnterlose); iUnterlose =
+					 * iUnterlose - 1; }
+					 */
 
 					getFertigungFac().createLos(losDto, theClientDto);
 					iAnzahlAngelegterLose++;
@@ -489,16 +506,18 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 					auftragDto.getKundeIIdAuftragsadresse(), theClientDto)
 					.getILieferdauer();
 
-			if (auftragDto.getAuftragstatusCNr().equals(
-					LocaleFac.STATUS_ANGELEGT)
-					|| auftragDto.getAuftragstatusCNr().equals(
-							LocaleFac.STATUS_OFFEN)
-					|| auftragDto.getAuftragstatusCNr().equals(
+			if (auftragDto.getStatusCNr().equals(LocaleFac.STATUS_ANGELEGT)
+					|| auftragDto.getStatusCNr().equals(LocaleFac.STATUS_OFFEN)
+					|| auftragDto.getStatusCNr().equals(
 							LocaleFac.STATUS_TEILERLEDIGT)) {
 				AuftragpositionDto[] dtos = getAuftragpositionFac()
 						.auftragpositionFindByAuftrag(auftragIId);
 				for (int i = 0; i < dtos.length; i++) {
 					ArrayList<LosAusAuftragDto> losDtosPosition = new ArrayList<LosAusAuftragDto>();
+
+					LosDto[] losDtosBereitsvorhanden = losFindByAuftragpositionIId(dtos[i]
+							.getIId());
+
 					if (dtos[i].getPositionsartCNr().equals(
 							AuftragServiceFac.AUFTRAGPOSITIONART_HANDEINGABE)) {
 
@@ -516,6 +535,9 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 								tEnde, -iVorlaufzeit);
 
 						LosAusAuftragDto laDto = new LosAusAuftragDto();
+
+						laDto.setBereitsVorhandeneLose(losDtosBereitsvorhanden);
+
 						if (tBeginn.before(Helper.cutTimestamp(new Timestamp(
 								System.currentTimeMillis())))) {
 							laDto.setBDatumVerschoben(true);
@@ -574,7 +596,9 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 										dtos[i].getArtikelIId(), theClientDto);
 						if (stuecklisteDto != null) {
 							if (dtos[i].getNMenge() != null
-									&& dtos[i].getNMenge().doubleValue() > 0) {
+									&& dtos[i].getNMenge().doubleValue() > 0
+									&& Helper.short2boolean(stuecklisteDto
+											.getBFremdfertigung()) == false) {
 
 								Timestamp tAuftragsliefertermin = dtos[i]
 										.getTUebersteuerbarerLiefertermin();
@@ -598,6 +622,8 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 								}
 								LosAusAuftragDto laDto = new LosAusAuftragDto();
 
+								laDto.setBereitsVorhandeneLose(losDtosBereitsvorhanden);
+
 								LosDto losDto = new LosDto();
 
 								losDto.setAuftragIId(auftragIId);
@@ -615,7 +641,23 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 										.getCBezProjektbezeichnung());
 								losDto.setFertigungsgruppeIId(stuecklisteDto
 										.getFertigungsgruppeIId());
+
+								// PJ18451
+								ArtikelDto aDto = getArtikelFac()
+										.artikelFindByPrimaryKeySmall(
+												dtos[i].getArtikelIId(),
+												theClientDto);
+								if (aDto.getFUeberproduktion() != null) {
+									dtos[i].setNMenge(dtos[i]
+											.getNMenge()
+											.add(Helper.getProzentWert(
+													dtos[i].getNMenge(),
+													new BigDecimal(
+															aDto.getFUeberproduktion()),
+													4)));
+								}
 								losDto.setNLosgroesse(dtos[i].getNMenge());
+
 								losDto.setKostenstelleIId(auftragDto
 										.getKostenstelleIId());
 
@@ -974,6 +1016,14 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("losDto.getFertigungsgruppeIId() == null"));
 		}
+
+		// ###########
+		//
+		// ACHTUNG: bei Aenderungen in der Nummernerstellung auch die Barcode
+		// Decoder Routine anpassen !!
+		//
+		// ###########
+
 		try {
 			// Geschaeftsjahr berechnen
 			Integer iGeschaeftsjahr = getParameterFac().getGeschaeftsjahr(
@@ -1029,10 +1079,24 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 				sBelegnummer = sBelegnummer + "-";
 				Integer iSort = null;
 
-				if (losDto.getAuftragpositionIId() != null) {
+				// PJ18596 Nachsehen, obs schon ein Los fuer diese Position
+				// gibt, wenn ja, dann muss eine neues Los mit einer
+				// Unternummer <999 angelegt werden
+				boolean bEsGibBereitsEinLos = false;
+				Query queryAufpos = em
+						.createNamedQuery("LosfindByAuftragpositionIId");
+				queryAufpos.setParameter(1, losDto.getAuftragpositionIId());
+				if (queryAufpos.getResultList().size() > 0) {
+					bEsGibBereitsEinLos = true;
+				}
+
+				if (losDto.getAuftragpositionIId() != null
+						&& bEsGibBereitsEinLos == false) {
+
 					iSort = getAuftragpositionFac()
 							.auftragpositionFindByPrimaryKey(
 									losDto.getAuftragpositionIId()).getISort();
+
 				} else {
 					if (losDto.getISortFuerUnterlos() != null) {
 						iSort = losDto.getISortFuerUnterlos();
@@ -1136,7 +1200,7 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 					if (doppelt != null) {
 						throw new EJBExceptionLP(
 								EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
-								new Exception("FERT_LOS.UK"));
+								new Exception("FERT_LOS.UK:" + doppelt.getCNr()));
 					}
 				} catch (NoResultException ex1) {
 					// nothing here
@@ -1181,6 +1245,25 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 			} else {
 				defaultArbeitszeitartikelErstellen(losDto, theClientDto);
 			}
+
+			// PJ18575
+			if (losDto.getStuecklisteIId() != null) {
+
+				StklagerentnahmeDto[] stklagerentnahmeDtos = getStuecklisteFac()
+						.stklagerentnahmeFindByStuecklisteIId(
+								losDto.getStuecklisteIId());
+				if (stklagerentnahmeDtos != null
+						&& stklagerentnahmeDtos.length > 0) {
+					for (int i = 0; i < stklagerentnahmeDtos.length; i++) {
+						LoslagerentnahmeDto loslager = new LoslagerentnahmeDto();
+						loslager.setLosIId(losDto.getIId());
+						loslager.setLagerIId(stklagerentnahmeDtos[i]
+								.getLagerIId());
+						createLoslagerentnahme(loslager, theClientDto);
+					}
+				}
+			}
+
 			// default materialentnahme vom Hauptlager des Mandanten
 			LagerDto lagerDto = getLagerFac().getHauptlagerDesMandanten(
 					theClientDto);
@@ -1191,16 +1274,37 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 
 			if (lagerDtos != null && lagerDtos.length > 0) {
 				for (int i = 0; i < lagerDtos.length; i++) {
-					LoslagerentnahmeDto loslager = new LoslagerentnahmeDto();
-					loslager.setLosIId(losDto.getIId());
-					loslager.setLagerIId(lagerDtos[i].getIId());
-					createLoslagerentnahme(loslager, theClientDto);
+					try {
+						Query query = em
+								.createNamedQuery("LoslagerentnahmefindByLosIIdLagerIId");
+						query.setParameter(1, losDto.getIId());
+						query.setParameter(2, lagerDtos[i].getIId());
+						Loslagerentnahme vorhanden = (Loslagerentnahme) query
+								.getSingleResult();
+					} catch (NoResultException ex1) {
+						LoslagerentnahmeDto loslager = new LoslagerentnahmeDto();
+						loslager.setLosIId(losDto.getIId());
+						loslager.setLagerIId(lagerDtos[i].getIId());
+						createLoslagerentnahme(loslager, theClientDto);
+					}
+
 				}
 			} else {
-				LoslagerentnahmeDto loslager = new LoslagerentnahmeDto();
-				loslager.setLosIId(losDto.getIId());
-				loslager.setLagerIId(lagerDto.getIId());
-				createLoslagerentnahme(loslager, theClientDto);
+				try {
+					Query query = em
+							.createNamedQuery("LoslagerentnahmefindByLosIIdLagerIId");
+					query.setParameter(1, losDto.getIId());
+					query.setParameter(2, lagerDto.getIId());
+					query.getSingleResult();
+					Loslagerentnahme vorhanden = (Loslagerentnahme) query
+							.getSingleResult();
+				} catch (NoResultException ex1) {
+					LoslagerentnahmeDto loslager = new LoslagerentnahmeDto();
+					loslager.setLosIId(losDto.getIId());
+					loslager.setLagerIId(lagerDto.getIId());
+					createLoslagerentnahme(loslager, theClientDto);
+				}
+
 			}
 
 			return losDto;
@@ -1578,6 +1682,22 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 		los.setCProjekt(losDto.getCProjekt());
 	}
 
+	public void offenAgsUmreihen(Integer lossollarbeitsplanIId,
+			boolean bNachUntenReihen) {
+		Lossollarbeitsplan sa = em.find(Lossollarbeitsplan.class,
+				lossollarbeitsplanIId);
+		if (sa.getIMaschinenversatzMs() == null) {
+			sa.setIMaschinenversatzMs(0);
+		}
+		if (bNachUntenReihen) {
+			sa.setIMaschinenversatzMs(sa.getIMaschinenversatzMs() + 1);
+		} else {
+			if (sa.getIMaschinenversatzMs() > 0) {
+				sa.setIMaschinenversatzMs(sa.getIMaschinenversatzMs() - 1);
+			}
+		}
+	}
+
 	public LosDto updateLos(LosDto losDto, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		// begin
@@ -1746,6 +1866,35 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 		}
 	}
 
+	public LosDto[] losFindByAuftragpositionIId(Integer auftragpositionIId) {
+		try {
+			Query query = em.createNamedQuery("LosfindByAuftragpositionIId");
+			query.setParameter(1, auftragpositionIId);
+			Collection c = query.getResultList();
+
+			return assembleLosDtos(c);
+		} catch (NoResultException ex) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
+		}
+	}
+
+	public LosDto[] losFindByAuftragIIdStuecklisteIId(Integer auftragIId,
+			Integer stuecklisteIId) {
+		try {
+			Query query = em
+					.createNamedQuery("LosfindByAuftragIIdStuecklisteIId");
+			query.setParameter(1, auftragIId);
+			query.setParameter(2, stuecklisteIId);
+			Collection c = query.getResultList();
+
+			return assembleLosDtos(c);
+		} catch (NoResultException ex) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
+		}
+	}
+
 	private void setLosFromLosDto(Los los, LosDto losDto) {
 		los.setMandantCNr(losDto.getMandantCNr());
 		los.setCNr(losDto.getCNr());
@@ -1792,6 +1941,11 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 		los.setKundeIId(losDto.getKundeIId());
 		los.setNSollmaterial(losDto.getNSollmaterial());
 		los.setLosbereichIId(losDto.getLosbereichIId());
+		los.setTMaterialvollstaendig(losDto.getTMaterialvollstaendig());
+		los.setPersonalIIdMaterialvollstaendig(losDto
+				.getPersonalIIdMaterialvollstaendig());
+		los.setProjektIId(losDto.getProjektIId());
+
 		em.merge(los);
 		em.flush();
 	}
@@ -1844,6 +1998,15 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 					EJBExceptionLP.FEHLER_FERTIGUNG_DAS_LOS_IST_STORNIERT, "");
 		}
 
+		if (losDto.getTMaterialvollstaendig() != null) {
+			ArrayList al = new ArrayList();
+			al.add(losDto.getCNr());
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_FERTIGUNG_MATERIAL_VOLLSTAENDIG, al,
+					new Exception("FEHLER_FERTIGUNG_MATERIAL_VOLLSTAENDIG"
+							+ " Los:" + losDto.getCNr()));
+		}
+
 		if (lossollmaterialDto.getIBeginnterminoffset() == null) {
 			lossollmaterialDto.setIBeginnterminoffset(0);
 		}
@@ -1887,6 +2050,28 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 		}
 
 		try {
+
+			// SP2795
+
+			StuecklisteDto stklDto = getStuecklisteFac()
+					.stuecklisteFindByArtikelIIdMandantCNrOhneExc(
+							lossollmaterialDto.getArtikelIId(),
+							theClientDto.getMandant());
+
+			if (stklDto != null
+					&& stklDto.getStuecklisteartCNr().equals(
+							StuecklisteFac.STUECKLISTEART_HILFSSTUECKLISTE)) {
+				Artikel artikel = em.find(Artikel.class,
+						lossollmaterialDto.getArtikelIId());
+				ArrayList al = new ArrayList();
+				al.add(artikel.getCNr());
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_FERTIGUNG_HILFSSTUECKLISTE_DARF_KEINE_SOLLPOSITION_SEIN,
+						al,
+						new Exception(
+								"FEHLER_FERTIGUNG_HILFSSTUECKLISTE_DARF_KEINE_SOLLPOSITION_SEIN"));
+			}
+
 			// rounddto: vor dem Create
 			lossollmaterialDto.round(
 					new Integer(4),
@@ -1958,6 +2143,16 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 					EJBExceptionLP.FEHLER_FERTIGUNG_DAS_LOS_IST_BEREITS_ERLEDIGT,
 					"");
 		}
+
+		if (losDto.getTMaterialvollstaendig() != null) {
+			ArrayList al = new ArrayList();
+			al.add(losDto.getCNr());
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_FERTIGUNG_MATERIAL_VOLLSTAENDIG, al,
+					new Exception("FEHLER_FERTIGUNG_MATERIAL_VOLLSTAENDIG"
+							+ " Los:" + losDto.getCNr()));
+		}
+
 		if (losDto.getStatusCNr().equals(FertigungFac.STATUS_STORNIERT)) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FERTIGUNG_DAS_LOS_IST_STORNIERT, "");
@@ -2032,6 +2227,16 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 					EJBExceptionLP.FEHLER_FERTIGUNG_DAS_LOS_IST_BEREITS_ERLEDIGT,
 					"");
 		}
+
+		if (losDto.getTMaterialvollstaendig() != null) {
+			ArrayList al = new ArrayList();
+			al.add(losDto.getCNr());
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_FERTIGUNG_MATERIAL_VOLLSTAENDIG, al,
+					new Exception("FEHLER_FERTIGUNG_MATERIAL_VOLLSTAENDIG"
+							+ " Los:" + losDto.getCNr()));
+		}
+
 		if (losDto.getStatusCNr().equals(FertigungFac.STATUS_STORNIERT)) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FERTIGUNG_DAS_LOS_IST_STORNIERT, "");
@@ -2601,6 +2806,23 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 
 	}
 
+	public void toggleMaterialVollstaendig(Integer losIId,
+			TheClientDto theClientDto) {
+		Los los = em.find(Los.class, losIId);
+		if (los.getTMaterialvollstaendig() == null) {
+			los.setTMaterialvollstaendig(new Timestamp(System
+					.currentTimeMillis()));
+			los.setPersonalIIdMaterialvollstaendig(theClientDto.getIDPersonal());
+
+		} else {
+			los.setPersonalIIdMaterialvollstaendig(null);
+			los.setTMaterialvollstaendig(null);
+
+		}
+		em.merge(los);
+		em.flush();
+	}
+
 	private void setLossollarbeitsplanFromLossollarbeitsplanDto(
 			Lossollarbeitsplan lossollarbeitsplan,
 			LossollarbeitsplanDto lossollarbeitsplanDto) {
@@ -2639,6 +2861,8 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 		lossollarbeitsplan.setAgartCNr(lossollarbeitsplanDto.getAgartCNr());
 		lossollarbeitsplan.setLossollmaterialIId(lossollarbeitsplanDto
 				.getLossollmaterialIId());
+		lossollarbeitsplan.setIMaschinenversatzMs(lossollarbeitsplanDto
+				.getIMaschinenversatzMs());
 		em.merge(lossollarbeitsplan);
 		em.flush();
 	}
@@ -3058,6 +3282,18 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 		Iterator<?> resultListIterator = results.iterator();
 		while (resultListIterator.hasNext()) {
 			FLRLosReport los = (FLRLosReport) resultListIterator.next();
+
+			LosDto losDto = losFindByPrimaryKey(los.getI_id());
+			// PJ18389
+			if (losDto.getTMaterialvollstaendig() != null) {
+				ArrayList al = new ArrayList();
+				al.add(losDto.getCNr());
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_FERTIGUNG_MATERIAL_VOLLSTAENDIG,
+						al, new Exception(
+								"FEHLER_FERTIGUNG_MATERIAL_VOLLSTAENDIG"
+										+ " Los:" + losDto.getCNr()));
+			}
 
 			if (los.getStatus_c_nr().equals(LocaleFac.STATUS_ANGELEGT)) {
 				aktualisiereSollArbeitsplanAusStueckliste(los.getI_id(),
@@ -3780,7 +4016,8 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 				BigDecimal bdMenge = Helper.berechneMengeInklusiveVerschnitt(
 						stkPos[i].getNMenge(),
 						artikelDto.getFVerschnittfaktor(),
-						artikelDto.getFVerschnittbasis(), bdLosgroesse);
+						artikelDto.getFVerschnittbasis(), bdLosgroesse,
+						artikelDto.getFFertigungsVpe());
 
 				// endgueltige Menge berechnen
 				BigDecimal posMenge = bdMenge
@@ -3837,6 +4074,52 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 		}
 
 		return hmPositionen;
+
+	}
+
+	public void sollpreiseAllerSollmaterialpositionenNeuKalkulieren(
+			Integer losIId, TheClientDto theClientDto) {
+
+		try {
+			LossollmaterialDto[] sollDtos = lossollmaterialFindByLosIId(losIId);
+
+			LosDto losDto = getFertigungFac().losFindByPrimaryKey(losIId);
+
+			for (int i = 0; i < sollDtos.length; i++) {
+
+				LossollmaterialDto sollDto = sollDtos[i];
+				sollDto.setNSollpreis(BigDecimal.ZERO);
+				StuecklistepositionDto[] stklPosDtos = null;
+				if (losDto.getStuecklisteIId() != null) {
+					stklPosDtos = getStuecklisteFac()
+							.stuecklistepositionFindByStuecklisteIIdArtikelIId(
+									losDto.getStuecklisteIId(),
+									sollDto.getArtikelIId(), theClientDto);
+				}
+
+				if (stklPosDtos != null && stklPosDtos.length > 0
+						&& stklPosDtos[0].getNKalkpreis() != null) {
+					sollDto.setNSollpreis(stklPosDtos[0].getNKalkpreis());
+				} else {
+					ArtikellieferantDto artikellieferantDto = getArtikelFac()
+							.getArtikelEinkaufspreis(sollDto.getArtikelIId(),
+									sollDto.getNMenge(),
+									theClientDto.getSMandantenwaehrung(),
+									theClientDto);
+					if (artikellieferantDto != null
+							&& artikellieferantDto.getLief1Preis() != null) {
+						sollDto.setNSollpreis(artikellieferantDto
+								.getLief1Preis());
+					}
+				}
+				
+				updateLossollmaterial(sollDto, theClientDto);
+				
+
+			}
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
 
 	}
 
@@ -3906,13 +4189,11 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 				BigDecimal bdMenge = Helper.berechneMengeInklusiveVerschnitt(
 						stkPos[i].getNMenge(),
 						artikelDto.getFVerschnittfaktor(),
-						artikelDto.getFVerschnittbasis(), bdPositionsMenge);
+						artikelDto.getFVerschnittbasis(), bdPositionsMenge,
+						artikelDto.getFFertigungsVpe());
 
 				// endgueltige Menge berechnen
 				if (bdFaktor.doubleValue() != 0) {
-
-					bdMenge = bdMenge.divide(bdFaktor,
-							BigDecimal.ROUND_HALF_EVEN);
 
 					BigDecimal losSollMenge = bdMenge
 							.multiply(bdDimProdukt)
@@ -3920,6 +4201,10 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 							.divide(new BigDecimal(stklDto
 									.getIErfassungsfaktor().doubleValue()),
 									BigDecimal.ROUND_HALF_EVEN);
+					// SP2418 nachher durch den Faktor dividieren, dan ansonsten
+					// eventuell die Nachkommastellen nicht ausreichen
+					losSollMenge = losSollMenge.divide(bdFaktor,
+							BigDecimal.ROUND_HALF_EVEN);
 
 					if (losSollMenge.doubleValue() < 0.001
 							&& losSollMenge.doubleValue() > 0.000001) {
@@ -3935,11 +4220,25 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 
 				}
 
-				BigDecimal bdSollpreis = getLagerFac()
-						.getGemittelterGestehungspreisEinesLagers(
-								stkPos[i].getArtikelIId(), lagerIId_Hauptlager,
-								theClientDto);
-				losMatDto.setNSollpreis(bdSollpreis);
+				losMatDto.setNSollpreis(BigDecimal.ZERO);
+
+				// PJ18903
+				if (stkPos[i].getNKalkpreis() != null) {
+					losMatDto.setNSollpreis(stkPos[i].getNKalkpreis());
+
+				} else {
+					ArtikellieferantDto artikellieferantDto = getArtikelFac()
+							.getArtikelEinkaufspreis(losMatDto.getArtikelIId(),
+									losMatDto.getNMenge(),
+									theClientDto.getSMandantenwaehrung(),
+									theClientDto);
+					if (artikellieferantDto != null
+							&& artikellieferantDto.getLief1Preis() != null) {
+						losMatDto.setNSollpreis(artikellieferantDto
+								.getLief1Preis());
+					}
+				}
+
 				// Datensatz speichern
 
 				// Wenn Unterstueckliste und Hilfsstueckliste:
@@ -4001,6 +4300,17 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 			throws EJBExceptionLP {
 		try {
 			LosDto losDto = losFindByPrimaryKey(losIId);
+
+			if (losDto.getTMaterialvollstaendig() != null) {
+				ArrayList al = new ArrayList();
+				al.add(losDto.getCNr());
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_FERTIGUNG_MATERIAL_VOLLSTAENDIG,
+						al, new Exception(
+								"FEHLER_FERTIGUNG_MATERIAL_VOLLSTAENDIG"
+										+ " Los:" + losDto.getCNr()));
+			}
+
 			// Aktualisierung ist nur im Status angelegt erlaubt.
 			if (losDto.getStatusCNr().equals(FertigungFac.STATUS_ANGELEGT)) {
 				// und nur fuer stuecklistenbezogene Lose
@@ -4048,6 +4358,22 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 									em.merge(lossollarbeitsplanTemp);
 									em.flush();
 								}
+							}
+
+							// SP2350 Zuerst Referenz des Ersatzartikels loschen
+
+							Query queryOrginial = em
+									.createNamedQuery("LossollmaterialfindByLossollmaterialIIdOriginal");
+							queryOrginial.setParameter(1, toRemove.getIId());
+							Collection<?> clOriginal = queryOrginial
+									.getResultList();
+							Iterator itOriginal = clOriginal.iterator();
+							while (itOriginal.hasNext()) {
+								Lossollmaterial mat_ori = (Lossollmaterial) itOriginal
+										.next();
+								mat_ori.setLossollmaterialIIdOriginal(null);
+								em.merge(mat_ori);
+								em.flush();
 							}
 
 							// PJ SP2012/305
@@ -4408,10 +4734,11 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 										.setIMaschinenversatztage(alStuecklistePositionen
 												.get(i)
 												.getIMaschinenversatztage());
-								if (stkPos[i].getMaschineIId() != null) {
+								if (lossollarbeitsplanDto.getMaschineIId() != null) {
 									MaschineDto mDto = getZeiterfassungFac()
 											.maschineFindByPrimaryKey(
-													stkPos[i].getMaschineIId());
+													lossollarbeitsplanDto
+															.getMaschineIId());
 									lossollarbeitsplanDto
 											.setBAutoendebeigeht(mDto
 													.getBAutoendebeigeht());
@@ -4653,199 +4980,207 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 
 						// PJ18216
 						if (bHandausgabe == true
-								&& bNichtLagerbewSofortAusgeben == true) {
-
-							if (Helper.short2boolean(artikelDto
-									.getBLagerbewirtschaftet())) {
-								continue;
-							}
-
-						}
-
-						StuecklisteDto stuecklisteDto = getStuecklisteFac()
-								.stuecklisteFindByMandantCNrArtikelIIdOhneExc(
-										artikelDto.getIId(), theClientDto);
-						if (bUnterstuecklistenAbbuchen == false
-								&& stuecklisteDto != null) {
+								&& bNichtLagerbewSofortAusgeben == true
+								&& Helper.short2boolean(artikelDto
+										.getBLagerbewirtschaftet())) {
+							// Dann nichts machen
 						} else {
 
-							BigDecimal bdAbzubuchendeMenge = new BigDecimal(
-									0.0000);
-							if (menge == null) {
-								bdAbzubuchendeMenge = sollmat[i].getNMenge();
+							StuecklisteDto stuecklisteDto = getStuecklisteFac()
+									.stuecklisteFindByMandantCNrArtikelIIdOhneExc(
+											artikelDto.getIId(), theClientDto);
+							if (bUnterstuecklistenAbbuchen == false
+									&& stuecklisteDto != null) {
 							} else {
-								if (losDto.getNLosgroesse().doubleValue() != 0) {
-									BigDecimal sollsatzGroesse = sollmat[i]
-											.getNMenge().divide(
-													losDto.getNLosgroesse(),
-													10,
-													BigDecimal.ROUND_HALF_EVEN);
 
-									sollsatzGroesse = Helper
-											.rundeKaufmaennisch(
-													sollsatzGroesse, 3);
+								BigDecimal bdAbzubuchendeMenge = new BigDecimal(
+										0.0000);
+								if (menge == null) {
+									bdAbzubuchendeMenge = sollmat[i]
+											.getNMenge();
+								} else {
+									if (losDto.getNLosgroesse().doubleValue() != 0) {
+										BigDecimal sollsatzGroesse = sollmat[i]
+												.getNMenge()
+												.divide(losDto.getNLosgroesse(),
+														10,
+														BigDecimal.ROUND_HALF_EVEN);
 
-									BigDecimal bdBereitsausgegeben = getAusgegebeneMenge(
-											sollmat[i].getIId(), null,
-											theClientDto);
-									BigDecimal bdGesamtmenge = Helper
-											.rundeKaufmaennisch(
-													bdBereitsabgeliefert.add(
-															menge).multiply(
-															sollsatzGroesse), 4);
-									if (bdGesamtmenge.subtract(
-											bdBereitsausgegeben).doubleValue() > 0) {
-										bdAbzubuchendeMenge = bdGesamtmenge
-												.subtract(bdBereitsausgegeben);
-									} else {
-										if (bdGesamtmenge.doubleValue() < 0) {
+										sollsatzGroesse = Helper
+												.rundeKaufmaennisch(
+														sollsatzGroesse, 3);
+
+										BigDecimal bdBereitsausgegeben = getAusgegebeneMenge(
+												sollmat[i].getIId(), null,
+												theClientDto);
+										BigDecimal bdGesamtmenge = Helper
+												.rundeKaufmaennisch(
+														bdBereitsabgeliefert
+																.add(menge)
+																.multiply(
+																		sollsatzGroesse),
+														4);
+										if (bdGesamtmenge.subtract(
+												bdBereitsausgegeben)
+												.doubleValue() > 0) {
 											bdAbzubuchendeMenge = bdGesamtmenge
-													.subtract(
-															bdBereitsausgegeben)
-													.abs();
+													.subtract(bdBereitsausgegeben);
+										} else {
+											if (bdGesamtmenge.doubleValue() < 0) {
+												bdAbzubuchendeMenge = bdGesamtmenge
+														.subtract(
+																bdBereitsausgegeben)
+														.abs();
 
+											}
 										}
 									}
 								}
-							}
 
-							// wg. PJ 15370
-							if (sollmat[i].getNMenge().doubleValue() > 0) {
+								// wg. PJ 15370
+								if (sollmat[i].getNMenge().doubleValue() > 0) {
 
-								if (!Helper.short2boolean(artikelDto
-										.getBSeriennrtragend())
-										&& !Helper.short2boolean(artikelDto
-												.getBChargennrtragend())) {
-									for (int j = 0; j < laeger.length; j++) {
-										// wenn noch was abzubuchen ist (Menge >
-										// 0)
-										if (bdAbzubuchendeMenge
-												.compareTo(new BigDecimal(0)) == 1) {
-											BigDecimal bdLagerstand = null;
-											if (Helper.short2boolean(artikelDto
-													.getBLagerbewirtschaftet())) {
+									if (!Helper.short2boolean(artikelDto
+											.getBSeriennrtragend())
+											&& !Helper.short2boolean(artikelDto
+													.getBChargennrtragend())) {
+										for (int j = 0; j < laeger.length; j++) {
+											// wenn noch was abzubuchen ist
+											// (Menge >
+											// 0)
+											if (bdAbzubuchendeMenge
+													.compareTo(new BigDecimal(0)) == 1) {
+												BigDecimal bdLagerstand = null;
+												if (Helper
+														.short2boolean(artikelDto
+																.getBLagerbewirtschaftet())) {
 
-												// PJ18290
-												boolean bImmerAusreichendVerfuegbar = false;
-												try {
-													ParametermandantDto parameterM = getParameterFac()
-															.getMandantparameter(
-																	theClientDto
-																			.getMandant(),
-																	ParameterFac.KATEGORIE_ARTIKEL,
-																	ParameterFac.PARAMETER_LAGER_IMMER_AUSREICHEND_VERFUEGBAR);
-													bImmerAusreichendVerfuegbar = ((Boolean) parameterM
-															.getCWertAsObject())
-															.booleanValue();
+													// PJ18290
+													boolean bImmerAusreichendVerfuegbar = false;
+													try {
+														ParametermandantDto parameterM = getParameterFac()
+																.getMandantparameter(
+																		theClientDto
+																				.getMandant(),
+																		ParameterFac.KATEGORIE_ARTIKEL,
+																		ParameterFac.PARAMETER_LAGER_IMMER_AUSREICHEND_VERFUEGBAR);
+														bImmerAusreichendVerfuegbar = ((Boolean) parameterM
+																.getCWertAsObject())
+																.booleanValue();
 
-												} catch (RemoteException ex) {
-													throw new EJBExceptionLP(
-															EJBExceptionLP.FEHLER,
-															ex);
-												}
-												if (bImmerAusreichendVerfuegbar == true) {
+													} catch (RemoteException ex) {
+														throw new EJBExceptionLP(
+																EJBExceptionLP.FEHLER,
+																ex);
+													}
+													if (bImmerAusreichendVerfuegbar == true) {
+														bdLagerstand = new BigDecimal(
+																999999999);
+													} else {
+														bdLagerstand = getLagerFac()
+																.getLagerstand(
+																		artikelDto
+																				.getIId(),
+																		laeger[j]
+																				.getLagerIId(),
+																		theClientDto);
+
+													}
+
+												} else {
 													bdLagerstand = new BigDecimal(
 															999999999);
-												} else {
-													bdLagerstand = getLagerFac()
-															.getLagerstand(
-																	artikelDto
-																			.getIId(),
-																	laeger[j]
-																			.getLagerIId(),
-																	theClientDto);
-
 												}
-
-											} else {
-												bdLagerstand = new BigDecimal(
-														999999999);
-											}
-											// wenn ein lagerstand da ist
-											if (bdLagerstand
-													.compareTo(new BigDecimal(0)) == 1) {
-												BigDecimal bdMengeVonLager;
+												// wenn ein lagerstand da ist
 												if (bdLagerstand
-														.compareTo(bdAbzubuchendeMenge) == 1) {
-													// wenn mehr als ausreichend
-													// auf
-													// lager
-													bdMengeVonLager = bdAbzubuchendeMenge;
-												} else {
-													// dann nur den lagerstand
-													// entnehmen
-													bdMengeVonLager = bdLagerstand;
-												}
-												LosistmaterialDto istmat = new LosistmaterialDto();
-												istmat.setLagerIId(laeger[j]
-														.getLagerIId());
-												istmat.setLossollmaterialIId(sollmat[i]
-														.getIId());
-												istmat.setNMenge(bdMengeVonLager);
+														.compareTo(new BigDecimal(
+																0)) == 1) {
+													BigDecimal bdMengeVonLager;
+													if (bdLagerstand
+															.compareTo(bdAbzubuchendeMenge) == 1) {
+														// wenn mehr als
+														// ausreichend
+														// auf
+														// lager
+														bdMengeVonLager = bdAbzubuchendeMenge;
+													} else {
+														// dann nur den
+														// lagerstand
+														// entnehmen
+														bdMengeVonLager = bdLagerstand;
+													}
+													LosistmaterialDto istmat = new LosistmaterialDto();
+													istmat.setLagerIId(laeger[j]
+															.getLagerIId());
+													istmat.setLossollmaterialIId(sollmat[i]
+															.getIId());
+													istmat.setNMenge(bdMengeVonLager);
 
-												if (sollmat[i].getNMenge()
-														.doubleValue() > 0) {
-													istmat.setBAbgang(Helper
-															.boolean2Short(true));
-												} else {
-													istmat.setBAbgang(Helper
-															.boolean2Short(false));
-												}
+													if (sollmat[i].getNMenge()
+															.doubleValue() > 0) {
+														istmat.setBAbgang(Helper
+																.boolean2Short(true));
+													} else {
+														istmat.setBAbgang(Helper
+																.boolean2Short(false));
+													}
 
-												// ist-wert anlegen und
-												// lagerbuchung
-												// durchfuehren
-												createLosistmaterial(istmat,
-														null, theClientDto);
-												// menge reduzieren
-												bdAbzubuchendeMenge = bdAbzubuchendeMenge
-														.subtract(bdMengeVonLager);
+													// ist-wert anlegen und
+													// lagerbuchung
+													// durchfuehren
+													createLosistmaterial(
+															istmat, null,
+															theClientDto);
+													// menge reduzieren
+													bdAbzubuchendeMenge = bdAbzubuchendeMenge
+															.subtract(bdMengeVonLager);
+												}
 											}
 										}
-									}
 
-								} else {
-									if (bucheSerienChnrAufLosDtos != null) {
-										for (int j = 0; j < bucheSerienChnrAufLosDtos
-												.size(); j++) {
-											BucheSerienChnrAufLosDto dtoTemp = bucheSerienChnrAufLosDtos
-													.get(j);
+									} else {
+										if (bucheSerienChnrAufLosDtos != null) {
+											for (int j = 0; j < bucheSerienChnrAufLosDtos
+													.size(); j++) {
+												BucheSerienChnrAufLosDto dtoTemp = bucheSerienChnrAufLosDtos
+														.get(j);
 
-											if (dtoTemp
-													.getLossollmaterialIId()
-													.equals(sollmat[i].getIId())) {
+												if (dtoTemp
+														.getLossollmaterialIId()
+														.equals(sollmat[i]
+																.getIId())) {
 
-												LosistmaterialDto istmat = new LosistmaterialDto();
-												istmat.setLagerIId(dtoTemp
-														.getLagerIId());
-												istmat.setLossollmaterialIId(dtoTemp
-														.getLossollmaterialIId());
-												istmat.setNMenge(dtoTemp
-														.getNMenge());
-												if (sollmat[i].getNMenge()
-														.doubleValue() > 0) {
-													istmat.setBAbgang(Helper
-															.boolean2Short(true));
-												} else {
-													istmat.setBAbgang(Helper
-															.boolean2Short(false));
+													LosistmaterialDto istmat = new LosistmaterialDto();
+													istmat.setLagerIId(dtoTemp
+															.getLagerIId());
+													istmat.setLossollmaterialIId(dtoTemp
+															.getLossollmaterialIId());
+													istmat.setNMenge(dtoTemp
+															.getNMenge());
+													if (sollmat[i].getNMenge()
+															.doubleValue() > 0) {
+														istmat.setBAbgang(Helper
+																.boolean2Short(true));
+													} else {
+														istmat.setBAbgang(Helper
+																.boolean2Short(false));
+													}
+													// ist-wert anlegen und
+													// lagerbuchung
+													// durchfuehren
+													createLosistmaterial(
+															istmat,
+															dtoTemp.getCSeriennrChargennr(),
+															theClientDto);
+
 												}
-												// ist-wert anlegen und
-												// lagerbuchung
-												// durchfuehren
-												createLosistmaterial(
-														istmat,
-														dtoTemp.getCSeriennrChargennr(),
-														theClientDto);
 
 											}
-
 										}
 									}
 								}
 							}
 						}
-
 					}
 				}
 
@@ -5107,6 +5442,50 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 
 	}
 
+	// PJ18741
+	public TreeSet<Integer> getLoseEinesStuecklistenbaums(Integer losIId,
+			TheClientDto theClientDto) {
+
+		TreeSet<Integer> ts = new TreeSet<Integer>();
+		ts.add(losIId);
+		ts = getLoseEinesStuecklistenbaums(losIId, ts, theClientDto);
+		return ts;
+	}
+
+	private TreeSet<Integer> getLoseEinesStuecklistenbaums(Integer losIId,
+			TreeSet<Integer> ts, TheClientDto theClientDto) {
+
+		LossollmaterialDto[] sollDtos = lossollmaterialFindByLosIId(losIId);
+		for (int i = 0; i < sollDtos.length; i++) {
+
+			StuecklisteDto stklDto = getStuecklisteFac()
+					.stuecklisteFindByMandantCNrArtikelIIdOhneExc(
+							sollDtos[i].getArtikelIId(), theClientDto);
+			if (stklDto != null) {
+
+				Query query = em.createNamedQuery("LosfindByStuecklisteIId");
+				query.setParameter(1, stklDto.getIId());
+
+				Collection c = query.getResultList();
+
+				Iterator it = c.iterator();
+				while (it.hasNext()) {
+					Los l = (Los) it.next();
+					if (!ts.contains(l.getIId())) {
+						if (l.getStatusCNr().equals(
+								FertigungFac.STATUS_ANGELEGT)) {
+							ts.add(l.getIId());
+						}
+
+						ts = getLoseEinesStuecklistenbaums(l.getIId(), ts,
+								theClientDto);
+					}
+				}
+			}
+		}
+		return ts;
+	}
+
 	@TransactionTimeout(5000)
 	public void gebeLosAus(Integer losIId, boolean bHandausgabe,
 			boolean throwExceptionWhenCreateFehlmenge,
@@ -5197,6 +5576,17 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 					bKeineAutomatischeMaterialausgabe = true;
 				}
 
+				// PJ18630 Uebersteuert von Stueckliste
+				if (losDto.getStuecklisteIId() != null) {
+					StuecklisteDto stklDto = getStuecklisteFac()
+							.stuecklisteFindByPrimaryKey(
+									losDto.getStuecklisteIId(), theClientDto);
+
+					bKeineAutomatischeMaterialausgabe = Helper
+							.short2Boolean(stklDto
+									.getBKeineAutomatischeMaterialbuchung());
+				}
+
 				if (bKeineAutomatischeMaterialausgabe) {
 					bucheMaterialAufLos(losDto, null, true, false,
 							bUnterstuecklisteAusgeben, theClientDto,
@@ -5253,8 +5643,10 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 	}
 
 	@TransactionTimeout(5000)
-	public void gebeLosAusRueckgaengig(Integer losIId, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+	public void gebeLosAusRueckgaengig(
+			Integer losIId,
+			boolean bSollmengenBeiNachtraeglichenMaterialentnahmenAktualisieren,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		// loggen
 		myLogger.logData(losIId);
 		// parameter pruefen
@@ -5321,9 +5713,17 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 				LosistmaterialDto[] istmat = losistmaterialFindByLossollmaterialIId(sollmat
 						.getIId());
 				// Lagerausgaben zuruecknehmen
+				BigDecimal bgAusgegeben = BigDecimal.ZERO;
 				for (int i = 0; i < istmat.length; i++) {
+					bgAusgegeben = bgAusgegeben.add(istmat[i].getNMenge());
 					removeLosistmaterial(istmat[i], theClientDto);
 				}
+
+				// SP2821
+				if (bSollmengenBeiNachtraeglichenMaterialentnahmenAktualisieren) {
+					sollmat.setNMenge(bgAusgegeben);
+				}
+
 				// eventuell eingetragene Fehlmenge loeschen
 				getFehlmengeFac().aktualisiereFehlmenge(LocaleFac.BELEGART_LOS,
 						sollmat.getIId(), false, theClientDto);
@@ -5585,7 +5985,7 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 								snr[i],
 								new java.sql.Timestamp(System
 										.currentTimeMillis()), theClientDto,
-								null, true);
+								null, null, true);
 
 					}
 				}
@@ -5607,7 +6007,7 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 							losistmaterialDto.getLagerIId(),
 							sSerienChargennummer,
 							new java.sql.Timestamp(System.currentTimeMillis()),
-							theClientDto, null, true);
+							theClientDto, null, null, true);
 				}
 			}
 			return losistmaterialDto;
@@ -6172,6 +6572,52 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 		return (LossollarbeitsplanDto[]) alDaten.toArray(returnArray);
 	}
 
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public Integer getJuengstenZusatzstatuseinesLoses(Integer losIId) {
+
+		Integer zusatzstatusIId = null;
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String sQuery = "SELECT lz.zusatzstatus_i_id FROM FLRLoszusatzstatus as lz WHERE lz.los_i_id="
+				+ losIId + " ORDER BY lz.t_aendern DESC";
+		org.hibernate.Query query = session.createQuery(sQuery);
+		query.setMaxResults(1);
+
+		List<?> resultList = query.list();
+
+		Iterator<?> resultListIterator = resultList.iterator();
+		if (resultListIterator.hasNext()) {
+			zusatzstatusIId = (Integer) resultListIterator.next();
+		}
+		session.close();
+		return zusatzstatusIId;
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public Map<Integer, String> getAllZusatzstatus(TheClientDto theClientDto) {
+
+		TreeMap<Integer, String> tmArten = new TreeMap<Integer, String>();
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String sQuery = "SELECT z.i_id,z.c_bez FROM FLRZusatzstatus as z";
+		org.hibernate.Query query = session.createQuery(sQuery);
+
+		List<?> resultList = query.list();
+
+		Iterator<?> resultListIterator = resultList.iterator();
+		while (resultListIterator.hasNext()) {
+			Object o[] = (Object[]) resultListIterator.next();
+			Integer id = (Integer) o[0];
+			String value = (String) o[1];
+
+			tmArten.put(id, value);
+		}
+		session.close();
+		return tmArten;
+	}
+
 	public LossollarbeitsplanDto[] getAlleOffenenMaschinenArbeitsplan(
 			Integer maschineIId, TheClientDto theClientDto) {
 
@@ -6337,6 +6783,14 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 			BigDecimal bdMaterialwertGesamt = getErledigterMaterialwertNEU(
 					losDto, theClientDto);
 
+			boolean bGesamteIstzeitenZaehlen = false;
+			parameter = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_FERTIGUNG,
+							ParameterFac.PARAMETER_LOSABLIEFERUNG_GESAMTE_ISTZEITEN_ZAEHLEN);
+			bGesamteIstzeitenZaehlen = ((Boolean) parameter.getCWertAsObject());
+
 			// --------------------------------------------------------------
 			// ---------
 			// nun der detaillierte Arbeitszeitwert (mit Beruecksichtigung
@@ -6389,6 +6843,8 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 			Collection<?> losablieferungs = query.getResultList();
 
 			LosablieferungDto[] losabDtos = assembleLosablieferungDtosOhneSnrs(losablieferungs);
+
+			Timestamp tAblieferzeitpunktVorherigeAblieferung = null;
 
 			for (Iterator<?> iter = losablieferungs.iterator(); iter.hasNext();) {
 				Losablieferung losablieferung = (Losablieferung) iter.next();
@@ -6481,6 +6937,61 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 				}
 				// speichern
 
+				// Nur die Zeiten dieser einen Ablieferung berechnen
+				// PJ18599
+				if (bGesamteIstzeitenZaehlen) {
+
+					// Wenn Los erledigt, dann bei der letzten Ablieferung die
+					// zunkuenftigen Zeiten hinzufuegen
+					Timestamp tBis = losablieferung.getTAendern();
+					if (losDto.getStatusCNr().equals(LocaleFac.STATUS_ERLEDIGT)
+							&& iter.hasNext() == false) {
+						tBis = null;
+					}
+
+					BigDecimal bdGesamtkostenAZ = new BigDecimal(0);
+					// Maschinenzeiten
+					AuftragzeitenDto[] zeitenMaschine = getZeiterfassungFac()
+							.getAllMaschinenzeitenEinesBeleges(losIId, null,
+									tAblieferzeitpunktVorherigeAblieferung,
+									tBis, theClientDto);
+					for (int j = 0; j < zeitenMaschine.length; j++) {
+						bdGesamtkostenAZ = bdGesamtkostenAZ
+								.add(zeitenMaschine[j].getBdKosten());
+					}
+
+					// "normale" Zeiten
+					AuftragzeitenDto[] zeitenMann = getZeiterfassungFac()
+							.getAllZeitenEinesBeleges(LocaleFac.BELEGART_LOS,
+									losIId, null, null,
+									tAblieferzeitpunktVorherigeAblieferung,
+									tBis, false, false, theClientDto);
+					for (int j = 0; j < zeitenMann.length; j++) {
+						bdGesamtkostenAZ = bdGesamtkostenAZ.add(zeitenMann[j]
+								.getBdKosten());
+					}
+
+					bdGesamtkostenAZ = bdGesamtkostenAZ
+							.add(bdArbeitszeitwertAusUnterlosenGesamt);
+
+					BigDecimal bdAbgeliefertGesamt = getErledigteMenge(
+							losDto.getIId(), theClientDto);
+					if (bdAbgeliefertGesamt.doubleValue() > 0) {
+						BigDecimal bdAzWertDerLosablieferung = bdGesamtkostenAZ
+								.divide(losablieferung.getNMenge(), 4,
+										BigDecimal.ROUND_HALF_EVEN);
+
+						losablieferung
+								.setNArbeitszeitwertdetailliert(bdAzWertDerLosablieferung);
+						losablieferung
+								.setNArbeitszeitwert(bdAzWertDerLosablieferung);
+						losablieferung.setNGestehungspreis(losablieferung
+								.getNMaterialwert().add(
+										bdAzWertDerLosablieferung));
+
+					}
+				}
+
 				if (bNurLetztenMaterialwertNeuBerechnen == false
 						|| (bNurLetztenMaterialwertNeuBerechnen == true && iter
 								.hasNext() == false)) {
@@ -6492,6 +7003,10 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 					// auch in Lagerbewegung aendern
 					bucheLosAblieferungAufLager(loaDot, losDto, theClientDto);
 				}
+
+				tAblieferzeitpunktVorherigeAblieferung = losablieferung
+						.getTAendern();
+
 			}
 		} catch (RemoteException ex1) {
 			throwEJBExceptionLPRespectOld(ex1);
@@ -6539,7 +7054,7 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 			for (int j = 0; j < istmatDtos.length; j++) {
 
 				List<SeriennrChargennrMitMengeDto> snrDtos = getLagerFac()
-						.getAllSeriennrchargennrEinerBelegartposition(
+						.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 								LocaleFac.BELEGART_LOS, istmatDtos[j].getIId());
 
 				for (int k = 0; k < snrDtos.size(); k++) {
@@ -7290,7 +7805,7 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 				getErledigteMenge(losDto.getIId(), theClientDto), theClientDto);
 
 		los.setStatusCNr(FertigungFac.STATUS_ERLEDIGT);
-		los.setPersonalIIdErledigt(theClientDto.getIDPersonal());
+		los.setPersonalIIdManuellerledigt(theClientDto.getIDPersonal());
 		if (bDatumDerLetztenAblieferungAlsErledigtDatumVerwenden == true) {
 
 			LosablieferungDto[] losablieferungDtos = null;
@@ -7831,7 +8346,7 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 
 		// Los updaten, wenn Mengenreduktion
 		if (losablieferungDto.getNMenge().doubleValue() > 0
-				&& losablieferungDto.getNMenge().doubleValue() < laVorher
+				&& losablieferungDto.getNMenge().doubleValue() <= laVorher
 						.getNMenge().doubleValue()) {
 
 			Losablieferung losablieferung = em.find(Losablieferung.class,
@@ -8027,7 +8542,7 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 		LosablieferungDto loaDto = LosablieferungDtoAssembler
 				.createDto(losablieferung);
 		loaDto.setSeriennrChargennrMitMenge(getLagerFac()
-				.getAllSeriennrchargennrEinerBelegartposition(
+				.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 						LocaleFac.BELEGART_LOSABLIEFERUNG,
 						losablieferung.getIId()));
 
@@ -8110,7 +8625,7 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 		for (int i = 0; i < istmatDtos.length; i++) {
 
 			List<SeriennrChargennrMitMengeDto> l = getLagerFac()
-					.getAllSeriennrchargennrEinerBelegartposition(
+					.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 							LocaleFac.BELEGART_LOS, istmatDtos[i].getIId());
 
 			for (int j = 0; j < l.size(); j++) {
@@ -8166,7 +8681,7 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 					.getIId());
 			for (int i = 0; i < istmaterialDtos.length; i++) {
 				List<SeriennrChargennrMitMengeDto> lospos = getLagerFac()
-						.getAllSeriennrchargennrEinerBelegartposition(
+						.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 								LocaleFac.BELEGART_LOS,
 								istmaterialDtos[i].getIId());
 				al.addAll(lospos);
@@ -8208,7 +8723,8 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 	}
 
 	public BigDecimal getAnzahlInFertigung(Integer artikelIId,
-			TheClientDto theClientDto) {
+			java.sql.Date tAbDatum, TheClientDto theClientDto) {
+
 		BigDecimal anzahl = new BigDecimal(0);
 		Session session = null;
 
@@ -8233,6 +8749,10 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 			crit.add(Restrictions.eq(
 					FertigungFac.FLR_INTERNE_BESTELLUNG_STUECKLISTE_I_ID,
 					stuecklisteDto.getIId()));
+			if (tAbDatum != null) {
+				crit.add(Restrictions.ge(
+						FertigungFac.FLR_LOS_T_PRODUKTIONSENDE, tAbDatum));
+			}
 
 			List<?> resultList = crit.list();
 			Iterator<?> resultListIterator = resultList.iterator();
@@ -8256,6 +8776,11 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 		}
 
 		return anzahl;
+	}
+
+	public BigDecimal getAnzahlInFertigung(Integer artikelIId,
+			TheClientDto theClientDto) {
+		return getAnzahlInFertigung(artikelIId, null, theClientDto);
 	}
 
 	public ArrayList<LosDto> getLoseInFertigung(Integer artikelIId,
@@ -8956,172 +9481,193 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 						LagerabgangursprungDto[] dtos = getLagerFac()
 								.lagerabgangursprungFindByLagerbewegungIIdBuchung(
 										l.getIIdBuchung());
+						if (l.getNMenge().doubleValue() > 0) {
+							for (int m = 0; m < dtos.length; m++) {
+								// nun die Ursprungsbuchungen suchen
+								Session session2 = FLRSessionFactory
+										.getFactory().openSession();
+								String sQuery2 = "from FLRLagerbewegung lagerbewegung WHERE lagerbewegung.i_id_buchung="
+										+ dtos[m].getILagerbewegungidursprung()
+										+ " order by lagerbewegung.t_buchungszeit DESC";
+								org.hibernate.Query ursrungsbuchung = session2
+										.createQuery(sQuery2);
+								ursrungsbuchung.setMaxResults(1);
 
-						for (int m = 0; m < dtos.length; m++) {
-							// nun die Ursprungsbuchungen suchen
-							Session session2 = FLRSessionFactory.getFactory()
-									.openSession();
-							String sQuery2 = "from FLRLagerbewegung lagerbewegung WHERE lagerbewegung.i_id_buchung="
-									+ dtos[m].getILagerbewegungidursprung()
-									+ " order by lagerbewegung.t_buchungszeit DESC";
-							org.hibernate.Query ursrungsbuchung = session2
-									.createQuery(sQuery2);
-							ursrungsbuchung.setMaxResults(1);
+								java.util.List resultList2 = ursrungsbuchung
+										.list();
 
-							java.util.List resultList2 = ursrungsbuchung.list();
+								Iterator itUrsprung = resultList2.iterator();
 
-							Iterator itUrsprung = resultList2.iterator();
+								while (itUrsprung.hasNext()) {
+									com.lp.server.artikel.fastlanereader.generated.FLRLagerbewegung lagerbewegung_ursprung = (com.lp.server.artikel.fastlanereader.generated.FLRLagerbewegung) itUrsprung
+											.next();
 
-							while (itUrsprung.hasNext()) {
-								com.lp.server.artikel.fastlanereader.generated.FLRLagerbewegung lagerbewegung_ursprung = (com.lp.server.artikel.fastlanereader.generated.FLRLagerbewegung) itUrsprung
-										.next();
+									// Wenn diese aus einer Losablieferung kommt
+									if (lagerbewegung_ursprung
+											.getC_belegartnr()
+											.equals(LocaleFac.BELEGART_LOSABLIEFERUNG)) {
 
-								// Wenn diese aus einer Losablieferung kommt
-								if (lagerbewegung_ursprung
-										.getC_belegartnr()
-										.equals(LocaleFac.BELEGART_LOSABLIEFERUNG)) {
+										LosablieferungDto laDto = losablieferungFindByPrimaryKey(
+												lagerbewegung_ursprung
+														.getI_belegartpositionid(),
+												true, theClientDto);
 
-									LosablieferungDto laDto = losablieferungFindByPrimaryKey(
-											lagerbewegung_ursprung
-													.getI_belegartpositionid(),
-											true, theClientDto);
-
-									LosDto losDtoUnterlos = losFindByPrimaryKey(laDto
-											.getLosIId());
-									BigDecimal sollsatzgroesse = lossollmaterialDto
-											.getNMenge().divide(
-													losDto.getNLosgroesse(), 4,
-													BigDecimal.ROUND_HALF_EVEN);
-
-									abNachkalkulationDto
-											.setBdGestehungswertmaterialist(abNachkalkulationDto
-													.getBdGestehungswertmaterialist()
-													.subtract(
-															laDto.getNArbeitszeitwertdetailliert()
-																	.multiply(
-																			bdMenge)));
-									abNachkalkulationDto
-											.setBdGestehungswertarbeitist(abNachkalkulationDto
-													.getBdGestehungswertarbeitist()
-													.add(laDto
-															.getNArbeitszeitwertdetailliert()
-															.multiply(bdMenge)));
-
-									BigDecimal bdGesamtAbgeliefert = getErledigteMenge(
-											laDto.getLosIId(), theClientDto);
-									Double dPers = getZeiterfassungFac()
-											.getSummeZeitenEinesBeleges(
-													LocaleFac.BELEGART_LOS,
-													losDtoUnterlos.getIId(),
-													null, null, null, null,
-													theClientDto);
-
-									BigDecimal arbeitszeitsoll = new BigDecimal(
-											0);
-
-									BigDecimal maschinenzeitsoll = new BigDecimal(
-											0);
-									LossollarbeitsplanDto[] sollarbeitsplanDtos = getFertigungFac()
-											.lossollarbeitsplanFindByLosIId(
-													losDtoUnterlos.getIId());
-
-									for (int u = 0; u < sollarbeitsplanDtos.length; u++) {
-										LossollarbeitsplanDto sollarbeitsplanDto = sollarbeitsplanDtos[u];
-
-										BigDecimal menge = sollarbeitsplanDto
-												.getNGesamtzeit()
-												.divide(losDtoUnterlos
-														.getNLosgroesse(),
+										LosDto losDtoUnterlos = losFindByPrimaryKey(laDto
+												.getLosIId());
+										BigDecimal sollsatzgroesse = lossollmaterialDto
+												.getNMenge()
+												.divide(losDto.getNLosgroesse(),
 														4,
-														BigDecimal.ROUND_HALF_EVEN)
-												.multiply(bdMenge);
-										/*
-										 * ArtikelDto artikelDto =
-										 * getArtikelFac()
-										 * .artikelFindByPrimaryKeySmall(
-										 * sollarbeitsplanDto
-										 * .getArtikelIIdTaetigkeit(),
-										 * theClientDto);
-										 * 
-										 * myLogger.warn("Los:" +
-										 * losDto.getCNr() + " Unterlos:" +
-										 * losDtoUnterlos.getCNr() + " AZ:" +
-										 * artikelDto.getCNr() + " Zeit:" +
-										 * Helper.rundeKaufmaennisch( menge,
-										 * 4));
-										 */
+														BigDecimal.ROUND_HALF_EVEN);
 
-										if (sollarbeitsplanDto.getMaschineIId() == null) {
-											arbeitszeitsoll = arbeitszeitsoll
-													.add(menge);
-										} else {
-											maschinenzeitsoll = maschinenzeitsoll
-													.add(menge);
-											if (!Helper
-													.short2boolean(sollarbeitsplanDto
-															.getBNurmaschinenzeit())) {
+										BigDecimal azWert = laDto
+												.getNArbeitszeitwertdetailliert()
+												.multiply(
+														dtos[m].getNVerbrauchtemenge());
+
+										abNachkalkulationDto
+												.setBdGestehungswertmaterialist(abNachkalkulationDto
+														.getBdGestehungswertmaterialist()
+														.subtract(azWert));
+										abNachkalkulationDto
+												.setBdGestehungswertarbeitist(abNachkalkulationDto
+														.getBdGestehungswertarbeitist()
+														.add(azWert));
+
+										System.out
+												.println("Losablieferung Unterlos  :\t"
+														+ losDtoUnterlos
+																.getCNr()
+														+ "\t AZ-Wert:\t"
+														+ Helper.fitString2LengthAlignRight(
+																Helper.rundeKaufmaennisch(
+																		azWert,
+																		2)
+																		+ "",
+																15, ' '));
+
+										BigDecimal bdGesamtAbgeliefert = getErledigteMenge(
+												laDto.getLosIId(), theClientDto);
+										Double dPers = getZeiterfassungFac()
+												.getSummeZeitenEinesBeleges(
+														LocaleFac.BELEGART_LOS,
+														losDtoUnterlos.getIId(),
+														null, null, null, null,
+														theClientDto);
+
+										BigDecimal arbeitszeitsoll = new BigDecimal(
+												0);
+
+										BigDecimal maschinenzeitsoll = new BigDecimal(
+												0);
+										LossollarbeitsplanDto[] sollarbeitsplanDtos = getFertigungFac()
+												.lossollarbeitsplanFindByLosIId(
+														losDtoUnterlos.getIId());
+
+										for (int u = 0; u < sollarbeitsplanDtos.length; u++) {
+											LossollarbeitsplanDto sollarbeitsplanDto = sollarbeitsplanDtos[u];
+
+											BigDecimal menge = sollarbeitsplanDto
+													.getNGesamtzeit()
+													.divide(losDtoUnterlos
+															.getNLosgroesse(),
+															4,
+															BigDecimal.ROUND_HALF_EVEN)
+													.multiply(bdMenge);
+											/*
+											 * ArtikelDto artikelDto =
+											 * getArtikelFac()
+											 * .artikelFindByPrimaryKeySmall(
+											 * sollarbeitsplanDto
+											 * .getArtikelIIdTaetigkeit(),
+											 * theClientDto);
+											 * 
+											 * myLogger.warn("Los:" +
+											 * losDto.getCNr() + " Unterlos:" +
+											 * losDtoUnterlos.getCNr() + " AZ:"
+											 * + artikelDto.getCNr() + " Zeit:"
+											 * + Helper.rundeKaufmaennisch(
+											 * menge, 4));
+											 */
+
+											if (sollarbeitsplanDto
+													.getMaschineIId() == null) {
 												arbeitszeitsoll = arbeitszeitsoll
 														.add(menge);
+											} else {
+												maschinenzeitsoll = maschinenzeitsoll
+														.add(menge);
+												if (!Helper
+														.short2boolean(sollarbeitsplanDto
+																.getBNurmaschinenzeit())) {
+													arbeitszeitsoll = arbeitszeitsoll
+															.add(menge);
+												}
+
 											}
-
 										}
+
+										abNachkalkulationDto
+												.setDdArbeitszeitsoll(abNachkalkulationDto
+														.getDdArbeitszeitsoll()
+														+ arbeitszeitsoll
+																.doubleValue());
+										abNachkalkulationDto
+												.setDdMaschinenzeitsoll(abNachkalkulationDto
+														.getDdMaschinenzeitsoll()
+														+ maschinenzeitsoll
+																.doubleValue());
+
+										// Zeit duch die Gesamtablieferungen
+										// dividieren und mal bMenge
+										dPers = dPers
+												/ bdGesamtAbgeliefert
+														.doubleValue()
+												* bdMenge.doubleValue();
+										abNachkalkulationDto
+												.setDdArbeitszeitist(abNachkalkulationDto
+														.getDdArbeitszeitist()
+														+ dPers);
+
+										Double dMasch = getZeiterfassungFac()
+												.getSummeMaschinenZeitenEinesBeleges(
+														losDtoUnterlos.getIId(),
+														null, null,
+														theClientDto);
+
+										dMasch = dMasch
+												/ bdGesamtAbgeliefert
+														.doubleValue()
+												* bdMenge.doubleValue();
+										abNachkalkulationDto
+												.setDdMaschinenzeitist(abNachkalkulationDto
+														.getDdMaschinenzeitist()
+														+ dMasch);
+
+										/*
+										 * System.out.println("Los: " +
+										 * losDto.getCNr() + " Stueckliste: " +
+										 * stklDto.getArtikelDto().getCNr() +
+										 * " UnterlosLos: " +
+										 * losDtoUnterlos.getCNr() +
+										 * " Artikel: " + aDto.getCNr() +
+										 * " Menge:" + bdMenge);
+										 */
+
+										abNachkalkulationDto = getWerteAusUnterlosen(
+												losDtoUnterlos,
+												sollsatzgroesse.multiply(dtos[m]
+														.getNVerbrauchtemenge()),
+												abNachkalkulationDto,
+												theClientDto);
+
 									}
-
-									abNachkalkulationDto
-											.setDdArbeitszeitsoll(abNachkalkulationDto
-													.getDdArbeitszeitsoll()
-													+ arbeitszeitsoll
-															.doubleValue());
-									abNachkalkulationDto
-											.setDdMaschinenzeitsoll(abNachkalkulationDto
-													.getDdMaschinenzeitsoll()
-													+ maschinenzeitsoll
-															.doubleValue());
-
-									// Zeit duch die Gesamtablieferungen
-									// dividieren und mal bMenge
-									dPers = dPers
-											/ bdGesamtAbgeliefert.doubleValue()
-											* bdMenge.doubleValue();
-									abNachkalkulationDto
-											.setDdArbeitszeitist(abNachkalkulationDto
-													.getDdArbeitszeitist()
-													+ dPers);
-
-									Double dMasch = getZeiterfassungFac()
-											.getSummeMaschinenZeitenEinesBeleges(
-													losDtoUnterlos.getIId(),
-													null, null, theClientDto);
-
-									dMasch = dMasch
-											/ bdGesamtAbgeliefert.doubleValue()
-											* bdMenge.doubleValue();
-									abNachkalkulationDto
-											.setDdMaschinenzeitist(abNachkalkulationDto
-													.getDdMaschinenzeitist()
-													+ dMasch);
-
-									/*
-									 * System.out.println("Los: " +
-									 * losDto.getCNr() + " Stueckliste: " +
-									 * stklDto.getArtikelDto().getCNr() +
-									 * " UnterlosLos: " +
-									 * losDtoUnterlos.getCNr() + " Artikel: " +
-									 * aDto.getCNr() + " Menge:" + bdMenge);
-									 */
-
-									abNachkalkulationDto = getWerteAusUnterlosen(
-											losDtoUnterlos,
-											sollsatzgroesse.multiply(bdMenge),
-											abNachkalkulationDto, theClientDto);
 
 								}
 
+								session2.close();
 							}
-
-							session2.close();
 						}
-
 					}
 
 				}
@@ -9148,6 +9694,66 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 							bdErledigteMenge, theClientDto));
 		}
 		return bdWert;
+	}
+
+	public java.sql.Date getFruehesterEintrefftermin(Integer artikelIId,
+			TheClientDto theClientDto) {
+		java.sql.Date dFruehesterEintreffTermin = null;
+		try {
+			BestellpositionDto[] bestellpositionDtos = getBestellpositionFac()
+					.bestellpositionfindByArtikelOrderByTAuftragsbestaetigungstermin(
+							artikelIId, theClientDto);
+			if (bestellpositionDtos != null) {
+				for (int i = 0; i < bestellpositionDtos.length; i++) {
+					if (!bestellpositionDtos[i]
+							.getBestellpositionstatusCNr()
+							.equals(BestellpositionFac.BESTELLPOSITIONSTATUS_ERLEDIGT)) {
+
+						if (bestellpositionDtos[i].getNOffeneMenge() == null
+								|| bestellpositionDtos[i].getNOffeneMenge()
+										.doubleValue() > 0) {
+
+							BestellungDto bestellungDto = getBestellungFac()
+									.bestellungFindByPrimaryKey(
+											bestellpositionDtos[i]
+													.getBestellungIId());
+							// SP3130
+							if (!bestellungDto.getStatusCNr().equals(
+									BestellungFac.BESTELLSTATUS_ERLEDIGT)) {
+
+								dFruehesterEintreffTermin = bestellpositionDtos[i]
+										.getTAuftragsbestaetigungstermin();
+								break;
+							}
+
+						}
+					}
+				}
+
+			}
+
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
+		}
+
+		// PJ18767
+		ArrayList<LosDto> alLose = getFertigungFac().getLoseInFertigung(
+				artikelIId, theClientDto);
+		for (int i = 0; i < alLose.size(); i++) {
+
+			if (dFruehesterEintreffTermin == null) {
+				dFruehesterEintreffTermin = alLose.get(i).getTProduktionsende();
+			} else {
+				if (dFruehesterEintreffTermin.after(alLose.get(i)
+						.getTProduktionsende())) {
+					dFruehesterEintreffTermin = alLose.get(i)
+							.getTProduktionsende();
+				}
+			}
+
+		}
+
+		return dFruehesterEintreffTermin;
 	}
 
 	private BigDecimal getErledigterArbeitszeitwertEinerSollpositionAusUnterlosen(
@@ -9300,7 +9906,7 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 
 		try {
 			List<SeriennrChargennrMitMengeDto> dtos = getLagerFac()
-					.getAllSeriennrchargennrEinerBelegartposition(
+					.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 							LocaleFac.BELEGART_LOS, losistmaterialIId);
 
 			if (dtos == null || dtos.size() < 1) {
@@ -9312,7 +9918,7 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 			if (Helper.short2boolean(losistmaterial.getBAbgang())) {
 
 				BigDecimal preis = getLagerFac()
-						.getGestehungspreisEinerAbgangsposition(
+						.getGestehungspreisEinerAbgangspositionMitTransaktion(
 								LocaleFac.BELEGART_LOS, losistmaterialIId,
 								dtos.get(0).getCSeriennrChargennr());
 				getLagerFac()
@@ -9348,7 +9954,7 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 						bdPreis, losistmaterial.getLagerIId(),
 						dtos.get(0).getCSeriennrChargennr(),
 						new Timestamp(System.currentTimeMillis()),
-						theClientDto, null, true);
+						theClientDto, null, null, true);
 
 				// Losistmaterial updaten
 				losistmaterial.setNMenge(bdMengeNeu);
@@ -10734,6 +11340,17 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 			em.persist(zusatzstatus);
 			em.flush();
 			setZusatzstatusFromZusatzstatusDto(zusatzstatus, zusatzstatusDto);
+
+			Status status = em.find(Status.class, zusatzstatusDto.getCBez());
+			if (status == null) {
+				status = new Status(zusatzstatusDto.getCBez());
+				try {
+					em.persist(status);
+				} catch (EntityExistsException e) {
+					// Bereits vorhanden
+				}
+			}
+
 			return zusatzstatusDto.getIId();
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
@@ -10814,11 +11431,16 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		setZusatzstatusFromZusatzstatusDto(zusatzstatus, zusatzstatusDto);
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
+
+		Status status = em.find(Status.class, zusatzstatusDto.getCBez());
+		if (status == null) {
+			status = new Status(zusatzstatusDto.getCBez());
+			try {
+				em.persist(status);
+			} catch (EntityExistsException e) {
+				// Bereits vorhanden
+			}
+		}
 
 	}
 
@@ -11814,6 +12436,21 @@ public class FertigungFacBean extends Facade implements FertigungFac {
 		} catch (EJBExceptionLP e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, e);
 		}
+	}
+
+	public LoszusatzstatusDto loszusatzstatusFindByLosIIdZusatzstatusIIdOhneExc(
+			Integer losIId, Integer zusatzstatusIId) {
+		try {
+			Query query = em
+					.createNamedQuery("LoszusatzstatusfindByLosIIdZusatzstatusIId");
+			query.setParameter(1, losIId);
+			query.setParameter(2, zusatzstatusIId);
+			return assembleLoszusatzstatusDto((Loszusatzstatus) query
+					.getSingleResult());
+		} catch (NoResultException ex) {
+			//
+		}
+		return null;
 	}
 
 	private void setLoszusatzstatusFromLoszusatzstatusDto(

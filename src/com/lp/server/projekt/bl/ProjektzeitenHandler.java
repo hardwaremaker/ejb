@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -91,7 +91,7 @@ public class ProjektzeitenHandler extends UseCaseHandlerTabelle {
 					Object.class, Object.class, Object.class, Object.class,
 					Double.class, BigDecimal.class },
 			// die Spaltenueberschriften werden durch die Kriterien
-					// bestimmt
+			// bestimmt
 					new String[] {
 							" ", // kein Zeilenheader
 							" ", // je nach Filter
@@ -214,8 +214,9 @@ public class ProjektzeitenHandler extends UseCaseHandlerTabelle {
 				rows[row][col++] = Helper.formatDatum(new Date(
 						oAuftragzeitenDto.getTsBeginn().getTime()),
 						theClientDto.getLocUi());
-				rows[row][col++] = Helper.formatTime(oAuftragzeitenDto
-						.getTsBeginn(), theClientDto.getLocUi());
+				rows[row][col++] = Helper.formatTime(
+						oAuftragzeitenDto.getTsBeginn(),
+						theClientDto.getLocUi());
 				rows[row][col++] = oAuftragzeitenDto.getDdDauer();
 				rows[row][col++] = oAuftragzeitenDto.getBdKosten();
 
@@ -230,8 +231,8 @@ public class ProjektzeitenHandler extends UseCaseHandlerTabelle {
 				rows[row][col++] = Helper.formatDatum(new Date(
 						oAuftragzeitenDto.getTsEnde().getTime()), theClientDto
 						.getLocUi());
-				rows[row][col++] = Helper.formatTime(oAuftragzeitenDto
-						.getTsEnde(), theClientDto.getLocUi());
+				rows[row][col++] = Helper.formatTime(
+						oAuftragzeitenDto.getTsEnde(), theClientDto.getLocUi());
 				rows[row][col++] = null;
 				rows[row][col++] = null;
 
@@ -303,6 +304,19 @@ public class ProjektzeitenHandler extends UseCaseHandlerTabelle {
 							theClientDto);
 		}
 
+		// Telefonzeiten hinzufuegen und sortieren
+		personalZeitenDtos = AuftragzeitenDto.add2BelegzeitenDtos(
+				getZeiterfassungFac().getAllTelefonzeitenEinesProjekts(
+						new Integer(Integer.parseInt(fkAuftrag.value)), null,
+						null, null, theClientDto), personalZeitenDtos);
+		if (fkAuswertung.kritName.equals(ProjektFac.KRIT_PERSONAL)) {
+			personalZeitenDtos = AuftragzeitenDto.sortiereBelegzeitDtos(
+					personalZeitenDtos, false);
+		} else {
+			personalZeitenDtos = AuftragzeitenDto.sortiereBelegzeitDtos(
+					personalZeitenDtos, true);
+		}
+
 		aProjektzeitenDtos = new AuftragzeitenDto[personalZeitenDtos.length];
 
 		int row = 0;
@@ -316,7 +330,7 @@ public class ProjektzeitenHandler extends UseCaseHandlerTabelle {
 		// pro Zeit
 		//
 		// - bei Sortierung nach Personal pro Auftragzeit
-		//----------------------------------------------------------------------
+		// ----------------------------------------------------------------------
 		// --------------
 		// Header | Pers. Nr. | Pers. name | ------------- | ----- | ------ |
 		// Dauer | Kosten
@@ -324,11 +338,11 @@ public class ProjektzeitenHandler extends UseCaseHandlerTabelle {
 		// Kosten
 		// Header | Grund Ende | ----------- | Zeitb. text | Datum | Ende |
 		// Dauer | Kosten
-		//----------------------------------------------------------------------
+		// ----------------------------------------------------------------------
 		// --------------
 		//
 		// - bei Sortierung nach Ident pro Auftragzeit
-		//----------------------------------------------------------------------
+		// ----------------------------------------------------------------------
 		// --------------
 		// Header | Ident | Identbez. | ------------- | ----- | ------ | Dauer |
 		// Kosten
@@ -336,7 +350,7 @@ public class ProjektzeitenHandler extends UseCaseHandlerTabelle {
 		// | Kosten
 		// Header | Grund Ende | ----------- | Zeitb. text | Datum | Ende |
 		// Dauer | Kosten
-		//----------------------------------------------------------------------
+		// ----------------------------------------------------------------------
 		// --------------
 
 		// hier werden die Koepfe gesammelt, in der HashMap gibt es keine

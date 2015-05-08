@@ -49,6 +49,7 @@
 			<generator class="native" />
 		</id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="i_max_users" column="I_MAX_USERS" type="java.lang.Integer" />
 	</class>
 	<class name="FLRBenutzermandantsystemrolle" table="PERS_BENUTZERMANDANTSYSTEMROLLE">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">

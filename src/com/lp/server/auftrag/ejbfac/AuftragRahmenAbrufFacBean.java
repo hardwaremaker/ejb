@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -370,8 +370,8 @@ public class AuftragRahmenAbrufFacBean extends Facade implements
 							iIdRahmenauftragI, theClientDto);
 			for (int i = 0; i < abrufAuftrag.length; i++) {
 				if (!(AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT
-						.equals(abrufAuftrag[i].getAuftragstatusCNr()) || AuftragServiceFac.AUFTRAGSTATUS_STORNIERT
-						.equals(abrufAuftrag[i].getAuftragstatusCNr()))) {
+						.equals(abrufAuftrag[i].getStatusCNr()) || AuftragServiceFac.AUFTRAGSTATUS_STORNIERT
+						.equals(abrufAuftrag[i].getStatusCNr()))) {
 					bAlleAbrufeErledigt = false;
 				}
 			}
@@ -397,7 +397,7 @@ public class AuftragRahmenAbrufFacBean extends Facade implements
 			}
 
 			
-			if(rahmenauftragDto.getAuftragstatusCNr().equals(AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT)){
+			if(rahmenauftragDto.getStatusCNr().equals(AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT)){
 				//ungueltiger status -> Siehe PJ 1063
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_RAHMENAUFTRAG_IST_IM_STATUS_ANGELEGT,
 						new Exception("FEHLER_RAHMENAUFTRAG_IST_IM_STATUS_ANGELEGT"));
@@ -406,21 +406,21 @@ public class AuftragRahmenAbrufFacBean extends Facade implements
 			if (dOffeneMenge == 0) {
 				if (bAlleAbrufeErledigt) {
 					rahmenauftragDto
-							.setAuftragstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT);
+							.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT);
 				} else {
 					rahmenauftragDto
-							.setAuftragstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
+							.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
 				}
 			} else if (dOffeneMenge == dGesamtmenge) {
 				rahmenauftragDto
-						.setAuftragstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_OFFEN);
+						.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_OFFEN);
 			} else {
 				rahmenauftragDto
-						.setAuftragstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
+						.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
 			}
 
 			getAuftragFac().aendereAuftragstatus(rahmenauftragDto.getIId(),
-					rahmenauftragDto.getAuftragstatusCNr(), theClientDto);
+					rahmenauftragDto.getStatusCNr(), theClientDto);
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}

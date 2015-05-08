@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -71,14 +71,26 @@ public class SiPrefixParser implements ISiPrefixParser {
 	};
 	
 	protected List<String> units = new ArrayList<String>();
+	private boolean forceZeroUnit = false;
 	
 	public SiPrefixParser() {
 		
 	}
 
 	@Override
+	public void setForceZeroUnit(boolean forceZeroUnit) {
+		this.forceZeroUnit = forceZeroUnit;
+		//Ueber einen setter und nicht automatisch, damit das bewusst gemacht wird.
+	}
+	
+	@Override
+	public boolean isForceZeroUnit() {
+		return forceZeroUnit;
+	}
+	
+	@Override
 	public List<BigDecimalSI> parse(String toParse) {
-		return new SiPrefixParserCore(siPrefixes, units).parse(toParse);
+		return new SiPrefixParserCore(siPrefixes, units, forceZeroUnit).parse(toParse);
 	}
 	
 	protected void checkNoIllegalChars(String prefix) {
@@ -86,7 +98,7 @@ public class SiPrefixParser implements ISiPrefixParser {
 		Matcher m = Pattern.compile("[\\s\\d\\r\\n\\t,\\.]+").matcher(prefix);
 		if(m.find())
 			throw new IllegalArgumentException("'" + prefix + "' contains illegal charaters.\n" +
-					"Must not contain a number, space, tabe, linebreak, dot or comma");
+					"Must not contain a number, space, tab, linebreak, dot or comma");
 	}
 
 	protected void checkNoIllegalChars(List<String> prefixes) {
@@ -95,8 +107,8 @@ public class SiPrefixParser implements ISiPrefixParser {
 	}
 	
 	protected void checkNotAlreadyTakenSI(String prefix) {
-		if(siPrefixes.containsKey(prefix))
-			throw new IllegalArgumentException("'" + prefix + "' is SI prefix");
+		if(siPrefixes.containsKey(prefix) && !forceZeroUnit)
+			throw new IllegalArgumentException("'" + prefix + "' is SI prefix. Use setForceZeroUnit(true) for enabeling Units contained in SI prefixes.");
 	}
 	
 	protected void checkNotAlreadyTakenUnits(String prefix) {

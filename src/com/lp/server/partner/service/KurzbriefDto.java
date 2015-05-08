@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -72,6 +72,7 @@ public class KurzbriefDto implements Serializable {
 
 	private BitSet bsIndikator = new BitSet(iF);
 	private String belegartCNr;
+	private Short bHtml ;
 
 	public Integer getIId() {
 		return iId;
@@ -160,6 +161,15 @@ public class KurzbriefDto implements Serializable {
 		this.belegartCNr = belegartCNr;
 	}
 
+	public Short getBHtml() {
+		return bHtml;
+	}
+
+	public void setBHtml(Short b_html) {
+		this.bHtml = b_html;
+	}
+
+	
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -192,6 +202,7 @@ public class KurzbriefDto implements Serializable {
 		if (!(that.xText == null ? this.xText == null : that.xText
 				.equals(this.xText)))
 			return false;
+		if(!(that.bHtml == null ? this.bHtml == null : that.bHtml.equals(this.bHtml))) return false ;
 		return true;
 	}
 
@@ -206,6 +217,7 @@ public class KurzbriefDto implements Serializable {
 		result = 37 * result + this.tAendern.hashCode();
 		result = 37 * result + this.personalIIdAendern.hashCode();
 		result = 37 * result + this.xText.hashCode();
+		result = 37 * result + this.bHtml.hashCode() ;
 		return result;
 	}
 

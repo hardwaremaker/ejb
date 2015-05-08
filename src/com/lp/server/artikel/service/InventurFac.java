@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -85,6 +85,12 @@ public interface InventurFac {
 	public final static int REPORT_INVENTURSTAND_SORTIERUNG_ARTIKELNR = 0;
 	public final static int REPORT_INVENTURSTAND_SORTIERUNG_ARTIKELGRUPPE = 1;
 	public final static int REPORT_INVENTURSTAND_SORTIERUNG_ARTIKELKLASSE = 2;
+	public final static int REPORT_INVENTURSTAND_SORTIERUNG_LAGERPLATZ = 3;
+	
+	public final static int REPORT_INVENTURLISTE_SORTIERUNG_ARTIKELNR = 0;
+	public final static int REPORT_INVENTURLISTE_SORTIERUNG_PERSON_ARTIKEL = 1;
+	public final static int REPORT_INVENTURLISTE_SORTIERUNG_PERSON_DATUM = 2;
+	
 
 	public Integer createInventur(InventurDto inventurDto,
 			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP;
@@ -136,19 +142,22 @@ public interface InventurFac {
 			throws RemoteException, EJBExceptionLP;
 
 	public JasperPrintLP printInventurprotokoll(Integer inventurIId,
-			Integer lagerIId, TheClientDto theClientDto) throws RemoteException;
+			Integer lagerIId, boolean bSortiertNachLagerplatz, String lagerplatzVon,
+			String lagerplatzBis, TheClientDto theClientDto) throws RemoteException;
 
 	public JasperPrintLP printInventurstand(Integer inventurIId,
 			Integer lagerIId, int iSortierung, TheClientDto theClientDto)
 			throws RemoteException;
 
 	public JasperPrintLP printInventurliste(Integer inventurIId,
-			Integer lagerIId, boolean bInventurpreis, TheClientDto theClientDto)
+			Integer lagerIId, boolean bInventurpreis, int iSortierung,Timestamp dVon, Timestamp dBis, TheClientDto theClientDto)
 			throws RemoteException;
 
 	public JasperPrintLP printNichterfassteartikel(Integer inventurIId,
 			Integer lagerIId, boolean bNurArtikelMitLagerstand,
-			TheClientDto theClientDto) throws RemoteException;
+			boolean bSortiertNachLagerplatz, String lagerplatzVon,
+			String lagerplatzBis, boolean bMitVersteckten, TheClientDto theClientDto)
+			throws RemoteException;
 
 	public InventurlisteDto[] inventurlisteFindByInventurIIdArtikelIId(
 			Integer inventurIId, Integer artikelIId, TheClientDto theClientDto)
@@ -225,11 +234,13 @@ public interface InventurFac {
 	public String importiereInventurliste(Integer inventurIId,
 			ArrayList<InvenurlisteImportDto> alImportdaten,
 			TheClientDto theClientDto);
-	
+
 	public ArrayList<String> sindSeriennumernBereitsInventiert(
 			InventurlisteDto inventurlisteDto, String[] snrs,
 			TheClientDto theClientDto);
-	public void mehrereSeriennumernInventieren(InventurlisteDto inventurlisteDto, String[] snrs,
+
+	public void mehrereSeriennumernInventieren(
+			InventurlisteDto inventurlisteDto, String[] snrs,
 			TheClientDto theClientDto);
-	
+
 }

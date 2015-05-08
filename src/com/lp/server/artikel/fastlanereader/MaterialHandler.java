@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -48,6 +48,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -56,8 +57,8 @@ import com.lp.util.Helper;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Materialien implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Materialien implementiert.
+ * Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -105,8 +106,7 @@ public class MaterialHandler extends UseCaseHandler {
 			int row = 0;
 			int col = 0;
 
-			String sLocUI = Helper.locale2String(theClientDto
-					.getLocUi());
+			String sLocUI = Helper.locale2String(theClientDto.getLocUi());
 
 			while (resultListIterator.hasNext()) {
 				Object o[] = (Object[]) resultListIterator.next();
@@ -207,13 +207,25 @@ public class MaterialHandler extends UseCaseHandler {
 						where.append(" " + booleanOperator);
 					}
 					filterAdded = true;
-					where.append(filterKriterien[i].kritName);
+					if (filterKriterien[i].isBIgnoreCase()) {
+						where.append(" upper("
+								+ filterKriterien[i].kritName + ")");
+					} else {
+						where.append(" " + filterKriterien[i].kritName);
+					}
 					where.append(" " + filterKriterien[i].operator);
-					where.append(" " + filterKriterien[i].value);
+
+					if (filterKriterien[i].isBIgnoreCase()) {
+						where.append(" "
+								+ filterKriterien[i].value.toUpperCase());
+					} else {
+						where.append(" " + filterKriterien[i].value);
+					}
+
 				}
 			}
 			if (filterAdded) {
-				where.insert(0, " WHERE");
+				where.insert(0, " WHERE ");
 			}
 		}
 
@@ -337,12 +349,31 @@ public class MaterialHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class }, new String[] { "Id",
-					getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
-					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI) },
-					new String[] { "material.i_id", "material.c_nr",
-							"materialsprset.c_bez" }));
+			setTableInfo(new TableInfo(
+					new Class[] {
+							Integer.class,
+							String.class,
+							String.class
+					},
+					
+					new String[] {
+							"Id",
+							getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI)
+					},
+					
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST
+					},
+					
+					new String[] {
+							"material.i_id",
+							"material.c_nr",
+							"materialsprset.c_bez"
+					})
+			);
 		}
 		return super.getTableInfo();
 	}

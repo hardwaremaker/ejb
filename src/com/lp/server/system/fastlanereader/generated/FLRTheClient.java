@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -37,122 +37,141 @@ import java.util.Date;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
 
+import com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle;
+
 /** @author Hibernate CodeGenerator */
 public class FLRTheClient implements Serializable {
-	
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
-	
 
-	/** identifier field */
-	private String cnr;
+    /** identifier field */
+    private String cnr;
 
-	/** persistent field */
-	private String c_benutzername;
+    /** persistent field */
+    private String c_benutzername;
 
-	/** persistent field */
-	private String c_mandant;
+    /** persistent field */
+    private String c_mandant;
 
-	/** persistent field */
-	private Integer i_personal;
+    /** persistent field */
+    private Integer i_personal;
 
-	/** persistent field */
-	private String c_uisprache;
+    /** persistent field */
+    private String c_uisprache;
 
-	/** persistent field */
-	private String c_konzernsprache;
+    /** persistent field */
+    private String c_konzernsprache;
 
-	/** persistent field */
-	private Date t_loggedin;
+    /** persistent field */
+    private Date t_loggedin;
 
-	/** persistent field */
-	private Date t_loggedout;
+    /** persistent field */
+    private Date t_loggedout;
 
-	/** full constructor */
-	public FLRTheClient(String c_benutzername, String c_mandant,
-			Integer i_personal, String c_uisprache, String c_konzernsprache,
-			Date t_loggedin, Date t_loggedout) {
-		this.c_benutzername = c_benutzername;
-		this.c_mandant = c_mandant;
-		this.i_personal = i_personal;
-		this.c_uisprache = c_uisprache;
-		this.c_konzernsprache = c_konzernsprache;
-		this.t_loggedin = t_loggedin;
-		this.t_loggedout = t_loggedout;
-	}
+    /** nullable persistent field */
+    private FLRSystemrolle flrsystemrolle;
 
-	/** default constructor */
-	public FLRTheClient() {
-	}
+    /** full constructor */
+    public FLRTheClient(String c_benutzername, String c_mandant, Integer i_personal, String c_uisprache, String c_konzernsprache, Date t_loggedin, Date t_loggedout, FLRSystemrolle flrsystemrolle) {
+        this.c_benutzername = c_benutzername;
+        this.c_mandant = c_mandant;
+        this.i_personal = i_personal;
+        this.c_uisprache = c_uisprache;
+        this.c_konzernsprache = c_konzernsprache;
+        this.t_loggedin = t_loggedin;
+        this.t_loggedout = t_loggedout;
+        this.flrsystemrolle = flrsystemrolle;
+    }
 
-	public String getCnr() {
-		return this.cnr;
-	}
+    /** default constructor */
+    public FLRTheClient() {
+    }
 
-	public void setCnr(String cnr) {
-		this.cnr = cnr;
-	}
+    /** minimal constructor */
+    public FLRTheClient(String c_benutzername, String c_mandant, Integer i_personal, String c_uisprache, String c_konzernsprache, Date t_loggedin, Date t_loggedout) {
+        this.c_benutzername = c_benutzername;
+        this.c_mandant = c_mandant;
+        this.i_personal = i_personal;
+        this.c_uisprache = c_uisprache;
+        this.c_konzernsprache = c_konzernsprache;
+        this.t_loggedin = t_loggedin;
+        this.t_loggedout = t_loggedout;
+    }
 
-	public String getC_benutzername() {
-		return this.c_benutzername;
-	}
+    public String getCnr() {
+        return this.cnr;
+    }
 
-	public void setC_benutzername(String c_benutzername) {
-		this.c_benutzername = c_benutzername;
-	}
+    public void setCnr(String cnr) {
+        this.cnr = cnr;
+    }
 
-	public String getC_mandant() {
-		return this.c_mandant;
-	}
+    public String getC_benutzername() {
+        return this.c_benutzername;
+    }
 
-	public void setC_mandant(String c_mandant) {
-		this.c_mandant = c_mandant;
-	}
+    public void setC_benutzername(String c_benutzername) {
+        this.c_benutzername = c_benutzername;
+    }
 
-	public Integer getI_personal() {
-		return this.i_personal;
-	}
+    public String getC_mandant() {
+        return this.c_mandant;
+    }
 
-	public void setI_personal(Integer i_personal) {
-		this.i_personal = i_personal;
-	}
+    public void setC_mandant(String c_mandant) {
+        this.c_mandant = c_mandant;
+    }
 
-	public String getC_uisprache() {
-		return this.c_uisprache;
-	}
+    public Integer getI_personal() {
+        return this.i_personal;
+    }
 
-	public void setC_uisprache(String c_uisprache) {
-		this.c_uisprache = c_uisprache;
-	}
+    public void setI_personal(Integer i_personal) {
+        this.i_personal = i_personal;
+    }
 
-	public String getC_konzernsprache() {
-		return this.c_konzernsprache;
-	}
+    public String getC_uisprache() {
+        return this.c_uisprache;
+    }
 
-	public void setC_konzernsprache(String c_konzernsprache) {
-		this.c_konzernsprache = c_konzernsprache;
-	}
+    public void setC_uisprache(String c_uisprache) {
+        this.c_uisprache = c_uisprache;
+    }
 
-	public Date getT_loggedin() {
-		return this.t_loggedin;
-	}
+    public String getC_konzernsprache() {
+        return this.c_konzernsprache;
+    }
 
-	public void setT_loggedin(Date t_loggedin) {
-		this.t_loggedin = t_loggedin;
-	}
+    public void setC_konzernsprache(String c_konzernsprache) {
+        this.c_konzernsprache = c_konzernsprache;
+    }
 
-	public Date getT_loggedout() {
-		return this.t_loggedout;
-	}
+    public Date getT_loggedin() {
+        return this.t_loggedin;
+    }
 
-	public void setT_loggedout(Date t_loggedout) {
-		this.t_loggedout = t_loggedout;
-	}
+    public void setT_loggedin(Date t_loggedin) {
+        this.t_loggedin = t_loggedin;
+    }
 
-	public String toString() {
-		return new ToStringBuilder(this).append("cnr", getCnr()).toString();
-	}
+    public Date getT_loggedout() {
+        return this.t_loggedout;
+    }
+
+    public void setT_loggedout(Date t_loggedout) {
+        this.t_loggedout = t_loggedout;
+    }
+
+    public FLRSystemrolle getFlrsystemrolle() {
+        return this.flrsystemrolle;
+    }
+
+    public void setFlrsystemrolle(FLRSystemrolle flrsystemrolle) {
+        this.flrsystemrolle = flrsystemrolle;
+    }
+
+    public String toString() {
+        return new ToStringBuilder(this)
+            .append("cnr", getCnr())
+            .toString();
+    }
 
 }

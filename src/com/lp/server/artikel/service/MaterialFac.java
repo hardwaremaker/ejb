@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,6 +35,7 @@ package com.lp.server.artikel.service;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
+import java.util.Locale;
 
 import javax.ejb.Remote;
 
@@ -93,5 +94,10 @@ public interface MaterialFac {
 
 	public MaterialzuschlagDto materialzuschlagFindByPrimaryKey(Integer iId)
 			throws EJBExceptionLP, RemoteException;
+	public void pflegeMaterialzuschlagsKursUndDatumNachtragen(
+			TheClientDto theClientDto);
+	public MaterialDto materialFindByPrimaryKey(Integer iId, Locale locDruck,
+			TheClientDto theClientDto);
+	
 
 }

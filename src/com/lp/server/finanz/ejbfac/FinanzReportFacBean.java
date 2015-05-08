@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -38,6 +38,8 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -63,7 +65,9 @@ import org.hibernate.Criteria;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
 import com.lp.server.angebot.fastlanereader.generated.FLRAngebot;
@@ -82,8 +86,6 @@ import com.lp.server.eingangsrechnung.ejb.Eingangsrechnungzahlung;
 import com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungReport;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
-import com.lp.server.finanz.ejb.Buchung;
-import com.lp.server.finanz.ejb.Buchungdetail;
 import com.lp.server.finanz.ejb.BuchungdetailText;
 import com.lp.server.finanz.ejb.Finanzamt;
 import com.lp.server.finanz.ejb.FinanzamtPK;
@@ -106,6 +108,7 @@ import com.lp.server.finanz.service.BelegbuchungDto;
 import com.lp.server.finanz.service.BuchenFac;
 import com.lp.server.finanz.service.BuchungDto;
 import com.lp.server.finanz.service.BuchungdetailDto;
+import com.lp.server.finanz.service.BuchungsjournalReportParameter;
 import com.lp.server.finanz.service.ErgebnisgruppeDto;
 import com.lp.server.finanz.service.ExportlaufDto;
 import com.lp.server.finanz.service.FinanzFac;
@@ -113,7 +116,6 @@ import com.lp.server.finanz.service.FinanzReportFac;
 import com.lp.server.finanz.service.FinanzServiceFac;
 import com.lp.server.finanz.service.FinanzamtDto;
 import com.lp.server.finanz.service.IntrastatDto;
-import com.lp.server.finanz.service.KassenbuchDto;
 import com.lp.server.finanz.service.KontoDto;
 import com.lp.server.finanz.service.KontoDtoSmall;
 import com.lp.server.finanz.service.LiquititaetsvorschauImportDto;
@@ -128,9 +130,11 @@ import com.lp.server.finanz.service.ReportSaldenlisteKriterienDto;
 import com.lp.server.finanz.service.ReportUvaKriterienDto;
 import com.lp.server.finanz.service.SammelmahnungDto;
 import com.lp.server.finanz.service.SteuerkategorieDto;
+import com.lp.server.finanz.service.SteuerkategoriekontoDto;
 import com.lp.server.finanz.service.UvaartDto;
 import com.lp.server.finanz.service.UvaverprobungDto;
 import com.lp.server.finanz.service.WarenverkehrsnummerDto;
+import com.lp.server.partner.ejb.HvTypedCriteria;
 import com.lp.server.partner.service.AnsprechpartnerDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.KundeFac;
@@ -143,6 +147,7 @@ import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungReport;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.rechnung.service.RechnungPositionDto;
+import com.lp.server.system.fastlanereader.generated.FLREntitylog;
 import com.lp.server.system.fastlanereader.generated.FLRKostenstelle;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeKassenbuch;
@@ -150,6 +155,7 @@ import com.lp.server.system.jcr.service.docnode.DocNodeSaldenliste;
 import com.lp.server.system.jcr.service.docnode.DocNodeUVAVerprobung;
 import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.service.GeschaeftsjahrMandantDto;
+import com.lp.server.system.service.HvDtoLogClass;
 import com.lp.server.system.service.KostenstelleDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
@@ -168,6 +174,7 @@ import com.lp.server.util.report.JasperPrintLP;
 import com.lp.server.util.report.TimingInterceptor;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
+import com.lp.util.report.UstVerprobungRow;
 import com.lp.util.report.UvaRpt;
 
 @Stateless
@@ -197,6 +204,22 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 	private final static int UC_ERFOLGSRECHNUNG = 15;
 	private final static int UC_STEUERKATEGORIEN = 16;
 	private final static int UC_BUCHUNGSBELEG = 17;
+	private final static int UC_USTVERPROBUNG = 18;
+	private final static int UC_AENDERUNGEN_KONTO = 19;
+
+	private final static int REPORT_USTVERPROBUNG_BETRAG = 0;
+	private final static int REPORT_USTVERPROBUNG_STEUER = 1;
+	private final static int REPORT_USTVERPROBUNG_STEUERART = 2;
+	private final static int REPORT_USTVERPROBUNG_KONTO_NR = 3;
+	private final static int REPORT_USTVERPROBUNG_KONTO_BEZ = 4;
+	private final static int REPORT_USTVERPROBUNG_GEGENKONTO_NR = 5;
+	private final static int REPORT_USTVERPROBUNG_GEGENKONTO_BEZ = 6;
+	private final static int REPORT_USTVERPROBUNG_MWST_SATZ = 7;
+	private final static int REPORT_USTVERPROBUNG_MWST_ID = 8;
+	private final static int REPORT_USTVERPROBUNG_MWST_BEZ = 9;
+	private final static int REPORT_USTVERPROBUNG_STEUERKATEGORIE_BEZ = 10;
+	private final static int REPORT_USTVERPROBUNG_MWST_SATZ_BERECHNET = 11;
+	private final static int REPORT_USTVERPROBUNG_ANZAHL_FELDER = 12;
 
 	private final static int REPORT_RA_SCHREIBEN_RECHNUNGSNUMMER = 0;
 	private final static int REPORT_RA_SCHREIBEN_RECHNUNGSDATUM = 1;
@@ -227,7 +250,10 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 	private final static int REPORT_KONTENLISTE_VERSTECKT = 17;
 	private final static int REPORT_KONTENLISTE_SORTIERUNG = 18;
 	private final static int REPORT_KONTENLISTE_UVAART_CNR = 19;
-	private final static int REPORT_KONTENLISTE_ALLE_FELDER = 20;
+	private final static int REPORT_KONTENLISTE_STEUERART = 20;
+	private final static int REPORT_KONTENLISTE_GRUPPENTYP = 21;
+	private final static int REPORT_KONTENLISTE_GRUPPENBEZEICHNUNG = 22;
+	private final static int REPORT_KONTENLISTE_ALLE_FELDER = 23;
 
 	private final static int REPORT_BUCHUNGEN_IN_BUCHUNGSJOURNAL_SOLL = 0;
 	private final static int REPORT_BUCHUNGEN_IN_BUCHUNGSJOURNAL_HABEN = 1;
@@ -254,7 +280,9 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 	private final static int REPORT_BUCHUNGSJOURNAL_HABEN = 14;
 	private final static int REPORT_BUCHUNGSJOURNAL_WER = 15;
 	private final static int REPORT_BUCHUNGSJOURNAL_STORNIERT = 16;
-	private final static int REPORT_BUCHUNGSJOURNAL_ANZAHL_SPALTEN = 17;
+	private final static int REPORT_BUCHUNGSJOURNAL_BUCHUNGSART_KBEZ = 17 ;
+	private final static int REPORT_BUCHUNGSJOURNAL_BELEGART_KBEZ = 18 ;
+	private final static int REPORT_BUCHUNGSJOURNAL_ANZAHL_SPALTEN = 19;
 
 	private final static int REPORT_BUCHUNGEN_AUF_KONTO_BETRAG = 0;
 	private final static int REPORT_BUCHUNGEN_AUF_KONTO_UST = 1;
@@ -277,6 +305,20 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 	private final static int REPORT_SALDENLISTE_FINANZAMT = 11;
 	private final static int REPORT_SALDENLISTE_KONSISTENT = 12;
 	private final static int REPORT_SALDENLISTE_ANZAHL_SPALTEN = 13;
+
+	private static int REPORT_ZEITERFASSUNG_AENDERUNGEN_FELDNAME = 0;
+	private static int REPORT_ZEITERFASSUNG_AENDERUNGEN_AENDERUNGSZEITPUNKT = 1;
+	private static int REPORT_ZEITERFASSUNG_AENDERUNGEN_GEAENDERT_VON = 2;
+	private static int REPORT_ZEITERFASSUNG_AENDERUNGEN_GEAENDERT_NACH = 3;
+	private static int REPORT_ZEITERFASSUNG_AENDERUNGEN_OPERATION = 4;
+	private static int REPORT_ZEITERFASSUNG_AENDERUNGEN_ANZAHL_SPALTEN = 5;
+
+	private final static int REPORT_AENDERUNGEN_KONTO_FELDNAME = 0;
+	private final static int REPORT_AENDERUNGEN_KONTO_AENDERUNGSZEITPUNKT = 1;
+	private final static int REPORT_AENDERUNGEN_KONTO_GEAENDERT_VON = 2;
+	private final static int REPORT_AENDERUNGEN_KONTO_GEAENDERT_NACH = 3;
+	private final static int REPORT_AENDERUNGEN_KONTO_OPERATION = 4;
+	private final static int REPORT_AENDERUNGEN_KONTO_ANZAHL_SPALTEN = 5;
 
 	private final static int REPORT_ERFOLGSRECHNUNG_BEZEICHNUNG = 0;
 	private final static int REPORT_ERFOLGSRECHNUNG_SALDO_PERIODE = 1;
@@ -355,7 +397,9 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 	private final static int REPORT_STEUERKATEGORIE_KONTO_KURSGEWINNE_BEZEICHNUNG = 34;
 	private final static int REPORT_STEUERKATEGORIE_KONTO_KURSVERLUSTE = 35;
 	private final static int REPORT_STEUERKATEGORIE_KONTO_KURSVERLUSTE_BEZEICHNUNG = 36;
-	private final static int REPORT_STEUERKATEGORIE_ANZAHL_FELDER = 37;
+	private final static int REPORT_STEUERKATEGORIE_SAMMELKONTO_MAP = 37;
+	private final static int REPORT_STEUERKATEGORIE_FINANZAMT_I_ID = 38;
+	private final static int REPORT_STEUERKATEGORIE_ANZAHL_FELDER = 39;
 
 	private final static int REPORT_INTRASTAT_BELEGNUMMER = 0;
 	private final static int REPORT_INTRASTAT_IDENT = 1;
@@ -388,7 +432,9 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 	private final static int REPORT_KONTOBLATT_KURSZUDATUM = 14;
 	private final static int REPORT_KONTOBLATT_BELEGWAEHRUNG = 15;
 	private final static int REPORT_KONTOBLATT_AUTOMATISCHE_EB = 16;
-	private final static int REPORT_KONTOBLATT_ANZAHL_SPALTEN = 17;
+	private final static int REPORT_KONTOBLATT_INKONSISTENT = 17;
+	private final static int REPORT_KONTOBLATT_AZK = 18;
+	private final static int REPORT_KONTOBLATT_ANZAHL_SPALTEN = 19;
 
 	private final static int REPORT_OP_BUCHUNGSDATUM = 0;
 	private final static int REPORT_OP_BUCHUNGSART = 1;
@@ -426,6 +472,9 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 	private final static int REPORT_BUCHUNGSBELEG_BETRAGUST = 8;
 	private final static int REPORT_BUCHUNGSBELEG_IST_HABEN = 9;
 	private final static int REPORT_BUCHUNGSBELEG_ANZAHL_SPALTEN = 10;
+
+	private final static String REPORT_GRUPPENTYP_BILANZ = "B";
+	private final static String REPORT_GRUPPENTYP_ERGEBNIS = "E";
 
 	private int useCase;
 	private Object[][] data = null;
@@ -479,6 +528,9 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 			put("F_VERSTECKT", REPORT_KONTENLISTE_VERSTECKT);
 			put("F_SORTIERUNG", REPORT_KONTENLISTE_SORTIERUNG);
 			put("F_UVAART_CNR", REPORT_KONTENLISTE_UVAART_CNR);
+			put("F_STEUERART", REPORT_KONTENLISTE_STEUERART);
+			put("F_GRUPPENTYP", REPORT_KONTENLISTE_GRUPPENTYP);
+			put("F_GRUPPENBEZEICHNUNG", REPORT_KONTENLISTE_GRUPPENBEZEICHNUNG);
 		}
 	};
 
@@ -508,6 +560,8 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 					put("Kurs", REPORT_KONTOBLATT_BELEGKURS);
 					put("KursZuDatum", REPORT_KONTOBLATT_KURSZUDATUM);
 					put("AutomatischeEB", REPORT_KONTOBLATT_AUTOMATISCHE_EB);
+					put("IstInkonsistent", REPORT_KONTOBLATT_INKONSISTENT);
+					put("AZK", REPORT_KONTOBLATT_AZK);
 				}
 			});
 
@@ -570,6 +624,32 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 				}
 			});
 
+	private ReportFieldValues reportBuchungsjournal = new ReportFieldValues(
+			new HashMap<String, Integer>() {
+				private static final long serialVersionUID = -7477136424185048969L;
+				{
+					put("F_BUCHUNGSJOURNALDATUM", REPORT_BUCHUNGSJOURNAL_BUCHUNGSJOURNALDATUM) ;
+					put("F_BUCHUNGSDATUM", REPORT_BUCHUNGSJOURNAL_BUCHUNGSDATUM) ;
+					put("F_KONTONUMMER", REPORT_BUCHUNGSJOURNAL_KONTONUMMER);
+					put("F_GEGENKONTONUMMER", REPORT_BUCHUNGSJOURNAL_GEGENKONTONUMMER);
+					put("F_BUCHUNGSART", REPORT_BUCHUNGSJOURNAL_BUCHUNGSART);
+					put("F_BELEGNUMMER",  REPORT_BUCHUNGSJOURNAL_BELEGNUMMER);
+					put("F_TEXT", REPORT_BUCHUNGSJOURNAL_TEXT) ;
+					put("F_BETRAG", REPORT_BUCHUNGSJOURNAL_BETRAG) ;
+					put("F_UST", REPORT_BUCHUNGSJOURNAL_UST);
+					put("F_STORNIERT", REPORT_BUCHUNGSJOURNAL_STORNIERT);
+					put("F_KOSTENSTELLENUMMER", REPORT_BUCHUNGSJOURNAL_KOSTENSTELLENUMMER);
+					put("F_AUSZUG",  REPORT_BUCHUNGSJOURNAL_AUSZUG) ;
+					put("F_AM",  REPORT_BUCHUNGSJOURNAL_AM);
+					put("F_UM",  REPORT_BUCHUNGSJOURNAL_UM);
+					put("F_SOLL", REPORT_BUCHUNGSJOURNAL_SOLL);
+					put("F_HABEN", REPORT_BUCHUNGSJOURNAL_HABEN) ;
+					put("F_WER", REPORT_BUCHUNGSJOURNAL_WER) ;
+					put("F_BELEGART_KBEZ", REPORT_BUCHUNGSJOURNAL_BELEGART_KBEZ) ;
+					put("F_BUCHUNGSART_KBEZ", REPORT_BUCHUNGSJOURNAL_BUCHUNGSART_KBEZ) ;
+				}
+			}) ;
+	
 	public boolean next() throws JRException {
 		index++;
 		return (index < data.length);
@@ -601,6 +681,20 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 			}
 		}
 			break;
+		case UC_AENDERUNGEN_KONTO: {
+			if ("Feldname".equals(fieldName)) {
+				value = data[index][REPORT_AENDERUNGEN_KONTO_FELDNAME];
+			} else if ("GeaendertVon".equals(fieldName)) {
+				value = data[index][REPORT_AENDERUNGEN_KONTO_GEAENDERT_VON];
+			} else if ("GeaendertNach".equals(fieldName)) {
+				value = data[index][REPORT_AENDERUNGEN_KONTO_GEAENDERT_NACH];
+			} else if ("Operation".equals(fieldName)) {
+				value = data[index][REPORT_AENDERUNGEN_KONTO_OPERATION];
+			} else if ("Aenderungszeitpunkt".equals(fieldName)) {
+				value = data[index][REPORT_AENDERUNGEN_KONTO_AENDERUNGSZEITPUNKT];
+			}
+		}
+			break;
 		case UC_KONTOBLATT: {
 			value = reportKontoblatt.getFieldValue(fieldName);
 			break;
@@ -619,6 +713,10 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 		}
 		case UC_BUCHUNGSBELEG: {
 			value = reportBuchungsbelegListe.getFieldValue(fieldName);
+			break;
+		}
+		case UC_USTVERPROBUNG: {
+			value = reportSteuernachweisListe.getFieldValue(fieldName);
 			break;
 		}
 		// if ("F_KONTONUMMER".equals(fieldName)) {
@@ -665,41 +763,46 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 		}
 			break;
 		case UC_BUCHUNGSJOURNAL: {
-			if ("F_BUCHUNGSJOURNALDATUM".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_BUCHUNGSJOURNALDATUM];
-			} else if ("F_BUCHUNGSDATUM".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_BUCHUNGSDATUM];
-			} else if ("F_KONTONUMMER".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_KONTONUMMER];
-			} else if ("F_GEGENKONTONUMMER".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_GEGENKONTONUMMER];
-			} else if ("F_BUCHUNGSART".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_BUCHUNGSART];
-			} else if ("F_BELEGNUMMER".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_BELEGNUMMER];
-			} else if ("F_TEXT".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_TEXT];
-			} else if ("F_BETRAG".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_BETRAG];
-			} else if ("F_UST".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_UST];
-			} else if ("F_STORNIERT".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_STORNIERT];
-			} else if ("F_KOSTENSTELLENUMMER".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_KOSTENSTELLENUMMER];
-			} else if ("F_AUSZUG".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_AUSZUG];
-			} else if ("F_AM".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_AM];
-			} else if ("F_UM".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_UM];
-			} else if ("F_SOLL".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_SOLL];
-			} else if ("F_HABEN".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_HABEN];
-			} else if ("F_WER".equals(fieldName)) {
-				value = data[index][REPORT_BUCHUNGSJOURNAL_WER];
-			}
+			value = reportBuchungsjournal.getFieldValue(fieldName) ;
+//			if ("F_BUCHUNGSJOURNALDATUM".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_BUCHUNGSJOURNALDATUM];
+//			} else if ("F_BUCHUNGSDATUM".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_BUCHUNGSDATUM];
+//			} else if ("F_KONTONUMMER".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_KONTONUMMER];
+//			} else if ("F_GEGENKONTONUMMER".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_GEGENKONTONUMMER];
+//			} else if ("F_BUCHUNGSART".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_BUCHUNGSART];
+//			} else if ("F_BELEGNUMMER".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_BELEGNUMMER];
+//			} else if ("F_TEXT".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_TEXT];
+//			} else if ("F_BETRAG".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_BETRAG];
+//			} else if ("F_UST".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_UST];
+//			} else if ("F_STORNIERT".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_STORNIERT];
+//			} else if ("F_KOSTENSTELLENUMMER".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_KOSTENSTELLENUMMER];
+//			} else if ("F_AUSZUG".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_AUSZUG];
+//			} else if ("F_AM".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_AM];
+//			} else if ("F_UM".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_UM];
+//			} else if ("F_SOLL".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_SOLL];
+//			} else if ("F_HABEN".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_HABEN];
+//			} else if ("F_WER".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_WER];
+//			} else if ("F_BELEGART_KBEZ".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_BELEGART_KBEZ] ;
+//			} else if ("F_BUCHUNGSART_KBEZ".equals(fieldName)) {
+//				value = data[index][REPORT_BUCHUNGSJOURNAL_BUCHUNGSART_KBEZ] ;				
+//			}
 		}
 			break;
 		case UC_BUCHUNGEN_AUF_KONTO: {
@@ -721,6 +824,8 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 		case UC_STEUERKATEGORIEN: {
 			if ("F_FINANZAMT".equals(fieldName)) {
 				value = data[index][REPORT_STEUERKATEGORIE_FINANZAMT];
+			} else if ("F_FINANZAMT_I_ID".equals(fieldName)) {
+				value = data[index][REPORT_STEUERKATEGORIE_FINANZAMT_I_ID];
 			} else if ("F_STEUERKATEGORIE".equals(fieldName)) {
 				value = data[index][REPORT_STEUERKATEGORIE_STEUERKATEGORIE];
 			} else if ("F_STEUERKATEGORIEBEZEICHNUNG".equals(fieldName)) {
@@ -787,9 +892,9 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 				value = data[index][REPORT_STEUERKATEGORIE_KONTO_KURSVERLUSTE];
 			} else if ("F_KONTO_KURSVERLUSTE_BEZEICHNUNG".equals(fieldName)) {
 				value = data[index][REPORT_STEUERKATEGORIE_KONTO_KURSVERLUSTE_BEZEICHNUNG];
-			}
-
-			else if ("F_KONTO_KURSGEWINNE".equals(fieldName)) {
+			} else if ("F_SAMMELKONTO_MAP".equals(fieldName)) {
+				value = data[index][REPORT_STEUERKATEGORIE_SAMMELKONTO_MAP];
+			} else if ("F_KONTO_KURSGEWINNE".equals(fieldName)) {
 				value = data[index][REPORT_STEUERKATEGORIE_KONTO_KURSGEWINNE];
 			} else if ("F_KONTO_KURSGEWINNE_BEZEICHNUNG".equals(fieldName)) {
 				value = data[index][REPORT_STEUERKATEGORIE_KONTO_KURSGEWINNE_BEZEICHNUNG];
@@ -1008,15 +1113,13 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 				Session session2 = FLRSessionFactory.getFactory().openSession();
 				List<?> blattDetails = getKontoDetails(session2, kbModel,
 						konto, sortOrder, theClientDto);
-				boolean istSachkonto = konto.getKontotyp_c_nr().equals(
-						FinanzServiceFac.KONTOTYP_SACHKONTO);
-				boolean istBankoderKasse = getFinanzFac().isKontoMitSaldo(
-						konto.getI_id(), theClientDto);
+				// boolean istSachkonto = konto.getKontotyp_c_nr().equals(
+				// FinanzServiceFac.KONTOTYP_SACHKONTO);
+				// boolean istBankoderKasse = getFinanzFac().isKontoMitSaldo(
+				// konto.getI_id(), theClientDto);
+
 				data = getReportBuchungen(blattDetails.size(),
-						blattDetails.iterator(),
-						kbModel.isDruckInMandantenWaehrung(),
-						konto.getWaehrung_c_nr_druck(), istSachkonto,
-						istBankoderKasse, theClientDto);
+						blattDetails.iterator(), kbModel, konto, theClientDto);
 
 				verifyKontoIsConsistentWithEB(kbModel, konto,
 						blattDetails.iterator(), theClientDto);
@@ -1110,16 +1213,19 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 		/**
 		 * Ermittelt den Saldo f&uuml;r das Konto aus der Vorperiode</br>
 		 * 
-		 * Ausgehend vom Beginndatum wird die Vorperiode ermittelt und f&uuml;r diese
-		 * dann der Saldo des Kontos errechnet.</br> Es gibt Konten die keinen
-		 * Vorsaldo kennen/k&ouml;nnen. F&uuml;r diese wird null geliefert
+		 * Ausgehend vom Beginndatum wird die Vorperiode ermittelt und f&uuml;r
+		 * diese dann der Saldo des Kontos errechnet.</br> Es gibt Konten die
+		 * keinen Vorsaldo kennen/k&ouml;nnen. F&uuml;r diese wird null
+		 * geliefert
 		 * 
 		 * @param kontoIId
 		 *            das zu ermittelnde Konto
-		 * @param kbModel das DatenModel zum Kontoblattdruck
+		 * @param kbModel
+		 *            das DatenModel zum Kontoblattdruck
 		 * @param vonPeriode
 		 *            Ist das Beginndatum der aktuellen Periode
-		 * @param waehrungCNrDruck die CNR der beim Druck zu verwendenden W&auml;hrung
+		 * @param waehrungCNrDruck
+		 *            die CNR der beim Druck zu verwendenden W&auml;hrung
 		 * @param theClientDto
 		 * @return Saldo der Vorperiode. F&uuml;r Konten die keinen Saldo
 		 *         kennen/k&ouml;nnen oder wo die Vorperiode im vorherigen
@@ -1215,26 +1321,60 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 			return crit.list();
 		}
 
-		protected List<?> getKontoDetails(Session session2,
-				PrintKontoblaetterModel kbModel, FLRFinanzKonto konto,
-				EnumSortOrder sortOrder, TheClientDto theClientDto)
-				throws EJBExceptionLP, RemoteException {
-			Criteria crit2 = session2
-					.createCriteria(FLRFinanzBuchungDetail.class);
+		protected List<FLRFinanzBuchungDetail> getKontoDetails(
+				Session session2, PrintKontoblaetterModel kbModel,
+				FLRFinanzKonto konto, EnumSortOrder sortOrder,
+				TheClientDto theClientDto) throws EJBExceptionLP,
+				RemoteException {
 
-			addCriteriasForDetails(crit2, kbModel, sortOrder, konto);
 			addParametersForDetails(kbModel, sortOrder, konto, theClientDto);
 
-			return crit2.list();
+			HvTypedCriteria<FLRFinanzBuchungDetail> crit2 = new HvTypedCriteria<FLRFinanzBuchungDetail>(
+					session2.createCriteria(FLRFinanzBuchungDetail.class));
+
+			List<FLRFinanzBuchungDetail> list = new ArrayList<FLRFinanzBuchungDetail>();
+			if (kbModel.isSortiereNachAZK()) {
+				addCriteriasForDetails(crit2, kbModel, sortOrder, konto, false);
+				list.addAll(crit2.list());
+				crit2 = new HvTypedCriteria<FLRFinanzBuchungDetail>(
+						session2.createCriteria(FLRFinanzBuchungDetail.class));
+				addCriteriasForDetails(crit2, kbModel, sortOrder, konto, true);
+				list.addAll(crit2.list());
+			} else {
+				addCriteriasForDetails(crit2, kbModel, sortOrder, konto, null);
+				list.addAll(crit2.list());
+			}
+
+			return list;
 		}
 
 		protected Object[][] getReportBuchungen(int sizeBuchungen,
-				Iterator<?> buchungen, boolean druckInMandantenWaehrung,
-				String waehrungDruck, boolean istSachkonto,
-				boolean istBankoderKasse, TheClientDto theClientDto)
+				Iterator<?> buchungen, PrintKontoblaetterModel kbModel,
+				FLRFinanzKonto konto, TheClientDto theClientDto)
 				throws EJBExceptionLP, RemoteException {
 			Object[][] data = new Object[sizeBuchungen][REPORT_KONTOBLATT_ANZAHL_SPALTEN];
 			int i = 0;
+
+			boolean druckInMandantenWaehrung = kbModel
+					.isDruckInMandantenWaehrung();
+			String waehrungDruck = konto.getWaehrung_c_nr_druck();
+			boolean istSachkonto = konto.getKontotyp_c_nr().equals(
+					FinanzServiceFac.KONTOTYP_SACHKONTO);
+			boolean istBankoderKasse = getFinanzFac().isKontoMitSaldo(
+					konto.getI_id(), theClientDto);
+
+			boolean doConsistentCheck = true;
+			if (konto.getI_eb_geschaeftsjahr() == null) {
+				doConsistentCheck = false;
+			}
+			if (doConsistentCheck
+					&& !konto.getI_eb_geschaeftsjahr().equals(
+							kbModel.getGeschaeftsjahr())) {
+				doConsistentCheck = false;
+			}
+
+			Timestamp[] tVonbis = getBuchenFac().getDatumbereichPeriodeGJ(
+					kbModel.getGeschaeftsjahr() - 1, -1, theClientDto);
 
 			BuchungdetailText buchungdetailText = new BuchungdetailText(
 					getBenutzerServicesFac(), theClientDto);
@@ -1252,28 +1392,25 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 				FLRFinanzBuchungDetail buchungDetail = (FLRFinanzBuchungDetail) buchungen
 						.next();
 
+				data[i][REPORT_KONTOBLATT_INKONSISTENT] = Boolean.FALSE;
+
 				if (buchungDetail.getFlrbuchung() != null) {
 					String s = buchungdetailText
 							.getTextFuerBuchungsart(buchungDetail
 									.getFlrbuchung());
 					data[i][REPORT_KONTOBLATT_BUCHUNGSART] = s;
 
-					// FLRFbbelegart flrBelegart =
-					// buchungDetail.getFlrbuchung().getFlrfbbelegart() ;
-					// FLRBuchungsart flrBuchungsart =
-					// buchungDetail.getFlrbuchung().getFlrbuchungsart() ;
-					//
-					// if (buchungDetail.getFlrbuchung().getFlrfbbelegart() !=
-					// null) {
-					// String art = buchungDetail.getFlrbuchung()
-					// .getFlrbuchungsart().getC_kbez();
-					// if (art == null)
-					// art = "__";
-					// String belegart = buchungDetail.getFlrbuchung()
-					// .getFlrfbbelegart().getC_kbez();
-					//
-					// data[i][REPORT_KONTOBLATT_BUCHUNGSART] = art + belegart;
-					// }
+					if (doConsistentCheck) {
+						Date buchungsDatum = buchungDetail.getFlrbuchung()
+								.getD_buchungsdatum();
+						Date tanlegen = buchungDetail.getFlrbuchung()
+								.getT_anlegen();
+						if (buchungsDatum.after(tVonbis[0])
+								&& buchungsDatum.before(tVonbis[1])
+								&& tanlegen.after(konto.getD_eb_anlegen())) {
+							data[i][REPORT_KONTOBLATT_INKONSISTENT] = Boolean.TRUE;
+						}
+					}
 				}
 
 				data[i][REPORT_KONTOBLATT_BELEG] = buchungDetail
@@ -1297,21 +1434,41 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 					soll = buchungDetail.getN_betrag();
 				}
 				ust = buchungDetail.getN_ust();
-				if (ust.compareTo(new BigDecimal(0.00)) != 0) {
+				// if (ust.compareTo(new BigDecimal(0.00)) != 0) {
+				if (ust.signum() != 0) {
 					BigDecimal ustprozent = null;
 					try {
-						BigDecimal netto = new BigDecimal(0);
+						Timestamp tsBuchungsDatum = new Timestamp(buchungDetail
+								.getFlrbuchung().getD_buchungsdatum().getTime());
 						if (istSachkonto && !istBankoderKasse) {
 							// nur Sachkonten die keine Bank oder Kasse sind
 							// buchen netto
-							netto = buchungDetail.getN_betrag().abs();
+							// netto = buchungDetail.getN_betrag().abs();
+							// ustprozent =
+							// Helper.getProzentsatzBD(buchungDetail.getN_betrag().abs(),
+							// buchungDetail.getN_ust().abs(),
+							// FinanzFac.NACHKOMMASTELLEN);
+							MwstsatzDto mwstSatzDto = getMandantFac()
+									.getMwstSatzVonNettoBetragUndUst(
+											theClientDto.getMandant(),
+											tsBuchungsDatum,
+											buchungDetail.getN_betrag().abs(),
+											buchungDetail.getN_ust().abs());
+							ustprozent = new BigDecimal(
+									mwstSatzDto.getFMwstsatz());
 						} else {
-							netto = buchungDetail.getN_betrag().abs()
-									.subtract(buchungDetail.getN_ust().abs());
+							// netto = buchungDetail.getN_betrag().abs()
+							// .subtract(buchungDetail.getN_ust().abs());
+							//
+							MwstsatzDto mwstSatzDto = getMandantFac()
+									.getMwstSatzVonBruttoBetragUndUst(
+											theClientDto.getMandant(),
+											tsBuchungsDatum,
+											buchungDetail.getN_betrag().abs(),
+											buchungDetail.getN_ust().abs());
+							ustprozent = new BigDecimal(
+									mwstSatzDto.getFMwstsatz());
 						}
-						ustprozent = Helper.getProzentsatzBD(netto,
-								buchungDetail.getN_ust().abs(),
-								FinanzFac.NACHKOMMASTELLEN);
 					} catch (Exception e) {
 						//
 					}
@@ -1560,6 +1717,8 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 				data[i][REPORT_KONTOBLATT_SOLL_FW] = sollFW;
 				data[i][REPORT_KONTOBLATT_KURSZUDATUM] = kurszudatum;
 				data[i][REPORT_KONTOBLATT_USTWERT] = ust;
+				data[i][REPORT_KONTOBLATT_AZK] = buchungDetail
+						.getI_ausziffern();
 
 				data[i][REPORT_KONTOBLATT_AUTOMATISCHE_EB] = buchungDetail
 						.getFlrbuchung().getB_autombuchungeb();
@@ -1598,7 +1757,7 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 
 		protected void addCriteriasForDetails(Criteria crit2,
 				PrintKontoblaetterModel kbModel, EnumSortOrder sortOrder,
-				FLRFinanzKonto detailKonto) {
+				FLRFinanzKonto detailKonto, Boolean whereAzkIsNull) {
 			crit2.add(Restrictions.eq("konto_i_id", detailKonto.getI_id()));
 
 			if (kbModel.gettVon() != null) {
@@ -1620,6 +1779,16 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 
 			crit2.add(Restrictions.isNull("s.t_storniert"));
 
+			if (whereAzkIsNull != null) {
+				if (whereAzkIsNull)
+					crit2.add(Restrictions.isNull("i_ausziffern"));
+				else
+					crit2.add(Restrictions.isNotNull("i_ausziffern"));
+			}
+
+			if (kbModel.isSortiereNachAZK()) {
+				crit2.addOrder(Order.asc("i_ausziffern"));
+			}
 			if (sortOrder == PrintKontoblaetterModel.EnumSortOrder.SORT_NACH_AUSZUG) {
 				crit2.addOrder(Order.asc("i_auszug"));
 				crit2.addOrder(Order.asc("s.d_buchungsdatum"));
@@ -1716,7 +1885,8 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 		protected void addCriteriasForDetails(Criteria crit2,
 				PrintKontoblaetterModel kbModel, EnumSortOrder sortOrder,
 				FLRFinanzKonto detailKonto) {
-			super.addCriteriasForDetails(crit2, kbModel, sortOrder, detailKonto);
+			super.addCriteriasForDetails(crit2, kbModel, sortOrder,
+					detailKonto, null);
 
 			// Es sollen zuerst die Eingaenge, dann die Ausgangs-Buchungen
 			// aufgelistet werden
@@ -1749,31 +1919,6 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 
 		KontoblaetterPrinter printer = new KassenbuchPrinter();
 		return printer.print(kbModel, theClientDto);
-	}
-
-	/**
-	 * @throws RemoteException
-	 * @throws EJBExceptionLP
-	 * @deprecated use
-	 *             {@link #printKontoblaetter(PrintKontoblaetterModel, TheClientDto)}
-	 */
-	public JasperPrintLP printKontoblaetter(String kontotypCNr,
-			Integer kontoIId, String ktoVon, String ktoBis,
-			boolean bSortiertNachDatum, java.sql.Timestamp tVon,
-			java.sql.Timestamp tBis, TheClientDto theClientDto,
-			boolean bSortiertNachBeleg, String geschaeftsjahr)
-			throws EJBExceptionLP, RemoteException {
-
-		PrintKontoblaetterModel kbModel = new PrintKontoblaetterModel(tVon,
-				tBis, geschaeftsjahr);
-		kbModel.setKontotypCNr(kontotypCNr);
-		kbModel.setEnableSaldo(true);
-		kbModel.setSortOrder(bSortiertNachDatum, bSortiertNachBeleg);
-		kbModel.setDefaultSortOrder(kbModel.getSortOrder());
-		kbModel.setVonKontoNr(ktoVon);
-		kbModel.setBisKontoNr(ktoBis);
-		kbModel.setKontoIId(kontoIId);
-		return printKontoblaetter(kbModel, theClientDto);
 	}
 
 	private String getFlrkontoCnr(FLRFinanzKonto konto) {
@@ -1814,22 +1959,27 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 		}
 		data[REPORT_KONTENLISTE_STEUERKATEGORIE] = getFlrkontoCbez(konto
 				.getFlrsteuerkategorie());
+		if (konto.getFlrsteuerkategorie() != null)
+			data[REPORT_KONTENLISTE_STEUERART] = konto.getC_steuerart();
 
+		data[REPORT_KONTENLISTE_GRUPPENTYP] = null;
 		if (konto.getFlrergebnisgruppe() != null) {
-
 			if (Helper.short2boolean(konto.getFlrergebnisgruppe()
 					.getB_bilanzgruppe()) == true) {
+				data[REPORT_KONTENLISTE_GRUPPENTYP] = REPORT_GRUPPENTYP_BILANZ;
+				data[REPORT_KONTENLISTE_GRUPPENBEZEICHNUNG] = getFlrkontoCbez(konto
+						.getFlrergebnisgruppe());
 				data[REPORT_KONTENLISTE_BILANZKONTO] = konto
 						.getFlrergebnisgruppe().getC_bez();
 			} else {
+				data[REPORT_KONTENLISTE_GRUPPENTYP] = REPORT_GRUPPENTYP_ERGEBNIS;
+				data[REPORT_KONTENLISTE_GRUPPENBEZEICHNUNG] = getFlrkontoCbez(konto
+						.getFlrergebnisgruppe());
 				data[REPORT_KONTENLISTE_ERGEBNISGRUPPE] = konto
 						.getFlrergebnisgruppe().getC_bez();
 			}
-
 		}
 
-		data[REPORT_KONTENLISTE_ERGEBNISGRUPPE] = getFlrkontoCbez(konto
-				.getFlrergebnisgruppe());
 		if (konto.getFlruvaart() != null) {
 			try {
 				data[REPORT_KONTENLISTE_UVAART] = getFinanzServiceFac()
@@ -2099,6 +2249,33 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 		}
 	}
 
+	public Map<String, Map<String, String>> getSammelKontoMap(
+			Integer finanzamtIId) {
+		HvTypedCriteria<FLRFinanzKonto> crit = new HvTypedCriteria<FLRFinanzKonto>(
+				FLRSessionFactory.getFactory().openSession()
+						.createCriteria(FLRFinanzKonto.class));
+		crit.add(
+				Restrictions.ne("kontoart_c_nr",
+						FinanzServiceFac.KONTOART_NICHT_ZUTREFFEND))
+				.add(Restrictions.eq("kontotyp_c_nr",
+						FinanzServiceFac.KONTOTYP_SACHKONTO))
+				.add(Restrictions.eq("finanzamt_i_id", finanzamtIId))
+				.addOrder(Order.asc("kontoart_c_nr"))
+				.addOrder(Order.asc("c_nr"));
+		List<FLRFinanzKonto> list = crit.list();
+		Map<String, Map<String, String>> kontenByArt = new HashMap<String, Map<String, String>>();
+		for (FLRFinanzKonto konto : list) {
+			if (kontenByArt.get(konto.getKontoart_c_nr()) == null) {
+				kontenByArt.put(konto.getKontoart_c_nr(),
+						new TreeMap<String, String>());
+			}
+			Map<String, String> kontoBezByCnr = kontenByArt.get(konto
+					.getKontoart_c_nr());
+			kontoBezByCnr.put(konto.getC_nr(), konto.getC_bez());
+		}
+		return kontenByArt;
+	}
+
 	public JasperPrintLP printSteuerkategorien(TheClientDto theClientDto) {
 		this.useCase = UC_STEUERKATEGORIEN;
 		HashMap mapParameter = new HashMap();
@@ -2139,14 +2316,26 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 			List<?> results = query.list();
 			Iterator<?> resultListIterator = results.iterator();
 
+			Integer prevFinanzAmt = null;
+			Map<String, Map<String, String>> prevSammelkontenMap = null;
 			while (resultListIterator.hasNext()) {
 				FLRSteuerkategoriekonto sk = (FLRSteuerkategoriekonto) resultListIterator
 						.next();
 
 				Object[] oZeile = new Object[REPORT_STEUERKATEGORIE_ANZAHL_FELDER];
 
+				if (!fa.getI_id().equals(prevFinanzAmt)) {
+					// damit nicht jedesmal die Sammelkonten geholt werden,
+					// sondern nur, wenn das naechste Finanzamt kommt
+					prevFinanzAmt = fa.getI_id();
+					prevSammelkontenMap = getSammelKontoMap(fa.getI_id());
+				}
+
+				oZeile[REPORT_STEUERKATEGORIE_SAMMELKONTO_MAP] = prevSammelkontenMap;
+
 				oZeile[REPORT_STEUERKATEGORIE_FINANZAMT] = HelperServer
 						.formatNameAusFLRPartner(fa.getFlrpartner());
+				oZeile[REPORT_STEUERKATEGORIE_FINANZAMT_I_ID] = fa.getI_id();
 				oZeile[REPORT_STEUERKATEGORIE_STEUERKATEGORIE] = sk
 						.getFlrsteuerkategorie().getC_nr();
 				oZeile[REPORT_STEUERKATEGORIE_STEUERKATEGORIEBEZEICHNUNG] = sk
@@ -2315,20 +2504,68 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 
 	}
 
+
+	private static class HvRestrictions {
+		public static HvRTrimExpression rtrim(String propertyName) {
+			return new HvRTrimExpression(propertyName) ;
+		}
+
+		public static HvRTrimLikeExpression rtrimLike(String propertyName, String value) {
+			return new HvRTrimLikeExpression(propertyName, value) ;
+		}
+
+		public static HvLowerLikeExpression lowerLike(String propertyName, String value) {
+			return new HvLowerLikeExpression(propertyName, value) ;
+		}
+		
+		public static HvRTrimLikeExpression rtrimLike(String propertyName, String value, MatchMode matchMode) {
+			return new HvRTrimLikeExpression(propertyName, value, matchMode) ;
+		}
+
+		public static HvLowerLikeExpression lowerLike(String propertyName, String value, MatchMode matchMode) {
+			return new HvLowerLikeExpression(propertyName, value, matchMode) ;
+		}
+	}
+	
+	private void addCriteriaBelegNummer(Criteria c, String belegnummer) {
+		if(belegnummer == null) return ;
+		String s = "%" + belegnummer ;
+		c.add(HvRestrictions.rtrimLike("s." + FinanzFac.FLR_BUCHUNG_C_BELEGNUMMER, s)) ;
+//		c.add(Restrictions.like("s." + FinanzFac.FLR_BUCHUNG_C_BELEGNUMMER, s, MatchMode.EXACT)) ;
+//		s = "%" + s ;
+//		c.add(Restrictions.like("s."
+//				+ FinanzFac.FLR_BUCHUNG_C_BELEGNUMMER, s, MatchMode.START));		
+	}
+	
+	private void addCriteriaKontoNummer(Criteria c, String kontonummer) {
+		if(kontonummer == null) return ;
+		String s = kontonummer + "%" ;
+		c.add(Restrictions.like("konto.c_nr",  s));
+	}
+	
+	private void addCriteriaBuchungsart(Criteria c, String buchungsart, String belegart) {
+		if(buchungsart != null) {
+			c.add(HvRestrictions.lowerLike("buchart.c_kbez", buchungsart.toLowerCase(), MatchMode.ANYWHERE)) ;
+		}
+		if(belegart != null) {
+			c.add(HvRestrictions.lowerLike("belegart.c_kbez", belegart.toLowerCase(), MatchMode.ANYWHERE)) ;			
+		}
+	}
+	
 	/**
 	 * Buchungsjournal drucken.
 	 * 
 	 * @param theClientDto
 	 *            String
-	 * @param buchungsjournalIId
-	 *            Integer
+	 * @param params die Parameter des Reports
 	 * @return JasperPrint
 	 * @throws EJBExceptionLP
 	 */
 	public JasperPrintLP printBuchungsjournal(TheClientDto theClientDto,
-			Integer buchungsjournalIId, Date dVon, Date dBis,
-			boolean storniert, boolean bDatumsfilterIstBuchungsdatum,
-			String text, String belegnummer, BigDecimal betrag)
+			BuchungsjournalReportParameter params)
+//			Integer buchungsjournalIId, Date dVon, Date dBis,
+//			boolean storniert, boolean bDatumsfilterIstBuchungsdatum,
+//			String text, String belegnummer, BigDecimal betrag, String kontonummer)
 			throws EJBExceptionLP {
 		Session session = null;
 		try {
@@ -2341,66 +2578,46 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 			session = factory.openSession();
 			Criteria c = session.createCriteria(FLRFinanzBuchungDetail.class);
 
-			Timestamp help = new Timestamp(dVon.getTime());
+			Timestamp help = new Timestamp(params.getdVon().getTime());
 
 			c.createAlias("flrbuchung", "s");
-
 			String datumsfilter = "s.d_buchungsdatum";
-			if (!bDatumsfilterIstBuchungsdatum) {
+			if (!params.isbDatumsfilterIstBuchungsdatum()) {
 				datumsfilter = "t_anlegen";
 			}
 			c.add(Restrictions.ge(datumsfilter, Helper.cutTimestamp(help)));
 
-			if (text != null) {
+			if (params.getBuchungsText() != null) {
 				c.add(Restrictions.ilike("s." + FinanzFac.FLR_BUCHUNG_C_TEXT,
-						"%" + text + "%"));
-				mapParameter.put("P_TEXT", text);
+						"%" + params.getBuchungsText() + "%"));
+				mapParameter.put("P_TEXT", params.getBuchungsText());
 
 			}
 
-			if (belegnummer != null) {
-
-				String trennzeichen = getParameterFac().getMandantparameter(
-						theClientDto.getMandant(),
-						ParameterFac.KATEGORIE_ALLGEMEIN,
-						ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_TRENNZEICHEN)
-						.getCWert();
-				Integer stellenBelegnummer = new Integer(
-						getParameterFac()
-								.getMandantparameter(
-										theClientDto.getMandant(),
-										ParameterFac.KATEGORIE_ALLGEMEIN,
-										ParameterFac.PARAMETER_BELEGNUMMERNFORMAT_STELLEN_BELEGNUMMER)
-								.getCWert());
-
-				String sValue = belegnummer;
-				sValue = sValue.replaceAll("%", "");
-
-				sValue = Helper.fitString2LengthAlignRight(sValue,
-						stellenBelegnummer, '0');
-
-				sValue = "%" + trennzeichen + sValue;
-
-				c.add(Restrictions.like("s."
-						+ FinanzFac.FLR_BUCHUNG_C_BELEGNUMMER, sValue));
-			}
-
-			if (betrag != null) {
-
+			addCriteriaBelegNummer(c, params.getBelegnummer());
+			
+			c.createAlias("flrkonto", "konto") ;
+			addCriteriaKontoNummer(c, params.getKontonummer()) ;
+			
+			c.createAlias("s.flrbuchungsart", "buchart") ;
+			c.createAlias("s.flrfbbelegart", "belegart") ;
+			addCriteriaBuchungsart(c, params.getBuchungsart(), params.getBelegart()) ;
+			
+			if (params.getBetrag() != null) {
 				Integer toleranzBetragsuche = new Integer(getParameterFac()
 						.getMandantparameter(theClientDto.getMandant(),
 								ParameterFac.KATEGORIE_FINANZ,
 								ParameterFac.PARAMETER_TOLERANZ_BETRAGSUCHE)
 						.getCWert());
 
-				BigDecimal value1 = betrag
+				BigDecimal value1 = params.getBetrag()
 						.subtract(
 								new BigDecimal(
-										betrag.doubleValue()
+										params.getBetrag().doubleValue()
 												* ((double) toleranzBetragsuche / (double) 100)))
 						.abs();
-				BigDecimal value2 = betrag
-						.add(new BigDecimal(betrag.doubleValue()
+				BigDecimal value2 = params.getBetrag()
+						.add(new BigDecimal(params.getBetrag().doubleValue()
 								* ((double) toleranzBetragsuche / (double) 100)))
 						.abs();
 
@@ -2412,22 +2629,23 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 
 				mapParameter
 						.put("P_TOLERANZ_BETRAGSSUCHE", toleranzBetragsuche);
-				mapParameter.put("P_BETRAG", betrag);
+				mapParameter.put("P_BETRAG", params.getBetrag());
 
 			}
 
-			help = new Timestamp(dBis.getTime() + 24 * 3600000);
+			help = new Timestamp(params.getdBis().getTime() + 24 * 3600000);
 
 			c.add(Restrictions.lt(datumsfilter, Helper.cutTimestamp(help)));
 
-			if (storniert != true) {
+			if (params.isStorniert() != true) {
 				c.add(Restrictions.isNull("s.t_storniert"));
-			} else {
-				// Skip
 			}
 
 			c.createAlias("s.flrkostenstelle", "k");
 			c.add(Restrictions.eq("k.mandant_c_nr", theClientDto.getMandant()));
+
+			c.addOrder(Order.asc(datumsfilter));
+			c.addOrder(Order.asc("buchung_i_id"));
 
 			List<?> list = c.list();
 			data = new Object[list.size()][REPORT_BUCHUNGSJOURNAL_ANZAHL_SPALTEN];
@@ -2482,18 +2700,24 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 						.personalFindByPrimaryKeySmall(
 								b.getFlrbuchung().getPersonal_i_id_anlegen())
 						.getCKurzzeichen();
-
+				data[i][REPORT_BUCHUNGSJOURNAL_BUCHUNGSART_KBEZ] = b.getFlrbuchung().getFlrbuchungsart().getC_kbez() ; 
+				data[i][REPORT_BUCHUNGSJOURNAL_BELEGART_KBEZ] = b.getFlrbuchung().getFlrfbbelegart().getC_kbez() ;
+				
 				i++;
 			}
 			MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(
 					theClientDto.getMandant(), theClientDto);
 
 			mapParameter.put(LPReport.P_WAEHRUNG, mandantDto.getWaehrungCNr());
-			mapParameter.put("P_VON", dVon);
-			mapParameter.put("P_MITSTORNIERTEN", new Boolean(storniert));
+			mapParameter.put("P_VON", params.getdVon());
+			mapParameter.put("P_MITSTORNIERTEN", new Boolean(params.isStorniert()));
 			mapParameter.put("P_DATUMSFILTER_IST_BUCHUNGSDATUM", new Boolean(
-					bDatumsfilterIstBuchungsdatum));
-			mapParameter.put("P_BIS", dBis);
+					params.isbDatumsfilterIstBuchungsdatum()));
+			mapParameter.put("P_BIS", params.getdBis());
+			mapParameter.put("P_BELEGART_KBEZ", params.getBelegart()) ;
+			mapParameter.put("P_BUCHUNGSART_KBEZ",  params.getBuchungsart()) ;
+			mapParameter.put("P_KONTONUMMER", params.getKontonummer()) ;
+			
 			initJRDS(mapParameter, FinanzReportFac.REPORT_MODUL,
 					FinanzReportFac.REPORT_BUCHUNGSJOURNAL,
 					theClientDto.getMandant(), theClientDto.getLocUi(),
@@ -3001,10 +3225,13 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 				Integer kundeIId = (Integer) iter.next();
 				JasperPrintLP print = printSammelmahnung(mahnlaufIId, kundeIId,
 						bMitLogo, theClientDto);
-				// Kunden-ID fuer den Client setzen.
-				print.putAdditionalInformation(JasperPrintLP.KEY_KUNDE_I_ID,
-						kundeIId);
-				c.add(print);
+
+				if (print != null) {
+					// Kunden-ID fuer den Client setzen.
+					print.putAdditionalInformation(
+							JasperPrintLP.KEY_KUNDE_I_ID, kundeIId);
+					c.add(print);
+				}
 			}
 			JasperPrintLP[] prints = new JasperPrintLP[c.size()];
 			int i = 0;
@@ -3016,6 +3243,68 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 		} finally {
 			closeSession(session);
 		}
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printAenderungenKonto(Integer kontoIId,
+			TheClientDto theClientDto) {
+
+		this.useCase = UC_AENDERUNGEN_KONTO;
+
+		HashMap<String, Object> parameter = new HashMap<String, Object>();
+
+		KontoDto kontoDto = null;
+		try {
+			kontoDto = getFinanzFac().kontoFindByPrimaryKey(kontoIId);
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+		parameter.put("P_KONTO", kontoDto.getKontonrBezeichnung());
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		org.hibernate.Criteria crit = session
+				.createCriteria(FLREntitylog.class);
+
+		crit.add(Restrictions.eq("c_filter_key", HvDtoLogClass.KONTO));
+		crit.add(Restrictions.eq("filter_i_id", kontoIId + ""));
+
+		crit.addOrder(Order.desc("t_aendern"));
+		List<?> results = crit.list();
+		Iterator<?> resultListIterator = results.iterator();
+
+		ArrayList alDaten = new ArrayList();
+
+		while (resultListIterator.hasNext()) {
+			FLREntitylog flrEntitylog = (FLREntitylog) resultListIterator
+					.next();
+
+			Object[] zeile = new Object[REPORT_AENDERUNGEN_KONTO_ANZAHL_SPALTEN];
+
+			zeile[REPORT_AENDERUNGEN_KONTO_FELDNAME] = flrEntitylog.getC_key();
+
+			zeile[REPORT_AENDERUNGEN_KONTO_GEAENDERT_NACH] = flrEntitylog
+					.getC_nach();
+			zeile[REPORT_AENDERUNGEN_KONTO_OPERATION] = flrEntitylog
+					.getC_operation();
+
+			zeile[REPORT_AENDERUNGEN_KONTO_GEAENDERT_VON] = flrEntitylog
+					.getC_von();
+			zeile[REPORT_AENDERUNGEN_KONTO_AENDERUNGSZEITPUNKT] = flrEntitylog
+					.getT_aendern();
+
+			alDaten.add(zeile);
+		}
+
+		Object[][] dataTemp = new Object[alDaten.size()][REPORT_AENDERUNGEN_KONTO_ANZAHL_SPALTEN];
+		data = (Object[][]) alDaten.toArray(dataTemp);
+
+		initJRDS(parameter, FinanzReportFac.REPORT_MODUL,
+				FinanzReportFac.REPORT_AENDERUNGEN_KONTO,
+				theClientDto.getMandant(), theClientDto.getLocUi(),
+				theClientDto);
+		return getReportPrint();
+
 	}
 
 	/**
@@ -3041,6 +3330,12 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 			String sRechnungen = "";
 			Collection<SammelmahnungDto> c = new LinkedList<SammelmahnungDto>();
 			Integer iMaxMahnstufe = null;
+
+			// PJ18939
+			ParametermandantDto p = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_RECHNUNG,
+					ParameterFac.PARAMETER_MINDEST_MAHNBETRAG);
+			Double dMindestmahnbetrag = (Double) p.getCWertAsObject();
 
 			// SP1104 Sammelmahnung -> Ansprechpartner Tel/Fax/Email aus der
 			// 1.Rechnung verwenden
@@ -3198,9 +3493,17 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 
 			data = new Object[c.size()][7];
 			int i = 0;
+
+			BigDecimal bdOffenGesamt = BigDecimal.ZERO;
+
 			for (Iterator<SammelmahnungDto> iter = c.iterator(); iter.hasNext();) {
 				SammelmahnungDto item = iter.next();
 				data[i][REPORT_SAMMELMAHNUNG_OFFEN] = item.getBdOffen();
+
+				if (item.getBdWert() != null) {
+					bdOffenGesamt = bdOffenGesamt.add(item.getBdOffen());
+				}
+
 				data[i][REPORT_SAMMELMAHNUNG_WERT] = item.getBdWert();
 				data[i][REPORT_SAMMELMAHNUNG_ZINSEN] = item.getBdZinsen();
 				data[i][REPORT_SAMMELMAHNUNG_BELEGDATUM] = item
@@ -3218,6 +3521,12 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 				}
 				i++;
 			}
+
+			// PJ18939
+			if (bdOffenGesamt.doubleValue() < dMindestmahnbetrag) {
+				return null;
+			}
+
 			Map<String, Object> mapParameter = new TreeMap<String, Object>();
 			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId,
 					theClientDto);
@@ -3363,6 +3672,9 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 					.iterator(); iter.hasNext();) {
 
 				FLRFinanzKonto konto = iter.next();
+				if ("20162".equals(konto.getC_nr())) {
+					System.out.println("break");
+				}
 				data[i][REPORT_SALDENLISTE_KONTONUMMER] = konto.getC_nr();
 				data[i][REPORT_SALDENLISTE_KONTOBEZEICHNUNG] = konto.getC_bez();
 				if (konto.getFlrergebnisgruppe() != null) {
@@ -3648,6 +3960,23 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 						.getMahnstufe_i_id();
 				// Wert kontrollieren - jemand koennte die rechnung
 				// zurueckgenommen haben
+
+				// SP3194
+				BigDecimal bdUstAnzahlungFW = new BigDecimal(0);
+				BigDecimal bdNettoAnzahlungFW = new BigDecimal(0);
+				if (mahnung.getFlrrechnungreport().getFlrauftrag() != null
+						&& mahnung.getFlrrechnungreport().getFlrrechnungart()
+								.getC_nr()
+								.equals(RechnungFac.RECHNUNGART_SCHLUSSZAHLUNG)) {
+					bdNettoAnzahlungFW = getRechnungFac()
+							.getAnzahlungenZuSchlussrechnungFw(
+									mahnung.getFlrrechnungreport().getI_id());
+					bdUstAnzahlungFW = getRechnungFac()
+							.getAnzahlungenZuSchlussrechnungUstFw(
+									mahnung.getFlrrechnungreport().getI_id());
+
+				}
+
 				if (mahnung.getFlrrechnungreport().getN_wert() != null) {
 					data[i][REPORT_MAHNLAUF_OFFEN] = mahnung
 							.getFlrrechnungreport()
@@ -3656,7 +3985,8 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 									getRechnungFac()
 											.getBereitsBezahltWertVonRechnung(
 													mahnung.getFlrrechnungreport()
-															.getI_id(), null));
+															.getI_id(), null))
+							.subtract(bdNettoAnzahlungFW);
 
 				}
 
@@ -3670,7 +4000,8 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 									getRechnungFac()
 											.getBereitsBezahltWertVonRechnungUst(
 													mahnung.getFlrrechnungreport()
-															.getI_id(), null));
+															.getI_id(), null))
+							.subtract(bdUstAnzahlungFW);
 				}
 
 				data[i][REPORT_MAHNLAUF_RECHNUNGSDATUM] = mahnung
@@ -3964,6 +4295,262 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 		return getReportPrint();
 	}
 
+	private ReportFieldValues reportSteuernachweisListe = new ReportFieldValues(
+			new HashMap<String, Integer>() {
+				private static final long serialVersionUID = -7477136424185048969L;
+				{
+					put("Betrag", REPORT_USTVERPROBUNG_BETRAG);
+					put("Steuer", REPORT_USTVERPROBUNG_STEUER);
+					put("Steuerart", REPORT_USTVERPROBUNG_STEUERART);
+					put("KontoNr", REPORT_USTVERPROBUNG_KONTO_NR);
+					put("KontoBez", REPORT_USTVERPROBUNG_KONTO_BEZ);
+					put("GegenkontoNr", REPORT_USTVERPROBUNG_GEGENKONTO_NR);
+					put("GegenkontoBez", REPORT_USTVERPROBUNG_GEGENKONTO_BEZ);
+					put("MwstSatz", REPORT_USTVERPROBUNG_MWST_SATZ);
+					put("MwstBez", REPORT_USTVERPROBUNG_MWST_BEZ);
+					put("MwstIId", REPORT_USTVERPROBUNG_MWST_ID);
+					put("SteuerkategorieBez",
+							REPORT_USTVERPROBUNG_STEUERKATEGORIE_BEZ);
+					put("MwstSatzBerechnet",
+							REPORT_USTVERPROBUNG_MWST_SATZ_BERECHNET);
+				}
+			});
+
+	public JasperPrintLP printUstVerprobung(ReportUvaKriterienDto krit,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+
+		useCase = UC_USTVERPROBUNG;
+
+		Map<Integer, Integer> ustKontoIIds = getFinanzServiceFac()
+				.getAllIIdsUstkontoMitIIdMwstBez(krit.getFinanzamtIId(),
+						theClientDto);
+		Map<Integer, Integer> vstKontoIIds = getFinanzServiceFac()
+				.getAllIIdsVstkontoMitIIdMwstBez(krit.getFinanzamtIId(),
+						theClientDto);
+		Map<Integer, Integer> eustKontoIIds = getFinanzServiceFac()
+				.getAllIIdsEUstkontoMitIIdMwstBez(krit.getFinanzamtIId(),
+						theClientDto);
+
+		FinanzamtDto finanzamtDto = getFinanzFac()
+				.finanzamtFindByPartnerIIdMandantCNr(krit.getFinanzamtIId(),
+						theClientDto.getMandant(), theClientDto);
+
+		// TODO: runden implementieren: muss hier jede Zeile gerundet werden und
+		// dann summiert,
+		// oder erst summiert und dann die Summe gerundet?
+		// gilt gleiches fuer's Kursumrechnen?
+		// boolean bRunden =
+		// Helper.short2boolean(finanzamtDto.getBUmsatzRunden());
+		// String finanzamtwaehrung = finanzamtDto.getPartnerDto()
+		// .getLandplzortDto().getLandDto().getWaehrungCNr();
+		// boolean bUmrechnen = !finanzamtwaehrung.equals(theClientDto
+		// .getSMandantenwaehrung());
+		List<UstVerprobungRow> steuernachweisList = new ArrayList<UstVerprobungRow>();
+		steuernachweisList.addAll(getVerprobungList(krit, ustKontoIIds,
+				FinanzServiceFac.STEUERART_UST, theClientDto));
+		steuernachweisList.addAll(getVerprobungList(krit, vstKontoIIds,
+				FinanzServiceFac.STEUERART_VST, theClientDto));
+		steuernachweisList.addAll(getVerprobungList(krit, eustKontoIIds,
+				FinanzServiceFac.STEUERART_EUST, theClientDto));
+
+		final List<String> steuerartSort = new ArrayList<String>();
+		steuerartSort.add(FinanzServiceFac.STEUERART_UST);
+		steuerartSort.add(FinanzServiceFac.STEUERART_VST);
+		steuerartSort.add(FinanzServiceFac.STEUERART_EUST);
+
+		Collections.sort(steuernachweisList,
+				new Comparator<UstVerprobungRow>() {
+					@Override
+					public int compare(UstVerprobungRow o1, UstVerprobungRow o2) {
+						if (o1.getSteuerkategorieISort() != o2
+								.getSteuerkategorieISort()) {
+							return new Integer(o1.getSteuerkategorieISort())
+									.compareTo(o2.getSteuerkategorieISort());
+						}
+						if (!o1.getSteuerart().equals(o2.getSteuerart())) {
+							Integer i1 = steuerartSort.indexOf(o1
+									.getSteuerart());
+							Integer i2 = steuerartSort.indexOf(o2
+									.getSteuerart());
+							return i1.compareTo(i2);
+						}
+						if (o1.getSteuersatz() == null
+								&& o2.getSteuersatz() != null)
+							return -1;
+						if (o1.getSteuersatz() != null
+								&& o2.getSteuersatz() == null)
+							return 1;
+						if (o1.getSteuersatz() != null
+								&& !o1.getSteuersatz().equals(
+										o2.getSteuersatz())) {
+							return o1.getSteuersatz().compareTo(
+									o2.getSteuersatz());
+						}
+						return o1.getGegenkontoCNr().compareTo(
+								o2.getGegenkontoCNr());
+					}
+				});
+
+		List<UstVerprobungRow> kommuliert = new ArrayList<UstVerprobungRow>();
+		for (UstVerprobungRow stnw : steuernachweisList) {
+			if (kommuliert.size() != 0) {
+				UstVerprobungRow last = kommuliert.get(kommuliert.size() - 1);
+				if (stnw.equalsAusgenommenBetraege(last)) {
+					last.setBetrag(last.getBetrag().add(stnw.getBetrag()));
+					last.setSteuer(last.getSteuer().add(stnw.getSteuer()));
+					continue;
+				}
+			}
+			kommuliert.add(stnw);
+
+		}
+
+		data = new Object[kommuliert.size()][REPORT_USTVERPROBUNG_ANZAHL_FELDER];
+		int i = 0;
+		for (UstVerprobungRow stnw : kommuliert) {
+			data[i][REPORT_USTVERPROBUNG_BETRAG] = stnw.getBetrag();
+			data[i][REPORT_USTVERPROBUNG_STEUER] = stnw.getSteuer();
+			data[i][REPORT_USTVERPROBUNG_STEUERART] = stnw.getSteuerart();
+			data[i][REPORT_USTVERPROBUNG_KONTO_BEZ] = stnw.getKontoCBez();
+			data[i][REPORT_USTVERPROBUNG_KONTO_NR] = stnw.getKontoCNr();
+			data[i][REPORT_USTVERPROBUNG_GEGENKONTO_BEZ] = stnw
+					.getGegenkontoCBez();
+			data[i][REPORT_USTVERPROBUNG_GEGENKONTO_NR] = stnw
+					.getGegenkontoCNr();
+			data[i][REPORT_USTVERPROBUNG_MWST_BEZ] = stnw.getMwstSatzBezCBez();
+			data[i][REPORT_USTVERPROBUNG_MWST_SATZ] = stnw.getSteuersatz();
+			data[i][REPORT_USTVERPROBUNG_MWST_ID] = stnw.getMwstSatzBezIId();
+			data[i][REPORT_USTVERPROBUNG_STEUERKATEGORIE_BEZ] = stnw
+					.getSteuerkategorieCBez();
+			data[i][REPORT_USTVERPROBUNG_MWST_SATZ_BERECHNET] = new BigDecimal(
+					getMandantFac().getMwstSatzVonBruttoBetragUndUst(
+							theClientDto.getMandant(), stnw.getDatum(),
+							stnw.getBetrag().add(stnw.getSteuer()),
+							stnw.getSteuer()).getFMwstsatz());
+			i++;
+		}
+
+		Date[] dVonBis = getBuchenFac().getDatumbereichPeriodeGJ(
+				krit.getIGeschaeftsjahr(), krit.getIPeriode(), theClientDto);
+
+		Map<String, Object> mapParameter = new HashMap<String, Object>();
+		mapParameter.put(LPReport.P_WAEHRUNG,
+				theClientDto.getSMandantenwaehrung());
+		fillFinanzamtParameter(mapParameter, krit, finanzamtDto, dVonBis,
+				theClientDto);
+
+		String report = FinanzReportFac.REPORT_USTVERPROBUNG;
+		initJRDS(mapParameter, FinanzReportFac.REPORT_MODUL, report,
+				theClientDto.getMandant(), theClientDto.getLocUi(),
+				theClientDto);
+		return getReportPrint();
+	}
+
+	private List<UstVerprobungRow> getVerprobungList(
+			ReportUvaKriterienDto krit, Map<Integer, Integer> steuerkontoIIds,
+			String steuerart, TheClientDto theClientDto) throws EJBExceptionLP,
+			RemoteException {
+		Timestamp[] tVonBis = getBuchenFac().getDatumbereichPeriodeGJ(
+				krit.getIGeschaeftsjahr(), krit.getIPeriode(), theClientDto);
+		java.sql.Date tBeginn = new java.sql.Date(tVonBis[0].getTime());
+		java.sql.Date tEnd = new java.sql.Date(tVonBis[1].getTime());
+		;
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		HvTypedCriteria<FLRFinanzBuchung> crit = new HvTypedCriteria<FLRFinanzBuchung>(
+				session.createCriteria(FLRFinanzBuchungDetail.class));
+		crit.createCriteria("flrbuchung")
+				.add(Restrictions.ge("d_buchungsdatum", tBeginn))
+				.add(Restrictions.lt("d_buchungsdatum", tEnd))
+				.add(Restrictions.eq("b_autombuchungeb",
+						Helper.boolean2Short(false)))
+				.add(Restrictions.eq("b_autombuchung",
+						Helper.boolean2Short(false)))
+				.add(Restrictions.isNull("t_storniert"));
+		crit.add(Restrictions.in("flrkonto.i_id", steuerkontoIIds.keySet()))
+				.setProjection(
+						Projections.distinct(Projections.property("flrbuchung")));
+
+		List<FLRFinanzBuchung> list = crit.list();
+		List<UstVerprobungRow> ustVerprobungZeilen = new ArrayList<UstVerprobungRow>();
+		for (FLRFinanzBuchung buchung : list) {
+			ustVerprobungZeilen.addAll(zerlegeSteuerbuchungen(buchung,
+					steuerkontoIIds, steuerart, theClientDto));
+		}
+
+		return ustVerprobungZeilen;
+	}
+
+	private List<UstVerprobungRow> zerlegeSteuerbuchungen(
+			FLRFinanzBuchung buchung, Map<Integer, Integer> steuerkontoIIds,
+			String steuerart, TheClientDto theClientDto) throws EJBExceptionLP,
+			RemoteException {
+		BuchungdetailDto[] details = getBuchenFac()
+				.buchungdetailsFindByBuchungIId(buchung.getI_id());
+		// HelperServer.printBuchungssatz(details, getFinanzFac(), System.out);
+		List<UstVerprobungRow> ustVerprobungZeilen = new ArrayList<UstVerprobungRow>();
+		for (int i = 1; i < details.length; i++) {
+			if (!steuerkontoIIds.containsKey(details[i].getKontoIId()))
+				continue;
+			if (details[i].getNBetrag().signum() == 0)
+				continue;
+			UstVerprobungRow ustVp = new UstVerprobungRow();
+			// vorherige Buchung ist die Betragsbuchung
+			BuchungdetailDto betragDetail = details[i - 1];
+			BuchungdetailDto steuerDetail = details[i];
+			if (betragDetail.getNBetrag().signum() != steuerDetail.getNBetrag()
+					.signum()
+					|| !betragDetail.getBuchungdetailartCNr().equals(
+							steuerDetail.getBuchungdetailartCNr())) {
+				if (i < 2)
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_FINANZ_UNGUELTIGE_STEUERBUCHUNG,
+							createBuchungsInfoForException(buchung)
+									+ HelperServer.printBuchungssatz(details,
+											getFinanzFac()));
+				betragDetail = details[i - 2];
+			}
+			KontoDto konto = getFinanzFac().kontoFindByPrimaryKey(
+					steuerDetail.getKontoIId());
+			KontoDto gegenkonto = getFinanzFac().kontoFindByPrimaryKey(
+					betragDetail.getKontoIId());
+			ustVp.setBetrag(betragDetail.getNBetrag());
+			ustVp.setDatum(new Timestamp(buchung.getD_buchungsdatum().getTime()));
+
+			ustVp.setGegenkontoCBez(gegenkonto.getCBez());
+			ustVp.setGegenkontoCNr(gegenkonto.getCNr());
+			ustVp.setSteuer(steuerDetail.getNBetrag());
+			ustVp.setSteuerart(steuerart);
+			ustVp.setKontoCBez(konto.getCBez());
+			ustVp.setKontoCNr(konto.getCNr());
+			ustVerprobungZeilen.add(ustVp);
+			if (steuerkontoIIds.get(konto.getIId()) == null)
+				continue;
+			MwstsatzbezDto mwstSatzBez = getMandantFac()
+					.mwstsatzbezFindByPrimaryKey(
+							steuerkontoIIds.get(konto.getIId()), theClientDto);
+			MwstsatzDto mwstSatz = getMandantFac().mwstsatzFindZuDatum(
+					mwstSatzBez.getIId(),
+					new Timestamp(buchung.getD_buchungsdatum().getTime()));
+			ustVp.setMwstSatzBezCBez(mwstSatzBez.getCBezeichnung());
+			ustVp.setMwstSatzBezIId(mwstSatzBez.getIId());
+			ustVp.setSteuersatz(new BigDecimal(mwstSatz.getFMwstsatz()));
+			List<SteuerkategoriekontoDto> stkks = getFinanzServiceFac()
+					.steuerkategorieFindByKontoIIdMwstSatzBezIId(
+							konto.getIId(), mwstSatzBez.getIId());
+			if (stkks.size() != 1)
+				continue;
+			SteuerkategorieDto stk = getFinanzServiceFac()
+					.steuerkategorieFindByPrimaryKey(
+							stkks.get(0).getSteuerkategorieIId(), theClientDto);
+			ustVp.setSteuerkategorieCBez(stk.getCBez());
+			ustVp.setSteuerkategorieISort(stk.getISort());
+		}
+		return ustVerprobungZeilen;
+
+	}
+
 	public JasperPrintLP printUva(String mandantCNr,
 			ReportUvaKriterienDto krit, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
@@ -4021,6 +4608,7 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 					}
 				}
 			}
+
 			UvaartDto[] uvas = getFinanzServiceFac().uvaartFindAll(mandantCNr);
 			Map<String, Object> mapParameter = new TreeMap<String, Object>();
 
@@ -4036,112 +4624,98 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 				bRunden = Helper.short2boolean(finanzamtDto.getBUmsatzRunden());
 				finanzamtwaehrung = finanzamtDto.getPartnerDto()
 						.getLandplzortDto().getLandDto().getWaehrungCNr();
-				if (finanzamtwaehrung.compareTo(theClientDto
-						.getSMandantenwaehrung()) != 0) {
-					bUmrechnen = true;
-				}
+				bUmrechnen = !finanzamtwaehrung.equals(theClientDto
+						.getSMandantenwaehrung());
 			}
+
 			// Salden fuer alle UVA Arten
 			for (int i = 0; i < uvas.length; i++) {
-				if (uvas[i].getCNr().compareTo("Nicht definiert") != 0) {
-					List<FLRFinanzKonto> uvaKonten = getKontenJeUvaart(
-							uvas[i].getIId(), krit.getFinanzamtIId());
-					BigDecimal saldo = new BigDecimal(0);
-					BigDecimal saldogerundet = null;
-					if (bRunden)
-						// nur wenn Runden erlaubt, sonst null!
-						saldogerundet = new BigDecimal(0);
+				if (uvas[i].getCNr().equals(
+						FinanzServiceFac.UVAART_NICHT_ZUTREFFEND))
+					continue;
+				List<FLRFinanzKonto> uvaKonten = getKontenJeUvaart(
+						uvas[i].getIId(), krit.getFinanzamtIId());
+				BigDecimal saldo = new BigDecimal(0);
+				BigDecimal saldogerundet = null;
+				if (bRunden)
+					// nur wenn Runden erlaubt, sonst null!
+					saldogerundet = new BigDecimal(0);
 
-					if (krit.getSAbrechnungszeitraum().equals(
-							FinanzFac.UVA_ABRECHNUNGSZEITRAUM_MONAT)) {
-						saldo = getSammelSaldo(krit, uvaKonten, theClientDto);
+				if (krit.getSAbrechnungszeitraum().equals(
+						FinanzFac.UVA_ABRECHNUNGSZEITRAUM_MONAT)) {
+					saldo = getSammelSaldo(krit, uvaKonten, theClientDto);
+					if (bUmrechnen) {
+						saldo = umrechnen(saldo, finanzamtwaehrung, krit,
+								theClientDto);
+					}
+					if (bRunden) {
+						saldogerundet = Helper.rundeKaufmaennisch(saldo, 0);
+					}
+				} else if (krit.getSAbrechnungszeitraum().equals(
+						FinanzFac.UVA_ABRECHNUNGSZEITRAUM_QUARTAL)) {
+					for (int j = 0; j < iPerioden.length; j++) {
+						krit.setIPeriode(iPerioden[j]);
+						BigDecimal saldoTemp = getSammelSaldo(krit, uvaKonten,
+								theClientDto);
 						if (bUmrechnen) {
-							saldo = umrechnen(saldo, finanzamtwaehrung, krit,
-									theClientDto);
-						}
-						if (bRunden) {
-							saldogerundet = Helper.rundeKaufmaennisch(saldo, 0);
-						}
-					} else if (krit.getSAbrechnungszeitraum().equals(
-							FinanzFac.UVA_ABRECHNUNGSZEITRAUM_QUARTAL)) {
-						for (int j = 0; j < iPerioden.length; j++) {
-							krit.setIPeriode(iPerioden[j]);
-							BigDecimal saldoTemp = getSammelSaldo(krit,
-									uvaKonten, theClientDto);
-							if (bUmrechnen) {
-								saldo = saldo.add(umrechnen(saldoTemp,
-										finanzamtwaehrung, krit, theClientDto));
-								if (bRunden) {
-									saldogerundet = saldogerundet
-											.add(Helper
-													.rundeKaufmaennisch(
-															umrechnen(
-																	saldoTemp,
-																	finanzamtwaehrung,
-																	krit,
-																	theClientDto),
-															0));
-								}
-							} else {
-								saldo = saldo.add(saldoTemp);
-								if (bRunden) {
-									saldogerundet = saldogerundet.add(Helper
-											.rundeKaufmaennisch(saldoTemp, 0));
-								}
+							saldo = saldo.add(umrechnen(saldoTemp,
+									finanzamtwaehrung, krit, theClientDto));
+							if (bRunden) {
+								saldogerundet = saldogerundet
+										.add(Helper.rundeKaufmaennisch(
+												umrechnen(saldoTemp,
+														finanzamtwaehrung,
+														krit, theClientDto), 0));
+							}
+						} else {
+							saldo = saldo.add(saldoTemp);
+							if (bRunden) {
+								saldogerundet = saldogerundet.add(Helper
+										.rundeKaufmaennisch(saldoTemp, 0));
 							}
 						}
-						krit.setIPeriode(iQuartal); // restore Quartal
-					} else if (krit.getSAbrechnungszeitraum().equals(
-							FinanzFac.UVA_ABRECHNUNGSZEITRAUM_JAHR)) {
-						Integer iPeriode = krit.getIPeriode();
-						for (int j = 1; j <= 12; j++) {
-							krit.setIPeriode(j);
-							BigDecimal saldoTemp = getSammelSaldo(krit,
-									uvaKonten, theClientDto);
-							if (bUmrechnen) {
-								saldo = saldo.add(umrechnen(saldoTemp,
-										finanzamtwaehrung, krit, theClientDto));
-								if (bRunden) {
-									saldogerundet = saldogerundet
-											.add(Helper
-													.rundeKaufmaennisch(
-															umrechnen(
-																	saldoTemp,
-																	finanzamtwaehrung,
-																	krit,
-																	theClientDto),
-															0));
-								}
-							} else {
-								saldo = saldo.add(saldoTemp);
-								if (bRunden) {
-									saldogerundet = saldogerundet.add(Helper
-											.rundeKaufmaennisch(saldoTemp, 0));
-								}
+					}
+					krit.setIPeriode(iQuartal); // restore Quartal
+				} else if (krit.getSAbrechnungszeitraum().equals(
+						FinanzFac.UVA_ABRECHNUNGSZEITRAUM_JAHR)) {
+					Integer iPeriode = krit.getIPeriode();
+					for (int j = 1; j <= 12; j++) {
+						krit.setIPeriode(j);
+						BigDecimal saldoTemp = getSammelSaldo(krit, uvaKonten,
+								theClientDto);
+						if (bUmrechnen) {
+							saldo = saldo.add(umrechnen(saldoTemp,
+									finanzamtwaehrung, krit, theClientDto));
+							if (bRunden) {
+								saldogerundet = saldogerundet
+										.add(Helper.rundeKaufmaennisch(
+												umrechnen(saldoTemp,
+														finanzamtwaehrung,
+														krit, theClientDto), 0));
+							}
+						} else {
+							saldo = saldo.add(saldoTemp);
+							if (bRunden) {
+								saldogerundet = saldogerundet.add(Helper
+										.rundeKaufmaennisch(saldoTemp, 0));
 							}
 						}
-						krit.setIPeriode(iPeriode); // restore Periode
 					}
-					if (uvas[i].getBInvertiert() == 1) {
-						saldo = saldo.negate();
-						if (bRunden) {
-							saldogerundet = saldogerundet.negate();
-						}
-					}
-					UvaRpt uva = new UvaRpt(uvas[i].getCKennzeichen(), saldo,
-							saldogerundet);
-					String para = "P_"
-							+ uvas[i].getCNr().toUpperCase().replace(" ", "_");
-					mapParameter.put(para, uva);
+					krit.setIPeriode(iPeriode); // restore Periode
 				}
+				if (uvas[i].getBInvertiert() == 1) {
+					saldo = saldo.negate();
+					if (bRunden) {
+						saldogerundet = saldogerundet.negate();
+					}
+				}
+				UvaRpt uva = new UvaRpt(uvas[i].getCKennzeichen(), saldo,
+						saldogerundet);
+				String para = "P_"
+						+ uvas[i].getCNr().toUpperCase().replace(" ", "_");
+				mapParameter.put(para, uva);
 			}
 
-			// alle zugehoerigen Mwstsaetze
-			MwstsatzbezDto[] mwstbezs = getMandantFac()
-					.mwstsatzbezFindAllByMandantAsDto(mandantCNr, theClientDto);
-			// GeschaeftsjahrMandantDto gj = getSystemFac()
-			// .geschaeftsjahrFindByPrimaryKey(krit.getIGeschaeftsjahr(),
-			// theClientDto.getMandant());
 			Date[] dVonBis = null;
 			if (krit.getSAbrechnungszeitraum().equals(
 					FinanzFac.UVA_ABRECHNUNGSZEITRAUM_QUARTAL))
@@ -4162,9 +4736,20 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 						theClientDto);
 
 			Timestamp tDatum = new Timestamp(dVonBis[0].getTime());
+
+			// Mandantenwaehrung
+			if (bUmrechnen)
+				mapParameter.put(LPReport.P_WAEHRUNG, finanzamtwaehrung);
+			else
+				mapParameter.put(LPReport.P_WAEHRUNG,
+						theClientDto.getSMandantenwaehrung());
+
+			boolean bHauptfinanzamt = false;
+
 			MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(
 					mandantCNr, theClientDto);
-			boolean bHauptfinanzamt = false;
+			MwstsatzbezDto[] mwstbezs = getMandantFac()
+					.mwstsatzbezFindAllByMandantAsDto(mandantCNr, theClientDto);
 			if (mandantDto.getPartnerIIdFinanzamt() != null)
 				bHauptfinanzamt = finanzamtDto.getPartnerIId().equals(
 						mandantDto.getPartnerIIdFinanzamt());
@@ -4190,46 +4775,8 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 					}
 				}
 			}
-
-			// Mandantenwaehrung
-			if (bUmrechnen)
-				mapParameter.put(LPReport.P_WAEHRUNG, finanzamtwaehrung);
-			else
-				mapParameter.put(LPReport.P_WAEHRUNG,
-						mandantDto.getWaehrungCNr());
-			// Mandantadresse
-			mapParameter.put(LPReport.P_MANDANT_ANREDE_UND_NAME, mandantDto
-					.getPartnerDto().formatFixTitelName1Name2());
-			mapParameter.put(LPReport.P_MANDANTADRESSE, mandantDto
-					.getPartnerDto().formatAdresse());
-
-			// Finanzamtadresse
-			if (finanzamtDto == null) {
-				mapParameter.put("P_FA_NAME", "Unbekannt");
-				mapParameter.put("P_FA_ADRESSE", "Unbekannt");
-				mapParameter.put("P_FA_REFERAT", "Unbekannt");
-				// Steuernummer
-				mapParameter.put("P_FA_STEUERNUMMER", "Unbekannt");
-				mapParameter.put("P_UMSATZRUNDEN", new Boolean(false));
-			} else {
-				mapParameter.put("P_FA_NAME", finanzamtDto.getPartnerDto()
-						.formatFixName1Name2());
-				mapParameter.put("P_FA_ADRESSE", finanzamtDto.getPartnerDto()
-						.formatAdresse());
-				// Steuernummer
-				mapParameter.put("P_FA_STEUERNUMMER",
-						finanzamtDto.getCSteuernummer());
-				mapParameter.put("P_FA_REFERAT", finanzamtDto.getCReferat());
-				mapParameter.put("P_UMSATZRUNDEN", new Boolean(bRunden));
-			}
-			// Periode + Geschaeftsjahr
-			mapParameter.put("P_PERIODE", krit.getIPeriode());
-			mapParameter.put("P_GESCHAEFTSJAHR", krit.getIGeschaeftsjahr());
-			mapParameter.put("P_PERIODE_MONAT", krit.getSPeriode());
-			mapParameter.put("P_PERIODE_KALENDERDATUM", dVonBis[0]);
-
-			mapParameter.put("P_ABRECHNUNGSZEITRAUM",
-					krit.getSAbrechnungszeitraum());
+			fillFinanzamtParameter(mapParameter, krit, finanzamtDto, dVonBis,
+					theClientDto);
 
 			data = new Object[0][0];
 
@@ -4265,11 +4812,59 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 		}
 	}
 
+	private void fillFinanzamtParameter(Map<String, Object> mapParameter,
+			ReportUvaKriterienDto krit, FinanzamtDto finanzamtDto,
+			Date[] dVonBis, TheClientDto theClientDto) throws EJBExceptionLP,
+			RemoteException {
+
+		MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(
+				theClientDto.getMandant(), theClientDto);
+
+		// Mandantadresse
+		mapParameter.put(LPReport.P_MANDANT_ANREDE_UND_NAME, mandantDto
+				.getPartnerDto().formatFixTitelName1Name2());
+		mapParameter.put(LPReport.P_MANDANTADRESSE, mandantDto.getPartnerDto()
+				.formatAdresse());
+
+		// Finanzamtadresse
+		if (finanzamtDto == null) {
+			mapParameter.put("P_FA_NAME", "Unbekannt");
+			mapParameter.put("P_FA_ADRESSE", "Unbekannt");
+			mapParameter.put("P_FA_REFERAT", "Unbekannt");
+			// Steuernummer
+			mapParameter.put("P_FA_STEUERNUMMER", "Unbekannt");
+			mapParameter.put("P_UMSATZRUNDEN", new Boolean(false));
+		} else {
+			mapParameter.put("P_FA_NAME", finanzamtDto.getPartnerDto()
+					.formatFixName1Name2());
+			mapParameter.put("P_FA_ADRESSE", finanzamtDto.getPartnerDto()
+					.formatAdresse());
+			// Steuernummer
+			mapParameter.put("P_FA_STEUERNUMMER",
+					finanzamtDto.getCSteuernummer());
+			mapParameter.put("P_FA_REFERAT", finanzamtDto.getCReferat());
+			mapParameter.put(
+					"P_UMSATZRUNDEN",
+					new Boolean(Helper.short2boolean(finanzamtDto
+							.getBUmsatzRunden())));
+		}
+		// Periode + Geschaeftsjahr
+		mapParameter.put("P_PERIODE", krit.getIPeriode());
+		mapParameter.put("P_GESCHAEFTSJAHR", krit.getIGeschaeftsjahr());
+		mapParameter.put("P_PERIODE_MONAT", krit.getSPeriode());
+		mapParameter.put("P_PERIODE_KALENDERDATUM", dVonBis[0]);
+
+		mapParameter.put("P_ABRECHNUNGSZEITRAUM",
+				krit.getSAbrechnungszeitraum());
+
+	}
+
 	private void pruefeSteuerkontenUva(ReportUvaKriterienDto krit,
 			TheClientDto theClientDto) {
 		Session session = FLRSessionFactory.getFactory().openSession();
 		String queryString = "SELECT DISTINCT (o) FROM FLRSteuerkategoriekonto o"
-				+ " WHERE o.flrsteuerkategorie.finanzamt_i_id = :pFinanzamt";
+				+ " WHERE o.flrsteuerkategorie.finanzamt_i_id = :pFinanzamt and o.flrsteuerkategorie.b_reversecharge = 0";
+		// SP 2652 Reverse Charge Steuerkonten fliessen nicht in die UVA mitein!
 		org.hibernate.Query hquery = session.createQuery(queryString);
 		hquery.setParameter("pFinanzamt", krit.getFinanzamtIId());
 		List<FLRSteuerkategoriekonto> results = hquery.list();
@@ -4288,7 +4883,8 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 				sammelkonto = getFinanzServiceFac().getSammelkonto(
 						FinanzServiceFac.KONTOART_UST_SAMMEL, null,
 						theClientDto);
-				kontenIIdAusnahmen.add(sammelkonto.getIId());
+				if (sammelkonto != null)
+					kontenIIdAusnahmen.add(sammelkonto.getIId());
 			} catch (EJBExceptionLP e) {
 				//
 			}
@@ -4302,6 +4898,7 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 			kontenIIdAusnahmen.add(stk.getKontoIIdForderungen());
 			kontenIIdAusnahmen.add(stk.getKontoIIdKursgewinn());
 			kontenIIdAusnahmen.add(stk.getKontoIIdKursverlust());
+
 			kontenIIdAusnahmen
 					.add(finanzamt.getKontoIIdAnzahlungErhaltenVerr());
 			kontenIIdAusnahmen.add(finanzamt
@@ -4313,142 +4910,129 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 
 			// nur UST Konten pruefen
 			if (stkk.getKontoiidvk() != null)
-				pruefeSteuerkontoUva(
-						krit,
-						stkk.getKontoiidvk().getI_id(),
-						kontenIIdAusnahmen
-								.toArray(new Integer[kontenIIdAusnahmen.size()]),
-						theClientDto);
+				pruefeSteuerkontoUva(krit, stk, stkk.getKontoiidvk().getI_id(),
+						kontenIIdAusnahmen, theClientDto);
 		}
 		session.close();
 	}
 
 	private void pruefeSteuerkontoUva(ReportUvaKriterienDto krit,
-			Integer kontoIId, Integer[] kontoIIdIgnore,
-			TheClientDto theClientDto) {
+			Steuerkategorie stk, Integer kontoIId,
+			List<Integer> kontoIIdIgnore, TheClientDto theClientDto) {
 		Session session = FLRSessionFactory.getFactory().openSession();
-		String queryString = "SELECT (o) FROM FLRFinanzBuchungDetail o"
-				+ " WHERE o.konto_i_id = :pKonto"
-				+ " AND o.flrbuchung.t_storniert IS null"
-				+ " AND o.flrbuchung.d_buchungsdatum >= :pVon AND o.flrbuchung.d_buchungsdatum < :pEnd"
-				+ " AND o.flrbuchung.b_autombuchung = 0";
-
-		org.hibernate.Query hquery = session.createQuery(queryString);
 		Timestamp[] tVonBis = getBuchenFac().getDatumbereichPeriodeGJ(
 				krit.getIGeschaeftsjahr(), krit.getIPeriode(), theClientDto);
-		hquery.setParameter("pKonto", kontoIId);
-		hquery.setParameter("pVon", tVonBis[0]);
-		hquery.setParameter("pEnd", tVonBis[1]);
-		List<FLRFinanzBuchungDetail> results = hquery.list();
-		Iterator<FLRFinanzBuchungDetail> it = (Iterator<FLRFinanzBuchungDetail>) results
-				.iterator();
-		while (it.hasNext()) {
-			FLRFinanzBuchungDetail detail = it.next();
-			javax.persistence.Query query = em
-					.createNamedQuery(Buchungdetail.QueryBuchungdetailfindByBuchungIID);
-			query.setParameter(1, detail.getBuchung_i_id());
-			List<Buchungdetail> buchungdetails = query.getResultList();
-			for (int i = 0; i < buchungdetails.size(); i++) {
-				Konto konto = em.find(Konto.class, buchungdetails.get(i)
-						.getKontoIId());
-				if (konto.getKontotypCNr().equals(
-						FinanzServiceFac.KONTOTYP_SACHKONTO)
-						&& konto.getIId().compareTo(kontoIId) != 0
-						&& istKeinKontoVon(kontoIIdIgnore, konto.getIId())) {
-					boolean bvalid = false;
-					// wenn Bank dann OK
-					BankverbindungDto bankDto = null;
-					try {
-						bankDto = getFinanzFac()
-								.bankverbindungFindByKontoIIdOhneExc(
-										konto.getIId());
-					} catch (Throwable t) {
-						//
-					}
-					if (bankDto != null)
-						bvalid = true;
 
-					if (!bvalid) {
-						// wenn Kassenkonto dann OK
-						KassenbuchDto kassenDto = null;
-						try {
-							kassenDto = getFinanzFac()
-									.kassenbuchFindByKontoIIdOhneExc(
-											konto.getIId());
-						} catch (Throwable t) {
-							//
-						}
-						if (kassenDto != null)
-							bvalid = true;
-					}
-					// sonst muss die uvaart gueltig sein
-					if (!bvalid) {
-						bvalid = true;
-						if (konto.getUvaartIId() == null)
-							bvalid = false;
-						else {
-							Uvaart uvaart = em.find(Uvaart.class,
-									konto.getUvaartIId());
-							if (uvaart.getCNr().equals(
-									FinanzServiceFac.UVAART_NICHT_DEFINIERT)
-									|| uvaart
-											.getCNr()
-											.equals(FinanzServiceFac.UVAART_ZAHLLASTKONTO)) {
-								bvalid = false;
-							}
-						}
-					}
-					if (!bvalid) {
-						// Eine Eroeffnungsbuchung darf auf ein Steuerkonto
-						// gemacht werden
-						// PJ 2012/0477
-						FLRFinanzBuchung buchung = detail.getFlrbuchung();
-						String buchungsart = buchung.getBuchungsart_c_nr();
-						if (FinanzFac.BUCHUNGSART_EROEFFNUNG
-								.equals(buchungsart)) {
-							bvalid = true;
-						}
-					}
+		HvTypedCriteria<FLRFinanzBuchungDetail> crit = new HvTypedCriteria<FLRFinanzBuchungDetail>(
+				session.createCriteria(FLRFinanzBuchungDetail.class));
+		crit.add(Restrictions.eq("konto_i_id", kontoIId))
+				.createCriteria("flrbuchung")
+				.add(Restrictions.ge("d_buchungsdatum", tVonBis[0]))
+				.add(Restrictions.lt("d_buchungsdatum", tVonBis[1]))
+				.add(Restrictions.isNull("t_storniert"))
+				.add(Restrictions.eq("b_autombuchung", Helper.getShortFalse()));
 
-					if (!bvalid) {
-						String kontoNr = detail.getFlrkonto().getC_nr();
-						String gegenkontoNr = konto.getCNr();
-						Buchung buchung = em.find(Buchung.class,
-								detail.getBuchung_i_id());
-						String info = "?\n";
-						if (buchung != null) {
-							info = (buchung.getBelegartCNr() == null ? " "
-									: buchung.getBelegartCNr().trim() + " ")
-									+ buchung.getCBelegnummer().trim()
-									+ ", "
-									+ buchung.getBuchungsartCNr().trim()
-									+ ", "
-									+ buchung.getTBuchungsdatum() + "\n";
-						}
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_FINANZ_EXPORT_UST_KONTO_NICHT_DEFINIERT,
-								"Buchung: " + info + "Ung\u00FCltiges Konto "
-										+ gegenkontoNr
-										+ " in Buchung auf Steuerkonto "
-										+ kontoNr);
+		List<FLRFinanzBuchungDetail> results = crit.list();
+		for (FLRFinanzBuchungDetail detail : results) {
+			BuchungdetailDto[] buchungdetails = getBuchenFac()
+					.buchungdetailsFindByBuchungIId(detail.getBuchung_i_id());
+			// HelperServer.printBuchungssatz(buchungdetails, getFinanzFac(),
+			// System.out);
+			for (BuchungdetailDto detail1 : buchungdetails) {
+				Konto konto = em.find(Konto.class, detail1.getKontoIId());
+				if (!konto.getKontotypCNr().equals(
+						FinanzServiceFac.KONTOTYP_SACHKONTO))
+					continue;
+				if (konto.getIId().equals(kontoIId))
+					continue;
+				if (kontoIIdIgnore.contains(konto.getIId()))
+					continue;
+
+				// wenn Bank dann OK
+				if (getFinanzFac().bankverbindungFindByKontoIIdOhneExc(
+						konto.getIId()) != null)
+					continue;
+
+				// wenn Kassenkonto dann OK
+				if (getFinanzFac().kassenbuchFindByKontoIIdOhneExc(
+						konto.getIId()) != null)
+					continue;
+
+				// sonst muss die uvaart gueltig sein
+				if (konto.getUvaartIId() != null) {
+					Uvaart uvaart = em.find(Uvaart.class, konto.getUvaartIId());
+					if (!Helper.isOneOf(uvaart.getCNr(),
+							FinanzServiceFac.UVAART_NICHT_ZUTREFFEND,
+							FinanzServiceFac.UVAART_ZAHLLASTKONTO)) {
+						continue;
 					}
 				}
+
+				// Eine Eroeffnungsbuchung darf auf ein Steuerkonto
+				// gemacht werden
+				// PJ 2012/0477
+				FLRFinanzBuchung buchung = detail.getFlrbuchung();
+				if (FinanzFac.BUCHUNGSART_EROEFFNUNG.equals(buchung
+						.getBuchungsart_c_nr()))
+					continue;
+
+				// Zahllastkonto darf auf USt/VSt-Konto buchen
+				if (isZahllastBuchung(detail1))
+					continue;
+
+				String kontoNr = detail.getFlrkonto().getC_nr();
+				String gegenkontoNr = konto.getCNr();
+				String info = createBuchungsInfoForException(buchung);
+				Konto stkKonto = em.find(Konto.class, kontoIId);
+				String stkInfo = "Steuerkategorie: " + stk.getCBez() + "(cnr:"
+						+ stk.getCNr() + "), " + "Pr\u00fcfkonto: "
+						+ stkKonto.getCBez() + "(cnr:" + stkKonto.getCNr()
+						+ ").";
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_FINANZ_EXPORT_UST_KONTO_NICHT_DEFINIERT,
+						stkInfo
+								+ "\n"
+								+ "Buchung: "
+								+ info
+								+ "Ung\u00FCltiges Konto "
+								+ gegenkontoNr
+								+ " in Buchung auf Steuerkonto "
+								+ kontoNr
+								+ "\n"
+								+ HelperServer.printBuchungssatz(
+										buchungdetails, getFinanzFac(), null));
 			}
 		}
+		session.close();
 	}
 
-	private boolean istKeinKontoVon(Integer[] kontoIIds, Integer id) {
-		boolean found = false;
-		for (int i = 0; i < kontoIIds.length; i++) {
-			if (kontoIIds[i] != null) {
-				if (kontoIIds[i].compareTo(id) == 0) {
-					found = true;
-					break;
-				}
-			}
-		}
-		return !found;
+	private boolean isZahllastBuchung(BuchungdetailDto buchungDetailDto) {
+		Konto konto1 = em.find(Konto.class, buchungDetailDto.getKontoIId());
+		Konto konto2 = em.find(Konto.class,
+				buchungDetailDto.getKontoIIdGegenkonto());
+
+		if (isZahllastBuchungImpl(konto1, konto2)
+				|| isZahllastBuchungImpl(konto2, konto1))
+			return true;
+
+		return false;
 	}
+
+	private boolean isZahllastBuchungImpl(Konto konto1, Konto konto2) {
+		return FinanzServiceFac.KONTOART_FA_ZAHLLAST.equals(konto1
+				.getKontoartCNr())
+				&& Helper.isOneOf(konto2.getKontoartCNr(),
+						FinanzServiceFac.KONTOART_UST,
+						FinanzServiceFac.KONTOART_VST);
+	}
+
+	private String createBuchungsInfoForException(FLRFinanzBuchung buchung) {
+		String info = String.format("%s %s, %s, %s%n", buchung
+				.getFlrfbbelegart() == null ? "" : buchung.getFlrfbbelegart()
+				.getC_nr(), buchung.getC_belegnummer().trim(), buchung
+				.getBuchungsart_c_nr().trim(), buchung.getD_buchungsdatum());
+		return info;
+	};
 
 	private BigDecimal umrechnen(BigDecimal betrag, String waehrung,
 			ReportUvaKriterienDto krit, TheClientDto theClientDto)
@@ -4527,8 +5111,6 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 		this.useCase = UC_LIQUIDITAET;
 		this.index = -1;
 
-		
-	
 		ArrayList<Object> alDaten = new ArrayList<Object>();
 
 		Calendar c = Calendar.getInstance();
@@ -4650,19 +5232,19 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 								.rechnungFindByAuftragIId(
 										flrRechnung.getFlrauftrag().getI_id());
 
-						for (int i = 0; i < rechnungDtos.length; i++) {
-							if (!rechnungDtos[i].getStatusCNr().equals(
-									RechnungFac.STATUS_STORNIERT)) {
-								if (rechnungDtos[i].getRechnungartCNr().equals(
-										RechnungFac.RECHNUNGART_ANZAHLUNG)
-										&& rechnungDtos[i].getNWertfw() != null) {
-									offen = offen.subtract(rechnungDtos[i]
-											.getNWertfw());
-									offenUst = offenUst
-											.subtract(rechnungDtos[i]
-													.getNWertustfw());
-								}
-							}
+						for (RechnungDto anzRe : rechnungDtos) {
+							if (anzRe.getStatusCNr().equals(
+									RechnungFac.STATUS_STORNIERT))
+								continue;
+							if (!anzRe.getRechnungartCNr().equals(
+									RechnungFac.RECHNUNGART_ANZAHLUNG))
+								continue;
+							if (anzRe.getNWertfw() == null)
+								continue;
+
+							offen = offen.subtract(anzRe.getNWertfw());
+							offenUst = offenUst.subtract(anzRe.getNWertustfw());
+
 						}
 
 					}
@@ -4974,6 +5556,26 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 
 						BigDecimal offenUst = flrEingangsrechnungReport
 								.getN_ustbetragfw().subtract(bdBezahltUstFW);
+
+						if (eDto.getEingangsrechnungartCNr()
+								.equals(EingangsrechnungFac.EINGANGSRECHNUNGART_SCHLUSSZAHLUNG)) {
+							for (EingangsrechnungDto anzRe : getEingangsrechnungFac()
+									.eingangsrechnungFindByBestellungIId(
+											eDto.getBestellungIId())) {
+								if (!anzRe
+										.getEingangsrechnungartCNr()
+										.equals(EingangsrechnungFac.EINGANGSRECHNUNGART_ANZAHLUNG))
+									continue;
+								if (anzRe.getStatusCNr().equals(
+										EingangsrechnungFac.STATUS_STORNIERT))
+									continue;
+
+								offen = offen.subtract(anzRe.getNBetragfw()
+										.subtract(anzRe.getNUstBetragfw()));
+								offenUst = offenUst.subtract(anzRe
+										.getNUstBetragfw());
+							}
+						}
 
 						offen = getLocaleFac().rechneUmInAndereWaehrungZuDatum(
 								offen, eDto.getWaehrungCNr(),
@@ -5474,12 +6076,23 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 									continue;
 								}
 
-								posWert = posWert
-										.add(weposDtos[i]
-												.getNGeliefertemenge()
-												.multiply(
-														weposDtos[i]
-																.getNGelieferterpreis()));
+								// SP3176
+								if (weposDtos[i].getBPreiseErfasst() == true
+										&& weposDtos[i].getNGelieferterpreis() != null) {
+
+									posWert = posWert
+											.add(weposDtos[i]
+													.getNGeliefertemenge()
+													.multiply(
+															weposDtos[i]
+																	.getNGelieferterpreis()));
+								} else {
+									posWert = besPos
+											.getNNettogesamtPreisminusRabatte()
+											.multiply(
+													weposDtos[i]
+															.getNGeliefertemenge());
+								}
 							}
 
 						}
@@ -5570,9 +6183,8 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 								cal.get(Calendar.YEAR));
 						oZeile[REPORT_LV_WOCHE] = new Integer(
 								cal.get(Calendar.WEEK_OF_YEAR));
-						oZeile[REPORT_LV_JAHR] = Helper
-								.berechneJahrDerKW(cal);
-						
+						oZeile[REPORT_LV_JAHR] = Helper.berechneJahrDerKW(cal);
+
 						alDaten.add(oZeile);
 					}
 				}
@@ -5705,22 +6317,26 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 		String q = "from FLRFinanzBuchungDetail buchungdetail LEFT OUTER JOIN buchungdetail.flrbuchung as b LEFT OUTER JOIN buchungdetail.flrkonto as k ";
-		q += "where b.d_buchungsdatum<'" + Helper.formatDateWithSlashes(Helper.addiereTageZuDatum(tStichtag, 1)) + "' ";
+		q += "where b.d_buchungsdatum<'"
+				+ Helper.formatDateWithSlashes(Helper.addiereTageZuDatum(
+						tStichtag, 1)) + "' ";
 		q += "and b.geschaeftsjahr_i_geschaeftsjahr=" + geschaeftsjahr + " ";
 		q += "and b.t_storniert is null ";
-		if(kontoIId != null) {
+		if (kontoIId != null) {
 			q += "and k.i_id=" + kontoIId + " ";
 		} else {
 			q += "and k.mandant_c_nr='" + theClientDto.getMandant() + "' ";
 			q += "and k.kontotyp_c_nr='" + kontotypCNr + "' ";
 		}
-		q += "and " + BuchungDetailQueryBuilder.buildNurOffeneBuchungDetails("buchungdetail");
+		q += "and "
+				+ BuchungDetailQueryBuilder.buildNurOffeneBuchungDetails(
+						"buchungdetail", tStichtag);
 		q += "order by ";
-		if(sortAlphabethisch) {
+		if (sortAlphabethisch) {
 			q += "k.c_bez,";
 		}
-		q+="k.c_nr, buchungdetail.i_ausziffern, b.c_belegnummer, b.d_buchungsdatum";
-		
+		q += "k.c_nr, buchungdetail.i_ausziffern, b.c_belegnummer, b.d_buchungsdatum";
+
 		List<?> results = session.createQuery(q).list();
 
 		Iterator<?> resultListIterator = results.iterator();
@@ -5785,7 +6401,7 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 			al.add(tempdata.clone());
 			tempdata = new Object[REPORT_OFFENEPOSTEN_ANZAHL_SPALTEN];
 		}
-		
+
 		data = al.toArray(new Object[0][]);
 
 		// if (print != null) {
@@ -5935,7 +6551,7 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 
 			cBilanzstichtag.set(Calendar.YEAR, krit.getIGeschaeftsjahr());
 
-			cBilanzstichtag.set(Calendar.MONTH, krit.getIPeriode()-1);
+			cBilanzstichtag.set(Calendar.MONTH, krit.getIPeriode() - 1);
 			cBilanzstichtag.set(Calendar.DAY_OF_MONTH,
 					cBilanzstichtag.getActualMaximum(Calendar.DAY_OF_MONTH));
 			cBilanzstichtag.set(Calendar.HOUR_OF_DAY, 0);
@@ -6035,7 +6651,8 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 	}
 
 	private BigDecimal getKontoSaldo(ReportErfolgsrechnungKriterienDto krit,
-			Konto konto, ErgebnisgruppeSaldo es, int saldoart, TheClientDto theClientDto) {
+			Konto konto, ErgebnisgruppeSaldo es, int saldoart,
+			TheClientDto theClientDto) {
 		List<Konto> konten = new ArrayList<Konto>();
 		konten.add(konto);
 		ReportErfolgsrechnungKriterienDto krit1 = new ReportErfolgsrechnungKriterienDto();
@@ -6057,9 +6674,11 @@ public class FinanzReportFacBean extends LPReport implements FinanzReportFac,
 			break;
 		}
 		if (es.ergebnisgruppeDto.getITyp() == FinanzFac.ERGEBNISGRUPPE_TYP_BILANZGRUPPE_POSITIV)
-			return getSammelSaldo(krit1, bKummuliert, konten, true,	theClientDto);
+			return getSammelSaldo(krit1, bKummuliert, konten, true,
+					theClientDto);
 		else if (es.ergebnisgruppeDto.getITyp() == FinanzFac.ERGEBNISGRUPPE_TYP_BILANZGRUPPE_NEGATIV)
-			return getSammelSaldo(krit1, bKummuliert, konten, false, theClientDto);
+			return getSammelSaldo(krit1, bKummuliert, konten, false,
+					theClientDto);
 		else
 			return getSammelSaldo(krit1, bKummuliert, konten, theClientDto);
 	}

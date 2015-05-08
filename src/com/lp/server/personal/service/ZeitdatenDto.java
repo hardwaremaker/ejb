@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -64,6 +64,24 @@ public class ZeitdatenDto implements Serializable, IIId {
 	private String cBelegartnr;
 	private String cWowurdegebucht;
 	
+	private Integer zeitdatenIId_BisZeit=null;
+	public Integer getZeitdatenIId_BisZeit() {
+		return zeitdatenIId_BisZeit;
+	}
+
+	public void setZeitdatenIId_BisZeit(Integer zeitdatenIId_BisZeit) {
+		this.zeitdatenIId_BisZeit = zeitdatenIId_BisZeit;
+	}
+
+	public Timestamp gettZeit_Bis() {
+		return tZeit_Bis;
+	}
+
+	public void settZeit_Bis(Timestamp tZeit_Bis) {
+		this.tZeit_Bis = tZeit_Bis;
+	}
+
+	private Timestamp tZeit_Bis=null;
 	
 	//Wird nur fuer Stifzeiterfassung F630 verwendet
 	public boolean bFertigFuerLossollarbeitsplan=false;
@@ -293,25 +311,7 @@ public class ZeitdatenDto implements Serializable, IIId {
 			for (int o = 0; o < daten.length; o++) {
 				ZeitdatenDto orig = daten[o];
 
-				ZeitdatenDto klon = new ZeitdatenDto();
-				klon.setArtikelIId(orig.getArtikelIId());
-				klon.setBAutomatikbuchung(orig.getBAutomatikbuchung());
-				klon.setBTaetigkeitgeaendert(orig.getBTaetigkeitgeaendert());
-				klon.setCBelegartnr(orig.getCBelegartnr());
-				klon.setCBemerkungZuBelegart(orig.getCBemerkungZuBelegart());
-				klon.setCWowurdegebucht(orig.getCWowurdegebucht());
-				klon.setHardwareIId(orig.getHardwareIId());
-				klon.setIBelegartid(orig.getIBelegartid());
-				klon.setIBelegartpositionid(orig.getIBelegartpositionid());
-				klon.setIId(orig.getIId());
-			
-				klon.setPersonalIId(orig.getPersonalIId());
-				klon.setPersonalIIdAendern(orig.getPersonalIIdAendern());
-				klon.setPersonalIIdAnlegen(orig.getPersonalIIdAnlegen());
-				klon.setTaetigkeitIId(orig.getTaetigkeitIId());
-				klon.setArtikelIId(orig.getArtikelIId());
-				klon.setTZeit(orig.getTZeit());
-				klon.setXKommentar(orig.getXKommentar());
+				ZeitdatenDto klon = clone(orig);
 
 				kopie[o] = klon;
 			}
@@ -320,6 +320,29 @@ public class ZeitdatenDto implements Serializable, IIId {
 		} else {
 			return null;
 		}
+	}
+
+	public static ZeitdatenDto clone(ZeitdatenDto orig) {
+		ZeitdatenDto klon = new ZeitdatenDto();
+		klon.setArtikelIId(orig.getArtikelIId());
+		klon.setBAutomatikbuchung(orig.getBAutomatikbuchung());
+		klon.setBTaetigkeitgeaendert(orig.getBTaetigkeitgeaendert());
+		klon.setCBelegartnr(orig.getCBelegartnr());
+		klon.setCBemerkungZuBelegart(orig.getCBemerkungZuBelegart());
+		klon.setCWowurdegebucht(orig.getCWowurdegebucht());
+		klon.setHardwareIId(orig.getHardwareIId());
+		klon.setIBelegartid(orig.getIBelegartid());
+		klon.setIBelegartpositionid(orig.getIBelegartpositionid());
+		klon.setIId(orig.getIId());
+
+		klon.setPersonalIId(orig.getPersonalIId());
+		klon.setPersonalIIdAendern(orig.getPersonalIIdAendern());
+		klon.setPersonalIIdAnlegen(orig.getPersonalIIdAnlegen());
+		klon.setTaetigkeitIId(orig.getTaetigkeitIId());
+		klon.setArtikelIId(orig.getArtikelIId());
+		klon.setTZeit(orig.getTZeit());
+		klon.setXKommentar(orig.getXKommentar());
+		return klon;
 	}
 
 	public int hashCode() {

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -54,6 +54,16 @@ public class KundesokoDto implements Serializable {
 	private Integer personalIIdAendern;
 	private Timestamp tAendern;
 	private String cKundeartikelnummer;
+
+	private Short bWirktNichtFuerPreisfindung;
+
+	public Short getBWirktNichtFuerPreisfindung() {
+		return bWirktNichtFuerPreisfindung;
+	}
+
+	public void setBWirktNichtFuerPreisfindung(Short bWirktNichtFuerPreisfindung) {
+		this.bWirktNichtFuerPreisfindung = bWirktNichtFuerPreisfindung;
+	}
 
 	public Integer getIId() {
 		return iId;

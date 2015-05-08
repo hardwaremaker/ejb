@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -47,8 +47,8 @@ public interface FinanzFac {
 
 	// die anzahl der nachkommastellen ist fix!!!
 	public static final int NACHKOMMASTELLEN = 2;
-	public static final int NACHKOMMASTELLEN_I = new Integer(NACHKOMMASTELLEN) ;
-	
+	public static final int NACHKOMMASTELLEN_I = new Integer(NACHKOMMASTELLEN);
+
 	public static final int MAX_BANKVERBINDUNG_BANKKONTONUMMER = 25;
 	public static final int MAX_BANKVERBINDUNG_IBAN = 34;
 	public static final int MAX_BANKVERBINDUNG_BEZEICHNUNG = 40;
@@ -72,7 +72,7 @@ public interface FinanzFac {
 	public static final int ERGEBNISGRUPPE_TYP_SEITENUMBRUCH = 3;
 	public static final int ERGEBNISGRUPPE_TYP_BILANZGRUPPE_POSITIV = 4;
 	public static final int ERGEBNISGRUPPE_TYP_BILANZGRUPPE_NEGATIV = 5;
-	
+
 	public static final String UVA_ABRECHNUNGSZEITRAUM_MONAT = "Monatlich";
 	public static final String UVA_ABRECHNUNGSZEITRAUM_QUARTAL = "Quartal";
 	public static final String UVA_ABRECHNUNGSZEITRAUM_JAHR = "J\u00E4hrlich";
@@ -82,21 +82,23 @@ public interface FinanzFac {
 	public static final String FILTER_KONTO_OHNE_MITLAUFENDE = "OHNE_MITLAUFENDE";
 	public static final String FILTER_KONTO_OHNE_UST_VST_KONTEN_AUSSER_MWSTSATZBEZ = "OHNE_UST_VST_KONTEN_AUSSER_MWSTSATZBEZ";
 
-	//public static final String BUCHUNGSART_AUSGANGSRECHNUNG = "Ausgangsrechnung";
+	// public static final String BUCHUNGSART_AUSGANGSRECHNUNG =
+	// "Ausgangsrechnung";
 	public static final String BUCHUNGSART_BANKBUCHUNG = "Bankbuchung";
-	//public static final String BUCHUNGSART_GUTSCHRIFT = "Gutschrift";
-	//public static final String BUCHUNGSART_EINGANGSRECHNUNG = "Eingangsrechnung";
+	// public static final String BUCHUNGSART_GUTSCHRIFT = "Gutschrift";
+	// public static final String BUCHUNGSART_EINGANGSRECHNUNG =
+	// "Eingangsrechnung";
 	public static final String BUCHUNGSART_KASSENBUCHUNG = "Kassenbuchung";
 	public static final String BUCHUNGSART_UMBUCHUNG = "Umbuchung";
 	public static final String BUCHUNGSART_EROEFFNUNG = "Eroeffnung";
 	public static final String BUCHUNGSART_BUCHUNG = "Buchung";
-	public static final String BUCHUNGSART_SALDOVORTRAG = "Saldovortrag" ;
-	
+	public static final String BUCHUNGSART_SALDOVORTRAG = "Saldovortrag";
+	public static final String BUCHUNGSART_MWST_ABSCHLUSS = "Mwst-Abschluss";
+
 	public static final String KONTO_SORTIERUNG_DATUM = "Datum";
 	public static final String KONTO_SORTIERUNG_AUSZUG = "Auszug";
 	public static final String KONTO_SORTIERUNG_BELEG = "Beleg";
-	
-	
+
 	public static final String FLR_KONTO_I_ID = "i_id";
 	public static final String FLR_KONTO_MANDANT_C_NR = "mandant_c_nr";
 	public static final String FLR_KONTO_C_NR = "c_nr";
@@ -115,9 +117,10 @@ public interface FinanzFac {
 	public static final String FLR_KONTO_I_ID_WEITERFUEHRENDBILANZ = "konto_i_id_weiterfuehrendbilanz";
 	public static final String FLR_KONTO_B_MANUELLBEBUCHBAR = "b_manuellbebuchbar";
 	public static final String FLR_KONTO_UVAART_I_ID = "uvaart_i_id";
+	public static final String FLR_KONTO_FLRUVAART = "flruvaart";
 	public static final String FLR_KONTO_FINANZAMT_I_ID = "finanzamt_i_id";
 	public static final String FLR_KONTO_STEUERKATEGORIE_C_NR = "flrsteuerkategorie.c_nr";
-	
+
 	public static final String FLR_FINANZAMT_I_ID = "i_id";
 	public static final String FLR_FINANZAMT_MANDANT_C_NR = "mandant_c_nr";
 	public static final String FLR_FINANZAMT_C_STEUERNUMMER = "c_steuernummer";
@@ -151,7 +154,7 @@ public interface FinanzFac {
 	public static final String FLR_BUCHUNG_T_STORNIERT = "t_storniert";
 	public static final String FLR_BUCHUNG_GESCHAEFTSJAHR_I_GESCHAEFTSJAHR = "geschaeftsjahr_i_geschaeftsjahr";
 	public static final String FLR_BUCHUNG_FLRKOSTENSTELLE = "flrkostenstelle";
-	public static final String FLR_BUCHUNG_AUTOMBUCHUNG_EB = "b_autombuchungeb" ;
+	public static final String FLR_BUCHUNG_AUTOMBUCHUNG_EB = "b_autombuchungeb";
 	public static final String FLR_BUCHUNGDETAIL_I_ID = "i_id";
 	public static final String FLR_BUCHUNGDETAIL_BUCHUNG_I_ID = "buchung_i_id";
 	public static final String FLR_BUCHUNGDETAIL_KONTO_I_ID = "konto_i_id";
@@ -163,8 +166,11 @@ public interface FinanzFac {
 	public static final String FLR_BUCHUNGDETAIL_FLRKONTO = "flrkonto";
 	public static final String FLR_BUCHUNGDETAIL_I_AUSZIFFERN = "i_ausziffern";
 	public static final String FLR_BUCHUNGDETAIL_KOMMENTAR = "kommentar";
+	public static final String FLR_BUCHUNGDETAIL_BUCHUNGBELEGART = "buchungbelegart" ;
+	public static final String FLR_BUCHUNGDETAIL_BUCHUNGART = "buchart.c_kbez" ;
+	public static final String FLR_BUCHUNGDETAIL_BELEGART = "belegart.c_kbez" ;
 	
-	public static final String FLR_UVAART_I_ID = "i_id";
+ 	public static final String FLR_UVAART_I_ID = "i_id";
 	public static final String FLR_UVAART_C_NR = "c_nr";
 	public static final String FLR_UVAART_C_KENNZEICHEN = "c_kennzeichen";
 	public static final String FLR_UVAART_I_SORT = "i_sort";
@@ -200,7 +206,7 @@ public interface FinanzFac {
 	public static final String FLR_ERGEBNISGRUPPE_ERGEBNISGRUPPE_I_ID_SUMME = "ergebnisgruppe_i_id_summe";
 	public static final String FLR_ERGEBNISGRUPPE_B_SUMME_NEGATIV = "b_summe_negativ";
 	public static final String FLR_ERGEBNISGRUPPE_B_INVERTIERT = "b_invertiert";
-	public static final String FLR_ERGEBNISGRUPPE_B_BILANZGRUPPE = "b_bilanzgruppe" ;
+	public static final String FLR_ERGEBNISGRUPPE_B_BILANZGRUPPE = "b_bilanzgruppe";
 	public static final String FLR_ERGEBNISGRUPPE_B_PROZENTBASIS = "b_prozentbasis";
 	public static final String FLR_ERGEBNISGRUPPE_I_TYP = "i_typ";
 	public static final String FLR_ERGEBNISGRUPPE_I_REIHUNG = "i_reihung";
@@ -230,14 +236,13 @@ public interface FinanzFac {
 	public static final String FLR_MAHNSPESEN_MAHNSTUFE_I_ID = "mahnstufe_i_id";
 	public static final String FLR_MAHNSPESEN_N_MAHNSPESEN = "n_mahnspesen";
 
-	
 	public static final String FLR_KONTOLAENDERART_ID_COMP = "id_comp";
 	public static final String FLR_KONTOLAENDERART_KONTO_I_ID = "konto_i_id";
 	public static final String FLR_KONTOLAENDERART_LAENDERART_C_NR = "laenderart_c_nr";
 	public static final String FLR_KONTOLAENDERART_FLRKONTO = "flrkonto";
 	public static final String FLR_KONTOLAENDERART_FLRKONTOUEBERSETZT = "flrkonto_uebersetzt";
 	public static final String FLR_KONTOLAENDERART_FINANZAMT_I_ID = "finanzamt_i_id";
-	
+
 	public static final String FLR_KONTOLAND_ID_COMP = "id_comp";
 	public static final String FLR_KONTOLAND_KONTO_I_ID = "konto_i_id";
 	public static final String FLR_KONTOLAND_FLRLAND = "flrland";
@@ -281,31 +286,31 @@ public interface FinanzFac {
 	public KontoDtoSmall kontoFindByPrimaryKeySmall(Integer iId)
 			throws EJBExceptionLP, RemoteException;
 
-	@Deprecated	
+	@Deprecated
 	public KontoDto kontoFindByCnrMandant(String sCnr, String sMandant,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public FinanzamtDto createFinanzamt(FinanzamtDto finanzamtDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public FinanzamtDto createFinanzamt(FinanzamtDto finanzamtDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void removeFinanzamt(FinanzamtDto finanzamtDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public void removeFinanzamt(FinanzamtDto finanzamtDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public FinanzamtDto updateFinanzamt(FinanzamtDto finanzamtDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public FinanzamtDto updateFinanzamt(FinanzamtDto finanzamtDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public FinanzamtDto finanzamtFindByPrimaryKey(Integer partnerIId,
-			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+			String mandantCNr, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public FinanzamtDto finanzamtFindByPartnerIIdMandantCNr(Integer partnerIId,
-			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+			String mandantCNr, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public FinanzamtDto finanzamtFindByPartnerIIdMandantCNrOhneExc(
 			Integer partnerIId, String mandantCNr, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
-	
+
 	public FinanzamtDto finanzamtFindByPartnerIIdMandantCNrOhneExcWithNull(
 			Integer partnerIId, String mandantCNr);
 
@@ -324,19 +329,19 @@ public interface FinanzFac {
 			throws EJBExceptionLP, RemoteException;
 
 	public BankverbindungDto bankverbindungFindByKontoIIdOhneExc(
-			Integer kontoIId) throws EJBExceptionLP, RemoteException;
+			Integer kontoIId);
 
 	public KassenbuchDto createKassenbuch(KassenbuchDto kassenbuchDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void removeKassenbuch(KassenbuchDto kassenbuchDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public void removeKassenbuch(KassenbuchDto kassenbuchDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public KassenbuchDto updateKassenbuch(KassenbuchDto kassenbuchDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public KassenbuchDto kassenbuchFindByPrimaryKey(Integer iId, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public KassenbuchDto kassenbuchFindByPrimaryKey(Integer iId,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void pruefeZykel(KontoDto kontoDto) throws EJBExceptionLP,
 			RemoteException;
@@ -369,39 +374,50 @@ public interface FinanzFac {
 	 * @return KontoDto passend zur cNrI
 	 * @throws RemoteException
 	 * 
-	 * @deprecated use {@link #kontoFindByCnrKontotypMandantOhneExc(String, String, String, TheClientDto)}
-	 * @see #kontoFindByCnrKontotypMandantOhneExc(String, String, String, TheClientDto)
+	 * @deprecated use
+	 *             {@link #kontoFindByCnrKontotypMandantOhneExc(String, String, String, TheClientDto)}
+	 * @see #kontoFindByCnrKontotypMandantOhneExc(String, String, String,
+	 *      TheClientDto)
 	 */
 	@Deprecated
 	public KontoDto kontoFindByCnrMandantOhneExc(String cNrI, String sMandantI,
 			TheClientDto theClientDto) throws RemoteException;
 
-	public KontoDto kontoFindByCnrKontotypMandantOhneExc(
-		String cNrI, String sKontoTypCnr, String sMandantI, TheClientDto theClientDto) throws RemoteException;
+	public KontoDto kontoFindByCnrKontotypMandantOhneExc(String cNrI,
+			String sKontoTypCnr, String sMandantI, TheClientDto theClientDto)
+			throws RemoteException;
 
 	/**
-	 * Ist das Konto ein mitlaufendes Konto?
-	 * Mitlaufende Konten sind jene, welche in den Steuerkategorien
-	 * als Forderungs- und Verbindlichkeitskonten hinterlegt sind.
+	 * Ist das Konto ein mitlaufendes Konto? Mitlaufende Konten sind jene,
+	 * welche in den Steuerkategorien als Forderungs- und Verbindlichkeitskonten
+	 * hinterlegt sind.
+	 * 
 	 * @param kontoIId
 	 * @return true wenn es ein mitlaufendes Konto ist
 	 * @throws RemoteException
 	 */
 	public boolean isMitlaufendesKonto(Integer kontoIId) throws RemoteException;
-	
+
 	/**
 	 * Alle Konten vom angegebenen Typ f&uuml;r den Mandanten zur&uuml;ckliefern
 	 * 
-	 * @param kontotypCNr der gesuchte Kontotyp #see {@link FinanzServiceFac#KONTOTYP_DEBITOR}
-	 * @param mandantCNr der gesuchte Mandant
+	 * @param kontotypCNr
+	 *            der gesuchte Kontotyp #see
+	 *            {@link FinanzServiceFac#KONTOTYP_DEBITOR}
+	 * @param mandantCNr
+	 *            der gesuchte Mandant
 	 * @return ein (leeres) Array von Konten des gesuchten Kontotyps
 	 * @throws EJBExceptionLP
 	 */
-	public KontoDto[] kontoFindAllByKontotypMandant(String kontotypCNr, String mandantCNr) throws EJBExceptionLP ;
+	public KontoDto[] kontoFindAllByKontotypMandant(String kontotypCNr,
+			String mandantCNr) throws EJBExceptionLP;
 
-	public KontoDto[] kontoFindAllByKontoartMandant(String kontoartCNr,	String mandantCNr) throws EJBExceptionLP ;
-	
-	public KontoDto[] kontoFindAllByKontoartMandantFinanzamt(String kontoartCNr,	String mandantCNr, Integer finanzamtIid) throws EJBExceptionLP ;
+	public KontoDto[] kontoFindAllByKontoartMandant(String kontoartCNr,
+			String mandantCNr) throws EJBExceptionLP;
+
+	public KontoDto[] kontoFindAllByKontoartMandantFinanzamt(
+			String kontoartCNr, String mandantCNr, Integer finanzamtIid)
+			throws EJBExceptionLP;
 
 	public Integer getAnzahlStellenVonKontoNummer(String kontotypCNr,
 			String mandantCNr) throws EJBExceptionLP, RemoteException;
@@ -417,25 +433,28 @@ public interface FinanzFac {
 			KontolaenderartDto kontolaenderartDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public KontolaenderartDto kontolaenderartFindByPrimaryKey(Integer kontoIId, String laenderartCNr,
-			Integer finanzamtIId, String mandantCNr) throws EJBExceptionLP, RemoteException;
+	public KontolaenderartDto kontolaenderartFindByPrimaryKey(Integer kontoIId,
+			String laenderartCNr, Integer finanzamtIId, String mandantCNr)
+			throws EJBExceptionLP, RemoteException;
 
-	public KontolaenderartDto kontolaenderartFindByPrimaryKeyOhneExc(Integer kontoIId, String laenderartCNr,
-			Integer finanzamtIId, String mandantCNr) throws EJBExceptionLP,	RemoteException;
+	public KontolaenderartDto kontolaenderartFindByPrimaryKeyOhneExc(
+			Integer kontoIId, String laenderartCNr, Integer finanzamtIId,
+			String mandantCNr) throws EJBExceptionLP, RemoteException;
 
 	public void pruefeBuchungszeitraum(Date d, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public KontoDto createKontoFuerPartnerAutomatisch(PartnerDto partnerDto,
-			String kontotypCNr, boolean kontoAnlegen, String kontonummerVorgabe, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+			String kontotypCNr, boolean kontoAnlegen,
+			String kontonummerVorgabe, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public void updateKontoDtoUIDaten(Integer kontoIIdI,
 			String cLetztesortierungI, Integer iLetzteselektiertebuchungI)
 			throws EJBExceptionLP, RemoteException;
 
-	public int getAnzahlDerFinanzaemter(TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+	public int getAnzahlDerFinanzaemter(TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public void vertauscheErgebnisgruppen(Integer iIdEG1I, Integer iIdEG2I,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
@@ -447,35 +466,37 @@ public interface FinanzFac {
 			Integer bankIId, String mandantCNr, String cKontonummer)
 			throws EJBExceptionLP, RemoteException;
 
-	public void createKontoland(KontolandDto kontolandDto, TheClientDto theClientDto)
-			throws RemoteException;
+	public void createKontoland(KontolandDto kontolandDto,
+			TheClientDto theClientDto) throws RemoteException;
 
 	public void removeKontoland(KontolandDto kontolandDto)
 			throws RemoteException;
 
-	public void updateKontoland(KontolandDto kontolandDto, TheClientDto theClientDto)
-			throws RemoteException;
+	public void updateKontoland(KontolandDto kontolandDto,
+			TheClientDto theClientDto) throws RemoteException;
 
-	public void updateKontolands(KontolandDto[] kontolandDtos, TheClientDto theClientDto)
-			throws RemoteException;
+	public void updateKontolands(KontolandDto[] kontolandDtos,
+			TheClientDto theClientDto) throws RemoteException;
 
 	public KontolandDto kontolandFindByPrimaryKey(Integer kontoIId,
 			Integer LandIId) throws RemoteException;
-	
+
 	public KontolandDto kontolandFindByPrimaryKeyOhneExc(Integer kontoIId,
 			Integer LandIId) throws RemoteException;
 
 	/**
-	 * Handelt es sich beim angegebenen Konto um eines welches einen Vorperiodensaldo unterstuetzt
+	 * Handelt es sich beim angegebenen Konto um eines welches einen
+	 * Vorperiodensaldo unterstuetzt
 	 * 
 	 * @param kontoIId
 	 * @param theClientDto
-	 * @return true wenn das Konto einen Vorperiodensaldo kennt. Also beispielsweise Bankkonto oder
-	 * Kassenbuch
+	 * @return true wenn das Konto einen Vorperiodensaldo kennt. Also
+	 *         beispielsweise Bankkonto oder Kassenbuch
 	 */
-	public boolean isKontoMitSaldo(Integer kontoIId, TheClientDto theClientDto) ;
+	public boolean isKontoMitSaldo(Integer kontoIId, TheClientDto theClientDto);
 
-	public KassenbuchDto kassenbuchFindByKontoIIdOhneExc(Integer kontoIId) throws EJBExceptionLP ;
+	public KassenbuchDto kassenbuchFindByKontoIIdOhneExc(Integer kontoIId)
+			throws EJBExceptionLP;
 
 	public FinanzamtDto[] finanzamtFindAllByMandantCNr(TheClientDto theClientDto);
 
@@ -483,9 +504,11 @@ public interface FinanzFac {
 			Integer finanzamtIId, String laenderart, TheClientDto theClientDto);
 
 	public KontoImporterResult importCsv(List<String[]> allLines,
-			boolean checkOnly, TheClientDto theClientDto) ;
+			boolean checkOnly, TheClientDto theClientDto);
 
-	public ErgebnisgruppeDto[] ergebnisgruppeFindAll(TheClientDto theClientDto, boolean bBilanzgruppe)
-		throws EJBExceptionLP;
+	public ErgebnisgruppeDto[] ergebnisgruppeFindAll(TheClientDto theClientDto,
+			boolean bBilanzgruppe) throws EJBExceptionLP;
+
+	public KassenbuchDto getHauptkassabuch(TheClientDto theClientDto);
 
 }

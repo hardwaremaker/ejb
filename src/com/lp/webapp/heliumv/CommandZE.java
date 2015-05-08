@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -33,12 +33,10 @@
 package com.lp.webapp.heliumv;
 
 import java.sql.Timestamp;
-import java.util.Locale;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.lp.server.benutzer.service.LogonFac;
 import com.lp.server.personal.service.ZeitdatenDto;
 import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.system.service.TheClientDto;
@@ -70,6 +68,7 @@ import com.lp.webapp.frame.TheClient;
 public class CommandZE extends Command {
 
 	private static final String sUser = "lpwebappzemecs";
+	private static final String sPassword = "lpwebappzemecs";
 
 	public CommandZE(String sJSPI) {
 		super(sJSPI);
@@ -107,8 +106,8 @@ public class CommandZE extends Command {
 			
 			TheClientDto theclientDto = getLogonFac()
 					.logon( Helper.getFullUsername(sUser), 			
-							Helper.getMD5Hash((sUser + new String("lpwebappzemecs")).toCharArray()),
-							getMandantFac().getLocaleDesHauptmandanten(), null, null,
+							Helper.getMD5Hash((sUser + sPassword).toCharArray()),
+							getMandantFac().getLocaleDesHauptmandanten(), null,
 							new Timestamp(System.currentTimeMillis()));
 
 
@@ -127,8 +126,10 @@ public class CommandZE extends Command {
 			zeitdatenDto.setPersonalIId(getPersonalFac()
 					.personalFindByCAusweis(dZE.getSAusweisnr()).getIId());
 
-			getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true,false,
+			getZeiterfassungsFac().createZeitdaten(zeitdatenDto, true, true,false,false,
 					theclientDto);
+			
+			getLogonFac().logout(theclientDto);
 		}
 
 		return getSJSPNext();

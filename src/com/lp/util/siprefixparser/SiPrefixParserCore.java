@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -54,28 +54,37 @@ public class SiPrefixParserCore {
 	private Map<String, Integer> prefixScales;
 	private String regex;
 	private int precision;
+	private boolean forceZeroUnit;
 
 	/**
 	 * 
 	 * @param prefixScales
 	 * @param zeroScales
 	 * @param precision
+	 * @param forceZeroUnit true, wenn die Nicht-SI-Einheit (zB. m f&uuml;r Meter) immer enthalten sein muss.
 	 */
-	public SiPrefixParserCore(Map<String, Integer> prefixScales, List<String> zeroScales, int precision) {
+	public SiPrefixParserCore(Map<String, Integer> prefixScales, List<String> zeroScales, int precision, boolean forceZeroUnit) {
 		this.prefixScales = prefixScales;
 		Set<String> units = prefixScales.keySet();
 		this.precision = precision;
+		this.forceZeroUnit = forceZeroUnit;
 		regex = createRegexPattern(units, zeroScales);
 	}
 	
-	public SiPrefixParserCore(Map<String, Integer> prefixScales, List<String> zeroScales) {
-		this(prefixScales, zeroScales, PRECISION_DYNAMIC);
+
+	/**
+	 * @param prefixScales 
+	 * @param zeroScales 
+	 * @param forceZeroUnit true, wenn die Nicht-SI-Einheit (zB. m f&uuml;r Meter) immer enthalten sein muss.
+	 */
+	public SiPrefixParserCore(Map<String, Integer> prefixScales, List<String> zeroScales, boolean forceZeroUnit) {
+		this(prefixScales, zeroScales, PRECISION_DYNAMIC, forceZeroUnit);
 	}
 
 	public List<BigDecimalSI> parse(String s) {
 		List<BigDecimalSI> list = new ArrayList<BigDecimalSI>();
 		if(s == null) return list;
-		for(String sub : s.split("[\\s/]")) {
+		for(String sub : s.split("[\\s/]|(?<!\\d),|,(?!\\d)|(,\\z)")) {
 			BigDecimalSI n = parseSubstring(sub);
 			if(n != null) {
 				list.add(n);
@@ -142,7 +151,7 @@ public class SiPrefixParserCore {
 		boolean first = true;
 		sb.append("(");
 		for (String prefix : c) {
-			sb.append((first?"":"|") + prefix);
+			sb.append(first?"":"|").append(prefix);
 			first = false;
 		}
 		sb.append(")");
@@ -156,8 +165,12 @@ public class SiPrefixParserCore {
 		StringBuffer sb = new StringBuffer();
 		
 		sb.append("^("+FIRST_NUMBER_COMA+"|"+FIRST_NUMBER_NO_COMA+")");
-		sb.append("("+PREFIXES+"?"+ZEROS+"?)");
+		sb.append("(").append(PREFIXES).append("?")
+			.append(ZEROS).append(forceZeroUnit ? "+" : "?")
+			.append(")");
 		sb.append(precision == PRECISION_DYNAMIC ? LAST_NUMBER_DYNAMIC : LAST_NUMBER);
+		//TODO LAST_NUMBER nimmt immer den Default von 3 her (siehe Instanzierung),
+		// das sollte eigentlich der uebergebene Wert sein
 		sb.append("$");
 		
 		return sb.toString();

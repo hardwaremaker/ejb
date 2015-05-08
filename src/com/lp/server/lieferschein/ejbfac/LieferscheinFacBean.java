@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -61,8 +61,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
+import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.naming.NamingException;
 import javax.net.ssl.HttpsURLConnection;
@@ -88,6 +90,7 @@ import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.SeriennrChargennrAufLagerDto;
 import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
 import com.lp.server.artikel.service.VerkaufspreisDto;
+import com.lp.server.auftrag.ejb.Auftrag;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragServiceFac;
 import com.lp.server.auftrag.service.AuftragpositionDto;
@@ -100,6 +103,7 @@ import com.lp.server.lieferschein.ejb.Lieferscheinposition;
 import com.lp.server.lieferschein.ejb.Lieferscheinpositionart;
 import com.lp.server.lieferschein.ejb.Lieferscheinstatus;
 import com.lp.server.lieferschein.ejb.Lieferscheintext;
+import com.lp.server.lieferschein.ejb.Verkettet;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferschein;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition;
 import com.lp.server.lieferschein.service.ILieferscheinAviso;
@@ -119,6 +123,8 @@ import com.lp.server.lieferschein.service.LieferscheinstatusDto;
 import com.lp.server.lieferschein.service.LieferscheinstatusDtoAssembler;
 import com.lp.server.lieferschein.service.LieferscheintextDto;
 import com.lp.server.lieferschein.service.LieferscheintextDtoAssembler;
+import com.lp.server.lieferschein.service.VerkettetDto;
+import com.lp.server.partner.ejb.Kunde;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.KundesokoDto;
 import com.lp.server.partner.service.PartnerDto;
@@ -142,6 +148,7 @@ import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.system.ejb.Versandweg;
 import com.lp.server.system.ejbfac.BelegAktivierungController;
+import com.lp.server.system.ejbfac.BelegAktivierungFac;
 import com.lp.server.system.ejbfac.CleverCureProducer;
 import com.lp.server.system.ejbfac.IAktivierbar;
 import com.lp.server.system.jcr.service.JCRDocDto;
@@ -152,6 +159,7 @@ import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.format.LpBelegnummer;
 import com.lp.server.system.pkgenerator.format.LpBelegnummerFormat;
+import com.lp.server.system.service.BelegPruefungDto;
 import com.lp.server.system.service.IVersandwegPartnerDto;
 import com.lp.server.system.service.LandDto;
 import com.lp.server.system.service.LocaleFac;
@@ -168,15 +176,21 @@ import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.logger.HvDtoLogger;
 import com.lp.service.Artikelset;
+import com.lp.service.BelegDto;
+import com.lp.service.BelegpositionDto;
 import com.lp.service.BelegpositionVerkaufDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
 @Stateless
-public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAktivierbar {
+public class LieferscheinFacBean extends Facade implements LieferscheinFac,
+		IAktivierbar {
 	@PersistenceContext
 	private EntityManager em;
 
+	@EJB
+	private BelegAktivierungFac belegAktivierungFac ;
+	
 	// Lieferschein
 	// --------------------------------------------------------------
 
@@ -213,6 +227,9 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 
 			lieferscheinIId = bnr.getPrimaryKey();
 			lieferscheinCNr = f.format(bnr);
+
+			lieferscheinDtoI.setTBelegdatum(Helper
+					.cutTimestamp(lieferscheinDtoI.getTBelegdatum()));
 
 			lieferscheinDtoI.setIId(lieferscheinIId);
 			lieferscheinDtoI.setCNr(lieferscheinCNr);
@@ -286,9 +303,9 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 		}
 
 		HvDtoLogger<LieferscheinDto> lsLogger = new HvDtoLogger<LieferscheinDto>(
-				em, lieferscheinDtoI.getIId(),  theClientDto);
+				em, lieferscheinDtoI.getIId(), theClientDto);
 		lsLogger.logInsert(lieferscheinDtoI);
-		
+
 		return lieferscheinIId;
 	}
 
@@ -319,16 +336,18 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 		myLogger.exit("Der Lieferschein wurde aktualisiert, Status: "
 				+ lieferschein.getLieferscheinstatusCNr());
 	}
-	
+
 	public void updateTAendern(Integer lieferscheinIId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 
-		Lieferschein lieferschein = em.find(Lieferschein.class, lieferscheinIId);
+		Lieferschein lieferschein = em
+				.find(Lieferschein.class, lieferscheinIId);
 		lieferschein.setTAendern(getTimestamp());
 		lieferschein.setPersonalIIdAendern(theClientDto.getIDPersonal());
 		em.merge(lieferschein);
 		em.flush();
 	}
+
 	/**
 	 * Einen bestehenden Lieferschein aktualisieren. <br>
 	 * Ein Lieferschein kann zu mehreren Auftraegen liefern. <br>
@@ -364,8 +383,7 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 
 				// die Positionswerte neu berechnen und abspeichern
 				BigDecimal ffWechselkurs = getLocaleFac().getWechselkurs2(
-						waehrungOriCNrI,
-						lieferscheinDtoI.getWaehrungCNr(),
+						waehrungOriCNrI, lieferscheinDtoI.getWaehrungCNr(),
 						theClientDto);
 
 				for (int i = 0; i < aLieferscheinpositionDto.length; i++) {
@@ -420,13 +438,12 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 
-			
-			LieferscheinDto lsDto_vorher = lieferscheinFindByPrimaryKey(
-					lieferscheinDtoI.getIId());
+			LieferscheinDto lsDto_vorher = lieferscheinFindByPrimaryKey(lieferscheinDtoI
+					.getIId());
 			HvDtoLogger<LieferscheinDto> erLogger = new HvDtoLogger<LieferscheinDto>(
 					em, lieferscheinDtoI.getIId(), theClientDto);
 			erLogger.log(lsDto_vorher, lieferscheinDtoI);
-			
+
 			// Wird der kunde geaendert muss man die Konditionen neu holen
 
 			// CK: 2013-06-04 Gilt nicht mehr, da die Konditionen nun
@@ -579,7 +596,8 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 				try {
 					getLagerFac().updateTBelegdatumEinesBelegesImLager(
 							LocaleFac.BELEGART_LIEFERSCHEIN,
-							lieferscheinDtoI.getIId(),lieferscheinDtoI.getTBelegdatum(), theClientDto);
+							lieferscheinDtoI.getIId(),
+							lieferscheinDtoI.getTBelegdatum(), theClientDto);
 				} catch (RemoteException ex1) {
 					throwEJBExceptionLPRespectOld(ex1);
 				}
@@ -714,6 +732,28 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 				hm.put(item.getFlrlieferschein().getI_id(), item
 						.getFlrlieferschein().getI_id());
 			}
+
+			// PJ18792
+			// Alle Lieferscheine keine auftragsbezogenen Positioen haben, aber
+			// in den Kopfdaten einen auftragsbezug haben
+
+			session = FLRSessionFactory.getFactory().openSession();
+			org.hibernate.Query query = session
+					.createQuery("SELECT ls FROM FLRLieferschein ls WHERE ls.auftrag_i_id="
+							+ iIdAuftragI);
+
+			List resultList = query.list();
+			Iterator resultListIterator = resultList.iterator();
+			while (resultListIterator.hasNext()) {
+
+				FLRLieferschein ls = (FLRLieferschein) resultListIterator
+						.next();
+
+				if (!hm.containsKey(ls.getI_id())) {
+					hm.put(ls.getI_id(), ls.getI_id());
+				}
+			}
+
 			// in der HM stehen jetzt die Auftrags-ID's.
 			LieferscheinDto[] aLieferscheinDto = new LieferscheinDto[hm.size()];
 			int index = 0;
@@ -836,13 +876,12 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 	public void toggleZollexportpapiereErhalten(Integer lieferscheinIId,
 			String cZollexportpapier, Integer eingangsrechnungIId_Zollexport,
 			TheClientDto theClientDto) {
-		Lieferschein lieferschein = em.find(Lieferschein.class,
-				lieferscheinIId);
+		Lieferschein lieferschein = em
+				.find(Lieferschein.class, lieferscheinIId);
 
-		
 		LieferscheinDto lsDto_vorher = lieferscheinFindByPrimaryKey(lieferscheinIId);
 		LieferscheinDto lsDto_nachher = lieferscheinFindByPrimaryKey(lieferscheinIId);
-		
+
 		if (lieferschein.getTZollexportpapier() == null) {
 			lieferschein.setTZollexportpapier(new Timestamp(System
 					.currentTimeMillis()));
@@ -851,9 +890,7 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 			lieferschein.setCZollexportpapier(cZollexportpapier);
 			lieferschein
 					.setEingangsrechnungIdZollexport(eingangsrechnungIId_Zollexport);
-			
-			
-			
+
 			lsDto_nachher.setTZollexportpapier(new Timestamp(System
 					.currentTimeMillis()));
 			lsDto_nachher.setPersonalIIdZollexportpapier(theClientDto
@@ -861,29 +898,26 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 			lsDto_nachher.setCZollexportpapier(cZollexportpapier);
 			lsDto_nachher
 					.setEingangsrechnungIdZollexport(eingangsrechnungIId_Zollexport);
-			
+
 		} else {
 			lieferschein.setTZollexportpapier(null);
 			lieferschein.setPersonalIIdZollexportpapier(null);
 			lieferschein.setCZollexportpapier(null);
 			lieferschein.setEingangsrechnungIdZollexport(null);
-			
+
 			lsDto_nachher.setTZollexportpapier(null);
 			lsDto_nachher.setPersonalIIdZollexportpapier(null);
 			lsDto_nachher.setCZollexportpapier(null);
 			lsDto_nachher.setEingangsrechnungIdZollexport(null);
-			
-			
-			
-			
+
 		}
-		
+
 		HvDtoLogger<LieferscheinDto> lsLogger = new HvDtoLogger<LieferscheinDto>(
 				em, lsDto_vorher.getIId(), theClientDto);
 		lsLogger.log(lsDto_vorher, lsDto_nachher);
-		
+
 	}
-	
+
 	private void setLieferscheinFromLieferscheinDto(Lieferschein lieferschein,
 			LieferscheinDto lieferscheinDto) {
 		if (lieferscheinDto.getCNr() != null) {
@@ -1036,7 +1070,8 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 		lieferschein.setCZollexportpapier(lieferscheinDto
 				.getCZollexportpapier());
 		lieferschein.setTLieferaviso(lieferscheinDto.getTLieferaviso());
-		lieferschein.setPersonalIIdLieferaviso(lieferscheinDto.getPersonalIIdLieferaviso());
+		lieferschein.setPersonalIIdLieferaviso(lieferscheinDto
+				.getPersonalIIdLieferaviso());
 		em.merge(lieferschein);
 		em.flush();
 	}
@@ -1363,10 +1398,11 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 
 		LieferscheinpositionDto lieferscheinpositionDto = LieferscheinpositionDtoAssembler
 				.createDto(lieferscheinposition);
-		lieferscheinpositionDto.setSeriennrChargennrMitMenge(getLagerFac()
-				.getAllSeriennrchargennrEinerBelegartposition(
-						LocaleFac.BELEGART_LIEFERSCHEIN,
-						lieferscheinpositionDto.getIId()));
+		lieferscheinpositionDto
+				.setSeriennrChargennrMitMenge(getLagerFac()
+						.getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
+								LocaleFac.BELEGART_LIEFERSCHEIN,
+								lieferscheinpositionDto.getIId()));
 
 		return lieferscheinpositionDto;
 	}
@@ -1397,7 +1433,7 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 	 *            String der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 *             Ausnahme
-	 * @throws RemoteException 
+	 * @throws RemoteException
 	 */
 	@Override
 	public void aktiviereLieferschein(Integer iIdLieferscheinI,
@@ -1405,12 +1441,12 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 		myLogger.entry();
 		Validator.notNull(iIdLieferscheinI, "IdLieferscheinI");
 		pruefeAktivierbar(iIdLieferscheinI, theClientDto);
-		//Wert berechnen
+		// Wert berechnen
 		berechneBeleg(iIdLieferscheinI, theClientDto);
-		//und Status aendern
+		// und Status aendern
 		aktiviereBeleg(iIdLieferscheinI, theClientDto);
 	}
-	
+
 	@Override
 	public void pruefeAktivierbar(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
@@ -1421,27 +1457,27 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 		}
 		// Ohne Positionen darf der Beleg nicht aktiviert werden.
 		if (getLieferscheinpositionFac()
-				.berechneAnzahlMengenbehaftetePositionen(iid,
-						theClientDto) == 0) {
+				.berechneAnzahlMengenbehaftetePositionen(iid, theClientDto) == 0) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BELEG_HAT_KEINE_POSITIONEN, "");
 		}
 	}
-	
+
 	@Override
 	public void aktiviereBeleg(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
 		Lieferschein oLieferschein = em.find(Lieferschein.class, iid);
 		if (oLieferschein.getLieferscheinstatusCNr().equals(
 				LieferscheinFac.LSSTATUS_ANGELEGT)) {
-			oLieferschein.setLieferscheinstatusCNr(LieferscheinFac.LSSTATUS_GELIEFERT);
+			oLieferschein
+					.setLieferscheinstatusCNr(LieferscheinFac.LSSTATUS_GELIEFERT);
 			// den Druckzeitpunkt vermerken
 			oLieferschein.setTGedruckt(getTimestamp());
 		}
 	}
-	
+
 	@Override
-	public void berechneBeleg(Integer iid, TheClientDto theClientDto)
+	public Timestamp berechneBeleg(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
 		Lieferschein oLieferschein = em.find(Lieferschein.class, iid);
 		if (oLieferschein.getLieferscheinstatusCNr().equals(
@@ -1459,9 +1495,25 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 				nGestehungwert = berechneGestehungswert(oLieferschein.getIId(),
 						theClientDto);
 			}
-			oLieferschein
-					.setNGestehungswertinmandantenwaehrung(nGestehungwert);
+			oLieferschein.setNGestehungswertinmandantenwaehrung(nGestehungwert);
+
+			// PJ2276
+			LieferscheinpositionDto[] lsPosDto = getLieferscheinpositionFac()
+					.getLieferscheinPositionenByLieferschein(
+							oLieferschein.getIId(), theClientDto);
+			Set<Integer> modifiedPositions = getBelegVerkaufFac()
+					.adaptIntZwsPositions(lsPosDto);
+			for (Integer index : modifiedPositions) {
+				Lieferscheinposition lsposEntity = em.find(
+						Lieferscheinposition.class, lsPosDto[index].getIId());
+				lsposEntity
+						.setNNettogesamtpreisplusversteckteraufschlagminusrabatt(lsPosDto[index]
+								.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+				em.merge(lsposEntity);
+			}
 		}
+
+		return getTimestamp();
 	}
 
 	/**
@@ -2271,12 +2323,8 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 	 */
 	public void updateLieferscheinKonditionen(Integer iIdLieferscheinI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
-		final String METHOD_NAME = "updateLieferscheinKonditionen";
-		myLogger.entry();
-		if (iIdLieferscheinI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("iIdLieferscheinI == null"));
-		}
+		Validator.notNull(iIdLieferscheinI, "iIdLieferscheinI");
+
 		try {
 			LieferscheinpositionDto[] aDtos = getLieferscheinpositionFac()
 					.lieferscheinpositionFindByLieferscheinIId(iIdLieferscheinI);
@@ -2286,23 +2334,34 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 				aDtos[i] = getLieferscheinpositionFac()
 						.befuelleZusaetzlichePreisfelder(aDtos[i].getIId(),
 								theClientDto);
-				if (aDtos[i].getLieferscheinpositionartCNr().equals(
-						LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT)) {
-					if (aDtos[i].getNMenge() != null
-							&& aDtos[i].getNMenge().doubleValue() > 0) {
+			}
 
+			// PJ2276
+			Set<Integer> modifiedPositions = getBelegVerkaufFac()
+					.adaptIntZwsPositions(aDtos);
+			for (Integer index : modifiedPositions) {
+				Lieferscheinposition lspos = em.find(
+						Lieferscheinposition.class, aDtos[index].getIId());
+				lspos.setNNettogesamtpreisplusversteckteraufschlagminusrabatt(aDtos[index]
+						.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+				em.merge(lspos);
+				em.flush();
+			}
+
+			for (int i = 0; i < aDtos.length; i++) {
+				if (aDtos[i].getLieferscheinpositionartCNr().equals(
+						LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT)
+						&& aDtos[i].getNMenge() != null) {
+					if (aDtos[i].getNMenge().signum() > 0) {
 						getLieferscheinpositionFac().bucheAbLager(aDtos[i],
 								theClientDto);
 
-					} else if (aDtos[i].getNMenge() != null
-							&& aDtos[i].getNMenge().doubleValue() < 0) {
-
+					} else if (aDtos[i].getNMenge().signum() < 0) {
 						getLieferscheinpositionFac().bucheZuLager(aDtos[i],
 								theClientDto);
 
 					}
 				}
-
 			}
 
 			Lieferschein oLieferschein = em.find(Lieferschein.class,
@@ -2467,7 +2526,7 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		final String METHOD_NAME = "manuellFreigeben";
 		myLogger.entry();
-		
+
 		Validator.notNull(iIdLieferscheinI, "iIdLieferscheinI");
 		// IMS ID 179 : Manuell freigeben bedeutet je nach Parameterwert den
 		// Wechsel
@@ -2504,12 +2563,11 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 		checkLieferscheinIId(iIdLieferscheinI);
 		myLogger.logData(iIdLieferscheinI);
 		Validator.notNull(iIdLieferscheinI, "iIdLieferscheinI");
-		
+
 		LieferscheinDto lieferschein = lieferscheinFindByPrimaryKey(iIdLieferscheinI);
 		if (lieferschein.getStatusCNr().equals(
 				LieferscheinFac.LSSTATUS_GELIEFERT)) {
-			lieferschein
-					.setStatusCNr(LieferscheinFac.LSSTATUS_ERLEDIGT);
+			lieferschein.setStatusCNr(LieferscheinFac.LSSTATUS_ERLEDIGT);
 			lieferschein.setTManuellerledigt(getTimestamp());
 			lieferschein.setPersonalIIdManuellerledigt(theClientDto
 					.getIDPersonal());
@@ -2541,8 +2599,7 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 				LieferscheinFac.LSSTATUS_ERLEDIGT)) {
 			if (lieferschein.getPersonalIIdManuellerledigt() != null
 					&& lieferschein.getTManuellerledigt() != null) {
-				lieferschein
-						.setStatusCNr(LieferscheinFac.LSSTATUS_GELIEFERT);
+				lieferschein.setStatusCNr(LieferscheinFac.LSSTATUS_GELIEFERT);
 				lieferschein.setTManuellerledigt(null);
 				lieferschein.setPersonalIIdManuellerledigt(null);
 			} else {
@@ -2551,8 +2608,7 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 				// new
 				// Exception("Dieser Lieferschein wurde nicht manuell erledigt"
 				// ));
-				lieferschein
-						.setStatusCNr(LieferscheinFac.LSSTATUS_GELIEFERT);
+				lieferschein.setStatusCNr(LieferscheinFac.LSSTATUS_GELIEFERT);
 				myLogger.logKritisch("Status Erledigt wurde aufgehoben, obwohl der Lieferschein nicht manuell erledigt wurde, LieferscheinIId: "
 						+ iIdLieferscheinI);
 			}
@@ -2584,7 +2640,7 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 		myLogger.entry();
 		Validator.notNull(iIdLieferscheinI, "iIdLieferscheinI");
 		Validator.notNull(iIdRechnungI, "iIdRechnungI");
-		
+
 		LieferscheinDto lieferschein = lieferscheinFindByPrimaryKey(iIdLieferscheinI);
 
 		if (lieferschein.getStatusCNr().equals(
@@ -2617,16 +2673,61 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 	public void stornieren(Integer iIdLieferscheinI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		checkLieferscheinIId(iIdLieferscheinI);
+
+		// PJ18739
+		VerkettetDto[] lsDtosVerketet = getLieferscheinServiceFac()
+				.verkettetFindByLieferscheinIId(iIdLieferscheinI);
+
+		Query query = em
+				.createNamedQuery("VerkettetfindByLieferscheinIIdVerkettet");
+		query.setParameter(1, iIdLieferscheinI);
+		Verkettet verkettet = null;
 		try {
-			LieferscheinDto lieferschein = lieferscheinFindByPrimaryKey(iIdLieferscheinI);
-			if (lieferschein.getStatusCNr().equals(
+			verkettet = (Verkettet) query.getSingleResult();
+		} catch (NoResultException e) {
+			//
+		}
+
+
+		if (lsDtosVerketet.length > 0) {
+
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_LIEFERSCHEIN_ENTHAELT_VERKETTETE_LIEFERSCHEINE,
+					new Exception(
+							"Lieferschein enthaelt verkettetet Lieferscheine"));
+
+		}
+
+		if (verkettet != null) {
+			LieferscheinDto lieferscheinDto = lieferscheinFindByPrimaryKey(verkettet
+					.getLieferscheinIId());
+
+			ArrayList alDaten = new ArrayList();
+			alDaten.add(lieferscheinDto.getCNr());
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_LIEFERSCHEIN_IST_VERKETTET, alDaten,
+					new Exception("Lieferschein ist verkettet is Lieferschein "
+							+ lieferscheinDto.getCNr()));
+
+		}
+
+		try {
+			LieferscheinDto lieferscheinDto = lieferscheinFindByPrimaryKey(iIdLieferscheinI);
+			if (lieferscheinDto.getStatusCNr().equals(
 					LieferscheinFac.LSSTATUS_GELIEFERT)) {
 				// die Lieferscheinwerte bleiben beim Stornieren erhalten
-				lieferschein
+				lieferscheinDto
 						.setStatusCNr(LieferscheinFac.LSSTATUS_STORNIERT);
-				lieferschein.setTStorniert(getTimestamp());
-				lieferschein.setPersonalIIdStorniert(theClientDto
+
+				lieferscheinDto.setTStorniert(getTimestamp());
+				lieferscheinDto.setPersonalIIdStorniert(theClientDto
 						.getIDPersonal());
+
+				// SP3020 LS muss vorher auf Storniert gesetzt werden, damit die
+				// naechste Methode mit dem gaenternet Status weiterarbeiten
+				// kann
+				updateLieferscheinOhneWeitereAktion(lieferscheinDto,
+						theClientDto);
 
 				LieferscheinpositionDto[] aLieferscheinpositionDto = getLieferscheinpositionFac()
 						.lieferscheinpositionFindByLieferscheinIId(
@@ -2641,13 +2742,12 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 										theClientDto);
 					}
 				}
-				updateLieferscheinOhneWeitereAktion(lieferschein, theClientDto);
+
 			} else {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_STATUS,
 						new Exception(
 								"Lieferschein kann nicht storniert werden, Status : "
-										+ lieferschein
-												.getStatusCNr()));
+										+ lieferscheinDto.getStatusCNr()));
 
 			}
 		} catch (Throwable t) {
@@ -2656,44 +2756,44 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 		}
 	}
 
-//	/**
-//	 * Storno eines Lieferscheins aufheben.
-//	 * 
-//	 * @param iIdLieferscheinI
-//	 *            PK des Lieferscheins
-//	 * @param theClientDto
-//	 *            der aktuelle Benutzer
-//	 * @throws EJBExceptionLP
-//	 *             Ausnahme
-//	 */
-//	private void stornoAufheben(Integer iIdLieferscheinI,
-//			TheClientDto theClientDto) throws EJBExceptionLP {
-//		final String METHOD_NAME = "stornoAufheben";
-//		myLogger.entry();
-//		if (iIdLieferscheinI == null) {
-//			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-//					new Exception("iIdLieferscheinI == null"));
-//		}
-//		Lieferschein oLieferschein = em.find(Lieferschein.class,
-//				iIdLieferscheinI);
-//		if (oLieferschein == null) {
-//			throw new EJBExceptionLP(
-//					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
-//		}
-//
-//		if (oLieferschein.getLieferscheinstatusCNr().equals(
-//				LieferscheinFac.LSSTATUS_STORNIERT)) {
-//			oLieferschein
-//					.setLieferscheinstatusCNr(LieferscheinFac.LSSTATUS_GELIEFERT);
-//			oLieferschein.setTStorniert(null);
-//			oLieferschein.setPersonalIIdStorniert(null);
-//		} else {
-//			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_STATUS,
-//					new Exception(
-//							"Storno des Lieferscheins kann nicht aufgehoben werden, Status : "
-//									+ oLieferschein.getLieferscheinstatusCNr()));
-//		}
-//	}
+	// /**
+	// * Storno eines Lieferscheins aufheben.
+	// *
+	// * @param iIdLieferscheinI
+	// * PK des Lieferscheins
+	// * @param theClientDto
+	// * der aktuelle Benutzer
+	// * @throws EJBExceptionLP
+	// * Ausnahme
+	// */
+	// private void stornoAufheben(Integer iIdLieferscheinI,
+	// TheClientDto theClientDto) throws EJBExceptionLP {
+	// final String METHOD_NAME = "stornoAufheben";
+	// myLogger.entry();
+	// if (iIdLieferscheinI == null) {
+	// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
+	// new Exception("iIdLieferscheinI == null"));
+	// }
+	// Lieferschein oLieferschein = em.find(Lieferschein.class,
+	// iIdLieferscheinI);
+	// if (oLieferschein == null) {
+	// throw new EJBExceptionLP(
+	// EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+	// }
+	//
+	// if (oLieferschein.getLieferscheinstatusCNr().equals(
+	// LieferscheinFac.LSSTATUS_STORNIERT)) {
+	// oLieferschein
+	// .setLieferscheinstatusCNr(LieferscheinFac.LSSTATUS_GELIEFERT);
+	// oLieferschein.setTStorniert(null);
+	// oLieferschein.setPersonalIIdStorniert(null);
+	// } else {
+	// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_STATUS,
+	// new Exception(
+	// "Storno des Lieferscheins kann nicht aufgehoben werden, Status : "
+	// + oLieferschein.getLieferscheinstatusCNr()));
+	// }
+	// }
 
 	/**
 	 * Fuer die Nachkalkulation des Lieferscheins den Ist-Verkaufswert (=
@@ -2741,7 +2841,8 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 										.getIId())) {
 
 					// alle mengenbehafteten Positionen beruecksichtigen
-					if (aLieferscheinpositionDtos[i].getNMenge() != null && aLieferscheinpositionDtos[i].getArtikelIId() != null) {
+					if (aLieferscheinpositionDtos[i].getNMenge() != null
+							&& aLieferscheinpositionDtos[i].getArtikelIId() != null) {
 						ArtikelDto oArtikelDto = getArtikelFac()
 								.artikelFindByPrimaryKey(
 										aLieferscheinpositionDtos[i]
@@ -2823,7 +2924,8 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 			for (int i = 0; i < aLieferscheinpositionDtos.length; i++) {
 
 				// alle mengenbehafteten Positionen beruecksichtigen
-				if (aLieferscheinpositionDtos[i].getNMenge() != null && aLieferscheinpositionDtos[i].getArtikelIId() != null) {
+				if (aLieferscheinpositionDtos[i].getNMenge() != null
+						&& aLieferscheinpositionDtos[i].getArtikelIId() != null) {
 					ArtikelDto oArtikelDto = getArtikelFac()
 							.artikelFindByPrimaryKey(
 									aLieferscheinpositionDtos[i]
@@ -3218,7 +3320,8 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 	protected void uebernimmAuftragsposition(boolean bEsGibtNochPositiveOffene,
 			LieferscheinDto lieferscheinDto,
 			AuftragpositionDto auftragpositionDto,
-			List<Artikelset> artikelsets, TheClientDto theClientDto)
+			List<Artikelset> artikelsets,
+			AuftragpositionDto[] auftragpositionDtos, TheClientDto theClientDto)
 			throws RemoteException {
 
 		if (AuftragServiceFac.AUFTRAGPOSITIONSTATUS_ERLEDIGT
@@ -3360,9 +3463,29 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 					// bei lagerbewirtschafteten Artikeln muss
 					// die Menge auf Lager
 					// beruecksichtigt werden
-					BigDecimal nMengeAufLager = getLagerFac().getMengeAufLager(
-							artikelDto.getIId(), lieferscheinDto.getLagerIId(),
-							null, theClientDto);
+
+					BigDecimal nMengeAufLager = null;
+					boolean bImmerAusreichendVerfuegbar = false;
+					try {
+						ParametermandantDto parameterM = getParameterFac()
+								.getMandantparameter(
+										theClientDto.getMandant(),
+										ParameterFac.KATEGORIE_ARTIKEL,
+										ParameterFac.PARAMETER_LAGER_IMMER_AUSREICHEND_VERFUEGBAR);
+						bImmerAusreichendVerfuegbar = ((Boolean) parameterM
+								.getCWertAsObject()).booleanValue();
+
+					} catch (RemoteException ex) {
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+					}
+					if (bImmerAusreichendVerfuegbar == true) {
+						nMengeAufLager = new BigDecimal(999999999);
+					} else {
+						nMengeAufLager = getLagerFac().getMengeAufLager(
+								artikelDto.getIId(),
+								lieferscheinDto.getLagerIId(), null,
+								theClientDto);
+					}
 
 					if (nMengeAufLager.signum() > 0) {
 						bLieferscheinpositionErzeugen = true;
@@ -3401,6 +3524,14 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 			// ;
 			// getAuftragpositionFac().updateAuftragpositionOhneWeitereAktion(auftragpositionDto,
 			// theClientDto) ;
+		} else if (auftragpositionDto.isIntelligenteZwischensumme()) {
+			if (!hatOffeneAuftragpositionenInZws(
+					auftragpositionDto.getZwsVonPosition(),
+					auftragpositionDto.getZwsBisPosition(), auftragpositionDtos)) {
+				bLieferscheinpositionErzeugen = true;
+				nMengeFuerLieferscheinposition = auftragpositionDto
+						.getNOffeneMenge();
+			}
 		}
 
 		if (bLieferscheinpositionErzeugen
@@ -3411,6 +3542,28 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 			if (lieferscheinpositionBisherDto == null) {
 				LieferscheinpositionDto lieferscheinpositionDto = auftragpositionDto
 						.cloneAsLieferscheinpositionDto();
+
+				if (auftragpositionDto.isIntelligenteZwischensumme()) {
+					Integer von = getAuftragpositionFac().getPositionNummer(
+							auftragpositionDto.getZwsVonPosition());
+					if (von != null) {
+						lieferscheinpositionDto
+								.setZwsVonPosition(getLieferscheinpositionFac()
+										.getLSPositionIIdFromPositionNummer(
+												lieferscheinDto.getIId(), von));
+					}
+					Integer bis = getAuftragpositionFac().getPositionNummer(
+							auftragpositionDto.getZwsBisPosition());
+					if (bis != null) {
+						lieferscheinpositionDto
+								.setZwsBisPosition(getLieferscheinpositionFac()
+										.getLSPositionIIdFromPositionNummer(
+												lieferscheinDto.getIId(), bis));
+					}
+					lieferscheinpositionDto
+							.setBZwsPositionspreisDrucken(auftragpositionDto
+									.getBZwsPositionspreisZeigen());
+				}
 
 				if (auftragpositionDto.getPositioniIdArtikelset() != null) {
 					LieferscheinpositionDto[] lPositionDtos = null;
@@ -3487,6 +3640,43 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 								lieferscheinpositionBisherDto, theClientDto);
 			}
 		}
+	}
+
+	private boolean hatOffeneAuftragpositionenInZws(Integer fromIId,
+			Integer toIId, AuftragpositionDto[] positionDtos)
+			throws RemoteException {
+		int fromIndex = -1;
+		for (int i = 0; fromIndex == -1 && i < positionDtos.length; i++) {
+			if (positionDtos[i].getIId().equals(fromIId)) {
+				fromIndex = i;
+			}
+		}
+		if (fromIndex == -1)
+			return true;
+
+		int toIndex = -1;
+		for (int i = fromIndex; toIndex == -1 && i < positionDtos.length; i++) {
+			if (positionDtos[i].getIId().equals(toIId)) {
+				toIndex = i;
+			}
+		}
+		if (toIndex == -1)
+			return true;
+
+		// Erneutes Lesen ist Absicht, da liefern die Menge geaendert hat!
+		for (int i = fromIndex; i <= toIndex; i++) {
+			AuftragpositionDto positionDto = getAuftragpositionFac()
+					.auftragpositionFindByPrimaryKey(positionDtos[i].getIId());
+			if (isAuftragPositionStatusErledigt(positionDto))
+				continue;
+
+			// Nicht mengenbehaftete Positionen (Texteingabe, ...bausteine, ...)
+			// ignorieren
+			if (positionDto.getNMenge() == null)
+				continue;
+		}
+
+		return false;
 	}
 
 	private boolean isAuftragPositionStatusErledigt(
@@ -3607,7 +3797,7 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 			for (int i = 0; i < aAuftragpositionDto.length; i++) {
 				uebernimmAuftragsposition(bEsGibtNochPositiveOffene,
 						lieferscheinDto, aAuftragpositionDto[i], artikelsets,
-						theClientDto);
+						aAuftragpositionDto, theClientDto);
 			}
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -3667,11 +3857,11 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 		}
 
 	}
-	
-	
-	public class LieferscheinAvisoProducerCC extends CleverCureProducer implements ILieferscheinAvisoProducer {
-		public final static String GENERATOR_INFO = "2.4" ;
-		
+
+	public class LieferscheinAvisoProducerCC extends CleverCureProducer
+			implements ILieferscheinAvisoProducer {
+		public final static String GENERATOR_INFO = "2.4";
+
 		@Override
 		public boolean isDummy() {
 			return false;
@@ -3681,332 +3871,419 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 		public ILieferscheinAviso createAviso(LieferscheinDto lieferscheinDto,
 				TheClientDto theClientDto) throws RemoteException,
 				NamingException, EJBExceptionLP {
-			LieferscheinAvisoCC aviso = new LieferscheinAvisoCC() ;
-			XMLXMLDISPATCHNOTIFICATION dn = createDn(aviso, lieferscheinDto, theClientDto) ; 
-			aviso.setNotification(dn) ;
-			return aviso ;
+			LieferscheinAvisoCC aviso = new LieferscheinAvisoCC();
+			XMLXMLDISPATCHNOTIFICATION dn = createDn(aviso, lieferscheinDto,
+					theClientDto);
+			aviso.setNotification(dn);
+			return aviso;
 		}
 
 		@Override
 		public String toString(ILieferscheinAviso aviso) {
-			return aviso instanceof LieferscheinAvisoCC ? fromXml((LieferscheinAvisoCC) aviso) : null ;	
+			return aviso instanceof LieferscheinAvisoCC ? fromXml((LieferscheinAvisoCC) aviso)
+					: null;
 		}
-		
-		private HttpURLConnection buildUrlconnectionPost(ILieferscheinAviso aviso) 
-				throws IOException, NoSuchAlgorithmException, CertificateException, KeyStoreException, KeyManagementException, UnrecoverableKeyException {
-			IVersandwegPartnerDto versandwegPartnerDto = getSystemFac()
-					.versandwegPartnerFindByPrimaryKey(aviso.getVersandwegId(), aviso.getPartnerId()) ;
-			if(versandwegPartnerDto == null) {
-				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_LIEFERSCHEIN_VERSANDWEG_PARTNER_KUNDENNUMMER_FEHLT, 
-						aviso.getPartnerId().toString()) ;
-			}
-			VersandwegCCPartnerDto ccPartnerDto = (VersandwegCCPartnerDto) versandwegPartnerDto ;
-			
-			String uri = getCCEndpunkt(em, ccPartnerDto)  ;
-			uri += "&datatype=dnd" ;
-			uri += "&companycode=" + ccPartnerDto.getCKundennummer().trim() ;
-			uri += "&password=" + ccPartnerDto.getCKennwort().trim() ;
-			
-			URL requestedUrl = new URL(uri) ;
-		    HttpURLConnection urlConnection = (HttpURLConnection) requestedUrl.openConnection();
-		    if(urlConnection instanceof HttpsURLConnection) {
-				KeyStore keystore = getKeystore(ccPartnerDto) ;
-				SSLContext sslContext = getSslContext(ccPartnerDto, keystore) ;
-				
-		        ((HttpsURLConnection)urlConnection).setSSLSocketFactory(sslContext.getSocketFactory());
-		    }
-		    urlConnection.setRequestMethod("POST");
-		    urlConnection.setRequestProperty("User-Agent", "HELIUM V");
-		    urlConnection.setConnectTimeout(10000);
-		    urlConnection.setReadTimeout(10500);
-		    urlConnection.setDoOutput(true);
 
-		    return urlConnection ;
+		private HttpURLConnection buildUrlconnectionPost(
+				ILieferscheinAviso aviso) throws IOException,
+				NoSuchAlgorithmException, CertificateException,
+				KeyStoreException, KeyManagementException,
+				UnrecoverableKeyException {
+			IVersandwegPartnerDto versandwegPartnerDto = getSystemFac()
+					.versandwegPartnerFindByPrimaryKey(aviso.getVersandwegId(),
+							aviso.getPartnerId());
+			if (versandwegPartnerDto == null) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_LIEFERSCHEIN_VERSANDWEG_PARTNER_KUNDENNUMMER_FEHLT,
+						aviso.getPartnerId().toString());
+			}
+			VersandwegCCPartnerDto ccPartnerDto = (VersandwegCCPartnerDto) versandwegPartnerDto;
+
+			String uri = getCCEndpunkt(em, ccPartnerDto);
+			uri += "&datatype=dnd";
+			uri += "&companycode=" + ccPartnerDto.getCKundennummer().trim();
+			uri += "&password=" + ccPartnerDto.getCKennwort().trim();
+
+			URL requestedUrl = new URL(uri);
+			HttpURLConnection urlConnection = (HttpURLConnection) requestedUrl
+					.openConnection();
+			if (urlConnection instanceof HttpsURLConnection) {
+				KeyStore keystore = getKeystore(ccPartnerDto);
+				SSLContext sslContext = getSslContext(ccPartnerDto, keystore);
+
+				((HttpsURLConnection) urlConnection)
+						.setSSLSocketFactory(sslContext.getSocketFactory());
+			}
+			urlConnection.setRequestMethod("POST");
+			urlConnection.setRequestProperty("User-Agent", "HELIUM V");
+			urlConnection.setConnectTimeout(10000);
+			urlConnection.setReadTimeout(10500);
+			urlConnection.setDoOutput(true);
+
+			return urlConnection;
 		}
-		
+
 		@Override
 		public void postAviso(ILieferscheinAviso aviso) {
-			if(!(aviso instanceof LieferscheinAvisoCC)) return ;
-			
+			if (!(aviso instanceof LieferscheinAvisoCC))
+				return;
+
 			try {
-				HttpURLConnection urlConnection = buildUrlconnectionPost(aviso) ;
-			    urlConnection.setRequestProperty("Content-Type", "text/xml") ;
-				OutputStreamWriter out = new OutputStreamWriter(urlConnection.getOutputStream()) ;
-				String xmlDndContent = toString(aviso) ;
-				out.write(xmlDndContent) ;
-				out.flush() ;
-				out.close() ;
+				HttpURLConnection urlConnection = buildUrlconnectionPost(aviso);
+				urlConnection.setRequestProperty("Content-Type", "text/xml");
+				OutputStreamWriter out = new OutputStreamWriter(
+						urlConnection.getOutputStream());
+				String xmlDndContent = toString(aviso);
+				out.write(xmlDndContent);
+				out.flush();
+				out.close();
 
-			    int lastResponseCode = urlConnection.getResponseCode();
+				int lastResponseCode = urlConnection.getResponseCode();
 
-			    InputStream s = urlConnection.getInputStream() ;
-				BufferedReader br = new BufferedReader(new InputStreamReader(s)) ;
-				String theContent = "" ;
-				String line = ""; 
-				while((line = br.readLine()) != null) {
-					theContent += line + "\n" ;
-				}				    
-			    String lastContentType = urlConnection.getContentType();
-
-			    System.out.println("response: " + lastResponseCode + " content-type: " + lastContentType + " for: " + theContent) ;				
-			} catch(IOException e) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HTTP_POST_IO, e) ;
+				InputStream s = urlConnection.getInputStream();
+				BufferedReader br = new BufferedReader(new InputStreamReader(s));
+				String theContent = "";
+				String line = "";
+				while ((line = br.readLine()) != null) {
+					theContent += line + "\n";
+				}
+				String lastContentType = urlConnection.getContentType();
+				String theMessage = "Lieferschein Aviso post: Status:'" + lastResponseCode + "' content-type: " + lastContentType + " for: '" + theContent + "'." ;
+				myLogger.info(theMessage);
+//				System.out.println("response: " + lastResponseCode
+//						+ " content-type: " + lastContentType + " for: "
+//						+ theContent);
+			} catch (IOException e) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_HTTP_POST_IO, e);
 			} catch (KeyManagementException e) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_KEYSTORE_MANAGMENT, e) ;
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_KEYSTORE_MANAGMENT, e);
 			} catch (UnrecoverableKeyException e) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_KEYSTORE_RECOVER, e) ;
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_KEYSTORE_RECOVER, e);
 			} catch (NoSuchAlgorithmException e) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_KEYSTORE_ALGORITHMEN, e) ;
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_KEYSTORE_ALGORITHMEN, e);
 			} catch (CertificateException e) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_KEYSTORE_CERTIFICATE, e) ;
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_KEYSTORE_CERTIFICATE, e);
 			} catch (KeyStoreException e) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_KEYSTORE, e) ;
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_KEYSTORE, e);
 			}
 		}
-		
+
 		private String fromXml(LieferscheinAvisoCC aviso) {
-			StringWriter writer = new StringWriter() ;
+			StringWriter writer = new StringWriter();
 			try {
-				JAXBContext context = JAXBContext.newInstance(aviso.getNotification().getClass().getPackage().getName()) ;
-				Marshaller m = context.createMarshaller() ;
-				m.marshal(aviso.getNotification(), writer) ;
-				String s = writer.toString() ;
-				return s ;
-			} catch(JAXBException e) {
-				System.out.println("JAXBException" + e.getMessage()) ;
+				JAXBContext context = JAXBContext.newInstance(aviso
+						.getNotification().getClass().getPackage().getName());
+				Marshaller m = context.createMarshaller();
+				m.marshal(aviso.getNotification(), writer);
+				String s = writer.toString();
+				return s;
+			} catch (JAXBException e) {
+				System.out.println("JAXBException" + e.getMessage());
 			}
-			
-			return null ;			
+
+			return null;
 		}
-		
-		private XMLXMLDISPATCHNOTIFICATION createDn(ILieferscheinAviso aviso, LieferscheinDto lieferscheinDto, TheClientDto theClientDto) throws RemoteException {
-			XMLXMLDISPATCHNOTIFICATION dn = new XMLXMLDISPATCHNOTIFICATION() ;
-			XMLXMLDISPATCHNOTIFICATIONHEADER dnHeader = new XMLXMLDISPATCHNOTIFICATIONHEADER() ;
-			XMLXMLCONTROLINFO controlInfo = new XMLXMLCONTROLINFO() ;
-			controlInfo.setGENERATORINFO(GENERATOR_INFO);		
-			controlInfo.setGENERATIONDATE(
-					formatAsIso8601Timestamp(GregorianCalendar.getInstance().getTime()));
-			dnHeader.setCONTROLINFO(controlInfo) ;
-			
-			Collection<LieferscheinpositionDto> positionDtos = getLSPositionsDto(lieferscheinDto, theClientDto) ;
-			
-			XMLXMLDISPATCHNOTIFICATIONINFO dnInfo = buildDnInfo(aviso, lieferscheinDto, theClientDto) ;
+
+		private XMLXMLDISPATCHNOTIFICATION createDn(ILieferscheinAviso aviso,
+				LieferscheinDto lieferscheinDto, TheClientDto theClientDto)
+				throws RemoteException {
+			XMLXMLDISPATCHNOTIFICATION dn = new XMLXMLDISPATCHNOTIFICATION();
+			XMLXMLDISPATCHNOTIFICATIONHEADER dnHeader = new XMLXMLDISPATCHNOTIFICATIONHEADER();
+			XMLXMLCONTROLINFO controlInfo = new XMLXMLCONTROLINFO();
+			controlInfo.setGENERATORINFO(GENERATOR_INFO);
+			controlInfo
+					.setGENERATIONDATE(formatAsIso8601Timestamp(GregorianCalendar
+							.getInstance().getTime()));
+			dnHeader.setCONTROLINFO(controlInfo);
+
+			Collection<LieferscheinpositionDto> positionDtos = getLSPositionsDto(
+					lieferscheinDto, theClientDto);
+
+			XMLXMLDISPATCHNOTIFICATIONINFO dnInfo = buildDnInfo(aviso,
+					lieferscheinDto, theClientDto);
 			dnHeader.setDISPATCHNOTIFICATIONINFO(dnInfo);
-			dn.setDISPATCHNOTIFICATIONHEADER(dnHeader) ;
-			
-			XMLXMLDISPATCHNOTIFICATIONITEMLIST dnItemList= buildDnItemList(lieferscheinDto, positionDtos, theClientDto) ;
+			dn.setDISPATCHNOTIFICATIONHEADER(dnHeader);
+
+			XMLXMLDISPATCHNOTIFICATIONITEMLIST dnItemList = buildDnItemList(
+					lieferscheinDto, positionDtos, theClientDto);
 			dn.setDISPATCHNOTIFICATIONITEMLIST(dnItemList);
-			
-			XMLXMLDISPATCHNOTIFICATIONSUMMARY dnSummary = buildDnSummary(lieferscheinDto, positionDtos, theClientDto) ;
+
+			XMLXMLDISPATCHNOTIFICATIONSUMMARY dnSummary = buildDnSummary(
+					lieferscheinDto, positionDtos, theClientDto);
 			dn.setDISPATCHNOTIFICATIONSUMMARY(dnSummary);
 
-			return dn ;
+			return dn;
 		}
 
-		public class LieferscheinpositionenNurIdentFilter implements Predicate, Serializable {
+		public class LieferscheinpositionenNurIdentFilter implements Predicate,
+				Serializable {
 			private static final long serialVersionUID = -5617572280308975044L;
 
 			@Override
 			public boolean evaluate(Object arg0) {
-				if(arg0 instanceof LieferscheinpositionDto) {
-					LieferscheinpositionDto pos = (LieferscheinpositionDto) arg0 ;
-					return LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT.equals(
-							pos.getLieferscheinpositionartCNr()) ; 
+				if (arg0 instanceof LieferscheinpositionDto) {
+					LieferscheinpositionDto pos = (LieferscheinpositionDto) arg0;
+					return LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT
+							.equals(pos.getLieferscheinpositionartCNr());
 				}
 
 				return false;
-			}		
+			}
 		}
-		
+
 		private Collection<LieferscheinpositionDto> getLSPositionsDto(
-				LieferscheinDto lieferscheinDto, TheClientDto theClientDto) throws RemoteException {
+				LieferscheinDto lieferscheinDto, TheClientDto theClientDto)
+				throws RemoteException {
 			Collection<LieferscheinpositionDto> ejbPositions = getLieferscheinpositionFac()
-					.lieferscheinpositionFindByLieferscheinIId(lieferscheinDto.getIId(), theClientDto) ;
-			CollectionUtils.filter(ejbPositions, new LieferscheinpositionenNurIdentFilter());
-			return ejbPositions ;
+					.lieferscheinpositionFindByLieferscheinIId(
+							lieferscheinDto.getIId(), theClientDto);
+			CollectionUtils.filter(ejbPositions,
+					new LieferscheinpositionenNurIdentFilter());
+			return ejbPositions;
 		}
-		
+
 		private XMLXMLDISPATCHNOTIFICATIONINFO buildDnInfo(
-				ILieferscheinAviso aviso, LieferscheinDto lieferscheinDto, TheClientDto theClientDto) throws RemoteException {
-			XMLXMLDISPATCHNOTIFICATIONINFO dnInfo = new XMLXMLDISPATCHNOTIFICATIONINFO() ;
-			dnInfo.setCCROWID(
-					lieferscheinDto.getIId() + "_" + lieferscheinDto.getCNr() + "_" + lieferscheinDto.getTAendern());
+				ILieferscheinAviso aviso, LieferscheinDto lieferscheinDto,
+				TheClientDto theClientDto) throws RemoteException {
+			XMLXMLDISPATCHNOTIFICATIONINFO dnInfo = new XMLXMLDISPATCHNOTIFICATIONINFO();
+			dnInfo.setCCROWID(lieferscheinDto.getIId() + "_"
+					+ lieferscheinDto.getCNr() + "_"
+					+ lieferscheinDto.getTAendern());
 
 			dnInfo.setDISPATCHNOTIFICATIONID(lieferscheinDto.getCNr());
 
-			Timestamp t = lieferscheinDto.getTLiefertermin() ;
-			if(t == null) t = lieferscheinDto.getTBelegdatum() ;
-			if(t == null) t = new Timestamp(System.currentTimeMillis());
-			dnInfo.setDISPATCHNOTIFICATIONDATE(formatAsIso8601Timestamp(new Date(t.getTime())));
+			Timestamp t = lieferscheinDto.getTLiefertermin();
+			if (t == null)
+				t = lieferscheinDto.getTBelegdatum();
+			if (t == null)
+				t = new Timestamp(System.currentTimeMillis());
+			dnInfo.setDISPATCHNOTIFICATIONDATE(formatAsIso8601Timestamp(new Date(
+					t.getTime())));
 
-			if(!HelperWebshop.isEmptyString(lieferscheinDto.getCBezProjektbezeichnung())) {
-				XMLXMLREMARK dnRemark = new XMLXMLREMARK() ;
+			if (!HelperWebshop.isEmptyString(lieferscheinDto
+					.getCBezProjektbezeichnung())) {
+				XMLXMLREMARK dnRemark = new XMLXMLREMARK();
 				dnRemark.setValue(lieferscheinDto.getCBezProjektbezeichnung());
-				dnInfo.getREMARK().add(dnRemark) ;
+				dnInfo.getREMARK().add(dnRemark);
 			}
-			
-			XMLXMLBUYERPARTY buyerParty = new XMLXMLBUYERPARTY() ;
-			XMLXMLPARTY xmlParty = new XMLXMLPARTY() ;
-			XMLXMLPARTYID xmlPartyId = new XMLXMLPARTYID() ;		
-			xmlPartyId.setValue(getLieferantennummer(lieferscheinDto.getKundeIIdRechnungsadresse(), theClientDto)) ;
+
+			XMLXMLBUYERPARTY buyerParty = new XMLXMLBUYERPARTY();
+			XMLXMLPARTY xmlParty = new XMLXMLPARTY();
+			XMLXMLPARTYID xmlPartyId = new XMLXMLPARTYID();
+//			xmlPartyId.setValue(
+//					getLieferantennummer(
+//							lieferscheinDto.getKundeIIdRechnungsadresse(),
+//							theClientDto));
+			xmlPartyId.setValue(
+					getLieferantennummer(lieferscheinDto, theClientDto));
 			xmlParty.setPARTYID(xmlPartyId);
 			buyerParty.setPARTY(xmlParty);
-			dnInfo.setBUYERPARTY(buyerParty) ;
+			dnInfo.setBUYERPARTY(buyerParty);
 
-			XMLXMLSUPPLIERPARTY supplierParty = new XMLXMLSUPPLIERPARTY() ;
-			XMLXMLPARTY xmlSupplierParty = new XMLXMLPARTY() ;
-			XMLXMLPARTYID xmlSupplierPartyId = new XMLXMLPARTYID() ;		
-			xmlSupplierPartyId.setValue(getSupplierPartyId(aviso, lieferscheinDto, theClientDto)) ;
+			XMLXMLSUPPLIERPARTY supplierParty = new XMLXMLSUPPLIERPARTY();
+			XMLXMLPARTY xmlSupplierParty = new XMLXMLPARTY();
+			XMLXMLPARTYID xmlSupplierPartyId = new XMLXMLPARTYID();
+			xmlSupplierPartyId.setValue(getSupplierPartyId(aviso,
+					lieferscheinDto, theClientDto));
 			xmlSupplierParty.setPARTYID(xmlSupplierPartyId);
 			supplierParty.setPARTY(xmlSupplierParty);
 			dnInfo.setSUPPLIERPARTY(supplierParty);
-			
-			return dnInfo ;
+
+			return dnInfo;
 		}
 
-	
-		private String getSupplierPartyId(ILieferscheinAviso aviso, LieferscheinDto lieferscheinDto, TheClientDto theClientDto) throws RemoteException {
-			Integer versandwegId = getVersandwegIdFor(lieferscheinDto, theClientDto) ;
-			if(versandwegId == null) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_LIEFERSCHEIN_VERSANDWEG_IM_PARTNER_NICHT_DEFINIERT, "") ;
-			}
-
-			Integer kundeId = lieferscheinDto.getKundeIIdLieferadresse() ;
-			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeId, theClientDto) ;
-
-			aviso.setVersandwegId(versandwegId) ;
-			aviso.setPartnerId(kundeDto.getPartnerIId());
-			
-			IVersandwegPartnerDto versandwegPartnerDto = getSystemFac()
-					.versandwegPartnerFindByPrimaryKey(versandwegId, aviso.getPartnerId()) ;
-			if(versandwegPartnerDto == null) {
+		private String getSupplierPartyId(ILieferscheinAviso aviso,
+				LieferscheinDto lieferscheinDto, TheClientDto theClientDto)
+				throws RemoteException {
+			Integer versandwegId = getVersandwegIdFor(lieferscheinDto,
+					theClientDto);
+			if (versandwegId == null) {
 				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_LIEFERSCHEIN_VERSANDWEG_PARTNER_KUNDENNUMMER_FEHLT, 
-						kundeDto.getPartnerIId().toString()) ;
+						EJBExceptionLP.FEHLER_LIEFERSCHEIN_VERSANDWEG_IM_PARTNER_NICHT_DEFINIERT,
+						"");
 			}
-			VersandwegCCPartnerDto partnerDto = (VersandwegCCPartnerDto) versandwegPartnerDto ;
-			String supplierId = partnerDto.getCKundennummer() ;
+
+			Integer kundeId = lieferscheinDto.getKundeIIdLieferadresse();
+			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeId,
+					theClientDto);
+
+			aviso.setVersandwegId(versandwegId);
+			aviso.setPartnerId(kundeDto.getPartnerIId());
+
+			IVersandwegPartnerDto versandwegPartnerDto = getSystemFac()
+					.versandwegPartnerFindByPrimaryKey(versandwegId,
+							aviso.getPartnerId());
+			if (versandwegPartnerDto == null) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_LIEFERSCHEIN_VERSANDWEG_PARTNER_KUNDENNUMMER_FEHLT,
+						kundeDto.getPartnerIId().toString());
+			}
+			VersandwegCCPartnerDto partnerDto = (VersandwegCCPartnerDto) versandwegPartnerDto;
+			String supplierId = partnerDto.getCKundennummer();
 			return supplierId.trim();
 		}
-		
-		private XMLXMLDISPATCHNOTIFICATIONITEMLIST buildDnItemList(LieferscheinDto lieferscheinDto,
-				Collection<LieferscheinpositionDto> ejbPositions, TheClientDto theClientDto) throws RemoteException {
-			XMLXMLDISPATCHNOTIFICATIONITEMLIST itemlist = new XMLXMLDISPATCHNOTIFICATIONITEMLIST();
-			
-			Integer lineitemId = 0 ;
-			for (LieferscheinpositionDto lieferscheinpositionDto : ejbPositions) {
-				XMLXMLDISPATCHNOTIFICATIONITEM dnItem = new XMLXMLDISPATCHNOTIFICATIONITEM() ;
-				dnItem.setCCROWID(lieferscheinpositionDto.getIId().toString()) ;
-				dnItem.setLINEITEMID((++lineitemId).toString());
-				dnItem.setCCORDERUNIT(lieferscheinpositionDto.getEinheitCNr().trim()) ;
 
-				ArtikelDto itemDto = getArtikelFac()
-						.artikelFindByPrimaryKey(lieferscheinpositionDto.getArtikelIId(), theClientDto) ;
+		private XMLXMLDISPATCHNOTIFICATIONITEMLIST buildDnItemList(
+				LieferscheinDto lieferscheinDto,
+				Collection<LieferscheinpositionDto> ejbPositions,
+				TheClientDto theClientDto) throws RemoteException {
+			XMLXMLDISPATCHNOTIFICATIONITEMLIST itemlist = new XMLXMLDISPATCHNOTIFICATIONITEMLIST();
+
+			Integer lineitemId = 0;
+			for (LieferscheinpositionDto lieferscheinpositionDto : ejbPositions) {
+				XMLXMLDISPATCHNOTIFICATIONITEM dnItem = new XMLXMLDISPATCHNOTIFICATIONITEM();
+				dnItem.setCCROWID(lieferscheinpositionDto.getIId().toString());
+				dnItem.setLINEITEMID((++lineitemId).toString());
+				dnItem.setCCORDERUNIT(lieferscheinpositionDto.getEinheitCNr()
+						.trim());
+
+				ArtikelDto itemDto = getArtikelFac().artikelFindByPrimaryKey(
+						lieferscheinpositionDto.getArtikelIId(), theClientDto);
 				dnItem.setCCORIGINCOUNTRY(buildUrsprungsland(itemDto));
 
-				XMLXMLARTICLEID itemId = new XMLXMLARTICLEID() ;
+				XMLXMLARTICLEID itemId = new XMLXMLARTICLEID();
 				itemId.setSUPPLIERAID(buildItemCnr(itemDto));
-				if(itemDto.getArtikelsprDto() != null) {
-					itemId.setDESCRIPTIONSHORT(
-							HelperWebshop.isEmptyString(itemDto.getArtikelsprDto().getCKbez()) 
-								? itemDto.getCNr() : itemDto.getArtikelsprDto().getCKbez());
+				if (itemDto.getArtikelsprDto() != null) {
+					itemId.setDESCRIPTIONSHORT(HelperWebshop
+							.isEmptyString(itemDto.getArtikelsprDto()
+									.getCKbez()) ? itemDto.getCNr() : itemDto
+							.getArtikelsprDto().getCKbez());
 				} else {
 					itemId.setDESCRIPTIONSHORT(itemDto.getCNr());
 				}
-				KundesokoDto[] sokos = getKundesokoFac().kundesokoFindByKundeIIdArtikelIId(
-						lieferscheinDto.getKundeIIdLieferadresse(), itemDto.getIId()) ;
-				if(sokos != null && sokos.length > 0) {
-					XMLXMLBUYERAID buyerItemId = new XMLXMLBUYERAID() ;
-					buyerItemId.setValue(sokos[0].getCKundeartikelnummer()) ;
+				KundesokoDto[] sokos = getKundesokoFac()
+						.kundesokoFindByKundeIIdArtikelIId(
+								lieferscheinDto.getKundeIIdLieferadresse(),
+								itemDto.getIId());
+				if (sokos != null && sokos.length > 0) {
+					XMLXMLBUYERAID buyerItemId = new XMLXMLBUYERAID();
+					buyerItemId.setValue(sokos[0].getCKundeartikelnummer());
 					buyerItemId.setType("buyer_specific");
-					List<XMLXMLBUYERAID> buyerItemlist = itemId.getBUYERAID() ;					
-					buyerItemlist.add(buyerItemId) ;					
+					List<XMLXMLBUYERAID> buyerItemlist = itemId.getBUYERAID();
+					buyerItemlist.add(buyerItemId);
 				}
 
 				dnItem.setARTICLEID(itemId);
-				dnItem.setQUANTITY(ccScaled3(lieferscheinpositionDto.getNMenge())); 
+				dnItem.setQUANTITY(ccScaled3(lieferscheinpositionDto
+						.getNMenge()));
 
 				buildOrderReference(dnItem, lieferscheinpositionDto);
-				buildDeliveryInfo(dnItem, lieferscheinDto, lieferscheinpositionDto) ;
-				
-				itemlist.getDISPATCHNOTIFICATIONITEM().add(dnItem) ;
+				buildDeliveryInfo(dnItem, lieferscheinDto,
+						lieferscheinpositionDto);
+
+				itemlist.getDISPATCHNOTIFICATIONITEM().add(dnItem);
 			}
 
 			return itemlist;
 		}
-		
 
-		
-		private String getOrderReference(AuftragpositionDto auftragpositionDto) throws RemoteException {
-			AuftragDto auftragDto = getAuftragFac().auftragFindByPrimaryKeyOhneExc(auftragpositionDto.getBelegIId()) ;
-			if(auftragDto == null) return "" ;
-			
-			return auftragDto.getCBestellnummer() ;
- 		}
-		
-		private void buildOrderReference(XMLXMLDISPATCHNOTIFICATIONITEM dnItem, LieferscheinpositionDto lsposDto) throws RemoteException {
-			if(lsposDto.getAuftragpositionIId() != null) {
-				XMLXMLORDERREFERENCE orderReference = new XMLXMLORDERREFERENCE() ;
-				
-				AuftragpositionDto auftragpositionDto = getAuftragpositionFac()
-						.auftragpositionFindByPrimaryKeyOhneExc(lsposDto.getAuftragpositionIId()) ;
-				if(auftragpositionDto != null) {
-					orderReference.setLINEITEMID(extractLineItemIdRef(auftragpositionDto));
-					orderReference.setORDERID(getOrderReference(auftragpositionDto));
-					dnItem.setORDERREFERENCE(orderReference) ;						
-				}
-			}		
+		private String getOrderReference(AuftragpositionDto auftragpositionDto)
+				throws RemoteException {
+			AuftragDto auftragDto = getAuftragFac()
+					.auftragFindByPrimaryKeyOhneExc(
+							auftragpositionDto.getBelegIId());
+			if (auftragDto == null)
+				return "";
+
+			return auftragDto.getCBestellnummer();
 		}
-		
-		private void buildDeliveryInfo(XMLXMLDISPATCHNOTIFICATIONITEM dnItem, LieferscheinDto lieferscheinDto, LieferscheinpositionDto lsposDto) throws RemoteException {			
-			Calendar c = GregorianCalendar.getInstance() ;
+
+		private void buildOrderReference(XMLXMLDISPATCHNOTIFICATIONITEM dnItem,
+				LieferscheinpositionDto lsposDto) throws RemoteException {
+			if (lsposDto.getAuftragpositionIId() != null) {
+				XMLXMLORDERREFERENCE orderReference = new XMLXMLORDERREFERENCE();
+
+				AuftragpositionDto auftragpositionDto = getAuftragpositionFac()
+						.auftragpositionFindByPrimaryKeyOhneExc(
+								lsposDto.getAuftragpositionIId());
+				if (auftragpositionDto != null) {
+					orderReference
+							.setLINEITEMID(extractLineItemIdRef(auftragpositionDto));
+					orderReference
+							.setORDERID(getOrderReference(auftragpositionDto));
+					dnItem.setORDERREFERENCE(orderReference);
+				}
+			}
+		}
+
+		private void buildDeliveryInfo(XMLXMLDISPATCHNOTIFICATIONITEM dnItem,
+				LieferscheinDto lieferscheinDto,
+				LieferscheinpositionDto lsposDto) throws RemoteException {
+			Calendar c = GregorianCalendar.getInstance();
 			c.setTimeInMillis(lieferscheinDto.getTLiefertermin().getTime());
 			c.set(Calendar.HOUR_OF_DAY, 0);
 			c.set(Calendar.MINUTE, 0);
-			c.set(Calendar.SECOND, 0) ;
-			String theDate = formatAsIso8601Timestamp(c.getTime()) ;
-			
-			XMLXMLDELIVERYDATE deliveryDate = new XMLXMLDELIVERYDATE() ;
+			c.set(Calendar.SECOND, 0);
+			String theDate = formatAsIso8601Timestamp(c.getTime());
+
+			XMLXMLDELIVERYDATE deliveryDate = new XMLXMLDELIVERYDATE();
 			deliveryDate.setDELIVERYSTARTDATE(theDate);
 			deliveryDate.setDELIVERYENDDATE(theDate);
 			dnItem.setDELIVERYDATE(deliveryDate);
 		}
-		
+
 		private String buildUrsprungsland(ArtikelDto itemDto) {
-			if(itemDto.getLandIIdUrsprungsland() == null) {
-				return "" ;
+			if (itemDto.getLandIIdUrsprungsland() == null) {
+				return "";
 			}
-			Integer landId = itemDto.getLandIIdUrsprungsland() ;
-			LandDto landDto = getSystemFac().landFindByPrimaryKey(landId) ;
-			return landDto.getCLkz() ;
+			Integer landId = itemDto.getLandIIdUrsprungsland();
+			LandDto landDto = getSystemFac().landFindByPrimaryKey(landId);
+			return landDto.getCLkz();
 		}
-		
+
 		private String buildItemCnr(ArtikelDto itemDto) {
-			String cnr = itemDto.getCNr() ;
-//			if(itemDto.getCRevision() != null && itemDto.getCRevision().trim().length() > 0) {
-//				cnr = cnr + "-" +itemDto.getCRevision().trim() ;
-//			}
-			
-			return cnr ;
+			String cnr = itemDto.getCNr();
+			// if(itemDto.getCRevision() != null &&
+			// itemDto.getCRevision().trim().length() > 0) {
+			// cnr = cnr + "-" +itemDto.getCRevision().trim() ;
+			// }
+
+			return cnr;
 		}
-		
-		private String getLieferantennummer(Integer kundeIId, TheClientDto theClientDto) {
-			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId, theClientDto) ;
-			return kundeDto.getCLieferantennr() ;
+
+		private String getLieferantennummer(LieferscheinDto lsDto,
+				TheClientDto theClientDto) {
+			if(lsDto.getAuftragIId() == null) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_LIEFERSCHEIN_AVISO_BEREITS_DURCHGEFUEHRT, lsDto.getCNr()) ;
+			}
+			Auftrag auftrag = em.find(Auftrag.class, lsDto.getAuftragIId()) ;
+			if(auftrag == null) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, lsDto.getAuftragIId().toString()) ;
+			}
+			Kunde kunde = em.find(Kunde.class, auftrag.getKundeIIdAuftragsadresse()) ;
+			if(kunde == null) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, auftrag.getKundeIIdAuftragsadresse().toString()) ;				
+			}
+			return kunde.getCLieferantennr();
 		}
-		
-		private XMLXMLDISPATCHNOTIFICATIONSUMMARY buildDnSummary(LieferscheinDto lieferscheinDto,
-				Collection<LieferscheinpositionDto> positionDtos, TheClientDto theClientDto) {
-			XMLXMLDISPATCHNOTIFICATIONSUMMARY dnSummary = new XMLXMLDISPATCHNOTIFICATIONSUMMARY() ;
-			int itemCount = positionDtos.size() ;
-			
-			dnSummary.setTOTALITEMNUM(new BigInteger(String.valueOf(itemCount))) ;
-			return dnSummary ;
-		}		
+
+		private String getLieferantennummer(Integer kundeIId,
+				TheClientDto theClientDto) {
+			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeIId,
+					theClientDto);
+			return kundeDto.getCLieferantennr();
+		}
+
+		private XMLXMLDISPATCHNOTIFICATIONSUMMARY buildDnSummary(
+				LieferscheinDto lieferscheinDto,
+				Collection<LieferscheinpositionDto> positionDtos,
+				TheClientDto theClientDto) {
+			XMLXMLDISPATCHNOTIFICATIONSUMMARY dnSummary = new XMLXMLDISPATCHNOTIFICATIONSUMMARY();
+			int itemCount = positionDtos.size();
+
+			dnSummary
+					.setTOTALITEMNUM(new BigInteger(String.valueOf(itemCount)));
+			return dnSummary;
+		}
 	}
-	
-	public class LieferscheinAvisoProducerDummy implements ILieferscheinAvisoProducer {
+
+	public class LieferscheinAvisoProducerDummy implements
+			ILieferscheinAvisoProducer {
 
 		@Override
 		public boolean isDummy() {
@@ -4023,154 +4300,187 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 		@Override
 		public String toString(ILieferscheinAviso aviso) {
 			return null;
-		}	
-		
+		}
+
 		@Override
 		public void postAviso(ILieferscheinAviso aviso) {
 		}
 	}
-	
-	public class LieferscheinAvisoProducerCCSelfSender extends LieferscheinAvisoProducerCC {
+
+	public class LieferscheinAvisoProducerCCSelfSender extends
+			LieferscheinAvisoProducerCC {
 		@Override
 		protected String getCCEndpunkt(EntityManager em,
 				VersandwegCCPartnerDto ccPartnerDto) {
 			return "http://localhost:8280/restapi/services/rest/api/beta/cc?fake=yes";
 		}
 	}
-	
+
 	private class LieferscheinAvisoFactory {
 		private ILieferscheinAvisoProducer getProducerCC() {
-//			return new LieferscheinAvisoProducerCCSelfSender() ;
-			return new LieferscheinAvisoProducerCC() ;
+			// return new LieferscheinAvisoProducerCCSelfSender() ;
+			return new LieferscheinAvisoProducerCC();
 		}
-		
+
 		public ILieferscheinAvisoProducer getProducer(
-				LieferscheinDto lieferscheinDto, TheClientDto theClientDto) throws RemoteException, NamingException {
-			Integer versandwegId = getVersandwegIdFor(lieferscheinDto, theClientDto) ;
-			if(null == versandwegId ) return new LieferscheinAvisoProducerDummy() ;
-			
-			Versandweg versandweg = em.find(Versandweg.class, versandwegId) ;
-			if(null == versandweg) throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, versandwegId.toString()) ;
+				LieferscheinDto lieferscheinDto, TheClientDto theClientDto)
+				throws RemoteException, NamingException {
+			Integer versandwegId = getVersandwegIdFor(lieferscheinDto,
+					theClientDto);
+			if (null == versandwegId)
+				return new LieferscheinAvisoProducerDummy();
 
-			if(SystemFac.VersandwegType.CleverCureVerkauf.equals(versandweg.getCnr().trim())) return getProducerCC() ;
-			return null ;
+			Versandweg versandweg = em.find(Versandweg.class, versandwegId);
+			if (null == versandweg)
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+						versandwegId.toString());
+
+			if (SystemFac.VersandwegType.CleverCureVerkauf.equals(versandweg
+					.getCnr().trim()))
+				return getProducerCC();
+			return null;
 		}
 	}
-	
-	private LieferscheinAvisoFactory avisoFactory = new LieferscheinAvisoFactory() ;
 
-	private Integer getVersandwegIdFor(LieferscheinDto lieferscheinDto, TheClientDto theClientDto) throws RemoteException {
-		return getVersandwegIdFor(lieferscheinDto.getKundeIIdLieferadresse(), theClientDto) ;
+	private LieferscheinAvisoFactory avisoFactory = new LieferscheinAvisoFactory();
+
+	private Integer getVersandwegIdFor(LieferscheinDto lieferscheinDto,
+			TheClientDto theClientDto) throws RemoteException {
+		return getVersandwegIdFor(lieferscheinDto.getKundeIIdLieferadresse(),
+				theClientDto);
 	}
-	
-	private Integer getVersandwegIdFor(Integer kundeId, TheClientDto theClientDto) throws RemoteException {
-		KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeId, theClientDto) ;
-		
-		Integer versandwegId = kundeDto.getPartnerDto().getVersandwegIId() ;
-		return versandwegId ;
+
+	private Integer getVersandwegIdFor(Integer kundeId,
+			TheClientDto theClientDto) throws RemoteException {
+		KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeId,
+				theClientDto);
+
+		Integer versandwegId = kundeDto.getPartnerDto().getVersandwegIId();
+		return versandwegId;
 	}
-	
-	public ILieferscheinAviso createLieferscheinAviso(Integer lieferscheinIId, TheClientDto theClientDto) throws NamingException, RemoteException {
-		Validator.notNull(lieferscheinIId, "lieferscheinIId") ;
-		Validator.notNull(theClientDto, "theClientDto") ;
+
+	public ILieferscheinAviso createLieferscheinAviso(Integer lieferscheinIId,
+			TheClientDto theClientDto) throws NamingException, RemoteException {
+		Validator.notNull(lieferscheinIId, "lieferscheinIId");
+		Validator.notNull(theClientDto, "theClientDto");
 		Validator.notEmpty(theClientDto.getMandant(), "theClient.mandant");
-		
-		LieferscheinDto lieferscheinDto = lieferscheinFindByPrimaryKey(lieferscheinIId) ;
-		if(!lieferscheinDto.getMandantCNr().equals(theClientDto.getMandant())) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FALSCHER_MANDANT, lieferscheinDto.getIId().toString());
+
+		LieferscheinDto lieferscheinDto = lieferscheinFindByPrimaryKey(lieferscheinIId);
+		if (!lieferscheinDto.getMandantCNr().equals(theClientDto.getMandant())) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FALSCHER_MANDANT,
+					lieferscheinDto.getIId().toString());
 		}
 
-		if(lieferscheinDto.getTLieferaviso() != null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_LIEFERSCHEIN_AVISO_BEREITS_DURCHGEFUEHRT,
-					lieferscheinDto.getTLieferaviso().toString()) ;
+		if (lieferscheinDto.getTLieferaviso() != null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_LIEFERSCHEIN_AVISO_BEREITS_DURCHGEFUEHRT,
+					lieferscheinDto.getTLieferaviso().toString());
 		}
-		
-		ILieferscheinAvisoProducer avisoProducer = avisoFactory.getProducer(lieferscheinDto, theClientDto) ;
-		if(null == avisoProducer) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_LIEFERSCHEIN_VERSANDWEG_NICHT_UNTERSTUETZT, "") ;
+
+		ILieferscheinAvisoProducer avisoProducer = avisoFactory.getProducer(
+				lieferscheinDto, theClientDto);
+		if (null == avisoProducer) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_LIEFERSCHEIN_VERSANDWEG_NICHT_UNTERSTUETZT,
+					"");
 		}
-		
-		ILieferscheinAviso aviso = avisoProducer.createAviso(lieferscheinDto, theClientDto) ;
-//		if(aviso != null) {
-//			Lieferschein ls = em.find(Lieferschein.class, lieferscheinDto.getIId())  ;		
-//			ls.setTLieferaviso(new Timestamp(System.currentTimeMillis()));
-//			ls.setPersonalIIdLieferaviso(theClientDto.getIDPersonal());
-//			em.merge(ls) ;
-//			em.flush() ;
-//			
-//		}
-		
-		return aviso ;
+
+		ILieferscheinAviso aviso = avisoProducer.createAviso(lieferscheinDto,
+				theClientDto);
+		// if(aviso != null) {
+		// Lieferschein ls = em.find(Lieferschein.class,
+		// lieferscheinDto.getIId()) ;
+		// ls.setTLieferaviso(new Timestamp(System.currentTimeMillis()));
+		// ls.setPersonalIIdLieferaviso(theClientDto.getIDPersonal());
+		// em.merge(ls) ;
+		// em.flush() ;
+		//
+		// }
+
+		return aviso;
 	}
-	
-	private void updateAvisoTimestamp(Integer lieferscheinIId, TheClientDto theClientDto) {
-		Lieferschein ls = em.find(Lieferschein.class, lieferscheinIId)  ;		
+
+	private void updateAvisoTimestamp(Integer lieferscheinIId,
+			TheClientDto theClientDto) {
+		Lieferschein ls = em.find(Lieferschein.class, lieferscheinIId);
 		ls.setTLieferaviso(new Timestamp(System.currentTimeMillis()));
 		ls.setPersonalIIdLieferaviso(theClientDto.getIDPersonal());
-		em.merge(ls) ;
-		em.flush() ;		
+		em.merge(ls);
+		em.flush();
 	}
-	
+
 	@Override
-	public void resetLieferscheinAviso(Integer lieferscheinIId, TheClientDto theClientDto) throws RemoteException {
-		Validator.notNull(lieferscheinIId, "lieferscheinIId") ;
-		Validator.notNull(theClientDto, "theClientDto") ;		
-		
-		Lieferschein ls = em.find(Lieferschein.class, lieferscheinIId)  ;
-		if(ls == null) return ;
-		
-		if(!ls.getMandantCNr().equals(theClientDto.getMandant())) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FALSCHER_MANDANT, lieferscheinIId.toString());
+	public void resetLieferscheinAviso(Integer lieferscheinIId,
+			TheClientDto theClientDto) throws RemoteException {
+		Validator.notNull(lieferscheinIId, "lieferscheinIId");
+		Validator.notNull(theClientDto, "theClientDto");
+
+		Lieferschein ls = em.find(Lieferschein.class, lieferscheinIId);
+		if (ls == null)
+			return;
+
+		if (!ls.getMandantCNr().equals(theClientDto.getMandant())) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FALSCHER_MANDANT,
+					lieferscheinIId.toString());
 		}
-		
+
 		ls.setTLieferaviso(null);
 		ls.setPersonalIIdLieferaviso(theClientDto.getIDPersonal());
-		em.merge(ls) ;
-		em.flush() ;
+		em.merge(ls);
+		em.flush();
 	}
-	
-	private String lieferscheinAvisoToStringImpl(
-			ILieferscheinAviso aviso, LieferscheinDto lieferscheinDto, 
-			TheClientDto theClientDto) throws RemoteException, NamingException {
-		ILieferscheinAvisoProducer producer = avisoFactory.getProducer(lieferscheinDto, theClientDto) ;
-		return producer.toString(aviso) ;
-	}
-	
-	@Override
-	public String lieferscheinAvisoToString(
-			LieferscheinDto lieferscheinDto, ILieferscheinAviso lieferscheinAviso, 
-			TheClientDto theClientDto) throws RemoteException, NamingException {
-		Validator.notNull(lieferscheinDto, "lieferscheinDto") ;
-		Validator.notNull(lieferscheinAviso, "lieferscheinAviso");
-		Validator.notNull(theClientDto, "theClientDto") ;		
 
-		return lieferscheinAvisoToStringImpl(lieferscheinAviso, lieferscheinDto, theClientDto) ;
+	private String lieferscheinAvisoToStringImpl(ILieferscheinAviso aviso,
+			LieferscheinDto lieferscheinDto, TheClientDto theClientDto)
+			throws RemoteException, NamingException {
+		ILieferscheinAvisoProducer producer = avisoFactory.getProducer(
+				lieferscheinDto, theClientDto);
+		return producer.toString(aviso);
 	}
-	
+
 	@Override
-	public String createLieferscheinAvisoToString(
-			Integer lieferscheinIId, TheClientDto theClientDto) throws RemoteException, NamingException {
-		ILieferscheinAviso aviso = createLieferscheinAviso(lieferscheinIId, theClientDto) ;
-		if(aviso == null) return null ;
-		LieferscheinDto lieferscheinDto = lieferscheinFindByPrimaryKey(lieferscheinIId) ;
-		return aviso == null ? null : lieferscheinAvisoToStringImpl(aviso, lieferscheinDto, theClientDto) ;
+	public String lieferscheinAvisoToString(LieferscheinDto lieferscheinDto,
+			ILieferscheinAviso lieferscheinAviso, TheClientDto theClientDto)
+			throws RemoteException, NamingException {
+		Validator.notNull(lieferscheinDto, "lieferscheinDto");
+		Validator.notNull(lieferscheinAviso, "lieferscheinAviso");
+		Validator.notNull(theClientDto, "theClientDto");
+
+		return lieferscheinAvisoToStringImpl(lieferscheinAviso,
+				lieferscheinDto, theClientDto);
 	}
-	
-	private void archiveAvisoDocument(LieferscheinDto lieferscheinDto, String xmlContent, TheClientDto theClientDto) {
-		
+
+	@Override
+	public String createLieferscheinAvisoToString(Integer lieferscheinIId,
+			TheClientDto theClientDto) throws RemoteException, NamingException {
+		ILieferscheinAviso aviso = createLieferscheinAviso(lieferscheinIId,
+				theClientDto);
+		if (aviso == null)
+			return null;
+		LieferscheinDto lieferscheinDto = lieferscheinFindByPrimaryKey(lieferscheinIId);
+		return aviso == null ? null : lieferscheinAvisoToStringImpl(aviso,
+				lieferscheinDto, theClientDto);
+	}
+
+	private void archiveAvisoDocument(LieferscheinDto lieferscheinDto,
+			String xmlContent, TheClientDto theClientDto) {
+
 		PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(
 				theClientDto.getIDPersonal(), theClientDto);
 
 		JCRDocDto jcrDocDto = new JCRDocDto();
-		DocPath dp = new DocPath(new DocNodeLieferschein(lieferscheinDto)).add(new DocNodeFile("Lieferaviso_Clevercure.xml")) ;
-		jcrDocDto.setDocPath(dp) ;
+		DocPath dp = new DocPath(new DocNodeLieferschein(lieferscheinDto))
+				.add(new DocNodeFile("Lieferaviso_Clevercure.xml"));
+		jcrDocDto.setDocPath(dp);
 		jcrDocDto.setbData(xmlContent.getBytes());
 		jcrDocDto.setbVersteckt(false);
 		jcrDocDto.setlAnleger(partnerDto.getIId());
-		
-		Integer kundeId = lieferscheinDto.getKundeIIdLieferadresse() ;
-		KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeId, theClientDto) ;
-		
+
+		Integer kundeId = lieferscheinDto.getKundeIIdLieferadresse();
+		KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(kundeId,
+				theClientDto);
+
 		jcrDocDto.setlPartner(kundeDto.getPartnerIId());
 		jcrDocDto.setlSicherheitsstufe(JCRDocFac.SECURITY_ARCHIV);
 		jcrDocDto.setlZeitpunkt(System.currentTimeMillis());
@@ -4184,65 +4494,290 @@ public class LieferscheinFacBean extends Facade implements LieferscheinFac, IAkt
 		jcrDocDto.setsTable("LIEFERSCHEIN");
 		String sSchlagworte = "Export Clevercure XML Dispatchnotification Aviso dnd";
 		jcrDocDto.setsSchlagworte(sSchlagworte);
-		getJCRDocFac().addNewDocumentOrNewVersionOfDocumentWithinTransaction(jcrDocDto, theClientDto);
+		getJCRDocFac().addNewDocumentOrNewVersionOfDocumentWithinTransaction(
+				jcrDocDto, theClientDto);
 	}
-		
+
 	@Override
-	public String createLieferscheinAvisoPost(
-			Integer lieferscheinIId, TheClientDto theClientDto) throws RemoteException, NamingException, EJBExceptionLP {
-		ILieferscheinAviso aviso = createLieferscheinAviso(lieferscheinIId, theClientDto) ;
-		if(aviso == null) return null ;
-	
-		LieferscheinDto lieferscheinDto = lieferscheinFindByPrimaryKey(lieferscheinIId) ;
-		ILieferscheinAvisoProducer producer = avisoFactory.getProducer(lieferscheinDto, theClientDto) ;
-		producer.postAviso(aviso) ;
+	public String createLieferscheinAvisoPost(Integer lieferscheinIId,
+			TheClientDto theClientDto) throws RemoteException, NamingException,
+			EJBExceptionLP {
+		ILieferscheinAviso aviso = createLieferscheinAviso(lieferscheinIId,
+				theClientDto);
+		if (aviso == null)
+			return null;
+
+		LieferscheinDto lieferscheinDto = lieferscheinFindByPrimaryKey(lieferscheinIId);
+		ILieferscheinAvisoProducer producer = avisoFactory.getProducer(
+				lieferscheinDto, theClientDto);
+		producer.postAviso(aviso);
 
 		// Besser Zeitstempel ist gesetzt, und dafuer ev. nicht archiviert
-		updateAvisoTimestamp(lieferscheinIId, theClientDto) ;
+		updateAvisoTimestamp(lieferscheinIId, theClientDto);
 
-		String xmlContent = lieferscheinAvisoToStringImpl(aviso, lieferscheinDto, theClientDto) ;
+		String xmlContent = lieferscheinAvisoToStringImpl(aviso,
+				lieferscheinDto, theClientDto);
 		archiveAvisoDocument(lieferscheinDto, xmlContent, theClientDto);
+
+		return xmlContent;
+	}
+
+	@Override
+	public boolean hatLieferscheinVersandweg(LieferscheinDto lieferscheinDto,
+			TheClientDto theClientDto) throws RemoteException {
+		Validator.notNull(lieferscheinDto, "lieferscheinDto");
+		return getKundeFac().hatKundeVersandweg(
+				lieferscheinDto.getKundeIIdLieferadresse(), theClientDto);
+	}
+
+	@Override
+	public boolean hatLieferscheinVersandweg(Integer lieferscheinIId,
+			TheClientDto theClientDto) throws RemoteException {
+		Validator.notNull(lieferscheinIId, "lieferscheinIId");
+		LieferscheinDto lieferscheinDto = lieferscheinFindByPrimaryKeyOhneExc(lieferscheinIId);
+		return getKundeFac().hatKundeVersandweg(
+				lieferscheinDto.getKundeIIdLieferadresse(), theClientDto);
+	}
+
+	@Override
+	public BelegPruefungDto aktiviereBelegControlled(Integer iid, Timestamp t,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		BelegPruefungDto pruefungDto = pruefeBeleg(new ILSPruefungFunction() {	
+			@Override
+			public BelegPruefungDto process(Integer iid, Timestamp t, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+				return belegAktivierungFac.aktiviereBelegControlled(LieferscheinFacBean.this, iid, t, theClientDto);
+			}
+		}, iid, t, theClientDto) ;
+		return pruefungDto ;
+
+//		BelegPruefungDto pruefungDto = belegAktivierungFac.aktiviereBelegControlled(this, iid, t, theClientDto) ;
+//
+//		boolean bUst = pruefungDto.isKundeHatUstAberNichtUstPositionen() ;
+//		boolean bNichtUst = pruefungDto.isKundeHatKeineUstAberUstPositionen() ;
+//		
+//		for (VerkettetDto verkettetDto : 
+//			getLieferscheinServiceFac().verkettetFindByLieferscheinIId(iid)) {
+//			BelegPruefungDto subBelegPruefungDto = belegAktivierungFac.aktiviereBelegControlled(this, 
+//					verkettetDto.getLieferscheinIIdVerkettet(), t, theClientDto) ;
+//
+//			bUst |= subBelegPruefungDto.isKundeHatUstAberNichtUstPositionen() ;
+//			bNichtUst |= subBelegPruefungDto.isKundeHatKeineUstAberUstPositionen() ;
+//		}
+//		pruefungDto.setKundeHatUstAberNichtUstPositionen(bUst);
+//		pruefungDto.setKundeHatKeineUstAberUstPositionen(bNichtUst);
+//		return pruefungDto ;
 		
-		return xmlContent ;
+//		ArrayList<Integer> alLs = new ArrayList<Integer>();
+//		alLs.add(iid);
+//
+//		for (VerkettetDto vDto : lsDtosVerketet) {
+//			alLs.add(vDto.getLieferscheinIIdVerkettet());
+//		}
+//
+//		for (Integer lieferscheinIId : alLs) {
+//
+//			new BelegAktivierungController(this).aktiviereBelegControlled(
+//					lieferscheinIId, t, theClientDto);
+//		}
 	}
 
 	@Override
-	public boolean hatLieferscheinVersandweg(LieferscheinDto lieferscheinDto, TheClientDto theClientDto) throws RemoteException {
-		Validator.notNull(lieferscheinDto, "lieferscheinDto") ;
-		return getKundeFac().hatKundeVersandweg(lieferscheinDto.getKundeIIdLieferadresse(), theClientDto) ;
+	public BelegPruefungDto berechneBelegControlled(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		BelegPruefungDto pruefungDto = pruefeBeleg(new ILSPruefungFunction() {	
+			@Override
+			public BelegPruefungDto process(Integer iid, Timestamp t, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+				return belegAktivierungFac.berechneBelegControlled(LieferscheinFacBean.this, iid, theClientDto);
+			}
+		}, iid, null, theClientDto) ;
+		return pruefungDto ;
+		
+//		BelegPruefungDto pruefungDto = belegAktivierungFac.berechneBelegControlled(this, iid, theClientDto) ;
+//		boolean bUst = pruefungDto.isKundeHatUstAberNichtUstPositionen() ;
+//		boolean bNichtUst = pruefungDto.isKundeHatKeineUstAberUstPositionen() ;
+//		
+//		for (VerkettetDto verkettetDto : 
+//			getLieferscheinServiceFac().verkettetFindByLieferscheinIId(iid)) {
+//			BelegPruefungDto subBelegPruefungDto = belegAktivierungFac.berechneBelegControlled(this, 
+//					verkettetDto.getLieferscheinIIdVerkettet(), theClientDto) ;
+//
+//			bUst |= subBelegPruefungDto.isKundeHatUstAberNichtUstPositionen() ;
+//			bNichtUst |= subBelegPruefungDto.isKundeHatKeineUstAberUstPositionen() ;
+//		}
+//		pruefungDto.setKundeHatUstAberNichtUstPositionen(bUst);
+//		pruefungDto.setKundeHatKeineUstAberUstPositionen(bNichtUst);
+//		return pruefungDto ;
+//		
+//		VerkettetDto[] lsDtosVerketet = getLieferscheinServiceFac()
+//				.verkettetFindByLieferscheinIId(iid);
+//
+//		ArrayList<Integer> alLs = new ArrayList<Integer>();
+//		alLs.add(iid);
+//
+//		for (VerkettetDto vDto : lsDtosVerketet) {
+//			alLs.add(vDto.getLieferscheinIIdVerkettet());
+//		}
+//
+//		Timestamp ts = null;
+//
+//		for (Integer lieferscheinIId : alLs) {
+//
+//			Timestamp tsTemp = new BelegAktivierungController(this)
+//					.berechneBelegControlled(lieferscheinIId, theClientDto);
+//
+//			if (ts == null) {
+//				ts = tsTemp;
+//			}
+//		}
+//
+//		return ts;
 	}
 
 	@Override
-	public boolean hatLieferscheinVersandweg(Integer lieferscheinIId, TheClientDto theClientDto) throws RemoteException {
-		Validator.notNull(lieferscheinIId, "lieferscheinIId") ;
-		LieferscheinDto lieferscheinDto = lieferscheinFindByPrimaryKeyOhneExc(lieferscheinIId) ;
-		return getKundeFac().hatKundeVersandweg(lieferscheinDto.getKundeIIdLieferadresse(), theClientDto) ;
+	public List<Timestamp> getAenderungsZeitpunkte(Integer iid)
+			throws EJBExceptionLP, RemoteException {
+		LieferscheinDto l = lieferscheinFindByPrimaryKey(iid);
+		List<Timestamp> timestamps = new ArrayList<Timestamp>();
+		timestamps.add(l.getTAendern());
+		timestamps.add(l.getTStorniert());
+		timestamps.add(l.getTManuellErledigt());
+		return timestamps;
 	}
 
-	@Override
-	public void aktiviereBelegControlled(Integer iid, Timestamp t,
-			TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException {
-		new BelegAktivierungController(this).aktiviereBelegControlled(iid, t, theClientDto);
+	// PJ2276
+	public void repairLieferscheinZws2276(Integer lieferscheinId,
+			TheClientDto theClientDto) throws RemoteException {
+		LieferscheinDto lieferscheinDto = lieferscheinFindByPrimaryKey(lieferscheinId);
+		if (LieferscheinFac.LSSTATUS_STORNIERT.equals(lieferscheinDto
+				.getStatusCNr()))
+			return;
+
+		LieferscheinpositionDto[] lsPosDto = getLieferscheinpositionFac()
+				.lieferscheinpositionFindByLieferscheinIId(
+						lieferscheinDto.getIId());
+		getBelegVerkaufFac().prepareIntZwsPositions(lsPosDto);
+		Set<Integer> modifiedPositions = getBelegVerkaufFac()
+				.adaptIntZwsPositions(lsPosDto);
+		for (Integer index : modifiedPositions) {
+			Lieferscheinposition lieferscheinposition = em.find(
+					Lieferscheinposition.class, lsPosDto[index].getIId());
+			lieferscheinposition
+					.setNNettogesamtpreisplusversteckteraufschlagminusrabatt(lsPosDto[index]
+							.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte());
+			em.merge(lieferscheinposition);
+			em.flush();
+
+			if (LocaleFac.POSITIONSART_IDENT.equals(lieferscheinposition
+					.getLieferscheinpositionartCNr())) {
+				LieferscheinpositionDto lieferscheinpositionDto = getLieferscheinpositionFac()
+						.lieferscheinpositionFindByPrimaryKey(
+								lieferscheinposition.getIId(), theClientDto);
+				if (lieferscheinpositionDto.getNMenge().signum() > 0) {
+					getLieferscheinpositionFac().bucheAbLager(
+							lieferscheinpositionDto, theClientDto);
+				} else {
+					if (lieferscheinpositionDto.getNMenge().signum() < 0) {
+						getLieferscheinpositionFac().bucheZuLager(
+								lieferscheinpositionDto, theClientDto);
+					}
+				}
+			}
+		}
+	}
+
+	public List<Integer> repairLieferscheinZws2276GetList(
+			TheClientDto theClientDto) {
+		Session session = FLRSessionFactory.getFactory().openSession();
+		String sQuery = "SELECT DISTINCT lieferschein_i_id "
+				+ " FROM FLRLieferscheinposition AS lspos WHERE lspos.positionsart_c_nr = 'IZwischensumme'";
+
+		org.hibernate.Query lieferscheinIdsQuery = session.createQuery(sQuery);
+
+		List<Integer> resultList = new ArrayList<Integer>();
+		List<Integer> queryList = (List<Integer>) lieferscheinIdsQuery.list();
+		for (Integer lieferschein_i_id : queryList) {
+			Lieferschein lieferschein = em.find(Lieferschein.class,
+					lieferschein_i_id);
+			if (theClientDto.getMandant().equals(lieferschein.getMandantCNr())) {
+				resultList.add(lieferschein_i_id);
+			}
+		}
+
+		session.close();
+		return resultList;
+	}
+	
+	interface ILSPruefungFunction {
+		BelegPruefungDto process(Integer id, Timestamp t, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException ;
+	}
+
+	private BelegPruefungDto pruefeBeleg(ILSPruefungFunction functor, 
+			Integer belegId, Timestamp t, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		BelegPruefungDto pruefungDto = functor.process(belegId, t, theClientDto) ;
+		
+		boolean bUst = pruefungDto.isKundeHatUstAberNichtUstPositionen() ;
+		boolean bNichtUst = pruefungDto.isKundeHatKeineUstAberUstPositionen() ;
+		
+		for (VerkettetDto verkettetDto : 
+			getLieferscheinServiceFac().verkettetFindByLieferscheinIId(belegId)) {
+			BelegPruefungDto subBelegPruefungDto = functor.process(
+					verkettetDto.getLieferscheinIIdVerkettet(), t, theClientDto) ;
+
+			bUst |= subBelegPruefungDto.isKundeHatUstAberNichtUstPositionen() ;
+			bNichtUst |= subBelegPruefungDto.isKundeHatKeineUstAberUstPositionen() ;
+		}
+		pruefungDto.setKundeHatUstAberNichtUstPositionen(bUst);
+		pruefungDto.setKundeHatKeineUstAberUstPositionen(bNichtUst);
+		return pruefungDto ;			
 	}
 	
 	@Override
-	public Timestamp berechneBelegControlled(Integer iid,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		return new BelegAktivierungController(this).berechneBelegControlled(iid, theClientDto);
+	public BelegPruefungDto berechneAktiviereBelegControlled(Integer iid, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		BelegPruefungDto pruefungDto = pruefeBeleg(new ILSPruefungFunction() {	
+			@Override
+			public BelegPruefungDto process(Integer iid, Timestamp t, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+				return belegAktivierungFac.berechneAktiviereControlled(LieferscheinFacBean.this, iid, theClientDto);
+			}
+		}, iid, null, theClientDto) ;
+		return pruefungDto ;
+//		
+//		BelegPruefungDto pruefungDto = belegAktivierungFac.berechneAktiviereControlled(this, iid, theClientDto) ;
+//		
+//		boolean bUst = pruefungDto.isKundeHatUstAberNichtUstPositionen() ;
+//		boolean bNichtUst = pruefungDto.isKundeHatKeineUstAberUstPositionen() ;
+//		
+//		for (VerkettetDto verkettetDto : 
+//			getLieferscheinServiceFac().verkettetFindByLieferscheinIId(iid)) {
+//			BelegPruefungDto subBelegPruefungDto = belegAktivierungFac.berechneAktiviereControlled(this, 
+//					verkettetDto.getLieferscheinIIdVerkettet(), theClientDto) ;
+//
+//			bUst |= subBelegPruefungDto.isKundeHatUstAberNichtUstPositionen() ;
+//			bNichtUst |= subBelegPruefungDto.isKundeHatKeineUstAberUstPositionen() ;
+//		}
+//		pruefungDto.setKundeHatUstAberNichtUstPositionen(bUst);
+//		pruefungDto.setKundeHatKeineUstAberUstPositionen(bNichtUst);
+//		return pruefungDto ;
+		
+//		new BelegAktivierungController(this).berechneAktiviereControlled(iid, theClientDto);
 	}
-
+	
 	@Override
-	public boolean hatAenderungenNach(Integer iid, Timestamp t)
+	public BelegDto getBelegDto(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
-		LieferscheinDto l = lieferscheinFindByPrimaryKey(iid);
-		if(l.getTAendern() != null && l.getTAendern().after(t))
-			return true;
-		if(l.getTStorniert() != null && l.getTStorniert().after(t))
-			return true;
-		if(l.getTManuellErledigt() != null && l.getTManuellErledigt().after(t))
-			return true;
-		return false;
+		BelegDto belegDto = lieferscheinFindByPrimaryKey(iid) ;
+		belegDto.setBelegartCNr(LocaleFac.BELEGART_LIEFERSCHEIN);
+		return belegDto ;
 	}
-
+	
+	@Override
+	public BelegpositionDto[] getBelegPositionDtos(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return getLieferscheinpositionFac().lieferscheinpositionFindByLieferscheinIId(iid) ;
+	}
+	
+	@Override
+	public Integer getKundeIdDesBelegs(BelegDto belegDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return ((LieferscheinDto)belegDto).getKundeIIdRechnungsadresse() ;
+	}
 }

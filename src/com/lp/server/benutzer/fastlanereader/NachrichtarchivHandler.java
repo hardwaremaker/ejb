@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,8 +35,7 @@ package com.lp.server.benutzer.fastlanereader;
 import java.sql.Timestamp;
 import java.util.Iterator;
 import java.util.List;
-
-import javax.persistence.Column;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -45,20 +44,18 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import com.lp.server.benutzer.fastlanereader.generated.FLRNachrichtarchiv;
-import com.lp.server.benutzer.fastlanereader.generated.FLRNachrichtart;
 import com.lp.server.benutzer.service.BenutzerFac;
 import com.lp.server.partner.service.PartnerFac;
-import com.lp.server.personal.fastlanereader.generated.FLRBeruf;
 import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
-import com.lp.util.Helper;
 
 /**
  * <p>
@@ -375,31 +372,43 @@ public class NachrichtarchivHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-
+			String mandantCNr = theClientDto.getMandant();
+			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
 							String.class, Timestamp.class, String.class,
 							Timestamp.class, String.class, Timestamp.class },
 					new String[] {
 							"Id",
-							getTextRespectUISpr("lp.nachrichtart", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.nachrichtart", mandantCNr,
+									locUI),
 
-							getTextRespectUISpr("lp.nachricht", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.erzeuger", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.erstellt", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.bearbeiter", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.bearbeitet", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.erledigtdurch",
-									theClientDto.getMandant(), theClientDto
-											.getLocUi()),
-							getTextRespectUISpr("lp.erledigtam", theClientDto
-									.getMandant(), theClientDto.getLocUi()) },
+							getTextRespectUISpr("lp.nachricht", mandantCNr,
+									locUI),
+							getTextRespectUISpr("lp.erzeuger", mandantCNr,
+									locUI),
+							getTextRespectUISpr("lp.erstellt", mandantCNr,
+									locUI),
+							getTextRespectUISpr("lp.bearbeiter", mandantCNr,
+									locUI),
+							getTextRespectUISpr("lp.bearbeitet", mandantCNr,
+									locUI),
+							getTextRespectUISpr("lp.erledigtdurch", mandantCNr,
+									locUI),
+							getTextRespectUISpr("lp.erledigtam", mandantCNr,
+									locUI) },
+
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
 					new String[] {
 							"i_id",
 							BenutzerFac.FLR_NACHRICHTARCHIV_FLRNACHRICHTART

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -106,6 +106,7 @@ import com.lp.server.system.service.WaehrungDtoAssembler;
 import com.lp.server.system.service.WechselkursDto;
 import com.lp.server.system.service.WechselkursDtoAssembler;
 import com.lp.server.util.Facade;
+import com.lp.server.util.Validator;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
@@ -2299,20 +2300,11 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 
 	public StatusDto statusFindByPrimaryKey(String cNrI,
 			TheClientDto theClientDto) {
-
-		// precondition
-		if (cNrI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"cNrI == null"));
-		}
-		if (theClientDto.getIDUser() == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
-					"theClientDto == null"));
-		}
+		Validator.notNull(cNrI, "cNrI");
+		Validator.notNull(theClientDto.getIDUser(), "getIDUser()") ;
 
 		StatusDto statusDto = null;
 
-		// try {
 		Status status = em.find(Status.class, cNrI);
 		if (status == null) {
 			throw new EJBExceptionLP(
@@ -2323,15 +2315,12 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		try {
 			Statusspr statusspr = em.find(Statusspr.class, new StatussprPK(
 					statusDto.getCNr(), theClientDto.getLocUiAsString()));
-			statusDto.setStatussprDto(assembleStatussprDto(statusspr));
+			if(statusspr != null) {
+				statusDto.setStatussprDto(assembleStatussprDto(statusspr));
+			}
 		} catch (Throwable t) {
 			// nothing here.
 		}
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
 
 		return statusDto;
 	}
@@ -2353,6 +2342,23 @@ public class LocaleFacBean extends Facade implements LocaleFac {
 		return (StatusDto[]) list.toArray(returnArray);
 	}
 
+	/**
+	 * Liefert die (&uuml;bersetzte) Bezeichnung f&uuml;r eine Status-CNr
+	 * @param statusCnr die Kennung des Status
+	 * @param theClientDto
+	 * @return die Bezeichnung sofern vorhanden, ansonsten die CNr 
+	 */
+	public String getStatusCBez(String statusCnr, TheClientDto theClientDto) {
+		StatusDto statusDto = statusFindByPrimaryKey(statusCnr, theClientDto) ;
+		StatussprDto sprDto = statusDto.getStatussprDto() ;
+		
+		if(sprDto != null && sprDto.getCBez() != null) {
+			return sprDto.getCBez() ;
+		}
+
+		return statusDto.getCNr() ;
+	}
+	
 	// *** Statusspr
 	// **************************************************************
 	public StatussprDto getStatusspr(String cNrI, String sLocUiI,

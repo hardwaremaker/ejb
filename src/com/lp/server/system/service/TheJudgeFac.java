@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -50,6 +50,9 @@ public interface TheJudgeFac {
 	public static final String FLRSPALTE_C_USERNR = "c_usernr";
 	public static final String FLRSPALTE_T_WANN = "t_wann";
 	public static final String FLRSPALTE_PERSONAL_I_ID_LOCKER = "personal_i_id_locker";
+	
+
+	public static final String ROLLE_HVADMIN = "HVAdmin";
 
 	public boolean isLocked(LockMeDto lockMeI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -68,6 +71,16 @@ public interface TheJudgeFac {
 
 	public LockMeDto[] findByWerWasOhneExc(String sWerI, String sWasI)
 			throws RemoteException;
+	
+	/**
+	 * Die Liste meiner Locks (LockMe) ermitteln
+	 * 
+	 * @param theClientDto
+	 * @return eine (leere) Liste meiner Locks
+	 */
+	public LockMeDto[] findMyLocks(TheClientDto theClientDto) ;
+	
+	public void removeMyLocks(TheClientDto theClientDto) ;
 
 	public boolean hatRecht(String rechtCNr, TheClientDto theClientDto);
 	public Integer getSystemrolleIId(TheClientDto theClientDto);

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,26 +32,19 @@
  ******************************************************************************/
 package com.lp.server.partner.fastlanereader.generated;
 
-import java.io.Serializable;
-import java.sql.Timestamp;
-import java.util.Date;
-
-import org.apache.commons.lang.builder.ToStringBuilder;
-
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto;
 import com.lp.server.personal.fastlanereader.generated.FLRPersonal;
 import com.lp.server.system.fastlanereader.generated.FLRKostenstelle;
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.Date;
+import org.apache.commons.lang.builder.ToStringBuilder;
 
 
 /** @author Hibernate CodeGenerator */
 public class FLRKunde implements Serializable {
 
-    /**
-	 * 
-	 */
-	private static final long serialVersionUID = 4362564689097139539L;
-
-	/** identifier field */
+    /** identifier field */
     private Integer i_id;
 
     /** nullable persistent field */
@@ -103,6 +96,15 @@ public class FLRKunde implements Serializable {
     private Integer vkpfartikelpreisliste_i_id_stdpreisliste;
 
     /** nullable persistent field */
+    private BigDecimal n_kreditlimit;
+
+    /** nullable persistent field */
+    private String c_id_extern;
+
+    /** nullable persistent field */
+    private Date t_aendern;
+
+    /** nullable persistent field */
     private com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartner;
 
     /** nullable persistent field */
@@ -117,12 +119,8 @@ public class FLRKunde implements Serializable {
     /** nullable persistent field */
     private FLRKostenstelle flrkostenstelle;
 
-    private String c_Id_Extern ;
-
-    private Timestamp t_aendern ;
-    
     /** full constructor */
-    public FLRKunde(String mandant_c_nr, String c_abc, Date t_liefersperream, String c_hinweisintern, String c_hinweisextern, String x_kommentar, Integer i_kundennummer, String c_kurznr, Integer konto_i_id_debitorenkonto, Integer lager_i_id_abbuchungslager, Integer i_lieferdauer, Short b_istinteressent, Short b_versteckterlieferant, Short b_monatsrechnung, Integer personal_i_id_bekommeprovision, Integer vkpfartikelpreisliste_i_id_stdpreisliste, com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartner, com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartnerRechnungsAdresse, FLRFinanzKonto flrkonto, FLRPersonal flrpersonal, FLRKostenstelle flrkostenstelle) {
+    public FLRKunde(String mandant_c_nr, String c_abc, Date t_liefersperream, String c_hinweisintern, String c_hinweisextern, String x_kommentar, Integer i_kundennummer, String c_kurznr, Integer konto_i_id_debitorenkonto, Integer lager_i_id_abbuchungslager, Integer i_lieferdauer, Short b_istinteressent, Short b_versteckterlieferant, Short b_monatsrechnung, Integer personal_i_id_bekommeprovision, Integer vkpfartikelpreisliste_i_id_stdpreisliste, BigDecimal n_kreditlimit, String c_id_extern, Date t_aendern, com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartner, com.lp.server.partner.fastlanereader.generated.FLRPartner flrpartnerRechnungsAdresse, FLRFinanzKonto flrkonto, FLRPersonal flrpersonal, FLRKostenstelle flrkostenstelle) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_abc = c_abc;
         this.t_liefersperream = t_liefersperream;
@@ -139,6 +137,9 @@ public class FLRKunde implements Serializable {
         this.b_monatsrechnung = b_monatsrechnung;
         this.personal_i_id_bekommeprovision = personal_i_id_bekommeprovision;
         this.vkpfartikelpreisliste_i_id_stdpreisliste = vkpfartikelpreisliste_i_id_stdpreisliste;
+        this.n_kreditlimit = n_kreditlimit;
+        this.c_id_extern = c_id_extern;
+        this.t_aendern = t_aendern;
         this.flrpartner = flrpartner;
         this.flrpartnerRechnungsAdresse = flrpartnerRechnungsAdresse;
         this.flrkonto = flrkonto;
@@ -286,6 +287,30 @@ public class FLRKunde implements Serializable {
         this.vkpfartikelpreisliste_i_id_stdpreisliste = vkpfartikelpreisliste_i_id_stdpreisliste;
     }
 
+    public BigDecimal getN_kreditlimit() {
+        return this.n_kreditlimit;
+    }
+
+    public void setN_kreditlimit(BigDecimal n_kreditlimit) {
+        this.n_kreditlimit = n_kreditlimit;
+    }
+
+    public String getC_id_extern() {
+        return this.c_id_extern;
+    }
+
+    public void setC_id_extern(String c_id_extern) {
+        this.c_id_extern = c_id_extern;
+    }
+
+    public Date getT_aendern() {
+        return this.t_aendern;
+    }
+
+    public void setT_aendern(Date t_aendern) {
+        this.t_aendern = t_aendern;
+    }
+
     public com.lp.server.partner.fastlanereader.generated.FLRPartner getFlrpartner() {
         return this.flrpartner;
     }
@@ -326,25 +351,11 @@ public class FLRKunde implements Serializable {
         this.flrkostenstelle = flrkostenstelle;
     }
 
-	public String getC_id_extern() {
-		return c_Id_Extern;
-	}
-
-	public void setC_id_extern(String c_Id_Extern) {
-		this.c_Id_Extern = c_Id_Extern;
-	}
-
-	public Timestamp getT_aendern() {
-		return t_aendern;
-	}
-
-	public void setT_aendern(Timestamp t_aendern) {
-		this.t_aendern = t_aendern;
-	}
-
-	public String toString() {
+    public String toString() {
         return new ToStringBuilder(this)
             .append("i_id", getI_id())
             .toString();
     }
+
 }
+

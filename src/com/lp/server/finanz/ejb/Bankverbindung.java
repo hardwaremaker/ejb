@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -45,10 +45,13 @@ import javax.persistence.Table;
 @NamedQueries( {
 		@NamedQuery(name = "BankverbindungfindByKontoIId", query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.kontoIId=?1"),
 		@NamedQuery(name = "BankverbindungfindByBankIId", query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.bankIId=?1"),
-		@NamedQuery(name = "BankverbindungfindByBankIIdMandantCNrCKontonummer", query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.bankIId=?1 AND o.mandantCNr=?2 AND o.cKontonummer=?3") })
+		@NamedQuery(name = "BankverbindungfindByBankIIdMandantCNrCKontonummer", query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.bankIId=?1 AND o.mandantCNr=?2 AND o.cKontonummer=?3"),
+		@NamedQuery(name = Bankverbindung.BankverbindungFindForLiquiditaetsvorschau, query = "SELECT OBJECT(o) FROM Bankverbindung o WHERE o.bInLiquiditaetsvorschau=1 AND o.mandantCNr=:mandant") })
 @Entity
 @Table(name = "FB_BANKVERBINDUNG")
 public class Bankverbindung implements Serializable {
+	
+	public static final String BankverbindungFindForLiquiditaetsvorschau = "BankverbindungFindForLiquiditaetsvorschau";
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;
@@ -82,6 +85,9 @@ public class Bankverbindung implements Serializable {
 
 	@Column(name = "PERSONAL_I_ID_ANLEGEN")
 	private Integer personalIIdAnlegen;
+	
+	@Column(name = "B_IN_LIQUIDITAETSVORSCHAU")
+	private Short bInLiquiditaetsvorschau;
 
 	private static final long serialVersionUID = 1L;
 
@@ -190,6 +196,14 @@ public class Bankverbindung implements Serializable {
 
 	public void setPersonalIIdAnlegen(Integer personalIIdAnlegen) {
 		this.personalIIdAnlegen = personalIIdAnlegen;
+	}
+	
+	public Short getbInLiquiditaetsvorschau() {
+		return bInLiquiditaetsvorschau;
+	}
+	
+	public void setbInLiquiditaetsvorschau(Short bInLiquiditaetsvorschau) {
+		this.bInLiquiditaetsvorschau = bInLiquiditaetsvorschau;
 	}
 
 }

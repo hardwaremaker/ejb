@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -36,45 +36,64 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+
+import com.lp.util.EJBExceptionLP;
 
 public class AuftragzeitenDto extends TabelleDto implements Serializable {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	
+
 	private String maschinengruppe;
-	
+
 	public String getMaschinengruppe() {
 		return maschinengruppe;
 	}
 
-
-	private Integer iArbeitsgang=null;
-	private Integer iUnterarbeitsgang=null;
+	private boolean bTelefonzeit=false;
 	
+	public boolean isBTelefonzeit() {
+		return bTelefonzeit;
+	}
+
+	public void setBTelefonzeit(boolean bTelefonzeit) {
+		this.bTelefonzeit = bTelefonzeit;
+	}
+
+	private Integer iArbeitsgang = null;
+	private Integer iUnterarbeitsgang = null;
+
 	public Integer getiArbeitsgang() {
 		return iArbeitsgang;
 	}
-
 
 	public void setiArbeitsgang(Integer iArbeitsgang) {
 		this.iArbeitsgang = iArbeitsgang;
 	}
 
-
 	public Integer getiUnterarbeitsgang() {
 		return iUnterarbeitsgang;
 	}
-
 
 	public void setiUnterarbeitsgang(Integer iUnterarbeitsgang) {
 		this.iUnterarbeitsgang = iUnterarbeitsgang;
 	}
 
-
 	public void setMaschinengruppe(String maschinengruppe) {
 		this.maschinengruppe = maschinengruppe;
+	}
+
+	
+	private String sPersonalKurzzeichen;
+	
+	public String getSPersonalKurzzeichen() {
+		return sPersonalKurzzeichen;
+	}
+
+	public void setSPersonalKurzzeichen(String sPersonalKurzzeichen) {
+		this.sPersonalKurzzeichen = sPersonalKurzzeichen;
 	}
 
 	private String sPersonalnummer;
@@ -85,18 +104,18 @@ public class AuftragzeitenDto extends TabelleDto implements Serializable {
 		return sPersonNachnameVorname;
 	}
 
-
 	public void setsPersonNachnameVorname(String sPersonNachnameVorname) {
+		
 		this.sPersonNachnameVorname = sPersonNachnameVorname;
 	}
 
 	private String sArtikelcnr;
 	private String sArtikelbezeichnung;
 	private String sArtikelzusatzbezeichnung;
+
 	public String getSArtikelzusatzbezeichnung() {
 		return sArtikelzusatzbezeichnung;
 	}
-
 
 	public void setSArtikelzusatzbezeichnung(String sArtikelzusatzbezeichnung) {
 		this.sArtikelzusatzbezeichnung = sArtikelzusatzbezeichnung;
@@ -270,4 +289,62 @@ public class AuftragzeitenDto extends TabelleDto implements Serializable {
 	public void setIPersonalMaschinenId(Integer iPersonalMaschinenId) {
 		this.iPersonalMaschinenId = iPersonalMaschinenId;
 	}
+
+	public static AuftragzeitenDto[] add2BelegzeitenDtos(
+			ArrayList<AuftragzeitenDto> alDaten,
+			AuftragzeitenDto[] vorhandenDtos) {
+		if (alDaten != null && alDaten.size()>0) {
+			ArrayList alnew = new ArrayList<AuftragzeitenDto>();
+			for (int i = 0; i < vorhandenDtos.length; i++) {
+				alnew.add(vorhandenDtos[i]);
+			}
+
+			for (int i = 0; i < alDaten.size(); i++) {
+				alnew.add(alDaten.get(i));
+			}
+
+			AuftragzeitenDto[] azDtos = new AuftragzeitenDto[alnew.size()];
+			return (AuftragzeitenDto[]) alnew.toArray(azDtos);
+		} else {
+			return vorhandenDtos;
+		}
+
+	}
+
+	public static AuftragzeitenDto[] sortiereBelegzeitDtos(
+			AuftragzeitenDto[] azDtos, boolean bOrderByArtikelCNr) {
+
+		try {
+			if (bOrderByArtikelCNr == true) {
+
+				for (int i = azDtos.length - 1; i > 0; --i) {
+					for (int j = 0; j < i; ++j) {
+						if (azDtos[j].getSArtikelcnr().compareTo(
+								azDtos[j + 1].getSArtikelcnr()) > 0) {
+							AuftragzeitenDto tauschDto = azDtos[j];
+							azDtos[j] = azDtos[j + 1];
+							azDtos[j + 1] = tauschDto;
+						}
+					}
+				}
+			} else {
+				for (int i = azDtos.length - 1; i > 0; --i) {
+					for (int j = 0; j < i; ++j) {
+						if (azDtos[j].getsPersonNachnameVorname().compareTo(
+								azDtos[j + 1].getsPersonNachnameVorname()) > 0) {
+							AuftragzeitenDto tauschDto = azDtos[j];
+							azDtos[j] = azDtos[j + 1];
+							azDtos[j + 1] = tauschDto;
+						}
+					}
+				}
+			}
+
+		} catch (NullPointerException ex3) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_IN_ZEITDATEN, ex3);
+		}
+
+		return azDtos;
+	}
+
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -36,10 +36,19 @@ import java.io.Serializable;
 import java.sql.Date;
 import java.sql.Timestamp;
 
+import com.lp.server.artikel.ejb.Artkla;
+import com.lp.server.artikel.ejb.Material;
+import com.lp.server.finanz.ejb.Ergebnisgruppe;
+import com.lp.server.finanz.ejb.Uvaart;
 import com.lp.server.partner.service.PartnerDto;
+import com.lp.server.system.service.HvDtoLogClass;
+import com.lp.server.system.service.HvDtoLogIdCBez;
+import com.lp.server.system.service.HvDtoLogIdCnr;
+import com.lp.server.util.IIId;
 import com.lp.server.util.IModificationData;
 
-public class KontoDto implements Serializable, IModificationData {
+@HvDtoLogClass(name = HvDtoLogClass.KONTO)
+public class KontoDto implements Serializable, IIId, IModificationData {
 	private static final long serialVersionUID = -792343803475903366L;
 
 	private Integer iId;
@@ -74,6 +83,7 @@ public class KontoDto implements Serializable, IModificationData {
 	private Integer steuerkategorieIIdReverse;
 	private String csortierung;
 	private String waehrungCNrDruck;
+	private String cSteuerart;
 
 	private String xBemerkung;
 
@@ -110,6 +120,7 @@ public class KontoDto implements Serializable, IModificationData {
 
 	private Integer ergebnisgruppeIId_negativ;
 
+	@HvDtoLogIdCBez(entityClass = Ergebnisgruppe.class)
 	public Integer getErgebnisgruppeIId_negativ() {
 		return ergebnisgruppeIId_negativ;
 	}
@@ -230,7 +241,7 @@ public class KontoDto implements Serializable, IModificationData {
 	public Integer getFinanzamtIId() {
 		return finanzamtIId;
 	}
-
+	
 	public void setFinanzamtIId(Integer finanzamtIId) {
 		this.finanzamtIId = finanzamtIId;
 	}
@@ -283,6 +294,7 @@ public class KontoDto implements Serializable, IModificationData {
 		this.kontotypCNr = kontotypCNr;
 	}
 
+	@HvDtoLogIdCBez(entityClass = Ergebnisgruppe.class)
 	public Integer getErgebnisgruppeIId() {
 		return ergebnisgruppeIId;
 	}
@@ -355,159 +367,340 @@ public class KontoDto implements Serializable, IModificationData {
 		this.csortierung = csortierung;
 	}
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime
+				* result
+				+ ((bAllgemeinsichtbar == null) ? 0 : bAllgemeinsichtbar
+						.hashCode());
+		result = prime
+				* result
+				+ ((bAutomeroeffnungsbuchung == null) ? 0
+						: bAutomeroeffnungsbuchung.hashCode());
+		result = prime
+				* result
+				+ ((bManuellbebuchbar == null) ? 0 : bManuellbebuchbar
+						.hashCode());
+		result = prime * result
+				+ ((bOhneUst == null) ? 0 : bOhneUst.hashCode());
+		result = prime * result
+				+ ((bVersteckt == null) ? 0 : bVersteckt.hashCode());
+		result = prime * result + ((cBez == null) ? 0 : cBez.hashCode());
+		result = prime
+				* result
+				+ ((cLetztesortierung == null) ? 0 : cLetztesortierung
+						.hashCode());
+		result = prime * result + ((cNr == null) ? 0 : cNr.hashCode());
+		result = prime * result
+				+ ((cSteuerart == null) ? 0 : cSteuerart.hashCode());
+		result = prime * result
+				+ ((csortierung == null) ? 0 : csortierung.hashCode());
+		result = prime * result
+				+ ((dGueltigbis == null) ? 0 : dGueltigbis.hashCode());
+		result = prime * result
+				+ ((dGueltigvon == null) ? 0 : dGueltigvon.hashCode());
+		result = prime
+				* result
+				+ ((ergebnisgruppeIId == null) ? 0 : ergebnisgruppeIId
+						.hashCode());
+		result = prime
+				* result
+				+ ((ergebnisgruppeIId_negativ == null) ? 0
+						: ergebnisgruppeIId_negativ.hashCode());
+		result = prime * result
+				+ ((finanzamtIId == null) ? 0 : finanzamtIId.hashCode());
+		result = prime
+				* result
+				+ ((iGeschaeftsjahrEB == null) ? 0 : iGeschaeftsjahrEB
+						.hashCode());
+		result = prime * result + ((iId == null) ? 0 : iId.hashCode());
+		result = prime
+				* result
+				+ ((iLetzteselektiertebuchung == null) ? 0
+						: iLetzteselektiertebuchung.hashCode());
+		result = prime
+				* result
+				+ ((kontoIIdWeiterfuehrendBilanz == null) ? 0
+						: kontoIIdWeiterfuehrendBilanz.hashCode());
+		result = prime
+				* result
+				+ ((kontoIIdWeiterfuehrendSkonto == null) ? 0
+						: kontoIIdWeiterfuehrendSkonto.hashCode());
+		result = prime
+				* result
+				+ ((kontoIIdWeiterfuehrendUst == null) ? 0
+						: kontoIIdWeiterfuehrendUst.hashCode());
+		result = prime * result
+				+ ((kontoartCNr == null) ? 0 : kontoartCNr.hashCode());
+		result = prime * result
+				+ ((kontotypCNr == null) ? 0 : kontotypCNr.hashCode());
+		result = prime * result
+				+ ((kostenstelleIId == null) ? 0 : kostenstelleIId.hashCode());
+		result = prime * result
+				+ ((mandantCNr == null) ? 0 : mandantCNr.hashCode());
+		result = prime * result
+				+ ((partnerDto == null) ? 0 : partnerDto.hashCode());
+		result = prime
+				* result
+				+ ((personalIIdAendern == null) ? 0 : personalIIdAendern
+						.hashCode());
+		result = prime
+				* result
+				+ ((personalIIdAnlegen == null) ? 0 : personalIIdAnlegen
+						.hashCode());
+		result = prime
+				* result
+				+ ((rechenregelCNrWeiterfuehrendBilanz == null) ? 0
+						: rechenregelCNrWeiterfuehrendBilanz.hashCode());
+		result = prime
+				* result
+				+ ((rechenregelCNrWeiterfuehrendSkonto == null) ? 0
+						: rechenregelCNrWeiterfuehrendSkonto.hashCode());
+		result = prime
+				* result
+				+ ((rechenregelCNrWeiterfuehrendUst == null) ? 0
+						: rechenregelCNrWeiterfuehrendUst.hashCode());
+		result = prime
+				* result
+				+ ((steuerkategorieIId == null) ? 0 : steuerkategorieIId
+						.hashCode());
+		result = prime
+				* result
+				+ ((steuerkategorieIIdReverse == null) ? 0
+						: steuerkategorieIIdReverse.hashCode());
+		result = prime * result
+				+ ((tAendern == null) ? 0 : tAendern.hashCode());
+		result = prime * result
+				+ ((tAnlegen == null) ? 0 : tAnlegen.hashCode());
+		result = prime * result
+				+ ((tEBAnlegen == null) ? 0 : tEBAnlegen.hashCode());
+		result = prime * result
+				+ ((uvaartIId == null) ? 0 : uvaartIId.hashCode());
+		result = prime
+				* result
+				+ ((waehrungCNrDruck == null) ? 0 : waehrungCNrDruck.hashCode());
+		result = prime * result
+				+ ((xBemerkung == null) ? 0 : xBemerkung.hashCode());
+		return result;
+	}
+
+	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
-		if (!(obj instanceof KontoDto))
+		if (obj == null)
 			return false;
-		KontoDto that = (KontoDto) obj;
-		if (!(that.iId == null ? this.iId == null : that.iId.equals(this.iId)))
+		if (getClass() != obj.getClass())
 			return false;
-		if (!(that.mandantCNr == null ? this.mandantCNr == null
-				: that.mandantCNr.equals(this.mandantCNr)))
+		KontoDto other = (KontoDto) obj;
+		if (bAllgemeinsichtbar == null) {
+			if (other.bAllgemeinsichtbar != null)
+				return false;
+		} else if (!bAllgemeinsichtbar.equals(other.bAllgemeinsichtbar))
 			return false;
-		if (!(that.cNr == null ? this.cNr == null : that.cNr.equals(this.cNr)))
+		if (bAutomeroeffnungsbuchung == null) {
+			if (other.bAutomeroeffnungsbuchung != null)
+				return false;
+		} else if (!bAutomeroeffnungsbuchung
+				.equals(other.bAutomeroeffnungsbuchung))
 			return false;
-		if (!(that.cBez == null ? this.cBez == null : that.cBez
-				.equals(this.cBez)))
+		if (bManuellbebuchbar == null) {
+			if (other.bManuellbebuchbar != null)
+				return false;
+		} else if (!bManuellbebuchbar.equals(other.bManuellbebuchbar))
 			return false;
-		if (!(that.kontoIIdWeiterfuehrendUst == null ? this.kontoIIdWeiterfuehrendUst == null
-				: that.kontoIIdWeiterfuehrendUst
-						.equals(this.kontoIIdWeiterfuehrendUst)))
+		if (bOhneUst == null) {
+			if (other.bOhneUst != null)
+				return false;
+		} else if (!bOhneUst.equals(other.bOhneUst))
 			return false;
-		if (!(that.rechenregelCNrWeiterfuehrendUst == null ? this.rechenregelCNrWeiterfuehrendUst == null
-				: that.rechenregelCNrWeiterfuehrendUst
-						.equals(this.rechenregelCNrWeiterfuehrendUst)))
+		if (bVersteckt == null) {
+			if (other.bVersteckt != null)
+				return false;
+		} else if (!bVersteckt.equals(other.bVersteckt))
 			return false;
-		if (!(that.kontoIIdWeiterfuehrendBilanz == null ? this.kontoIIdWeiterfuehrendBilanz == null
-				: that.kontoIIdWeiterfuehrendBilanz
-						.equals(this.kontoIIdWeiterfuehrendBilanz)))
+		if (cBez == null) {
+			if (other.cBez != null)
+				return false;
+		} else if (!cBez.equals(other.cBez))
 			return false;
-		if (!(that.rechenregelCNrWeiterfuehrendBilanz == null ? this.rechenregelCNrWeiterfuehrendBilanz == null
-				: that.rechenregelCNrWeiterfuehrendBilanz
-						.equals(this.rechenregelCNrWeiterfuehrendBilanz)))
+		if (cLetztesortierung == null) {
+			if (other.cLetztesortierung != null)
+				return false;
+		} else if (!cLetztesortierung.equals(other.cLetztesortierung))
 			return false;
-		if (!(that.kontoIIdWeiterfuehrendSkonto == null ? this.kontoIIdWeiterfuehrendSkonto == null
-				: that.kontoIIdWeiterfuehrendSkonto
-						.equals(this.kontoIIdWeiterfuehrendSkonto)))
+		if (cNr == null) {
+			if (other.cNr != null)
+				return false;
+		} else if (!cNr.equals(other.cNr))
 			return false;
-		if (!(that.rechenregelCNrWeiterfuehrendSkonto == null ? this.rechenregelCNrWeiterfuehrendSkonto == null
-				: that.rechenregelCNrWeiterfuehrendSkonto
-						.equals(this.rechenregelCNrWeiterfuehrendSkonto)))
+		if (cSteuerart == null) {
+			if (other.cSteuerart != null)
+				return false;
+		} else if (!cSteuerart.equals(other.cSteuerart))
 			return false;
-		if (!(that.uvaartIId == null ? this.uvaartIId == null : that.uvaartIId
-				.equals(this.uvaartIId)))
+		if (csortierung == null) {
+			if (other.csortierung != null)
+				return false;
+		} else if (!csortierung.equals(other.csortierung))
 			return false;
-		if (!(that.dGueltigvon == null ? this.dGueltigvon == null
-				: that.dGueltigvon.equals(this.dGueltigvon)))
+		if (dGueltigbis == null) {
+			if (other.dGueltigbis != null)
+				return false;
+		} else if (!dGueltigbis.equals(other.dGueltigbis))
 			return false;
-		if (!(that.dGueltigbis == null ? this.dGueltigbis == null
-				: that.dGueltigbis.equals(this.dGueltigbis)))
+		if (dGueltigvon == null) {
+			if (other.dGueltigvon != null)
+				return false;
+		} else if (!dGueltigvon.equals(other.dGueltigvon))
 			return false;
-		if (!(that.finanzamtIId == null ? this.finanzamtIId == null
-				: that.finanzamtIId.equals(this.finanzamtIId)))
+		if (ergebnisgruppeIId == null) {
+			if (other.ergebnisgruppeIId != null)
+				return false;
+		} else if (!ergebnisgruppeIId.equals(other.ergebnisgruppeIId))
 			return false;
-		if (!(that.kostenstelleIId == null ? this.kostenstelleIId == null
-				: that.kostenstelleIId.equals(this.kostenstelleIId)))
+		if (ergebnisgruppeIId_negativ == null) {
+			if (other.ergebnisgruppeIId_negativ != null)
+				return false;
+		} else if (!ergebnisgruppeIId_negativ
+				.equals(other.ergebnisgruppeIId_negativ))
 			return false;
-		if (!(that.bAutomeroeffnungsbuchung == null ? this.bAutomeroeffnungsbuchung == null
-				: that.bAutomeroeffnungsbuchung
-						.equals(this.bAutomeroeffnungsbuchung)))
+		if (finanzamtIId == null) {
+			if (other.finanzamtIId != null)
+				return false;
+		} else if (!finanzamtIId.equals(other.finanzamtIId))
 			return false;
-		if (!(that.bAllgemeinsichtbar == null ? this.bAllgemeinsichtbar == null
-				: that.bAllgemeinsichtbar.equals(this.bAllgemeinsichtbar)))
+		if (iGeschaeftsjahrEB == null) {
+			if (other.iGeschaeftsjahrEB != null)
+				return false;
+		} else if (!iGeschaeftsjahrEB.equals(other.iGeschaeftsjahrEB))
 			return false;
-		if (!(that.bManuellbebuchbar == null ? this.bManuellbebuchbar == null
-				: that.bManuellbebuchbar.equals(this.bManuellbebuchbar)))
+		if (iId == null) {
+			if (other.iId != null)
+				return false;
+		} else if (!iId.equals(other.iId))
 			return false;
-		if (!(that.kontoartCNr == null ? this.kontoartCNr == null
-				: that.kontoartCNr.equals(this.kontoartCNr)))
+		if (iLetzteselektiertebuchung == null) {
+			if (other.iLetzteselektiertebuchung != null)
+				return false;
+		} else if (!iLetzteselektiertebuchung
+				.equals(other.iLetzteselektiertebuchung))
 			return false;
-		if (!(that.kontotypCNr == null ? this.kontotypCNr == null
-				: that.kontotypCNr.equals(this.kontotypCNr)))
+		if (kontoIIdWeiterfuehrendBilanz == null) {
+			if (other.kontoIIdWeiterfuehrendBilanz != null)
+				return false;
+		} else if (!kontoIIdWeiterfuehrendBilanz
+				.equals(other.kontoIIdWeiterfuehrendBilanz))
 			return false;
-		if (!(that.ergebnisgruppeIId == null ? this.ergebnisgruppeIId == null
-				: that.ergebnisgruppeIId.equals(this.ergebnisgruppeIId)))
+		if (kontoIIdWeiterfuehrendSkonto == null) {
+			if (other.kontoIIdWeiterfuehrendSkonto != null)
+				return false;
+		} else if (!kontoIIdWeiterfuehrendSkonto
+				.equals(other.kontoIIdWeiterfuehrendSkonto))
 			return false;
-		if (!(that.tAnlegen == null ? this.tAnlegen == null : that.tAnlegen
-				.equals(this.tAnlegen)))
+		if (kontoIIdWeiterfuehrendUst == null) {
+			if (other.kontoIIdWeiterfuehrendUst != null)
+				return false;
+		} else if (!kontoIIdWeiterfuehrendUst
+				.equals(other.kontoIIdWeiterfuehrendUst))
 			return false;
-		if (!(that.personalIIdAnlegen == null ? this.personalIIdAnlegen == null
-				: that.personalIIdAnlegen.equals(this.personalIIdAnlegen)))
+		if (kontoartCNr == null) {
+			if (other.kontoartCNr != null)
+				return false;
+		} else if (!kontoartCNr.equals(other.kontoartCNr))
 			return false;
-		if (!(that.tAendern == null ? this.tAendern == null : that.tAendern
-				.equals(this.tAendern)))
+		if (kontotypCNr == null) {
+			if (other.kontotypCNr != null)
+				return false;
+		} else if (!kontotypCNr.equals(other.kontotypCNr))
 			return false;
-		if (!(that.personalIIdAendern == null ? this.personalIIdAendern == null
-				: that.personalIIdAendern.equals(this.personalIIdAendern)))
+		if (kostenstelleIId == null) {
+			if (other.kostenstelleIId != null)
+				return false;
+		} else if (!kostenstelleIId.equals(other.kostenstelleIId))
 			return false;
-		if (!(that.cLetztesortierung == null ? this.cLetztesortierung == null
-				: that.cLetztesortierung.equals(this.cLetztesortierung)))
+		if (mandantCNr == null) {
+			if (other.mandantCNr != null)
+				return false;
+		} else if (!mandantCNr.equals(other.mandantCNr))
 			return false;
-		if (!(that.iLetzteselektiertebuchung == null ? this.iLetzteselektiertebuchung == null
-				: that.iLetzteselektiertebuchung
-						.equals(this.iLetzteselektiertebuchung)))
+		if (partnerDto == null) {
+			if (other.partnerDto != null)
+				return false;
+		} else if (!partnerDto.equals(other.partnerDto))
 			return false;
-		if (!(that.bVersteckt == null ? this.bVersteckt == null
-				: that.bVersteckt.equals(this.bVersteckt)))
+		if (personalIIdAendern == null) {
+			if (other.personalIIdAendern != null)
+				return false;
+		} else if (!personalIIdAendern.equals(other.personalIIdAendern))
 			return false;
-		if (!(that.steuerkategorieIId == null ? this.steuerkategorieIId == null
-				: that.steuerkategorieIId.equals(this.steuerkategorieIId)))
+		if (personalIIdAnlegen == null) {
+			if (other.personalIIdAnlegen != null)
+				return false;
+		} else if (!personalIIdAnlegen.equals(other.personalIIdAnlegen))
 			return false;
-		if (!(that.steuerkategorieIIdReverse == null ? this.steuerkategorieIIdReverse == null
-				: that.steuerkategorieIIdReverse
-						.equals(this.steuerkategorieIIdReverse)))
+		if (rechenregelCNrWeiterfuehrendBilanz == null) {
+			if (other.rechenregelCNrWeiterfuehrendBilanz != null)
+				return false;
+		} else if (!rechenregelCNrWeiterfuehrendBilanz
+				.equals(other.rechenregelCNrWeiterfuehrendBilanz))
 			return false;
-		if (!(that.csortierung == null ? this.csortierung == null
-				: that.csortierung.equals(this.csortierung)))
+		if (rechenregelCNrWeiterfuehrendSkonto == null) {
+			if (other.rechenregelCNrWeiterfuehrendSkonto != null)
+				return false;
+		} else if (!rechenregelCNrWeiterfuehrendSkonto
+				.equals(other.rechenregelCNrWeiterfuehrendSkonto))
 			return false;
-		if (!(that.waehrungCNrDruck == null ? this.waehrungCNrDruck == null
-				: that.waehrungCNrDruck.equals(this.waehrungCNrDruck)))
+		if (rechenregelCNrWeiterfuehrendUst == null) {
+			if (other.rechenregelCNrWeiterfuehrendUst != null)
+				return false;
+		} else if (!rechenregelCNrWeiterfuehrendUst
+				.equals(other.rechenregelCNrWeiterfuehrendUst))
 			return false;
-		if (!(that.bOhneUst == null ? this.bOhneUst == null
-				: that.bOhneUst.equals(this.bOhneUst)))
+		if (steuerkategorieIId == null) {
+			if (other.steuerkategorieIId != null)
+				return false;
+		} else if (!steuerkategorieIId.equals(other.steuerkategorieIId))
+			return false;
+		if (steuerkategorieIIdReverse == null) {
+			if (other.steuerkategorieIIdReverse != null)
+				return false;
+		} else if (!steuerkategorieIIdReverse
+				.equals(other.steuerkategorieIIdReverse))
+			return false;
+		if (tAendern == null) {
+			if (other.tAendern != null)
+				return false;
+		} else if (!tAendern.equals(other.tAendern))
+			return false;
+		if (tAnlegen == null) {
+			if (other.tAnlegen != null)
+				return false;
+		} else if (!tAnlegen.equals(other.tAnlegen))
+			return false;
+		if (tEBAnlegen == null) {
+			if (other.tEBAnlegen != null)
+				return false;
+		} else if (!tEBAnlegen.equals(other.tEBAnlegen))
+			return false;
+		if (uvaartIId == null) {
+			if (other.uvaartIId != null)
+				return false;
+		} else if (!uvaartIId.equals(other.uvaartIId))
+			return false;
+		if (waehrungCNrDruck == null) {
+			if (other.waehrungCNrDruck != null)
+				return false;
+		} else if (!waehrungCNrDruck.equals(other.waehrungCNrDruck))
+			return false;
+		if (xBemerkung == null) {
+			if (other.xBemerkung != null)
+				return false;
+		} else if (!xBemerkung.equals(other.xBemerkung))
 			return false;
 		return true;
-	}
-
-	public int hashCode() {
-		int result = 17;
-		result = 37 * result + this.iId.hashCode();
-		result = 37 * result + this.mandantCNr.hashCode();
-		result = 37 * result + this.cNr.hashCode();
-		result = 37 * result + this.cBez.hashCode();
-		result = 37 * result + this.kontoIIdWeiterfuehrendUst.hashCode();
-		result = 37 * result + this.rechenregelCNrWeiterfuehrendUst.hashCode();
-		result = 37 * result + this.kontoIIdWeiterfuehrendBilanz.hashCode();
-		result = 37 * result
-				+ this.rechenregelCNrWeiterfuehrendBilanz.hashCode();
-		result = 37 * result + this.kontoIIdWeiterfuehrendSkonto.hashCode();
-		result = 37 * result
-				+ this.rechenregelCNrWeiterfuehrendSkonto.hashCode();
-		result = 37 * result + this.uvaartIId.hashCode();
-		result = 37 * result + this.dGueltigvon.hashCode();
-		result = 37 * result + this.dGueltigbis.hashCode();
-		result = 37 * result + this.finanzamtIId.hashCode();
-		result = 37 * result + this.kostenstelleIId.hashCode();
-		result = 37 * result + this.bAutomeroeffnungsbuchung.hashCode();
-		result = 37 * result + this.bAllgemeinsichtbar.hashCode();
-		result = 37 * result + this.bManuellbebuchbar.hashCode();
-		result = 37 * result + this.kontoartCNr.hashCode();
-		result = 37 * result + this.kontotypCNr.hashCode();
-		result = 37 * result + this.ergebnisgruppeIId.hashCode();
-		result = 37 * result + this.tAnlegen.hashCode();
-		result = 37 * result + this.personalIIdAnlegen.hashCode();
-		result = 37 * result + this.tAendern.hashCode();
-		result = 37 * result + this.personalIIdAendern.hashCode();
-		result = 37 * result + this.cLetztesortierung.hashCode();
-		result = 37 * result + this.iLetzteselektiertebuchung.hashCode();
-		result = 37 * result + this.bVersteckt.hashCode();
-		result = 37 * result + this.steuerkategorieIId.hashCode();
-		result = 37 * result + this.steuerkategorieIIdReverse.hashCode();
-		result = 37 * result + this.csortierung.hashCode();
-		result = 37 * result + this.waehrungCNrDruck.hashCode();
-		result = 37 * result + this.bOhneUst.hashCode();
-		return result;
 	}
 
 	public String toString() {
@@ -568,6 +761,7 @@ public class KontoDto implements Serializable, IModificationData {
 		this.uvaartIId = uvaartIId;
 	}
 
+	@HvDtoLogIdCnr(entityClass = Uvaart.class)
 	public Integer getUvaartIId() {
 		return uvaartIId;
 	}
@@ -602,5 +796,13 @@ public class KontoDto implements Serializable, IModificationData {
 
 	public void setBOhneUst(Short bOhneUst) {
 		this.bOhneUst = bOhneUst;
+	}
+
+	public String getcSteuerart() {
+		return cSteuerart;
+	}
+
+	public void setcSteuerart(String cSteuerart) {
+		this.cSteuerart = cSteuerart;
 	}
 }

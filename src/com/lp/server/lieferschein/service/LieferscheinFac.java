@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -341,4 +341,7 @@ public interface LieferscheinFac extends IAktivierbarControlled {
 	boolean hatLieferscheinVersandweg(LieferscheinDto lieferscheinDto, TheClientDto theClientDto) throws RemoteException ;	
 
 	boolean hatLieferscheinVersandweg(Integer lieferscheinIId, TheClientDto theClientDto) throws RemoteException ;	
+
+	List<Integer> repairLieferscheinZws2276GetList(TheClientDto theClientDto) ;
+	void repairLieferscheinZws2276(Integer lieferscheinId, TheClientDto theClientDto) throws RemoteException ;
 }

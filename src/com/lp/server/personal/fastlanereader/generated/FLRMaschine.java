@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,17 +19,17 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.personal.fastlanereader.generated;
 
 import java.io.Serializable;
@@ -62,9 +62,6 @@ public class FLRMaschine implements Serializable {
     private Short b_autoendebeigeht;
 
     /** nullable persistent field */
-    private Double f_verfuegbarkeitinprozent;
-
-    /** nullable persistent field */
     private Date t_kaufdatum;
 
     /** nullable persistent field */
@@ -74,14 +71,13 @@ public class FLRMaschine implements Serializable {
     private com.lp.server.personal.fastlanereader.generated.FLRMaschinengruppe flrmaschinengruppe;
 
     /** full constructor */
-    public FLRMaschine(String mandant_c_nr, String c_inventarnummer, String c_bez, Short b_versteckt, String c_identifikationsnr, Short b_autoendebeigeht, Double f_verfuegbarkeitinprozent, Date t_kaufdatum, Integer maschinengruppe_i_id, com.lp.server.personal.fastlanereader.generated.FLRMaschinengruppe flrmaschinengruppe) {
+    public FLRMaschine(String mandant_c_nr, String c_inventarnummer, String c_bez, Short b_versteckt, String c_identifikationsnr, Short b_autoendebeigeht, Date t_kaufdatum, Integer maschinengruppe_i_id, com.lp.server.personal.fastlanereader.generated.FLRMaschinengruppe flrmaschinengruppe) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_inventarnummer = c_inventarnummer;
         this.c_bez = c_bez;
         this.b_versteckt = b_versteckt;
         this.c_identifikationsnr = c_identifikationsnr;
         this.b_autoendebeigeht = b_autoendebeigeht;
-        this.f_verfuegbarkeitinprozent = f_verfuegbarkeitinprozent;
         this.t_kaufdatum = t_kaufdatum;
         this.maschinengruppe_i_id = maschinengruppe_i_id;
         this.flrmaschinengruppe = flrmaschinengruppe;
@@ -145,14 +141,6 @@ public class FLRMaschine implements Serializable {
 
     public void setB_autoendebeigeht(Short b_autoendebeigeht) {
         this.b_autoendebeigeht = b_autoendebeigeht;
-    }
-
-    public Double getF_verfuegbarkeitinprozent() {
-        return this.f_verfuegbarkeitinprozent;
-    }
-
-    public void setF_verfuegbarkeitinprozent(Double f_verfuegbarkeitinprozent) {
-        this.f_verfuegbarkeitinprozent = f_verfuegbarkeitinprozent;
     }
 
     public Date getT_kaufdatum() {

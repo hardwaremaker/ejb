@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -45,8 +45,13 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzBuchungDetail;
 import com.lp.server.finanz.service.BuchenFac;
+import com.lp.server.finanz.service.BuchungDto;
+import com.lp.server.finanz.service.BuchungdetailDto;
 import com.lp.server.finanz.service.FinanzFac;
-import com.lp.server.finanz.service.FinanzServiceFac;
+import com.lp.server.finanz.service.KontoDto;
+import com.lp.server.system.jcr.service.PrintInfoDto;
+import com.lp.server.system.jcr.service.docnode.DocNodeBuchungdetail;
+import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -56,7 +61,6 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
-import com.lp.util.Helper;
 
 /**
  * <p>
@@ -284,10 +288,6 @@ public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 	 * 
 	 * @see UseCaseHandler#sort(SortierKriterium[], Object)
 	 * @throws EJBExceptionLP
-	 * @param sortierKriterien
-	 *            SortierKriterium[]
-	 * @param selectedId
-	 *            Object
 	 * @return QueryResult
 	 */
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
@@ -379,4 +379,25 @@ public class BuchungDetailKassenbuchHandler extends UseCaseHandler {
 		}
 		return super.getTableInfo();
 	}
+	
+	@Override
+	public PrintInfoDto getSDocPathAndPartner(Object key) {
+		BuchungdetailDto detail = null;
+		BuchungDto buchung = null;
+		KontoDto konto = null;
+		
+		try {
+			detail = getBuchenFac().buchungdetailFindByPrimaryKey((Integer)key);
+			buchung = getBuchenFac().buchungFindByPrimaryKey(detail.getBuchungIId());
+			konto = getFinanzFac().kontoFindByPrimaryKey(detail.getKontoIId());
+		} catch (Exception e) {
+			// nicht gefunden
+			return null;
+		}
+		return new PrintInfoDto(new DocPath(new DocNodeBuchungdetail(detail, buchung, konto)), null, getSTable());
+	}
+	
+	public String getSTable() {
+		return "BUCHUNGDETAIL";
+	};
 }

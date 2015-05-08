@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -54,6 +54,7 @@ public interface ProjektReportFac {
 	public final static String REPORT_PROJEKT_JOURNAL_ERLEDIGT = "proj_projekt_journal_erledigt.jasper";
 	public final static String REPORT_PROJEKT_JOURNAL_AKTIVITAETSUEBERSICHT = "proj_aktivitaetsuebersicht.jasper";
 	public final static String REPORT_PROJEKTVERLAUF = "proj_projektverlauf.jasper";
+	public final static String REPORT_PROJEKTZEITDATEN = "proj_projektzeitdaten.jasper";
 
 	public final static int REPORT_PROJEKT_JOURNAL_OFFENE_PROJEKTCNR = 0;
 	public final static int REPORT_PROJEKT_JOURNAL_OFFENE_PROJEKTKATEGORIE = 1;
@@ -88,7 +89,9 @@ public interface ProjektReportFac {
 	public final static int REPORT_PROJEKT_JOURNAL_OFFENE_GESAMTDAUER = 30;
 	public final static int REPORT_PROJEKT_JOURNAL_OFFENE_INTERNERLEDIGT_PERSON = 31;
 	public final static int REPORT_PROJEKT_JOURNAL_OFFENE_INTERNERLEDIGT_ZEIT = 32;
-	public final static int REPORT_PROJEKT_JOURNAL_OFFENE_ANZAHL_SPALTEN = 33;
+	public final static int REPORT_PROJEKT_JOURNAL_OFFENE_BRANCHE = 33;
+	public final static int REPORT_PROJEKT_JOURNAL_OFFENE_PARTNERKLASSE = 34;
+	public final static int REPORT_PROJEKT_JOURNAL_OFFENE_ANZAHL_SPALTEN = 35;
 
 	public final static int REPORT_PROJEKT_JOURNAL_ALLE_PROJEKTCNR = 0;
 	public final static int REPORT_PROJEKT_JOURNAL_ALLE_PROJEKTKATEGORIE = 1;
@@ -205,8 +208,34 @@ public interface ProjektReportFac {
 	public final static int REPORT_PROJEKTVERLAUF_REISE_KOMMENTAR = 22;
 	public final static int REPORT_PROJEKTVERLAUF_TELEFON_KOMMENTAR_INTERN = 23;
 	public final static int REPORT_PROJEKTVERLAUF_TELEFON_KOMMENTAR_EXTERN = 24;
-	public final static int REPORT_PROJEKTVERLAUF_ANZAHL_SPALTEN = 25;
+	public final static int REPORT_PROJEKTVERLAUF_ER_KEINE_AUFTRAGSWERTUNG = 25;
+	public final static int REPORT_PROJEKTVERLAUF_LOSANTEIL_LIEFERSCHEIN_LOSNUMMER = 26;
+	public final static int REPORT_PROJEKTVERLAUF_LOSANTEIL_LIEFERSCHEIN_EINSTANDSWERT_MATERIAL = 27;
+	public final static int REPORT_PROJEKTVERLAUF_LOSANTEIL_LIEFERSCHEIN_EINSTANDSWERT_AZ = 28;
+	public final static int REPORT_PROJEKTVERLAUF_ANZAHL_SPALTEN = 29;
 
+	
+	public final static int REPORT_PROJEKTZEITEN_PERSON = 0;
+	public final static int REPORT_PROJEKTZEITEN_BELEGART = 1;
+	public final static int REPORT_PROJEKTZEITEN_BELEG = 2;
+	public final static int REPORT_PROJEKTZEITEN_VON = 3;
+	public final static int REPORT_PROJEKTZEITEN_BIS = 4;
+	public final static int REPORT_PROJEKTZEITEN_DAUER = 5;
+	public final static int REPORT_PROJEKTZEITEN_ARTIKEL = 6;
+	public final static int REPORT_PROJEKTZEITEN_BEZEICHNUNG = 7;
+	public final static int REPORT_PROJEKTZEITEN_BEMERKUNG = 8;
+	public final static int REPORT_PROJEKTZEITEN_KOMMENTAR = 9;
+	public final static int REPORT_PROJEKTZEITEN_KOSTEN = 10;
+	public final static int REPORT_PROJEKTZEITEN_TELEFONZEIT = 11;
+	public final static int REPORT_PROJEKTZEITEN_ANZAHL_SPALTEN = 12;
+	
+	
+	public final static int SORTIERUNG_PROJEKTZEITEN_PERSON_BELEGART_BELEG = 0;
+	public final static int SORTIERUNG_PROJEKTZEITEN_BELEGART_BELEG_PERSON = 1;
+	public final static int SORTIERUNG_PROJEKTZEITEN_TAETIEKGKEIT_DATUM_PERSON = 2;
+	
+	
+	
 	public JasperPrintLP printProjekt(Integer iIdProjektI,
 			Integer iAnzahlKopienI, Boolean bMitLogo, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -237,5 +266,9 @@ public interface ProjektReportFac {
 
 	public JasperPrintLP printProjektverlauf(Integer projektIId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+	
+	public JasperPrintLP printProjektzeiten(Integer projektIId,
+			int iSortierung, TheClientDto theClientDto);
+	
 
 }

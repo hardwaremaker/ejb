@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -44,21 +44,68 @@ public class QueryParametersFeatures extends QueryParameters {
 		super(useCaseId, pSortKrit, pFilter, keyOfSelectedRow, new ArrayList()) ;
 	}
 
+	private ArrayList<String> getListOfExtraDataAsString() {
+		return ((ArrayList<String>)getListOfExtraData()) ;
+	}
+	
 	public void addFeature(String feature) {
-		((ArrayList<String>)getListOfExtraData()).add(buildToken(feature)) ;
+		getListOfExtraDataAsString().add(buildToken(feature)) ;
+	}
+	
+	/**
+	 * Ein Feature mit einem Wert hinzuf&uuml;gen
+	 * 
+	 * @param feature das Feature
+	 * @param value der Wert. null wird immer als "(null)" hinzugef&uuml;gt 
+	 */
+	public void addFeatureValue(String feature, String value) {
+		getListOfExtraDataAsString().add(buildTokenValue(feature) + value) ;		
 	}
 	
 	private String buildToken(String feature) {
 		return FEATURE_PREFIX + feature ;
 	}
 	
+	private String buildTokenValue(String feature) {
+		return FEATUREVALUE_PREFIX + feature + ":" ;
+	}
+	
 	public boolean hasFeature(String feature) {
 		String token = buildToken(feature) ;
-		for (Object o : (ArrayList<String>) getListOfExtraData()) {
+		for (Object o : getListOfExtraDataAsString()) {
 			if(!(o instanceof String)) continue ;			
 			if(token.equals((String) o)) return true ;
 		}
 		
 		return false ;
+	}
+	
+	public boolean hasFeatureValue(String feature) {
+		String token = buildTokenValue(feature) ;
+		for (Object o : getListOfExtraDataAsString()) {
+			if(!(o instanceof String)) continue ;			
+			if(((String) o).startsWith(token)) return true ;
+		}
+		
+		return false ;		
+	}
+	
+	/**
+	 * Liefert den f&uuml;r das Feature zugeordneten Wert
+	 * 
+	 * @param feature f&uuml;r das der Wert ermittelt werden soll
+	 * 
+	 * @return null oder der mittels {@link #addFeatureValue(String, String)} gespeicherte Wert
+	 */
+	public String getFeatureValue(String feature) {
+		String token = buildTokenValue(feature) ;
+		for (Object o : getListOfExtraDataAsString()) {
+			if(!(o instanceof String)) continue ;			
+			if(((String) o).startsWith(token)) {
+				return ((String) o).substring(token.length()) ;
+			}
+		}
+		
+		return null ;		
 	}
 }

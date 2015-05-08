@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -48,6 +48,7 @@ public interface TheClientFac {
 	public static final String FLRSPALTE_T_LOGGEDIN = "t_loggedin";
 	public static final String FLRSPALTE_T_LOGGEDOUT = "t_loggedout";
 	public static final String FLRSPALTE_I_PERSONAL = "i_personal";
+	public static final String FLRSPALTE_SYSTEMROLLE_C_BEZ = "flrsystemrolle.c_bez";
 
 	public static final int PK_INSTALLER = 1;
 
@@ -57,11 +58,11 @@ public interface TheClientFac {
 	public void removeTheClientTVonTBis(Timestamp tVon, Timestamp tBis)
 			throws EJBExceptionLP, RemoteException;
 
-	public void removeTheClient(String cNr) throws EJBExceptionLP,
-			RemoteException;
-
-	public void removeTheClient(TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+//	public void removeTheClient(String cNr) throws EJBExceptionLP,
+//			RemoteException;
+//
+//	public void removeTheClient(TheClientDto theClientDto)
+//			throws EJBExceptionLP, RemoteException;
 
 	public void updateTheClient(TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -71,6 +72,8 @@ public interface TheClientFac {
 
 	public TheClientDto theClientFindByPrimaryKey(String cNrUserI)
 			throws EJBExceptionLP, RemoteException;
+	
+	public TheClientDto theClientFindByPrimaryKeyOhneExc(String cNrUserI);
 
 	public TheClientDto theClientFindByUserLoggedIn(String cNr)
 			throws EJBExceptionLP, RemoteException;
@@ -89,6 +92,15 @@ public interface TheClientFac {
 
 	public InstallerDto getInstallerWithoutClientFile() throws RemoteException;
 	
-	  public InstallerDto getInstallerPart(Integer iPart) throws EJBExceptionLP;
+	public InstallerDto getInstallerPart(Integer iPart) throws EJBExceptionLP;
 
+	/**
+	 * Alle noch angemeldeten Benutzer explizit ausloggen</br>
+	 * <p>Es werden alle Theclient abgemeldet, die ein TLoggedOut == null haben</p>
+	 * @param remove l&ouml;scht die abzumeldenden Benutzer auch gleich, ansonsten
+	 *    wird als Abmeldezeitpunkt die aktuelle Zeit des Servers verwendet 
+	 * @return die Anzahl der abgemeldeten Benutzer
+	 * @throws EJBExceptionLP
+	 */
+	int logoutAllClients(boolean remove) throws EJBExceptionLP ;
 }

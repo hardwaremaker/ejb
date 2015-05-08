@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,15 +32,31 @@
  ******************************************************************************/
 package com.lp.server.finanz.ejbfac;
 
+import java.sql.Timestamp;
+
+import com.lp.util.Helper;
+
 
 public class BuchungDetailQueryBuilder {
 	
-	private static final String NUR_OFFENE_BUCHUNGEN = " (SELECT SUM(CASE WHEN bd.buchungdetailart_c_nr LIKE 'HABEN%' THEN -bd.n_betrag ELSE bd.n_betrag END) " +
+	private static final String NUR_OFFENE_BUCHUNGEN_WHERE_PLACEHOLDER = 
+			" (SELECT SUM(CASE WHEN bd.buchungdetailart_c_nr LIKE 'HABEN%' THEN -bd.n_betrag ELSE bd.n_betrag END) " +
 			"FROM FLRFinanzBuchungDetail bd " +
 			"WHERE bd.konto_i_id = {ALIAS}.konto_i_id AND bd.flrbuchung.t_storniert IS NULL " +
-			"AND bd.flrbuchung.geschaeftsjahr_i_geschaeftsjahr = buchungdetail.flrbuchung.geschaeftsjahr_i_geschaeftsjahr " +
-			"AND ( {ALIAS}.flrbuchung.c_belegnummer = bd.flrbuchung.c_belegnummer " +
-			"OR (bd.i_ausziffern IS NOT NULL AND bd.i_ausziffern = {ALIAS}.i_ausziffern))) != 0 ";
+			"AND bd.flrbuchung.geschaeftsjahr_i_geschaeftsjahr = {ALIAS}.flrbuchung.geschaeftsjahr_i_geschaeftsjahr " +
+			"AND (" +
+					"({ALIAS}.i_ausziffern IS NULL " + 
+					"AND {ALIAS}.flrbuchung.c_belegnummer = bd.flrbuchung.c_belegnummer) " +
+				"OR " + 
+					"({ALIAS}.i_ausziffern IS NOT NULL " + 
+					"AND bd.i_ausziffern = {ALIAS}.i_ausziffern)" +
+			") " +
+			"{WHERE} " +
+			") != 0 ";
+
+	private static final String NUR_OFFENE_BUCHUNGEN = NUR_OFFENE_BUCHUNGEN_WHERE_PLACEHOLDER.replaceAll("\\{WHERE\\}", "");
+	private static final String NUR_OFFENE_BUCHUNGEN_STICHTAG = NUR_OFFENE_BUCHUNGEN_WHERE_PLACEHOLDER
+			.replaceAll("\\{WHERE\\}", "AND bd.flrbuchung.d_buchungsdatum<='{STICHTAG}' ");
 	
 	
 	private static final String NICHT_ZUORDENBARE_BUCHUNGEN = 
@@ -51,9 +67,14 @@ public class BuchungDetailQueryBuilder {
 			" AND (SELECT COUNT(*)" +
 							" FROM FLRFinanzBelegbuchung beleg LEFT OUTER JOIN beleg.flrbuchung AS flrbuchung" +
 							" WHERE flrbuchung.i_id={ALIASBUCHUNG}.i_id) = 0) ";
-			
+
 	public static String buildNurOffeneBuchungDetails(String flrBuchungdetailName) {
 		return NUR_OFFENE_BUCHUNGEN.replaceAll("\\{ALIAS\\}", flrBuchungdetailName);
+	}
+	
+	public static String buildNurOffeneBuchungDetails(String flrBuchungdetailName, Timestamp tStichtag) {
+		return NUR_OFFENE_BUCHUNGEN_STICHTAG.replaceAll("\\{ALIAS\\}", flrBuchungdetailName)
+				.replaceAll("\\{STICHTAG\\}", Helper.formatDateWithSlashes(Helper.addiereTageZuDatum(tStichtag, 1)));
 	}
 	
 	public static String buildNichtZuordenbareVonKonto(String flrBuchungdetailName, String flrBuchungName, Integer kontoIId) {

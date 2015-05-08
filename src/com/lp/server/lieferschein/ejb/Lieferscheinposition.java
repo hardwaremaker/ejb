@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.lieferschein.ejb;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -156,7 +157,29 @@ public class Lieferscheinposition implements Serializable, IISort, IPositionIIdA
 	public void setNMaterialzuschlag(BigDecimal materialzuschlag) {
 		nMaterialzuschlag = materialzuschlag;
 	}
+	@Column(name = "T_MATERIALZUSCHLAG_DATUM")
+	private Timestamp tMaterialzuschlagDatum ;
 	
+
+	public Timestamp getTMaterialzuschlagDatum() {
+		return tMaterialzuschlagDatum;
+	}
+
+	public void setTMaterialzuschlagDatum(Timestamp tMaterialzuschlagDatum) {
+		this.tMaterialzuschlagDatum = tMaterialzuschlagDatum;
+	}
+
+	@Column(name = "N_MATERIALZUSCHLAG_KURS")
+	private BigDecimal nMaterialzuschlagKurs ;
+
+	
+	public BigDecimal getNMaterialzuschlagKurs() {
+		return nMaterialzuschlagKurs;
+	}
+
+	public void setNMaterialzuschlagKurs(BigDecimal nMaterialzuschlagKurs) {
+		this.nMaterialzuschlagKurs = nMaterialzuschlagKurs;
+	}
 	public String getCLvposition() {
 		return cLvposition;
 	}
@@ -176,6 +199,9 @@ public class Lieferscheinposition implements Serializable, IISort, IPositionIIdA
 	
 	@Column(name = "N_ZWSNETTOSUMME") 
 	private BigDecimal zwsNettoSumme ;
+	
+	@Column(name = "B_ZWSPOSITIONSPREISZEIGEN")
+	private Short bZwsPositionspreisZeigen ;
 	
 	
 	public Integer getKostentraegerIId() {
@@ -550,5 +576,13 @@ public class Lieferscheinposition implements Serializable, IISort, IPositionIIdA
 
 	public void setZwsNettoSumme(BigDecimal zwsNettoSumme) {
 		this.zwsNettoSumme = zwsNettoSumme;
+	}
+	
+	public Short getBZwsPositionspreisZeigen() {
+		return bZwsPositionspreisZeigen;
+	}
+
+	public void setBZwsPositionspreisZeigen(Short bZwsPositionpreisZeigen) {
+		this.bZwsPositionspreisZeigen = bZwsPositionpreisZeigen;
 	}	
 }

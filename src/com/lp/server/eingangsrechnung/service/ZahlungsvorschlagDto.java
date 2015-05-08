@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -47,7 +47,11 @@ public class ZahlungsvorschlagDto implements Serializable {
 	private Short bBezahlen;
 	private Date tFaellig;
 	private BigDecimal nAngewandterskontosatz;
-	private BigDecimal nOffen;
+
+	private BigDecimal nErBruttoBetrag;
+	private BigDecimal nBereitsBezahlt;
+	private BigDecimal nZahlbetrag;
+	private Short bWaereVollstaendigBezahlt;
 
 	public Integer getIId() {
 		return iId;
@@ -97,12 +101,36 @@ public class ZahlungsvorschlagDto implements Serializable {
 		this.nAngewandterskontosatz = nAngewandterskontosatz;
 	}
 
-	public BigDecimal getNOffen() {
-		return nOffen;
+	public BigDecimal getNErBruttoBetrag() {
+		return nErBruttoBetrag;
 	}
 
-	public void setNOffen(BigDecimal nOffen) {
-		this.nOffen = nOffen;
+	public void setNErBruttoBetrag(BigDecimal nErBruttoBetrag) {
+		this.nErBruttoBetrag = nErBruttoBetrag;
+	}
+
+	public BigDecimal getNBereitsBezahlt() {
+		return nBereitsBezahlt;
+	}
+
+	public void setNBereitsBezahlt(BigDecimal nBereitsBezahlt) {
+		this.nBereitsBezahlt = nBereitsBezahlt;
+	}
+
+	public BigDecimal getNZahlbetrag() {
+		return nZahlbetrag;
+	}
+
+	public void setNZahlbetrag(BigDecimal nZahlbetrag) {
+		this.nZahlbetrag = nZahlbetrag;
+	}
+
+	public Short getBWaereVollstaendigBezahlt() {
+		return bWaereVollstaendigBezahlt;
+	}
+
+	public void setBWaereVollstaendigBezahlt(Short bWaereVollstaendigBezahlt) {
+		this.bWaereVollstaendigBezahlt = bWaereVollstaendigBezahlt;
 	}
 
 	public boolean equals(Object obj) {
@@ -130,9 +158,7 @@ public class ZahlungsvorschlagDto implements Serializable {
 				: that.nAngewandterskontosatz
 						.equals(this.nAngewandterskontosatz)))
 			return false;
-		if (!(that.nOffen == null ? this.nOffen == null : that.nOffen
-				.equals(this.nOffen)))
-			return false;
+
 		return true;
 	}
 
@@ -144,7 +170,7 @@ public class ZahlungsvorschlagDto implements Serializable {
 		result = 37 * result + this.bBezahlen.hashCode();
 		result = 37 * result + this.tFaellig.hashCode();
 		result = 37 * result + this.nAngewandterskontosatz.hashCode();
-		result = 37 * result + this.nOffen.hashCode();
+
 		return result;
 	}
 
@@ -160,7 +186,7 @@ public class ZahlungsvorschlagDto implements Serializable {
 		returnStringBuffer.append("tFaellig:").append(tFaellig);
 		returnStringBuffer.append("nAngewandterskontosatz:").append(
 				nAngewandterskontosatz);
-		returnStringBuffer.append("nOffen:").append(nOffen);
+
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();
 	}

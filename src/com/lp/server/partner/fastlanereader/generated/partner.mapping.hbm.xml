@@ -1,36 +1,24 @@
 <?xml version="1.0"?>
-<!--
-  HELIUM V, Open Source ERP software for sustained success
-  at small and medium-sized enterprises.
-  Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
-  
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Affero General Public License as published 
-  by the Free Software Foundation, either version 3 of theLicense, or 
-  (at your option) any later version.
-  
-  According to sec. 7 of the GNU Affero General Public License, version 3, 
-  the terms of the AGPL are supplemented with the following terms:
-  
-  "HELIUM V" and "HELIUM 5" are registered trademarks of 
-  HELIUM V IT-Solutions GmbH. The licensing of the program under the 
-  AGPL does not imply a trademark license. Therefore any rights, title and
-  interest in our trademarks remain entirely with us. If you want to propagate
-  modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
-  you may only do so if you have a written permission by HELIUM V IT-Solutions 
-  GmbH (to acquire a permission please contact HELIUM V IT-Solutions
-  at trademark@heliumv.com).
-  
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Affero General Public License for more details.
-  
-  You should have received a copy of the GNU Affero General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  
-  Contact: developers@heliumv.com
--->
+<!-- HELIUM V, Open Source ERP software for sustained success at small and 
+	medium-sized enterprises. Copyright (C) 2004 - 2014 HELIUM V IT-Solutions 
+	GmbH This program is free software: you can redistribute it and/or modify 
+	it under the terms of the GNU Affero General Public License as published 
+	by the Free Software Foundation, either version 3 of theLicense, or (at your 
+	option) any later version. According to sec. 7 of the GNU Affero General 
+	Public License, version 3, the terms of the AGPL are supplemented with the 
+	following terms: "HELIUM V" and "HELIUM 5" are registered trademarks of HELIUM 
+	V IT-Solutions GmbH. The licensing of the program under the AGPL does not 
+	imply a trademark license. Therefore any rights, title and interest in our 
+	trademarks remain entirely with us. If you want to propagate modified versions 
+	of the Program under the name "HELIUM V" or "HELIUM 5", you may only do so 
+	if you have a written permission by HELIUM V IT-Solutions GmbH (to acquire 
+	a permission please contact HELIUM V IT-Solutions at trademark@heliumv.com). 
+	This program is distributed in the hope that it will be useful, but WITHOUT 
+	ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+	FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+	details. You should have received a copy of the GNU Affero General Public 
+	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
+	Contact: developers@heliumv.com -->
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 <!-- Diese Mappingdatei kuemmert sich um den Partner. Copyright Logistik 
 	Pur GmbH (c) 2004 Erstellungsdatum xx.xx.04 @author Josef Ornetsmueller @version 
@@ -93,6 +81,10 @@
 			class="com.lp.server.partner.fastlanereader.generated.FLRPartnerklasse"
 			column="PARTNERKLASSE_I_ID" insert="false" update="false" />
 
+		<many-to-one name="flrbranche"
+			class="com.lp.server.partner.fastlanereader.generated.FLRBranche"
+			column="BRANCHE_I_ID" insert="false" update="false" />
+
 		<set name="partner_paselektion_set" inverse="true">
 			<key column="PARTNER_I_ID" />
 			<one-to-many
@@ -139,8 +131,8 @@
 			type="java.lang.Integer" not-null="false" />
 		<property name="b_versteckt" column="B_VERSTECKT" type="java.lang.Short"
 			not-null="false" />
-		<property name="b_newsletter_empfaenger" column="B_NEWSLETTER_EMPFAENGER" type="java.lang.Short"
-			not-null="false" />
+		<property name="b_newsletter_empfaenger" column="B_NEWSLETTER_EMPFAENGER"
+			type="java.lang.Short" not-null="false" />
 		<property name="x_bemerkung" column="X_BEMERKUNG" type="java.lang.String"
 			not-null="false" />
 
@@ -356,6 +348,8 @@
 			type="java.lang.Integer" not-null="false" />
 		<property name="vkpfartikelpreisliste_i_id_stdpreisliste"
 			column="VKPFARTIKELPREISLISTE_I_ID_STDPREISLISTE" type="java.lang.Integer" />
+		<property name="n_kreditlimit" column="N_KREDITLIMIT" type="java.math.BigDecimal"
+			not-null="false" />
 		<!-- flrres: partner ist alias fuer com.lp.server.partner.fastlanereader.generated.FLRPartner 
 			meine tabelle -->
 		<many-to-one name="flrpartner"
@@ -490,7 +484,7 @@
 			not-null="false" />
 		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String"
 			not-null="false" />
-		<property name="b_webshop" column="B_WEBSHOP" type="java.lang.Short" />			
+		<property name="b_webshop" column="B_WEBSHOP" type="java.lang.Short" />
 	</class>
 	<class name="FLRSelektionspr" table="PART_SELEKTIONSPR">
 		<composite-id>
@@ -551,6 +545,23 @@
 	<class name="FLRSerienbriefselektion" table="PART_SERIENBRIEFSELEKTION">
 		<composite-id name="id_comp"
 			class="com.lp.server.partner.fastlanereader.generated.service.FLRSerienbriefselektionPK">
+			<key-property name="serienbrief_i_id" column="SERIENBRIEF_I_ID"
+				type="java.lang.Integer" />
+			<key-property name="selektion_i_id" column="SELEKTION_I_ID"
+				type="java.lang.Integer" />
+		</composite-id>
+		<property name="c_bemerkung" column="C_BEMERKUNG" type="java.lang.String"
+			not-null="false" />
+		<many-to-one name="flrserienbrief"
+			class="com.lp.server.partner.fastlanereader.generated.FLRSerienbrief"
+			column="SERIENBRIEF_I_ID" insert="false" update="false" />
+		<many-to-one name="flrselektion"
+			class="com.lp.server.partner.fastlanereader.generated.FLRSelektion"
+			column="SELEKTION_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRSerienbriefselektionnegativ" table="PART_SERIENBRIEFSELEKTIONNEGATIV">
+		<composite-id name="id_comp"
+			class="com.lp.server.partner.fastlanereader.generated.service.FLRSerienbriefselektionnegativPK">
 			<key-property name="serienbrief_i_id" column="SERIENBRIEF_I_ID"
 				type="java.lang.Integer" />
 			<key-property name="selektion_i_id" column="SELEKTION_I_ID"
@@ -652,8 +663,49 @@
 	</class>
 
 
+	<class name="FLRPartnerkommentar" table="PART_PARTNERKOMMENTAR">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="partner_i_id" column="PARTNER_I_ID" type="java.lang.Integer" />
+		<property name="datenformat_c_nr" column="DATENFORMAT_C_NR"
+			type="java.lang.String" />
+		<property name="b_kunde" column="B_KUNDE" type="java.lang.Short" />
+		<property name="i_art" column="I_ART" type="java.lang.Integer" />
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="x_kommentar" column="X_KOMMENTAR" type="java.lang.String" />
+		<many-to-one name="flrpartnerkommentarart"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartnerkommentarart"
+			column="PARTNERKOMMENTARART_I_ID" insert="false" update="false" />
+		<many-to-one name="flrpartner"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartner"
+			column="PARTNER_I_ID" insert="false" update="false" />
+	</class>
+
+	<class name="FLRPartnerkommentardruck" table="PART_PARTNERKOMMENTARDRUCK">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="belegart_c_nr" column="BELEGART_C_NR" type="java.lang.String" />
+		<many-to-one name="flrpartnerkommentar"
+			class="com.lp.server.partner.fastlanereader.generated.FLRPartnerkommentar"
+			column="PARTNERKOMMENTAR_I_ID" insert="false" update="false" />
+
+	</class>
+
+
+	<class name="FLRPartnerkommentarart" table="PART_PARTNERKOMMENTARART">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
 
 	<filter-def name="filterLocale">
 		<filter-param name="paramLocale" type="java.lang.String" />
+	</filter-def>
+	<filter-def name="filterKundeId">
+		<filter-param name="paramKundeId" type="java.lang.Integer" />
 	</filter-def>
 </hibernate-mapping>

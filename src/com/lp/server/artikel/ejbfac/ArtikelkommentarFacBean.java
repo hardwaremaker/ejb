@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,6 +32,10 @@
  ******************************************************************************/
 package com.lp.server.artikel.ejbfac;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,6 +48,10 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
+
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.rendering.PDFRenderer;
 
 import com.lp.server.artikel.ejb.Artikelkommentar;
 import com.lp.server.artikel.ejb.Artikelkommentarart;
@@ -1168,9 +1176,10 @@ public class ArtikelkommentarFacBean extends Facade implements
 			} else {
 				artikelkommentarsprDto = new ArtikelkommentarsprDto();
 				artikelkommentarsprDto.setArtikelkommentarIId(iId);
-				artikelkommentarsprDto.setXKommentar(
-						getTextRespectUISpr("artikel.keinkommentarinsprvorhanden",
-								theClientDto.getMandant(), theClientDto.getLocUi(), localeCNr.trim()));
+				artikelkommentarsprDto.setXKommentar(getTextRespectUISpr(
+						"artikel.keinkommentarinsprvorhanden",
+						theClientDto.getMandant(), theClientDto.getLocUi(),
+						localeCNr.trim()));
 			}
 		}
 		artikelkommentarDto.setArtikelkommentarsprDto(artikelkommentarsprDto);
@@ -1433,6 +1442,34 @@ public class ArtikelkommentarFacBean extends Facade implements
 		// }
 	}
 
+	public boolean sindTexteOderPDFsVorhanden(Integer artikelIId,
+			TheClientDto theClientDto) {
+		ArrayList<String> al = new ArrayList<String>();
+		try {
+			Query query = em
+					.createNamedQuery("ArtikelkommentarfindByArtikelIId");
+			query.setParameter(1, artikelIId);
+			ArtikelkommentarDto[] artikelkommentarDtos = assembleArtikelkommentarDtos(query
+					.getResultList());
+
+			for (int i = 0; i < artikelkommentarDtos.length; i++) {
+
+				if (artikelkommentarDtos[i].getDatenformatCNr().equals(
+						MediaFac.DATENFORMAT_MIMETYPE_TEXT_HTML)
+						|| artikelkommentarDtos[i].getDatenformatCNr().equals(
+								MediaFac.DATENFORMAT_MIMETYPE_APP_PDF)) {
+
+					return true;
+
+				}
+
+			}
+		} catch (NoResultException e) {
+			// nothing here
+		}
+		return false;
+	}
+
 	public String[] getArtikelhinweise(Integer artikelIId, String belegartCNr,
 			TheClientDto theClientDto) {
 		ArrayList<String> al = new ArrayList<String>();
@@ -1628,6 +1665,121 @@ public class ArtikelkommentarFacBean extends Facade implements
 		// FEHLER_BEI_FIND,
 		// e);
 		// }
+	}
+
+	public ArrayList<byte[]> getArtikelbilderFindByArtikelIIdBelegartCNr(
+			Integer artikelIId, String belegartCNr, String localeCNr,
+			TheClientDto theClientDto) {
+
+		Query query = em
+				.createNamedQuery("ArtikelkommentardruckfindByArtikelIIdBelegartCNr");
+		query.setParameter(1, artikelIId);
+		query.setParameter(2, belegartCNr);
+		Collection<?> cl = query.getResultList();
+		// if (cl.isEmpty()) {
+		// throw new EJBExceptionLP(EJBExceptionLP.
+		// FEHLER_BEI_FIND,
+		// null);
+		// }
+
+		ArtikelkommentardruckDto[] artikelkommentardruckDtos = assembleArtikelkommentardruckDtos(cl);
+		ArrayList<ArtikelkommentarDto> al = new ArrayList<ArtikelkommentarDto>();
+
+		for (int i = 0; i < artikelkommentardruckDtos.length; i++) {
+			ArtikelkommentarDto artikelkommentarDto = artikelkommentarFindByPrimaryKeyUndLocale(
+					artikelkommentardruckDtos[i].getArtikelkommentarIId(),
+					localeCNr, theClientDto);
+			if (artikelkommentarDto.getIArt() == ARTIKELKOMMENTARART_MITDRUCKEN) {
+				al.add(artikelkommentarDto);
+			}
+		}
+
+		// Nun noch nach I_SORT sortieren
+		for (int i = al.size() - 1; i > 0; --i) {
+			for (int j = 0; j < i; ++j) {
+				ArtikelkommentarDto o = al.get(j);
+				ArtikelkommentarDto o1 = al.get(j + 1);
+
+				int iSort = o.getISort();
+				int iSort1 = o1.getISort();
+
+				if (iSort > iSort1) {
+					al.set(j, o1);
+					al.set(j + 1, o);
+				}
+			}
+		}
+
+		ArrayList<byte[]> bilder = new ArrayList<byte[]>();
+
+		for (int i = 0; i < al.size(); i++) {
+
+			ArtikelkommentarDto dto = al.get(i);
+
+			if (dto.getDatenformatCNr().equals(
+					MediaFac.DATENFORMAT_MIMETYPE_IMAGE_GIF)
+					|| dto.getDatenformatCNr().equals(
+							MediaFac.DATENFORMAT_MIMETYPE_IMAGE_JPEG)
+					|| dto.getDatenformatCNr().equals(
+							MediaFac.DATENFORMAT_MIMETYPE_IMAGE_PNG)) {
+				bilder.add(dto.getArtikelkommentarsprDto().getOMedia());
+			} else if (dto.getDatenformatCNr().equals(
+					MediaFac.DATENFORMAT_MIMETYPE_APP_PDF)) {
+
+				byte[] pdf = dto.getArtikelkommentarsprDto().getOMedia();
+
+				PDDocument document = null;
+
+				try {
+
+					InputStream myInputStream = new ByteArrayInputStream(pdf);
+
+					document = PDDocument.load(myInputStream);
+
+					int numPages = document.getNumberOfPages();
+
+					PDFRenderer renderer = new PDFRenderer(document);
+					for (int p = 0; p < numPages; p++) {
+						BufferedImage image = renderer.renderImageWithDPI(p,
+								150);
+						bilder.add(Helper.imageToByteArray(image));
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER,
+							e.getMessage());
+
+				} finally {
+					if (document != null) {
+
+						try {
+							document.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER,
+									e.getMessage());
+
+						}
+					}
+
+				}
+
+			} else if (dto.getDatenformatCNr().equals(
+					MediaFac.DATENFORMAT_MIMETYPE_IMAGE_TIFF)) {
+
+				BufferedImage[] tiffs = Helper.tiffToImageArray(dto
+						.getArtikelkommentarsprDto().getOMedia());
+				if (tiffs != null) {
+					for (int k = 0; k < tiffs.length; k++) {
+						bilder.add(Helper.imageToByteArray(tiffs[k]));
+					}
+				}
+
+			}
+
+		}
+		return bilder;
+
 	}
 
 	public ArtikelkommentarDto[] artikelkommentardruckFindByArtikelIIdBelegartCNrAnhaenge(

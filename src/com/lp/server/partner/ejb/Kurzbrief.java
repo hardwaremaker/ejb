@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -48,8 +48,9 @@ import javax.persistence.Table;
 @Entity
 @Table(name = "PART_KURZBRIEF")
 public class Kurzbrief implements Serializable {
+	private static final long serialVersionUID = 2981524321590962943L;
+
 	public Kurzbrief() {
-		// TODO Auto-generated constructor stub
 	}
 
 	@Id
@@ -83,14 +84,15 @@ public class Kurzbrief implements Serializable {
 	@Column(name = "PERSONAL_I_ID_ANLEGEN")
 	private Integer personalIIdAnlegen;
 
-	private static final long serialVersionUID = 1L;
+	@Column(name = "B_HTML")
+	private Short bHtml ;
 
 	public Kurzbrief(Integer iId, 
 			Integer partnerIId,
 			Integer ansprechpartnerIId,
 			Integer personalIIdAnlegen, 
 			Integer personalIIdAendern, 
-			String belegartCNr) {
+			String belegartCNr, Short b_html) {
 		setIId(iId);
 		setPartnerIId(partnerIId);
 		setAnsprechpartnerIId(ansprechpartnerIId);
@@ -100,13 +102,14 @@ public class Kurzbrief implements Serializable {
 		setTAendern(t);
 		setPersonalIIdAendern(personalIIdAendern);
 		setBelegartCNr(belegartCNr);
+		setBHtml(b_html) ;
 	}
 	
 	public Kurzbrief(Integer iId, 
 			Integer partnerIId,
 			Integer personalIIdAnlegen, 
 			Integer personalIIdAendern, 
-			String belegartCNr) {
+			String belegartCNr, Short b_html) {
 		setIId(iId);
 		setPartnerIId(partnerIId);
 		Timestamp t = new Timestamp(System.currentTimeMillis());
@@ -115,6 +118,7 @@ public class Kurzbrief implements Serializable {
 		setTAendern(t);
 		setPersonalIIdAendern(personalIIdAendern);
 		setBelegartCNr(belegartCNr);
+		setBHtml(b_html) ;
 	}
 
 	public Integer getIId() {
@@ -196,5 +200,12 @@ public class Kurzbrief implements Serializable {
 	public void setPersonalIIdAnlegen(Integer personalIIdAnlegen) {
 		this.personalIIdAnlegen = personalIIdAnlegen;
 	}
+	
+	public Short getBHtml() {
+		return bHtml;
+	}
 
+	public void setBHtml(Short b_html) {
+		this.bHtml = b_html;
+	}
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -122,6 +122,18 @@ public class Stuecklisteposition implements Serializable {
 	@Column(name = "ARTIKEL_I_ID")
 	private Integer artikelIId;
 
+	@Column(name = "T_AENDERN_ANSPRECHPARTNER")
+	private Timestamp tAendernAnsprechpartner;
+
+	@Column(name = "T_ANLEGEN_ANSPRECHPARTNER")
+	private Timestamp tAnlegenAnsprechpartner;
+
+	@Column(name = "ANSPRECHPARTNER_I_ID_ANLEGEN")
+	private Integer ansprechpartnerIIdAnlegen;
+
+	@Column(name = "ANSPRECHPARTNER_I_ID_AENDERN")
+	private Integer ansprechpartnerIIdAendern;
+	
 	private static final long serialVersionUID = 1L;
 
 	public Stuecklisteposition() {
@@ -301,4 +313,35 @@ public class Stuecklisteposition implements Serializable {
 		this.artikelIId = artikelIId;
 	}
 
+	public Timestamp getTAendernAnsprechpartner() {
+		return tAendernAnsprechpartner;
+	}
+
+	public void setTAendernAnsprechpartner(Timestamp tAendernAnsprechpartner) {
+		this.tAendernAnsprechpartner = tAendernAnsprechpartner;
+	}
+
+	public Integer getAnsprechpartnerIIdAnlegen() {
+		return ansprechpartnerIIdAnlegen;
+	}
+
+	public void setAnsprechpartnerIIdAnlegen(Integer ansprechpartnerIIdAnlegen) {
+		this.ansprechpartnerIIdAnlegen = ansprechpartnerIIdAnlegen;
+	}
+
+	public Integer getAnsprechpartnerIIdAendern() {
+		return ansprechpartnerIIdAendern;
+	}
+
+	public void setAnsprechpartnerIIdAendern(Integer ansprechpartnerIIdAendern) {
+		this.ansprechpartnerIIdAendern = ansprechpartnerIIdAendern;
+	}
+
+	public Timestamp getTAnlegenAnsprechpartner() {
+		return tAnlegenAnsprechpartner;
+	}
+
+	public void setTAnlegenAnsprechpartner(Timestamp tAnlegenAnsprechpartner) {
+		this.tAnlegenAnsprechpartner = tAnlegenAnsprechpartner;
+	}
 }

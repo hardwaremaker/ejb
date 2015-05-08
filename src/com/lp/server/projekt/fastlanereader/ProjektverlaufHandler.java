@@ -1,33 +1,33 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.projekt.fastlanereader;
@@ -52,12 +52,14 @@ import org.hibernate.Session;
 import com.lp.server.anfrage.fastlanereader.generated.FLRAnfrage;
 import com.lp.server.anfrage.service.AnfrageDto;
 import com.lp.server.angebot.fastlanereader.generated.FLRAngebot;
+import com.lp.server.angebotstkl.fastlanereader.generated.FLRAgstkl;
+import com.lp.server.angebotstkl.service.AgstklDto;
 import com.lp.server.auftrag.bl.UseCaseHandlerTabelle;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.bestellung.fastlanereader.generated.FLRBestellung;
 import com.lp.server.bestellung.service.BestellungDto;
-import com.lp.server.fertigung.fastlanereader.generated.FLRLos;
+import com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungAuftragszuordnung;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosAuftrag;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferschein;
@@ -92,7 +94,7 @@ import com.lp.util.EJBExceptionLP;
  * </p>
  * <p>
  * </p>
- * 
+ *
  * @author Uli Walch
  * @version 1.0
  */
@@ -100,7 +102,7 @@ import com.lp.util.EJBExceptionLP;
 public class ProjektverlaufHandler extends UseCaseHandlerTabelle {
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 
@@ -178,7 +180,7 @@ public class ProjektverlaufHandler extends UseCaseHandlerTabelle {
 	/**
 	 * gets the data page for the specified row using the current query. The row
 	 * at rowIndex will be located in the middle of the page.
-	 * 
+	 *
 	 * @param rowIndex
 	 *            Zeilenindex
 	 * @return QueryResult Ergebnis
@@ -239,7 +241,7 @@ public class ProjektverlaufHandler extends UseCaseHandlerTabelle {
 
 	/**
 	 * Diese Methode setzt die Anzahl der Zeilen in der Tabelle und den Inhalt.
-	 * 
+	 *
 	 * @param bFillData
 	 *            false, wenn der Inhalt nicht befuellt werden soll
 	 * @throws Throwable
@@ -664,6 +666,31 @@ public class ProjektverlaufHandler extends UseCaseHandlerTabelle {
 		hmDaten.add(oZeile);
 	}
 
+	private void setzeAgstklInEbene(FLRAgstkl flragstkl, int iEbene)
+			throws RemoteException {
+
+		String agstkl = "AS" + flragstkl.getC_nr();
+
+		Object[] oZeile = new Object[ANZAHL_SPALTEN];
+		oZeile[iEbene] = agstkl;
+
+		oZeile[SPALTE_DATUM] = flragstkl.getT_belegdatum();
+
+		AgstklDto aDto = getAngebotstklFac().agstklFindByPrimaryKey(
+				flragstkl.getI_id());
+
+		ProjektVerlaufHelperDto pvDto = new ProjektVerlaufHelperDto(iEbene,
+				aDto);
+		oZeile[SPALTE_PROJEKTVERLAUF_HELPER] = pvDto;
+		if (!hmDatenBereitsVerwendet.containsKey(agstkl)) {
+
+			oZeile[SPALTE_WAEHRUNG] = flragstkl.getWaehrung_c_nr();
+
+			hmDatenBereitsVerwendet.put(agstkl, pvDto);
+		}
+		hmDaten.add(oZeile);
+	}
+
 	public LinkedHashMap<String, ProjektVerlaufHelperDto> setInhalt()
 			throws RemoteException {
 		hmDaten = new ArrayList<Object[]>();
@@ -722,6 +749,20 @@ public class ProjektverlaufHandler extends UseCaseHandlerTabelle {
 		// alle Auftraege holen, welche kein Angebot als Vorgaenger haben
 		auftraegeHinzufuegen(projektIId, null, false);
 
+		// Alle Los ohne Auftragsbezuh holen
+		session = FLRSessionFactory.getFactory().openSession();
+		query = session
+				.createQuery("SELECT los FROM FLRLosAuftrag los WHERE los.projekt_i_id="
+						+ projektIId);
+
+		resultListAG = query.list();
+		resultListIteratorAG = resultListAG.iterator();
+		while (resultListIteratorAG.hasNext()) {
+			FLRLosAuftrag flrlos = (FLRLosAuftrag) resultListIteratorAG.next();
+			setzeLosInEbene(flrlos, SPALTE_TYP0);
+		}
+		session.close();
+
 		// Nun noch alle Lieferscheine holen, welche ein Projekt haben, jeodch
 		// keinen Vorgaenger haben
 		session = FLRSessionFactory.getFactory().openSession();
@@ -762,7 +803,7 @@ public class ProjektverlaufHandler extends UseCaseHandlerTabelle {
 		session = FLRSessionFactory.getFactory().openSession();
 		query = session
 				.createQuery("SELECT af FROM FLRAnfrage af WHERE  af.projekt_i_id="
-						+ projektIId + "ORDER BY af.c_nr ASC");
+						+ projektIId + " ORDER BY af.c_nr ASC");
 
 		resultListAG = query.list();
 		resultListIteratorAG = resultListAG.iterator();
@@ -771,6 +812,21 @@ public class ProjektverlaufHandler extends UseCaseHandlerTabelle {
 			AnfrageDto aDto = getAnfrageFac().anfrageFindByPrimaryKey(
 					flranfrage.getI_id(), theClientDto);
 			setzeAnfrageInEbene(aDto, SPALTE_TYP0);
+		}
+		session.close();
+		// alle agstkl holen, die dem PJ zugeordnet sind
+
+		session = FLRSessionFactory.getFactory().openSession();
+		query = session
+				.createQuery("SELECT ag FROM FLRAgstkl ag WHERE ag.projekt_i_id="
+						+ projektIId + " ORDER BY ag.c_nr ASC");
+
+		resultListAG = query.list();
+		resultListIteratorAG = resultListAG.iterator();
+		while (resultListIteratorAG.hasNext()) {
+			FLRAgstkl flrAgstkl = (FLRAgstkl) resultListIteratorAG.next();
+
+			setzeAgstklInEbene(flrAgstkl, SPALTE_TYP0);
 		}
 		session.close();
 
@@ -833,8 +889,8 @@ public class ProjektverlaufHandler extends UseCaseHandlerTabelle {
 					.personalgehaltFindLetztePersonalgehalt(
 							flrTelefonzeiten.getPersonal_i_id(),
 							c.get(Calendar.YEAR), c.get(Calendar.MONTH));
-			if (pgDto != null && pgDto.getNStundensatz() != null && flrTelefonzeiten
-					.getT_bis()!=null) {
+			if (pgDto != null && pgDto.getNStundensatz() != null
+					&& flrTelefonzeiten.getT_bis() != null) {
 
 				Double dauer = new Double(((double) (flrTelefonzeiten
 						.getT_bis().getTime() - flrTelefonzeiten.getT_von()
@@ -873,6 +929,35 @@ public class ProjektverlaufHandler extends UseCaseHandlerTabelle {
 		setAnzahlZeilen(iAnzahlZeilen);
 
 		return hmDatenBereitsVerwendet;
+
+	}
+
+	private void setzeEingangsrechnungInEbene(
+			FLREingangsrechnungAuftragszuordnung ea, int iEbene)
+			throws RemoteException {
+		// Reisezeiten des Projekts
+
+		String er = "ER";
+
+		Object[] oZeile = new Object[ANZAHL_SPALTEN];
+		oZeile[iEbene] = er + ea.getFlreingangsrechnung().getC_nr();
+
+		oZeile[SPALTE_DATUM] = ea.getFlreingangsrechnung().getT_belegdatum();
+
+		ProjektVerlaufHelperDto pvDto = new ProjektVerlaufHelperDto(iEbene,
+				getEingangsrechnungFac()
+						.eingangsrechnungAuftragszuordnungFindByPrimaryKey(
+								ea.getI_id()));
+		oZeile[SPALTE_PROJEKTVERLAUF_HELPER] = pvDto;
+
+		oZeile[SPALTE_NETTOWERT] = ea.getN_betrag();
+		oZeile[SPALTE_WAEHRUNG] = ea.getFlreingangsrechnung()
+				.getWaehrung_c_nr();
+		oZeile[SPALTE_STATUS] = ea.getFlreingangsrechnung().getStatus_c_nr();
+
+		hmDatenBereitsVerwendet.put(er, pvDto);
+
+		hmDaten.add(oZeile);
 
 	}
 
@@ -923,9 +1008,21 @@ public class ProjektverlaufHandler extends UseCaseHandlerTabelle {
 
 					}
 
+					/////////////////////////////////////////////////////
+
+					// Daten fuer JRuby Script
+					String personalart = getPersonalFac().personalFindByPrimaryKey(
+							rDto.getPersonalIId(), theClientDto).getPersonalartCNr().trim();
+
 					BigDecimal bdDiaeten = getZeiterfassungFac()
-							.berechneDiaeten(rDto.getDiaetenIId(),
-									rDto.getTZeit(), tBis, theClientDto);
+							.berechneDiaetenAusScript(rDto.getDiaetenIId(),
+									rDto.getTZeit(), tBis, theClientDto, personalart);
+
+					/////////////////////////////////////////////////////
+
+//					BigDecimal bdDiaeten = getZeiterfassungFac()
+//							.berechneDiaeten(rDto.getDiaetenIId(),
+//									rDto.getTZeit(), tBis, theClientDto);
 
 					BigDecimal kostenDesProjekts = rkDto
 							.getAnteiligeKostenEinesAbschnitts(rDto.getIId(),
@@ -967,7 +1064,6 @@ public class ProjektverlaufHandler extends UseCaseHandlerTabelle {
 		int iEbeneAuftrag = iEbene;
 		iEbene++;
 		int iEbeneLieferschein = iEbene;
-		iEbene++;
 		int iEbeneRechnung = iEbene;
 
 		List<?> resultListAB = queryAB.list();
@@ -1147,6 +1243,24 @@ public class ProjektverlaufHandler extends UseCaseHandlerTabelle {
 
 				// befuelleMitRechnungDto(reDto, "AB" + flrauftrag.getC_nr(),
 				// "RE", null, null);
+			}
+
+			// PJ18663 zuegordnete ERs hinzufuegen
+			session = FLRSessionFactory.getFactory().openSession();
+			query = session
+					.createQuery("SELECT ea FROM FLREingangsrechnungAuftragszuordnung ea WHERE ea.flrauftrag.i_id="
+							+ flrauftrag.getI_id()
+							+ " ORDER BY ea.flreingangsrechnung.c_nr");
+
+			resultList = query.list();
+			resultListIterator = resultList.iterator();
+			while (resultListIterator.hasNext()) {
+
+				FLREingangsrechnungAuftragszuordnung ea = (FLREingangsrechnungAuftragszuordnung) resultListIterator
+						.next();
+
+				setzeEingangsrechnungInEbene(ea, iEbeneAuftrag + 1);
+
 			}
 
 			// Reisezeiten eines Auftrags hinzufuegen

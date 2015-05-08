@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -43,11 +43,9 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
-import com.lp.server.finanz.fastlanereader.generated.FLRFinanzMahnung;
 import com.lp.server.finanz.service.FinanzFac;
 import com.lp.server.partner.service.KundeFac;
 import com.lp.server.personal.service.PersonalFac;
-import com.lp.server.rechnung.fastlanereader.generated.FLRRechnung;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungReport;
 import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.util.Facade;
@@ -291,7 +289,8 @@ public class MahnsperreHandler extends UseCaseHandler {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append("rechnung." + kriterien[i].kritName);
+//							orderBy.append("rechnung." + kriterien[i].kritName);
+							orderBy.append(kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -433,6 +432,7 @@ public class MahnsperreHandler extends UseCaseHandler {
 							"i_id",
 							Facade.NICHT_SORTIERBAR,
 							RechnungFac.FLR_RECHNUNG_C_NR,
+							"rechnung."+
 							RechnungFac.FLR_RECHNUNG_FLRKUNDE
 									+ "."
 									+ KundeFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -69,11 +69,13 @@ import com.lp.server.anfrage.service.AnfragepositionDto;
 import com.lp.server.angebot.service.AngebotDto;
 import com.lp.server.angebot.service.AngebotpositionDto;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikellieferant;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikellieferantDto;
 import com.lp.server.artikel.service.ArtklaDto;
 import com.lp.server.artikel.service.LagerDto;
+import com.lp.server.auftrag.service.AuftragpositionDto;
 import com.lp.server.bestellung.ejb.Bestellvorschlag;
 import com.lp.server.bestellung.fastlanereader.BestellvorschlagHandler;
 import com.lp.server.bestellung.fastlanereader.generated.FLRBestellposition;
@@ -105,6 +107,7 @@ import com.lp.server.system.service.KostenstelleDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.LockMeDto;
 import com.lp.server.system.service.MandantDto;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
@@ -154,10 +157,17 @@ public class BestellvorschlagFacBean extends Facade implements
 					.boolean2Short(false));
 		}
 
-		// bestellvorschlagDtoI.setPersonalAendernIID(theClientDto.getIDPersonal(
-		// ));
-		// bestellvorschlagDtoI.setPersonalAnlegenIID(theClientDto.getIDPersonal(
-		// ));
+		if (bestellvorschlagDtoI.getBVormerkung() == null) {
+			bestellvorschlagDtoI.setBVormerkung(Helper.boolean2Short(false));
+		}
+
+		// PJ18940
+		if (Helper.short2boolean(bestellvorschlagDtoI.getBVormerkung()) == true) {
+			bestellvorschlagDtoI.setPersonalIIdVormerkung(theClientDto
+					.getIDPersonal());
+			bestellvorschlagDtoI.setTVormerkung(new java.sql.Timestamp(System
+					.currentTimeMillis()));
+		}
 
 		// PK fuer Partner generieren.
 		PKGeneratorObj pkGen = new PKGeneratorObj();
@@ -224,13 +234,33 @@ public class BestellvorschlagFacBean extends Facade implements
 		}
 	}
 
-	public void updateBestellvorschlag(BestellvorschlagDto bestellvorschlagDto)
-			throws EJBExceptionLP {
+	public void updateBestellvorschlag(BestellvorschlagDto bestellvorschlagDto,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (bestellvorschlagDto != null) {
 			Integer iId = bestellvorschlagDto.getIId();
 			// try {
 			Bestellvorschlag bestellvorschlag = em.find(Bestellvorschlag.class,
 					iId);
+
+			// PJ18940
+			if (Helper.short2boolean(bestellvorschlag.getBVormerkung()) == false
+					|| Helper.short2boolean(bestellvorschlagDto
+							.getBVormerkung()) == true) {
+				bestellvorschlagDto.setPersonalIIdVormerkung(theClientDto
+						.getIDPersonal());
+				bestellvorschlagDto.setTVormerkung(new java.sql.Timestamp(
+						System.currentTimeMillis()));
+			} else {
+
+				if (Helper.short2boolean(bestellvorschlag.getBVormerkung()) == true
+						|| Helper.short2boolean(bestellvorschlagDto
+								.getBVormerkung()) == false) {
+					bestellvorschlagDto.setPersonalIIdVormerkung(null);
+					bestellvorschlagDto.setTVormerkung(null);
+				}
+
+			}
+
 			if (bestellvorschlag == null) {
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
@@ -246,10 +276,11 @@ public class BestellvorschlagFacBean extends Facade implements
 	}
 
 	public void updateBestellvorschlags(
-			BestellvorschlagDto[] bestellvorschlagDtos) throws EJBExceptionLP {
+			BestellvorschlagDto[] bestellvorschlagDtos,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		if (bestellvorschlagDtos != null) {
 			for (int i = 0; i < bestellvorschlagDtos.length; i++) {
-				updateBestellvorschlag(bestellvorschlagDtos[i]);
+				updateBestellvorschlag(bestellvorschlagDtos[i], theClientDto);
 			}
 		}
 	}
@@ -357,6 +388,11 @@ public class BestellvorschlagFacBean extends Facade implements
 		bestellvorschlag.setBNettopreisuebersteuert(bestellvorschlagDto
 				.getBNettopreisuebersteuert());
 		bestellvorschlag.setProjektIId(bestellvorschlagDto.getProjektIId());
+		bestellvorschlag.setXTextinhalt(bestellvorschlagDto.getXTextinhalt());
+		bestellvorschlag.setBVormerkung(bestellvorschlagDto.getBVormerkung());
+		bestellvorschlag.setTVormerkung(bestellvorschlagDto.getTVormerkung());
+		bestellvorschlag.setPersonalIIdVormerkung(bestellvorschlagDto
+				.getPersonalIIdVormerkung());
 		em.merge(bestellvorschlag);
 		em.flush();
 	}
@@ -408,7 +444,7 @@ public class BestellvorschlagFacBean extends Facade implements
 
 	public void erstelleBestellvorschlagAnhandEinesAngebots(Integer angebotIId,
 			java.sql.Date dLiefertermin, TheClientDto theClientDto) {
-		loescheBestellvorlaegeEinesMandaten(theClientDto);
+		loescheBestellvorlaegeEinesMandaten(true, theClientDto);
 
 		try {
 			AngebotpositionDto[] agposDtos = getAngebotpositionFac()
@@ -462,9 +498,11 @@ public class BestellvorschlagFacBean extends Facade implements
 									null,
 									new java.sql.Timestamp(dLiefertermin
 											.getTime()),
-									position.getNZielmenge().multiply(
-											agposDtos[i].getNMenge()),
-									angebotDto.getProjektIId(), theClientDto);
+									Helper.rundeKaufmaennisch(
+											position.getNZielmenge().multiply(
+													agposDtos[i].getNMenge()),
+											4), angebotDto.getProjektIId(),
+									null, null, null, theClientDto);
 
 						}
 
@@ -480,7 +518,11 @@ public class BestellvorschlagFacBean extends Facade implements
 									new java.sql.Timestamp(dLiefertermin
 											.getTime()),
 									agposDtos[i].getNMenge(),
-									angebotDto.getProjektIId(), theClientDto);
+									angebotDto.getProjektIId(),
+									agposDtos[i].getXTextinhalt(),
+									agposDtos[i].getLieferantIId(),
+									agposDtos[i].getNEinkaufpreis(),
+									theClientDto);
 						}
 					}
 
@@ -495,8 +537,9 @@ public class BestellvorschlagFacBean extends Facade implements
 	}
 
 	public void erstelleBestellvorschlagAnhandStuecklistenmindestlagerstand(
-			java.sql.Date dLiefertermin, TheClientDto theClientDto) {
-		loescheBestellvorlaegeEinesMandaten(theClientDto);
+			java.sql.Date dLiefertermin, boolean vormerklisteLoeschen,
+			TheClientDto theClientDto) {
+		loescheBestellvorlaegeEinesMandaten(vormerklisteLoeschen, theClientDto);
 
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = null;
@@ -528,8 +571,9 @@ public class BestellvorschlagFacBean extends Facade implements
 
 				List<?> m = null;
 				try {
+
 					m = getStuecklisteFac()
-							.getStrukturDatenEinerStueckliste(
+							.getStrukturDatenEinerStuecklisteMitArbeitsplan(
 									flrStueckliste.getI_id(),
 									theClientDto,
 									StuecklisteReportFac.REPORT_STUECKLISTE_OPTION_SORTIERUNG_OHNE,
@@ -539,7 +583,8 @@ public class BestellvorschlagFacBean extends Facade implements
 									true,
 									new BigDecimal(flrStueckliste
 											.getFlrartikel()
-											.getF_lagermindest()), null, false);
+											.getF_lagermindest()), null);
+
 				} catch (RemoteException ex4) {
 					throwEJBExceptionLPRespectOld(ex4);
 				}
@@ -549,17 +594,31 @@ public class BestellvorschlagFacBean extends Facade implements
 				while (it.hasNext()) {
 					StuecklisteMitStrukturDto struktur = (StuecklisteMitStrukturDto) it
 							.next();
-					StuecklistepositionDto position = struktur
-							.getStuecklistepositionDto();
 
-					BigDecimal nBedarf = position.getNZielmenge();
-					if (hmArtikel.containsKey(position.getArtikelIId())) {
+					if (struktur.isBArbeitszeit() == false) {
+						StuecklistepositionDto position = struktur
+								.getStuecklistepositionDto();
 
-						nBedarf = nBedarf.add(hmArtikel.get(position
-								.getArtikelIId()));
+						BigDecimal nBedarf = position.getNZielmenge().multiply(
+								new BigDecimal(flrStueckliste.getFlrartikel()
+										.getF_lagermindest()));
+						if (hmArtikel.containsKey(position.getArtikelIId())) {
+
+							nBedarf = nBedarf.add(hmArtikel.get(position
+									.getArtikelIId()));
+
+						}
+
+						// SP2483 Zusaetzlich noch pro Verwendung des Artikels
+						// dessen Lagermindeststand aus der Kopfstueckliste
+						// addieren
+						if (position.getfLagermindeststandAusKopfartikel() != null) {
+							nBedarf = nBedarf.add(new BigDecimal(position
+									.getfLagermindeststandAusKopfartikel()));
+						}
+
+						hmArtikel.put(position.getArtikelIId(), nBedarf);
 					}
-
-					hmArtikel.put(position.getArtikelIId(), nBedarf);
 				}
 			}
 		}
@@ -643,7 +702,7 @@ public class BestellvorschlagFacBean extends Facade implements
 								null,
 								null,
 								new java.sql.Timestamp(dLiefertermin.getTime()),
-								diff, null, theClientDto);
+								diff, null, null, null, null, theClientDto);
 					}
 				}
 
@@ -669,11 +728,14 @@ public class BestellvorschlagFacBean extends Facade implements
 			Integer iToleranz, java.sql.Date dateFuerEintraegeOhneLiefertermin,
 			ArrayList<Integer> arLosIId, ArrayList<Integer> arAuftragIId,
 			boolean bMitNichtlagerbewirtschafteten,
-			boolean bNurLospositionenBeruecksichtigen, TheClientDto theClientDto) {
+			boolean bNurLospositionenBeruecksichtigen,
+			boolean vormerklisteLoeschen, TheClientDto theClientDto) {
 		// alten bestellvorschlag loeschen
-		loescheBestellvorlaegeEinesMandaten(theClientDto);
+		loescheBestellvorlaegeEinesMandaten(vormerklisteLoeschen, theClientDto);
 		Session session = null;
 		try {
+
+			ArrayList<Integer> arArtikelIIds = new ArrayList<Integer>();
 
 			// Wenn auftragsIId angebeben werden, dann deren Los suchen
 
@@ -692,12 +754,25 @@ public class BestellvorschlagFacBean extends Facade implements
 
 					}
 
+					// und die Auftragspositionen hinzufuegen
+
+					AuftragpositionDto[] aufposDtos = getAuftragpositionFac()
+							.auftragpositionFindByAuftrag(arAuftragIId.get(i));
+					for (int j = 0; j < aufposDtos.length; j++) {
+						AuftragpositionDto apDto = aufposDtos[j];
+
+						if (apDto.isIdent() && apDto.getArtikelIId() != null) {
+							arArtikelIIds.add(apDto.getArtikelIId());
+						}
+
+					}
+
 				}
 
 			}
 
 			// Wenn losIIds vorhanden dann nur die Artikel dieser Lose
-			ArrayList<Integer> arArtikelIIds = new ArrayList<Integer>();
+
 			if (arLosIId != null) {
 				if (arLosIId.size() > 0) {
 					Object[] oLosIId = new Object[arLosIId.size()];
@@ -729,8 +804,14 @@ public class BestellvorschlagFacBean extends Facade implements
 			org.hibernate.Criteria crit = session
 					.createCriteria(FLRArtikel.class);
 			// Filter nach Mandant
-			crit.add(Restrictions.eq(ArtikelFac.FLR_ARTIKEL_MANDANT_C_NR,
-					theClientDto.getMandant()));
+
+			if (!getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+					theClientDto)) {
+
+				crit.add(Restrictions.eq(ArtikelFac.FLR_ARTIKEL_MANDANT_C_NR,
+						theClientDto.getMandant()));
+			}
 			// keine Hand- und AZ-Artikel
 			crit.add(Restrictions.not(Restrictions.in(
 					ArtikelFac.FLR_ARTIKELLISTE_ARTIKELART_C_NR, new String[] {
@@ -744,9 +825,17 @@ public class BestellvorschlagFacBean extends Facade implements
 			}
 			// Zusaetlich nach Losen wenn Materialien vorhanden
 			if (arArtikelIIds.size() > 0) {
+
 				Object[] oArtikelIIds = arArtikelIIds.toArray();
 				crit.add(Restrictions.in(ArtikelFac.FLR_ARTIKEL_I_ID,
 						oArtikelIIds));
+			} else {
+				// Wenn ein Auftrag ausgewaehlt wurde, jedoch keine Artikel
+				// vorhanden sind, dann gibts keine Positionen
+				if (arAuftragIId != null && arAuftragIId.size() > 0) {
+					return;
+				}
+
 			}
 
 			List<?> resultList = crit.list();
@@ -814,6 +903,9 @@ public class BestellvorschlagFacBean extends Facade implements
 														.getTime()),
 										materialbedarf[i].getNMenge(),
 										materialbedarf[i].getProjektIId(),
+										materialbedarf[i].getXTextinhalt(),
+										materialbedarf[i].getLieferantIId(),
+										materialbedarf[i].getNEinkaufpreis(),
 										theClientDto);
 							}
 						}
@@ -841,7 +933,7 @@ public class BestellvorschlagFacBean extends Facade implements
 								new java.sql.Timestamp(
 										dateFuerEintraegeOhneLiefertermin
 												.getTime()), stdMenge, null,
-								theClientDto);
+								null, null, null, theClientDto);
 
 					}
 				}
@@ -934,6 +1026,7 @@ public class BestellvorschlagFacBean extends Facade implements
 				anfragepositionDto.setNRichtpreis(new BigDecimal(0));
 				anfragepositionDto.setBArtikelbezeichnunguebersteuert(Helper
 						.boolean2Short(false));
+				anfragepositionDto.setXTextinhalt(bv.getX_textinhalt());
 
 				getAnfragepositionFac().createAnfrageposition(
 						anfragepositionDto, theClientDto);
@@ -964,8 +1057,9 @@ public class BestellvorschlagFacBean extends Facade implements
 			ArtikellieferantDto[] artLiefDto = getArtikelFac()
 					.artikellieferantFindByArtikelIId(
 							bestellvorschlag.getArtikelIId(), theClientDto);
-			if (artLiefDto != null && artLiefDto.length>0) {
-				bestellvorschlag.setLieferantIId(artLiefDto[0].getLieferantIId());
+			if (artLiefDto != null && artLiefDto.length > 0) {
+				bestellvorschlag.setLieferantIId(artLiefDto[0]
+						.getLieferantIId());
 			}
 		}
 	}
@@ -973,10 +1067,12 @@ public class BestellvorschlagFacBean extends Facade implements
 	public void bestellvorschlagDtoErzeugen(String belegartCNr,
 			String mandantCNr, Integer artikelIId, Integer belegIId,
 			Integer belegpositionIId, java.sql.Timestamp tTermin,
-			BigDecimal nMenge, Integer projektIId, TheClientDto theClientDto) {
+			BigDecimal nMenge, Integer projektIId, String xTextinhalt,
+			Integer lieferantIId, BigDecimal nEinkaufspreis,
+			TheClientDto theClientDto) {
 		BestellvorschlagDto bestellvorschlagDto = new BestellvorschlagDto();
 		bestellvorschlagDto.setCBelegartCNr(belegartCNr);
-		bestellvorschlagDto.setCMandantCNr(mandantCNr);
+		bestellvorschlagDto.setCMandantCNr(theClientDto.getMandant());
 		bestellvorschlagDto.setIArtikelId(artikelIId);
 		bestellvorschlagDto.setIBelegartId(belegIId);
 		bestellvorschlagDto.setIBelegartpositionid(belegpositionIId);
@@ -985,80 +1081,105 @@ public class BestellvorschlagFacBean extends Facade implements
 		bestellvorschlagDto.setBNettopreisuebersteuert(Helper
 				.boolean2Short(false));
 		bestellvorschlagDto.setProjektIId(projektIId);
+		bestellvorschlagDto.setXTextinhalt(xTextinhalt);
+		bestellvorschlagDto.setBVormerkung(Helper.boolean2Short(false));
 
 		// Einkaufspreis des ersten Lieferanten in
 		// Mandantenwaehrung
-		ArtikellieferantDto[] artLiefDto = getArtikelFac()
-				.artikellieferantFindByArtikelIId(artikelIId, theClientDto);
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+		String sQuery = "SELECT al FROM FLRArtikellieferant al WHERE al.artikel_i_id="
+				+ artikelIId;
+		sQuery += " AND al.flrlieferant.mandant_c_nr='"
+				+ theClientDto.getMandant() + "'";
+		sQuery += " ORDER BY al.i_sort ASC";
+
+		ArtikellieferantDto artLiefDto = null;
+
+		org.hibernate.Query query = session.createQuery(sQuery);
+		query.setMaxResults(1);
+		List<?> result = query.list();
+		Iterator it = result.iterator();
+		if (it.hasNext()) {
+			FLRArtikellieferant flrArtikellieferant = (FLRArtikellieferant) it
+					.next();
+			try {
+				artLiefDto = getArtikelFac().artikellieferantFindByPrimaryKey(
+						flrArtikellieferant.getI_id(), theClientDto);
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+
+		}
+		session.close();
+
 		if (artLiefDto != null) {
-			Integer iKleinsterIsort = null;
-			for (int y = 0; y < artLiefDto.length; y++) {
-				if (iKleinsterIsort == null) {
-					iKleinsterIsort = y;
+
+			ArtikellieferantDto helper2 = getArtikelFac()
+					.getArtikelEinkaufspreis(artikelIId,
+							artLiefDto.getLieferantIId(), nMenge,
+							theClientDto.getSMandantenwaehrung(), null,
+							theClientDto);
+			bestellvorschlagDto.setILieferantId(artLiefDto.getLieferantIId());
+			if (helper2 != null) {
+				bestellvorschlagDto.setNNettoeinzelpreis(helper2
+						.getNEinzelpreis());
+				bestellvorschlagDto.setNNettogesamtpreis(helper2
+						.getNNettopreis());
+				bestellvorschlagDto.setDRabattsatz(helper2.getFRabatt());
+				if (helper2.getNEinzelpreis() != null
+						&& helper2.getFRabatt() != null) {
+					bestellvorschlagDto.setNRabattbetrag(Helper
+							.rundeKaufmaennisch(
+									helper2.getNEinzelpreis()
+											.multiply(
+													new BigDecimal(helper2
+															.getFRabatt())
+															.movePointLeft(2)),
+									4));
+				}
+				if (Helper.short2boolean(helper2.getBRabattbehalten())) {
+					bestellvorschlagDto.setBNettopreisuebersteuert(Helper
+							.boolean2Short(false));
 				} else {
-					if (artLiefDto[iKleinsterIsort].getISort().intValue() > artLiefDto[y]
-							.getISort().intValue()) {
-						iKleinsterIsort = y;
-					}
+					bestellvorschlagDto.setBNettopreisuebersteuert(Helper
+							.boolean2Short(true));
+				}
+
+			} else {
+				bestellvorschlagDto.setNNettoeinzelpreis(artLiefDto
+						.getNEinzelpreis());
+				bestellvorschlagDto.setNNettogesamtpreis(artLiefDto
+						.getNNettopreis());
+				bestellvorschlagDto.setDRabattsatz(artLiefDto.getFRabatt());
+				if (artLiefDto.getNEinzelpreis() != null
+						&& artLiefDto.getFRabatt() != null) {
+					bestellvorschlagDto.setNRabattbetrag(Helper
+							.rundeKaufmaennisch(
+									artLiefDto.getNEinzelpreis().multiply(
+											new BigDecimal(artLiefDto
+													.getFRabatt())
+													.movePointLeft(2)), 4));
+				}
+				if (Helper.short2boolean(artLiefDto.getBRabattbehalten())) {
+					bestellvorschlagDto.setBNettopreisuebersteuert(Helper
+							.boolean2Short(false));
+				} else {
+					bestellvorschlagDto.setBNettopreisuebersteuert(Helper
+							.boolean2Short(true));
 				}
 			}
-			ArtikellieferantDto helper = new ArtikellieferantDto();
-			if (iKleinsterIsort != null) {
-				helper = artLiefDto[iKleinsterIsort];
-				ArtikellieferantDto helper2 = getArtikelFac()
-						.getArtikelEinkaufspreis(artikelIId,
-								helper.getLieferantIId(), nMenge,
-								theClientDto.getSMandantenwaehrung(), null,
-								theClientDto);
-				bestellvorschlagDto.setILieferantId(helper.getLieferantIId());
-				if (helper2 != null) {
-					bestellvorschlagDto.setNNettoeinzelpreis(helper2
-							.getNEinzelpreis());
-					bestellvorschlagDto.setNNettogesamtpreis(helper2
-							.getNNettopreis());
-					bestellvorschlagDto.setDRabattsatz(helper2.getFRabatt());
-					if (helper2.getNEinzelpreis() != null
-							&& helper2.getFRabatt() != null) {
-						bestellvorschlagDto.setNRabattbetrag(Helper
-								.rundeKaufmaennisch(
-										helper2.getNEinzelpreis().multiply(
-												new BigDecimal(helper2
-														.getFRabatt())
-														.movePointLeft(2)), 4));
-					}
-					if (Helper.short2boolean(helper2.getBRabattbehalten())) {
-						bestellvorschlagDto.setBNettopreisuebersteuert(Helper
-								.boolean2Short(false));
-					} else {
-						bestellvorschlagDto.setBNettopreisuebersteuert(Helper
-								.boolean2Short(true));
-					}
 
-				} else {
-					bestellvorschlagDto.setNNettoeinzelpreis(helper
-							.getNEinzelpreis());
-					bestellvorschlagDto.setNNettogesamtpreis(helper
-							.getNNettopreis());
-					bestellvorschlagDto.setDRabattsatz(helper.getFRabatt());
-					if (helper.getNEinzelpreis() != null
-							&& helper.getFRabatt() != null) {
-						bestellvorschlagDto.setNRabattbetrag(Helper
-								.rundeKaufmaennisch(
-										helper.getNEinzelpreis().multiply(
-												new BigDecimal(helper
-														.getFRabatt())
-														.movePointLeft(2)), 4));
-					}
-					if (Helper.short2boolean(helper.getBRabattbehalten())) {
-						bestellvorschlagDto.setBNettopreisuebersteuert(Helper
-								.boolean2Short(false));
-					} else {
-						bestellvorschlagDto.setBNettopreisuebersteuert(Helper
-								.boolean2Short(true));
-					}
+		}
 
-				}
-			}
+		if (nEinkaufspreis != null) {
+			bestellvorschlagDto.setNNettoeinzelpreis(nEinkaufspreis);
+			bestellvorschlagDto.setNNettogesamtpreis(nEinkaufspreis);
+			bestellvorschlagDto.setDRabattsatz(0D);
+			bestellvorschlagDto.setNRabattbetrag(BigDecimal.ZERO);
+		}
+		if (lieferantIId != null) {
+			bestellvorschlagDto.setILieferantId(lieferantIId);
 		}
 		try {
 			context.getBusinessObject(BestellvorschlagFac.class)
@@ -1068,14 +1189,27 @@ public class BestellvorschlagFacBean extends Facade implements
 		}
 	}
 
-	public void loescheBestellvorlaegeEinesMandaten(TheClientDto theClientDto) {
+	public void loescheBestellvorlaegeEinesMandaten(
+			boolean vormerklisteLoeschen, TheClientDto theClientDto) {
 
 		Session session = FLRSessionFactory.getFactory().openSession();
 		try {
-			String hqlDelete = "delete FLRBestellvorschlag where mandant_c_nr = :param1";
-			session.createQuery(hqlDelete)
-					.setString("param1", theClientDto.getMandant())
-					.executeUpdate();
+			String hqlDelete = "delete FLRBestellvorschlag WHERE 1=1";
+
+			if (!getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+					theClientDto)) {
+
+				hqlDelete += " and mandant_c_nr ='" + theClientDto.getMandant()
+						+ "'";
+
+			}
+
+			if (vormerklisteLoeschen == false) {
+				hqlDelete += " and b_vormerkung = 0 ";
+			}
+
+			session.createQuery(hqlDelete).executeUpdate();
 		} finally {
 			closeSession(session);
 		}
@@ -1152,7 +1286,8 @@ public class BestellvorschlagFacBean extends Facade implements
 						.getListeBestellvorschlaege(
 								fkneu,
 								ski,
-								BestellvorschlagFac.BES_NACH_BV_FUER_JEDEN_LF_UND_GLEICHE_TERMIN);
+								BestellvorschlagFac.BES_NACH_BV_FUER_JEDEN_LF_UND_GLEICHE_TERMIN,
+								theClientDto.getMandant());
 
 				aBestellvorschlagDto = bereinigeBestellvorschlagVonVeraltenArtikeln(
 						aBestellvorschlagDto, theClientDto);
@@ -1202,7 +1337,8 @@ public class BestellvorschlagFacBean extends Facade implements
 
 			BestellvorschlagDto[] aBestellvorschlagDto = BestellvorschlagHandler
 					.getListeBestellvorschlaege(fkneu, ski,
-							BestellvorschlagFac.BES_NACH_BV_FUER_JEDEN_LF);
+							BestellvorschlagFac.BES_NACH_BV_FUER_JEDEN_LF,
+							theClientDto.getMandant());
 			aBestellvorschlagDto = bereinigeBestellvorschlagVonVeraltenArtikeln(
 					aBestellvorschlagDto, theClientDto);
 
@@ -1239,7 +1375,8 @@ public class BestellvorschlagFacBean extends Facade implements
 				.getListeBestellvorschlaege(
 						fk,
 						ski,
-						BestellvorschlagFac.BES_NACH_BV_FUER_BESTIMMTEN_LF_UND_TERMIN);
+						BestellvorschlagFac.BES_NACH_BV_FUER_BESTIMMTEN_LF_UND_TERMIN,
+						theClientDto.getMandant());
 		aBestellvorschlagDto = bereinigeBestellvorschlagVonVeraltenArtikeln(
 				aBestellvorschlagDto, theClientDto);
 
@@ -1266,7 +1403,8 @@ public class BestellvorschlagFacBean extends Facade implements
 			throws EJBExceptionLP, RemoteException {
 		BestellvorschlagDto[] aBestellvorschlagDto = BestellvorschlagHandler
 				.getListeBestellvorschlaege(fk, ski,
-						BestellvorschlagFac.BES_ABRUFE_ZU_RAHMEN);
+						BestellvorschlagFac.BES_ABRUFE_ZU_RAHMEN,
+						theClientDto.getMandant());
 		aBestellvorschlagDto = bereinigeBestellvorschlagVonVeraltenArtikeln(
 				aBestellvorschlagDto, theClientDto);
 		return getBestellvorschlagFac().erstelleAbrufbestellungenAusBV(
@@ -1280,7 +1418,8 @@ public class BestellvorschlagFacBean extends Facade implements
 
 		BestellvorschlagDto[] aBestellvorschlagDto = BestellvorschlagHandler
 				.getListeBestellvorschlaege(fk, ski,
-						BestellvorschlagFac.BES_NACH_BV_FUER_BESTIMMTEN_LF);
+						BestellvorschlagFac.BES_NACH_BV_FUER_BESTIMMTEN_LF,
+						theClientDto.getMandant());
 
 		aBestellvorschlagDto = bereinigeBestellvorschlagVonVeraltenArtikeln(
 				aBestellvorschlagDto, theClientDto);
@@ -1354,6 +1493,23 @@ public class BestellvorschlagFacBean extends Facade implements
 			boolean bBestellungAnlegen = true;
 			Integer iIdBestellung = null;
 
+			boolean bBestellvorschlagErzeugtLoszuordnung = true;
+
+			ParametermandantDto parameterDto = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_BESTELLUNG,
+							ParameterFac.PARAMETER_BESTELLUNG_AUS_BESTVOR_POSITIONEN_MIT_LOSZUORDNUNG);
+			bBestellvorschlagErzeugtLoszuordnung = (Boolean) parameterDto
+					.getCWertAsObject();
+
+			boolean bAnsprechpartnerVorbesetzen = false;
+			ParametermandantDto param = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_BESTELLUNG,
+					ParameterFac.PARAMETER_BESTELLUNG_ANSP_VORBESETZEN);
+			bAnsprechpartnerVorbesetzen = (Boolean) param.getCWertAsObject();
+
 			for (int i = 0; i < aBestellvorschlagDto.length; i++) {
 				// anlegen der Bestellung
 				LieferantDto lieferantDto = getLieferantFac()
@@ -1365,13 +1521,17 @@ public class BestellvorschlagFacBean extends Facade implements
 						lieferantDto.getWaehrungCNr(), theClientDto);
 				if (bBestellungAnlegen == true) {
 					BestellungDto bestellungDto = new BestellungDto();
-					AnsprechpartnerDto ansprechpartnerDto[] = getAnsprechpartnerFac()
-							.ansprechpartnerFindByAnsprechpartnerIId(
-									lieferantDto.getPartnerIId(), theClientDto);
-					if (ansprechpartnerDto.length > 0) {
-						bestellungDto
-								.setAnsprechpartnerIId(ansprechpartnerDto[0]
-										.getIId());
+
+					// SP3131
+					if (bAnsprechpartnerVorbesetzen == true) {
+						AnsprechpartnerDto anspDto = getAnsprechpartnerFac()
+								.ansprechpartnerFindErstenEinesPartnersOhneExc(
+										lieferantDto.getPartnerIId(),
+										theClientDto);
+						if (anspDto != null) {
+							bestellungDto.setAnsprechpartnerIId(anspDto
+									.getIId());
+						}
 					}
 
 					PersonalDto anfordererDto = getPersonalFac()
@@ -1395,11 +1555,10 @@ public class BestellvorschlagFacBean extends Facade implements
 							.setBestellungartCNr(BestellungFac.BESTELLUNGART_FREIE_BESTELLUNG_C_NR);
 					bestellungDto
 							.setStatusCNr(BestellungFac.BESTELLSTATUS_ANGELEGT);
-					ParametermandantDto parameterDto = getParameterFac()
-							.getMandantparameter(
-									theClientDto.getMandant(),
-									ParameterFac.KATEGORIE_BESTELLUNG,
-									ParameterFac.PARAMETER_DEFAULT_TEILLIEFERUNG);
+					parameterDto = getParameterFac().getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_BESTELLUNG,
+							ParameterFac.PARAMETER_DEFAULT_TEILLIEFERUNG);
 
 					bestellungDto.setBTeillieferungMoeglich(Helper
 							.boolean2Short((Boolean) parameterDto
@@ -1462,20 +1621,24 @@ public class BestellvorschlagFacBean extends Facade implements
 				bestellpositionDto.setEinheitCNr(artikelDto.getEinheitCNr());
 				bestellpositionDto.setNMenge(aBestellvorschlagDto[i]
 						.getNZubestellendeMenge());
+				bestellpositionDto.setXTextinhalt(aBestellvorschlagDto[i]
+						.getXTextinhalt());
 
-				if (aBestellvorschlagDto[i].getCBelegartCNr() != null
-						&& aBestellvorschlagDto[i].getCBelegartCNr().equals(
-								LocaleFac.BELEGART_LOS)
-						&& aBestellvorschlagDto[i].getIBelegartpositionid() != null) {
+				if (bBestellvorschlagErzeugtLoszuordnung == true) {
+					if (aBestellvorschlagDto[i].getCBelegartCNr() != null
+							&& aBestellvorschlagDto[i].getCBelegartCNr()
+									.equals(LocaleFac.BELEGART_LOS)
+							&& aBestellvorschlagDto[i].getIBelegartpositionid() != null) {
 
-					LossollmaterialDto lossollmaterialDto = getFertigungFac()
-							.lossollmaterialFindByPrimaryKeyOhneExc(
-									aBestellvorschlagDto[i]
+						LossollmaterialDto lossollmaterialDto = getFertigungFac()
+								.lossollmaterialFindByPrimaryKeyOhneExc(
+										aBestellvorschlagDto[i]
+												.getIBelegartpositionid());
+						if (lossollmaterialDto != null) {
+							bestellpositionDto
+									.setLossollmaterialIId(aBestellvorschlagDto[i]
 											.getIBelegartpositionid());
-					if (lossollmaterialDto != null) {
-						bestellpositionDto
-								.setLossollmaterialIId(aBestellvorschlagDto[i]
-										.getIBelegartpositionid());
+						}
 					}
 				}
 
@@ -1483,8 +1646,10 @@ public class BestellvorschlagFacBean extends Facade implements
 
 				if (artikelDto.getMaterialIId() != null) {
 					BigDecimal zuschlag = getMaterialFac()
-							.materialzuschlagFindAktuellenzuschlag(
-									artikelDto.getMaterialIId(), theClientDto);
+							.getMaterialzuschlagEKInZielwaehrung(
+									artikelDto.getIId(), lieferantDto.getIId(),
+									this.getDate(),
+									lieferantDto.getWaehrungCNr(), theClientDto);
 					if (zuschlag != null) {
 						bestellpositionDto.setNMaterialzuschlag(zuschlag);
 
@@ -1557,6 +1722,20 @@ public class BestellvorschlagFacBean extends Facade implements
 									.doubleValue()));
 				} else {
 					bestellpositionDto.setDRabattsatz(new Double(0));
+				}
+
+				// SP2241
+				ArtikellieferantDto alDto = getArtikelFac()
+						.getArtikelEinkaufspreis(
+								aBestellvorschlagDto[i].getIArtikelId(),
+								aBestellvorschlagDto[i].getILieferantId(),
+								new BigDecimal(1),
+								theClientDto.getSMandantenwaehrung(),
+								this.getDate(), theClientDto);
+
+				if (alDto != null) {
+					bestellpositionDto.setCAngebotnummer(alDto
+							.getCAngebotnummer());
 				}
 
 				bestellpositionDto
@@ -1891,9 +2070,24 @@ public class BestellvorschlagFacBean extends Facade implements
 		try {
 			// isort in Bestellposition
 			int j = 0;
+			boolean bBestellvorschlagErzeugtLoszuordnung = true;
 
+			ParametermandantDto parameterDto = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_BESTELLUNG,
+							ParameterFac.PARAMETER_BESTELLUNG_AUS_BESTVOR_POSITIONEN_MIT_LOSZUORDNUNG);
+			bBestellvorschlagErzeugtLoszuordnung = (Boolean) parameterDto
+					.getCWertAsObject();
 			MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(
 					theClientDto.getMandant(), theClientDto);
+
+			boolean bAnsprechpartnerVorbesetzen = false;
+			ParametermandantDto param = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_BESTELLUNG,
+					ParameterFac.PARAMETER_BESTELLUNG_ANSP_VORBESETZEN);
+			bAnsprechpartnerVorbesetzen = (Boolean) param.getCWertAsObject();
 
 			Integer iIdBestellung = null;
 			for (int i = 0; i < aBestellvorschlagDto.length; i++) {
@@ -1911,12 +2105,14 @@ public class BestellvorschlagFacBean extends Facade implements
 
 				BestellungDto bestellungDto = new BestellungDto();
 
-				AnsprechpartnerDto ansprechpartnerDto[] = getAnsprechpartnerFac()
-						.ansprechpartnerFindByAnsprechpartnerIId(
-								lieferantDto.getPartnerIId(), theClientDto);
-				if (ansprechpartnerDto.length > 0) {
-					bestellungDto.setAnsprechpartnerIId(ansprechpartnerDto[0]
-							.getIId());
+				// SP3131
+				if (bAnsprechpartnerVorbesetzen == true) {
+					AnsprechpartnerDto anspDto = getAnsprechpartnerFac()
+							.ansprechpartnerFindErstenEinesPartnersOhneExc(
+									lieferantDto.getPartnerIId(), theClientDto);
+					if (anspDto != null) {
+						bestellungDto.setAnsprechpartnerIId(anspDto.getIId());
+					}
 				}
 
 				PersonalDto anfordererDto = getPersonalFac()
@@ -1940,10 +2136,10 @@ public class BestellvorschlagFacBean extends Facade implements
 				bestellungDto
 						.setStatusCNr(BestellungFac.BESTELLSTATUS_ANGELEGT);
 
-				ParametermandantDto parameterDto = getParameterFac()
-						.getMandantparameter(theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_BESTELLUNG,
-								ParameterFac.PARAMETER_DEFAULT_TEILLIEFERUNG);
+				parameterDto = getParameterFac().getMandantparameter(
+						theClientDto.getMandant(),
+						ParameterFac.KATEGORIE_BESTELLUNG,
+						ParameterFac.PARAMETER_DEFAULT_TEILLIEFERUNG);
 
 				bestellungDto.setBTeillieferungMoeglich(Helper
 						.boolean2Short((Boolean) parameterDto
@@ -2000,20 +2196,25 @@ public class BestellvorschlagFacBean extends Facade implements
 				bestellpositionDto.setEinheitCNr(artikelDto.getEinheitCNr());
 				bestellpositionDto.setNMenge(aBestellvorschlagDto[i]
 						.getNZubestellendeMenge());
+				bestellpositionDto.setXTextinhalt(aBestellvorschlagDto[i]
+						.getXTextinhalt());
 
-				if (aBestellvorschlagDto[i].getCBelegartCNr() != null
-						&& aBestellvorschlagDto[i].getCBelegartCNr().equals(
-								LocaleFac.BELEGART_LOS)
-						&& aBestellvorschlagDto[i].getIBelegartpositionid() != null) {
+				if (bBestellvorschlagErzeugtLoszuordnung == true) {
 
-					LossollmaterialDto lossollmaterialDto = getFertigungFac()
-							.lossollmaterialFindByPrimaryKeyOhneExc(
-									aBestellvorschlagDto[i]
+					if (aBestellvorschlagDto[i].getCBelegartCNr() != null
+							&& aBestellvorschlagDto[i].getCBelegartCNr()
+									.equals(LocaleFac.BELEGART_LOS)
+							&& aBestellvorschlagDto[i].getIBelegartpositionid() != null) {
+
+						LossollmaterialDto lossollmaterialDto = getFertigungFac()
+								.lossollmaterialFindByPrimaryKeyOhneExc(
+										aBestellvorschlagDto[i]
+												.getIBelegartpositionid());
+						if (lossollmaterialDto != null) {
+							bestellpositionDto
+									.setLossollmaterialIId(aBestellvorschlagDto[i]
 											.getIBelegartpositionid());
-					if (lossollmaterialDto != null) {
-						bestellpositionDto
-								.setLossollmaterialIId(aBestellvorschlagDto[i]
-										.getIBelegartpositionid());
+						}
 					}
 				}
 
@@ -2021,8 +2222,10 @@ public class BestellvorschlagFacBean extends Facade implements
 
 				if (artikelDto.getMaterialIId() != null) {
 					BigDecimal zuschlag = getMaterialFac()
-							.materialzuschlagFindAktuellenzuschlag(
-									artikelDto.getMaterialIId(), theClientDto);
+							.getMaterialzuschlagEKInZielwaehrung(
+									artikelDto.getIId(), lieferantDto.getIId(),
+									this.getDate(),
+									lieferantDto.getWaehrungCNr(), theClientDto);
 					if (zuschlag != null) {
 						bestellpositionDto.setNMaterialzuschlag(zuschlag);
 
@@ -2097,6 +2300,20 @@ public class BestellvorschlagFacBean extends Facade implements
 					bestellpositionDto.setDRabattsatz(new Double(0));
 				}
 
+				// SP2241
+				ArtikellieferantDto alDto = getArtikelFac()
+						.getArtikelEinkaufspreis(
+								aBestellvorschlagDto[i].getIArtikelId(),
+								aBestellvorschlagDto[i].getILieferantId(),
+								new BigDecimal(1),
+								theClientDto.getSMandantenwaehrung(),
+								this.getDate(), theClientDto);
+
+				if (alDto != null) {
+					bestellpositionDto.setCAngebotnummer(alDto
+							.getCAngebotnummer());
+				}
+
 				bestellpositionDto
 						.setBNettopreisuebersteuert(aBestellvorschlagDto[i]
 								.getBNettopreisuebersteuert());
@@ -2120,9 +2337,17 @@ public class BestellvorschlagFacBean extends Facade implements
 	public void removeLockDesBestellvorschlagesWennIchIhnSperre(
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		try {
+
+			String mandant = theClientDto.getMandant();
+
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+					theClientDto)) {
+				mandant = getSystemFac().getHauptmandant();
+			}
+
 			LockMeDto[] lockMeDtoLock = getTheJudgeFac().findByWerWasOhneExc(
-					BestellvorschlagFac.LOCKME_BESTELLVORSCHLAG,
-					theClientDto.getMandant());
+					BestellvorschlagFac.LOCKME_BESTELLVORSCHLAG, mandant);
 			if (lockMeDtoLock != null && lockMeDtoLock.length > 0) {
 				if (lockMeDtoLock[0].getPersonalIIdLocker().equals(
 						theClientDto.getIDPersonal())
@@ -2150,11 +2375,19 @@ public class BestellvorschlagFacBean extends Facade implements
 			// lock-objekt zusammenstellen
 			LockMeDto lockMeDto = new LockMeDto();
 			lockMeDto.setCUsernr(theClientDto.getIDUser());
-			lockMeDto.setCWas(theClientDto.getMandant());
+
+			String mandant = theClientDto.getMandant();
+
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+					theClientDto)) {
+				mandant = getSystemFac().getHauptmandant();
+			}
+
+			lockMeDto.setCWas(mandant);
 			lockMeDto.setCWer(BestellvorschlagFac.LOCKME_BESTELLVORSCHLAG);
 			LockMeDto[] lockMeDtoLock = getTheJudgeFac().findByWerWasOhneExc(
-					BestellvorschlagFac.LOCKME_BESTELLVORSCHLAG,
-					theClientDto.getMandant());
+					BestellvorschlagFac.LOCKME_BESTELLVORSCHLAG, mandant);
 			if (lockMeDtoLock != null && lockMeDtoLock.length > 0) {
 				if (lockMeDtoLock[0].getPersonalIIdLocker().equals(
 						theClientDto.getIDPersonal())
@@ -2169,8 +2402,7 @@ public class BestellvorschlagFacBean extends Facade implements
 					throw new EJBExceptionLP(
 							EJBExceptionLP.FEHLER_BESTELLVORSCHLAG_IST_GESPERRT,
 							al, new Exception("Bestellvorschlag auf Mandant "
-									+ theClientDto.getMandant()
-									+ " gesperrt durch Personal Id "
+									+ mandant + " gesperrt durch Personal Id "
 									+ lockMeDtoLock[0].getPersonalIIdLocker()));
 				}
 			} else {
@@ -2281,9 +2513,14 @@ public class BestellvorschlagFacBean extends Facade implements
 							if (artLief == null) { // lazy loading fuer jeden
 								// Artikel.
 								artLief = getArtikelFac()
-										.artikellieferantFindByArtikellIIdLieferantIIdOhneExc(
+										.getArtikelEinkaufspreis(
 												bv.getArtikel_i_id(),
 												bv.getLieferant_i_id(),
+												BigDecimal.ONE,
+												theClientDto
+														.getSMandantenwaehrung(),
+												new java.sql.Date(System
+														.currentTimeMillis()),
 												theClientDto);
 							}
 							// Wenn der Artikellieferant definiert ist (von dort
@@ -2581,7 +2818,7 @@ public class BestellvorschlagFacBean extends Facade implements
 					.getNNettopreis());
 		}
 
-		updateBestellvorschlag(bestellvorschlagDto);
+		updateBestellvorschlag(bestellvorschlagDto, theClientDto);
 	}
 
 	public Map getAllLieferantenDesBestellvorschlages(TheClientDto theClientDto) {
@@ -2667,9 +2904,13 @@ public class BestellvorschlagFacBean extends Facade implements
 				if (item.getArtikel_i_id() != null
 						&& item.getLieferant_i_id() != null) {
 					ArtikellieferantDto artLief = getArtikelFac()
-							.artikellieferantFindByArtikellIIdLieferantIIdOhneExc(
+							.getArtikelEinkaufspreis(
 									item.getArtikel_i_id(),
-									item.getLieferant_i_id(), theClientDto);
+									item.getLieferant_i_id(),
+									BigDecimal.ONE,
+									theClientDto.getSMandantenwaehrung(),
+									new java.sql.Date(System
+											.currentTimeMillis()), theClientDto);
 					// Wenn der Artikellieferant definiert ist (von dort kommt
 					// die Wiederbeschaffungszeit)
 					// und wenn auch eine WBZ definiert ist.

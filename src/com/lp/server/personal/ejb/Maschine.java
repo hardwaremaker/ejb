@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -62,9 +62,6 @@ public class Maschine implements Serializable, ICBez {
 	@Column(name = "C_BEZ")
 	private String cBez;
 
-	@Column(name = "F_VERFUEGBARKEITINPROZENT")
-	private Double fVerfuegbarkeitinprozent;
-
 	@Column(name = "B_AUTOENDEBEIGEHT")
 	private Short bAutoendebeigeht;
 
@@ -90,12 +87,11 @@ public class Maschine implements Serializable, ICBez {
 	}
 
 	public Maschine(Integer id, String mandantCNr2, String inventarnummer,
-			Double verfuegbarkeitinprozent, Short autoendebeigeht,
+			 Short autoendebeigeht,
 			Integer maschinengruppeIId2, Short bVersteckt) {
 		setIId(id);
 		setMandantCNr(mandantCNr2);
 		setCInventarnummer(inventarnummer);
-		setFVerfuegbarkeitinprozent(verfuegbarkeitinprozent);
 		setBAutoendebeigeht(autoendebeigeht);
 		setMaschinengruppeIId(maschinengruppeIId2);
 		setBVersteckt(bVersteckt);
@@ -129,14 +125,6 @@ public class Maschine implements Serializable, ICBez {
 
 	public void setCBez(String cBez) {
 		this.cBez = cBez;
-	}
-
-	public Double getFVerfuegbarkeitinprozent() {
-		return this.fVerfuegbarkeitinprozent;
-	}
-
-	public void setFVerfuegbarkeitinprozent(Double fVerfuegbarkeitinprozent) {
-		this.fVerfuegbarkeitinprozent = fVerfuegbarkeitinprozent;
 	}
 
 	public Short getBAutoendebeigeht() {

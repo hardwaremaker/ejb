@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -33,6 +33,10 @@
 package com.lp.server.fertigung.ejbfac;
 
 import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
@@ -54,11 +58,15 @@ import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
 import javax.interceptor.Interceptors;
+import javax.persistence.NoResultException;
 
 import net.sf.jasperreports.engine.JRDataSource;
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JRField;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.hibernate.Criteria;
 import org.hibernate.Query;
 import org.hibernate.Session;
@@ -76,6 +84,7 @@ import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikelbestelltFac;
 import com.lp.server.artikel.service.ArtikelfehlmengeDto;
 import com.lp.server.artikel.service.ArtikelkommentarDto;
+import com.lp.server.artikel.service.ArtikelkommentarartDto;
 import com.lp.server.artikel.service.ArtikellagerplaetzeDto;
 import com.lp.server.artikel.service.ArtikellieferantDto;
 import com.lp.server.artikel.service.ArtikelsprDto;
@@ -103,6 +112,7 @@ import com.lp.server.bestellung.service.BSMahnungDto;
 import com.lp.server.bestellung.service.BestellpositionDto;
 import com.lp.server.bestellung.service.BestellungDto;
 import com.lp.server.bestellung.service.BestellungFac;
+import com.lp.server.fertigung.ejb.Lossollarbeitsplan;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLos;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosReport;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosablieferung;
@@ -110,6 +120,7 @@ import com.lp.server.fertigung.fastlanereader.generated.FLRLosgutschlecht;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLosistmaterial;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLossollarbeitsplan;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial;
+import com.lp.server.fertigung.fastlanereader.generated.FLROffeneags;
 import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.fertigung.service.FertigungReportFac;
 import com.lp.server.fertigung.service.LosDto;
@@ -136,6 +147,7 @@ import com.lp.server.personal.service.MaschinenzeitdatenDto;
 import com.lp.server.personal.service.PersonalDto;
 import com.lp.server.personal.service.SollverfuegbarkeitDto;
 import com.lp.server.personal.service.ZeitdatenDto;
+import com.lp.server.projekt.service.ProjektReportFac;
 import com.lp.server.reklamation.fastlanereader.generated.FLRFehlerspr;
 import com.lp.server.reklamation.service.FehlerDto;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste;
@@ -147,6 +159,10 @@ import com.lp.server.stueckliste.service.StuecklisteReportFac;
 import com.lp.server.stueckliste.service.StuecklisteeigenschaftDto;
 import com.lp.server.stueckliste.service.StuecklistepositionDto;
 import com.lp.server.system.jcr.service.JCRDocDto;
+import com.lp.server.system.jcr.service.PrintInfoDto;
+import com.lp.server.system.jcr.service.docnode.DocNodeLosAblieferung;
+import com.lp.server.system.jcr.service.docnode.DocNodeReklamation;
+import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.pkgenerator.format.LpBelegnummerFormat;
 import com.lp.server.system.service.KostenstelleDto;
 import com.lp.server.system.service.LandplzortDto;
@@ -157,7 +173,9 @@ import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.ReportJournalKriterienDto;
+import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.DatumsfilterVonBis;
 import com.lp.server.util.HelperServer;
 import com.lp.server.util.LPReport;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
@@ -165,7 +183,9 @@ import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.report.JasperPrintLP;
 import com.lp.server.util.report.TimingInterceptor;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.HVPdfReport;
 import com.lp.util.Helper;
+import com.lp.util.HelperReport;
 import com.lp.util.LPDatenSubreport;
 
 @Stateless
@@ -203,6 +223,9 @@ public class FertigungReportFacBean extends LPReport implements
 	private static final int UC_ETIKETTA4 = 24;
 	private static final int UC_FEHLERSTATISTIK = 25;
 	private static final int UC_MATERIALLISTE = 26;
+	private static final int UC_AUSLASTUNGSVORSCHAU_DETAILIERT = 27;
+	private static final int UC_GESAMTKALKULATION = 28;
+	private static final int UC_MASCHINEUNDMATERIAL = 29;
 
 	private static final int TF_IDENT = 0;
 	private static final int TF_BEZEICHNUNG = 1;
@@ -252,7 +275,9 @@ public class FertigungReportFacBean extends LPReport implements
 	private final static int AUSG_REVISION = 29;
 	private final static int AUSG_IN_FERTIGUNG = 30;
 	private final static int AUSG_NUR_ZUR_INFO = 31;
-	private final static int AUSG_SPALTENANZAHL = 32;
+	private static final int AUSG_STUECKLISTE_POSITION = 32;
+
+	private final static int AUSG_SPALTENANZAHL = 33;
 
 	private static final int BEGL_IDENT = 0;
 	private static final int BEGL_BEZEICHNUNG = 1;
@@ -300,7 +325,8 @@ public class FertigungReportFacBean extends LPReport implements
 	private static final int BEGL_FREMDMATERIAL_LAGERORT = 43;
 	private static final int BEGL_FERTIG = 44;
 	private static final int BEGL_NURZURINFORMATION = 45;
-	private final static int BEGL_SPALTENANZAHL = 46;
+	private static final int BEGL_MATERIAL_SNRCHNR = 46;
+	private final static int BEGL_SPALTENANZAHL = 47;
 
 	private static final int MATERIAL_ART = 0;
 	private static final int MATERIAL_ARTIKELNUMMER = 1;
@@ -314,8 +340,9 @@ public class FertigungReportFacBean extends LPReport implements
 	private static final int MATERIAL_LIEF1PREIS = 9;
 	private static final int MATERIAL_ISTPREIS = 10;
 	private static final int MATERIAL_WE_REFERENZ = 11;
-	private static final int MATERIAL_SNRCHNR = 11;
-	private final static int MATERIAL_SPALTENANZAHL = 12;
+	private static final int MATERIAL_SNRCHNR = 12;
+	private static final int MATERIAL_EINHEIT = 13;
+	private final static int MATERIAL_SPALTENANZAHL = 14;
 
 	private static final int ALLE_LOSNUMMER = 0;
 	private static final int ALLE_IDENT = 1;
@@ -364,6 +391,55 @@ public class FertigungReportFacBean extends LPReport implements
 	private static final int OFFENE_DETAILBEDARF = 22;
 	private static final int OFFENE_LOSHATFEHLMENGE = 23;
 	private final static int OFFENE_SPALTENANZAHL = 24;
+
+	private final static int MASCHINEUNDMATERIAL_LOSNUMMER = 0;
+	private final static int MASCHINEUNDMATERIAL_ARTIKELNUMMER_TAETIGKEIT = 1;
+	private final static int MASCHINEUNDMATERIAL_ARTIKELBEZEICHNUNG_TAETIGKEIT = 2;
+	private final static int MASCHINEUNDMATERIAL_ARBEITSGANG = 3;
+	private final static int MASCHINEUNDMATERIAL_UNTERARBEITSGANG = 4;
+	private final static int MASCHINEUNDMATERIAL_AG_ART = 5;
+	private final static int MASCHINEUNDMATERIAL_AG_BEGINN = 6;
+	private final static int MASCHINEUNDMATERIAL_AUFSPANNUNG = 7;
+	private final static int MASCHINEUNDMATERIAL_PERSON = 8;
+	private static final int MASCHINEUNDMATERIAL_MASCHINE_IDENTIFIKATIONSNUMMMER = 9;
+	private static final int MASCHINEUNDMATERIAL_MASCHINE_BEZEICHNUNG = 10;
+	private static final int MASCHINEUNDMATERIAL_MASCHINE_INVENTARNUMMMER = 11;
+	private final static int MASCHINEUNDMATERIAL_NUR_MASCHINENZEIT = 12;
+	private final static int MASCHINEUNDMATERIAL_AUTO_STOP_BEI_GEHT = 13;
+	private final static int MASCHINEUNDMATERIAL_KOMMENTAR = 14;
+	private final static int MASCHINEUNDMATERIAL_KOMMENTAR_LANG = 15;
+	private final static int MASCHINEUNDMATERIAL_STUECKZEIT = 16;
+	private final static int MASCHINEUNDMATERIAL_RUESTZEIT = 17;
+	private final static int MASCHINEUNDMATERIAL_ZEITEINHEIT_ARBEITSPLAN = 18;
+	private final static int MASCHINEUNDMATERIAL_ARTIKELNUMMER_MATERIAL = 19;
+	private final static int MASCHINEUNDMATERIAL_ARTIKELBEZEICHNUNG_MATERIAL = 20;
+	private final static int MASCHINEUNDMATERIAL_GESAMTZEIT_IN_STUNDEN = 21;
+	private final static int MASCHINEUNDMATERIAL_KUNDE_KBEZ = 22;
+	private final static int MASCHINEUNDMATERIAL_MASCHINENVERSATZ_MS = 23;
+
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_ARTIKELNUMMER_TAETIGKEIT = 24;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_ARTIKELBEZEICHNUNG_TAETIGKEIT = 25;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_ARBEITSGANG = 26;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_UNTERARBEITSGANG = 27;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_AG_ART = 28;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_AG_BEGINN = 29;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_AUFSPANNUNG = 30;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_PERSON = 31;
+	private static final int MASCHINEUNDMATERIAL_NEXT_AG_MASCHINE_IDENTIFIKATIONSNUMMMER = 32;
+	private static final int MASCHINEUNDMATERIAL_NEXT_AG_MASCHINE_BEZEICHNUNG = 33;
+	private static final int MASCHINEUNDMATERIAL_NEXT_AG_MASCHINE_INVENTARNUMMMER = 34;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_NUR_MASCHINENZEIT = 35;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_AUTO_STOP_BEI_GEHT = 36;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_KOMMENTAR = 37;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_KOMMENTAR_LANG = 38;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_STUECKZEIT = 39;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_RUESTZEIT = 40;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_ARTIKELNUMMER_MATERIAL = 41;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_ARTIKELBEZEICHNUNG_MATERIAL = 42;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_GESAMTZEIT_IN_STUNDEN = 43;
+	private final static int MASCHINEUNDMATERIAL_NEXT_AG_MASCHINENVERSATZ_MS = 44;
+
+	private final static int MASCHINEUNDMATERIAL_SPALTENANZAHL = 45;
 
 	private static final int OFFENE_AG_LOSNUMMER = 0;
 	private static final int OFFENE_AG_ARTIKELNUMMER = 1;
@@ -471,6 +547,8 @@ public class FertigungReportFacBean extends LPReport implements
 	private static final int ABLIEF_ARBEITSZEITWERT = 7;
 	private static final int ABLIEF_WERT = 8;
 	private static final int ABLIEF_ZUSATZBEZEICHNUNG = 9;
+	private static final int ABLIEF_AUFRAGSNUMMER = 10;
+	private static final int ABLIEF_ANZAHL_SPALTEN = 11;
 
 	private static final int ZE_SOLLZEIT = 0;
 	private static final int ZE_ISTZEIT = 1;
@@ -482,6 +560,23 @@ public class FertigungReportFacBean extends LPReport implements
 	private static final int AV_DATUM = 2;
 	private static final int AV_ARTIKELGRUPPE = 3;
 	private static final int AV_PERSONALVERFUEGBARKEIT = 4;
+
+	private static final int AV_DETAIL_ARTIKELNUMMER = 0;
+	private static final int AV_DETAIL_BEZEICHNUNG = 1;
+	private static final int AV_DETAIL_ARTIKELGRUPPE = 2;
+	private static final int AV_DETAIL_ARBEITSGANG = 3;
+	private static final int AV_DETAIL_UNTERARBEITSGANG = 4;
+	private static final int AV_DETAIL_BEGINN_DATUM = 5;
+	private static final int AV_DETAIL_DAUER = 6;
+	private static final int AV_DETAIL_VERFUEGBARKEIT = 7;
+
+	private static final int AV_DETAIL_LOSNUMMER = 8;
+	private static final int AV_DETAIL_KUNDE = 9;
+	private static final int AV_DETAIL_AUFTRAG = 10;
+	private static final int AV_DETAIL_PROJEKT = 11;
+	private static final int AV_DETAIL_KOMMENTAR = 12;
+	private static final int AV_DETAIL_SORT_VERFUEGBARKEIT = 13;
+	private static final int AV_DETAIL_ANZAHL_SPALTEN = 14;
 
 	private static final int HF_ARTIKELNUMMER = 0;
 	private static final int HF_LOSGROESSE = 1;
@@ -500,6 +595,9 @@ public class FertigungReportFacBean extends LPReport implements
 	private static final int HF_POSITION_ABGELIFERT_MASCHINE = 14;
 	private static final int HF_POSITION_OFFEN_MASCHINE = 15;
 	private static final int HF_POSITION_PREIS_MASCHINE = 16;
+	private static final int HF_AUFTRAGSNUMMER = 17;
+	private static final int HF_FERTIGUNGSGRUPPE = 18;
+	private static final int HF_ANZAHL_SPALTEN = 19;
 
 	private final static int AFM_BELEGNUMMER = 0;
 	private final static int AFM_PROJEKT = 1;
@@ -655,6 +753,25 @@ public class FertigungReportFacBean extends LPReport implements
 	private final static int NACHKALKULATION_GESAMTSOLL = 8;
 	private final static int NACHKALKULATION_GESAMTIST = 9;
 
+	private final static int GESAMTKALKULATION_ARTIKELNUMMER = 0;
+	private final static int GESAMTKALKULATION_ARTIKELBEZEICHNUNG = 1;
+	private final static int GESAMTKALKULATION_ZUSATZBEZEICHNUNG = 2;
+	private final static int GESAMTKALKULATION_EINHEIT = 3;
+	private final static int GESAMTKALKULATION_LOSGROESSE = 4;
+	private final static int GESAMTKALKULATION_EBENE = 5;
+	private final static int GESAMTKALKULATION_SOLLMENGE = 6;
+	private final static int GESAMTKALKULATION_SOLLPREIS = 7;
+	private final static int GESAMTKALKULATION_ISTMENGE = 8;
+	private final static int GESAMTKALKULATION_ISTPREIS = 9;
+	private final static int GESAMTKALKULATION_ARBEITSZEIT_KOSTEN = 10;
+	private final static int GESAMTKALKULATION_VERBRAUCHTE_MENGE = 11;
+	private final static int GESAMTKALKULATION_BELEGART_ZUGANG = 12;
+	private final static int GESAMTKALKULATION_BELEGNUMMER_ZUGANG = 13;
+	private final static int GESAMTKALKULATION_ARBEITSZEIT = 14;
+	private final static int GESAMTKALKULATION_MENGENFAKTOR = 15;
+	private final static int GESAMTKALKULATION_EINSTANDSPREIS = 16;
+	private final static int GESAMTKALKULATION_ANZAHL_SPALTEN = 17;
+
 	private static final int ETI_ARTIKELNUMMER = 0;
 	private static final int ETI_BEZEICHNUNG = 1;
 	private static final int ETI_KURZBEZEICHNUNG = 2;
@@ -724,11 +841,14 @@ public class FertigungReportFacBean extends LPReport implements
 	private static final int FT_LOSGROESSE = 9;
 	private static final int FT_ABGELIEFERT = 10;
 	private static final int FT_LOSSTATUS = 11;
-	private final static int FT_ANZAHL_SPALTEN = 12;
+	private static final int FT_FRUEHESTER_EINTREFFTERMIN = 12;
+	private final static int FT_ANZAHL_SPALTEN = 13;
 
 	private static final int ABLIEFERETIKETT_SERIENNUMMER = 0;
 	private static final int ABLIEFERETIKETT_SUBREPORT_GERAETESNR = 1;
-	private final static int ABLIEFERETIKETT_ANZAHL_SPALTEN = 2;
+	private static final int ABLIEFERETIKETT_VERSION = 2;
+	private static final int ABLIEFERETIKETT_I_ID_BUCHUNG = 3;
+	private final static int ABLIEFERETIKETT_ANZAHL_SPALTEN = 4;
 
 	public boolean next() throws JRException {
 		index++;
@@ -772,6 +892,43 @@ public class FertigungReportFacBean extends LPReport implements
 
 		}
 			break;
+		case UC_GESAMTKALKULATION: {
+			if ("Artikelnummer".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_ARTIKELNUMMER];
+			} else if ("Bezeichnung".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_ARTIKELBEZEICHNUNG];
+			} else if ("Zusatzbezeichnung".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_ZUSATZBEZEICHNUNG];
+			} else if ("Sollmenge".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_SOLLMENGE];
+			} else if ("Istmenge".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_ISTMENGE];
+			} else if ("Sollpreis".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_SOLLPREIS];
+			} else if ("Istpreis".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_ISTPREIS];
+			} else if ("Einheit".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_EINHEIT];
+			} else if ("Ebene".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_EBENE];
+			} else if ("VerbrauchteMenge".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_VERBRAUCHTE_MENGE];
+			} else if ("BelegartZugang".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_BELEGART_ZUGANG];
+			} else if ("BelegnummerZugang".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_BELEGNUMMER_ZUGANG];
+			} else if ("Losgroesse".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_LOSGROESSE];
+			} else if ("Arbeitszeit".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_ARBEITSZEIT];
+			} else if ("Mengenfaktor".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_MENGENFAKTOR];
+			} else if ("Einstandspreis".equals(fieldName)) {
+				value = data[index][GESAMTKALKULATION_EINSTANDSPREIS];
+			}
+
+		}
+			break;
 		case UC_MATERIALLISTE: {
 			if ("F_ART".equals(fieldName)) {
 				value = data[index][MATERIAL_ART];
@@ -787,6 +944,8 @@ public class FertigungReportFacBean extends LPReport implements
 				value = data[index][MATERIAL_KURZBEZEICHNUNG];
 			} else if ("F_SOLLMENGE".equals(fieldName)) {
 				value = data[index][MATERIAL_SOLLMENGE];
+			} else if ("F_EINHEIT".equals(fieldName)) {
+				value = data[index][MATERIAL_EINHEIT];
 			} else if ("F_ISTMENGE".equals(fieldName)) {
 				value = data[index][MATERIAL_ISTMENGE];
 			} else if ("F_SOLLPREIS".equals(fieldName)) {
@@ -849,6 +1008,8 @@ public class FertigungReportFacBean extends LPReport implements
 			} else if ("F_STKL_KOMMENTAR".equals(fieldName)) {
 				value = Helper
 						.formatStyledTextForJasper(data[index][AUSG_STUECKLISTE_KOMMENTAR]);
+			} else if ("F_STKL_POSITION".equals(fieldName)) {
+				value = data[index][AUSG_STUECKLISTE_POSITION];
 			} else if ("F_SNRCHNR".equals(fieldName)) {
 				value = data[index][AUSG_SNRCHNR];
 			} else if ("F_ARTIKELKOMMENTAR".equals(fieldName)) {
@@ -968,6 +1129,8 @@ public class FertigungReportFacBean extends LPReport implements
 			} else if ("FremdmaterialArtikelzusatzbezeichnung2"
 					.equals(fieldName)) {
 				value = data[index][BEGL_FREMDMATERIAL_ARTIKELZUSATZBEZEICHNUNG2];
+			} else if ("F_MATERIAL_SNRCHNR".equals(fieldName)) {
+				value = data[index][BEGL_MATERIAL_SNRCHNR];
 			}
 
 		}
@@ -991,6 +1154,8 @@ public class FertigungReportFacBean extends LPReport implements
 				value = data[index][ABLIEF_ARBEITSZEITWERT];
 			} else if ("F_WERT".equals(fieldName)) {
 				value = data[index][ABLIEF_WERT];
+			} else if ("F_AUFTRAGSNUMMER".equals(fieldName)) {
+				value = data[index][ABLIEF_AUFRAGSNUMMER];
 			} else if (F_ZUSATZBEZEICHNUNG.equals(fieldName)) {
 				value = data[index][ABLIEF_ZUSATZBEZEICHNUNG];
 			}
@@ -1001,6 +1166,10 @@ public class FertigungReportFacBean extends LPReport implements
 				value = data[index][ABLIEFERETIKETT_SERIENNUMMER];
 			} else if ("F_SUBREPORT_GERAETESNR".equals(fieldName)) {
 				value = data[index][ABLIEFERETIKETT_SUBREPORT_GERAETESNR];
+			} else if ("F_VERSION".equals(fieldName)) {
+				value = data[index][ABLIEFERETIKETT_VERSION];
+			} else if ("F_I_ID_BUCHUNG".equals(fieldName)) {
+				value = data[index][ABLIEFERETIKETT_I_ID_BUCHUNG];
 			}
 		}
 			break;
@@ -1102,6 +1271,8 @@ public class FertigungReportFacBean extends LPReport implements
 				value = data[index][FT_LOSSTATUS];
 			} else if ("F_ABGELIEFERT".equals(fieldName)) {
 				value = data[index][FT_ABGELIEFERT];
+			} else if ("F_FRUEHESTER_EINTREFFTERMIN".equals(fieldName)) {
+				value = data[index][FT_FRUEHESTER_EINTREFFTERMIN];
 			}
 
 		}
@@ -1131,6 +1302,37 @@ public class FertigungReportFacBean extends LPReport implements
 			} else if ("Artikelgruppe".equals(fieldName)) {
 				value = data[index][AV_ARTIKELGRUPPE];
 			}
+		}
+			break;
+		case UC_AUSLASTUNGSVORSCHAU_DETAILIERT: {
+			if ("Arbeitsgang".equals(fieldName)) {
+				value = data[index][AV_DETAIL_ARBEITSGANG];
+			} else if ("Artikelgruppe".equals(fieldName)) {
+				value = data[index][AV_DETAIL_ARTIKELGRUPPE];
+			} else if ("Artikelnummer".equals(fieldName)) {
+				value = data[index][AV_DETAIL_ARTIKELNUMMER];
+			} else if ("Bezeichnung".equals(fieldName)) {
+				value = data[index][AV_DETAIL_BEZEICHNUNG];
+			} else if ("BeginnDatum".equals(fieldName)) {
+				value = data[index][AV_DETAIL_BEGINN_DATUM];
+			} else if ("Dauer".equals(fieldName)) {
+				value = data[index][AV_DETAIL_DAUER];
+			} else if ("Unterarbeitsgang".equals(fieldName)) {
+				value = data[index][AV_DETAIL_UNTERARBEITSGANG];
+			} else if ("Verfuegbarkeit".equals(fieldName)) {
+				value = data[index][AV_DETAIL_VERFUEGBARKEIT];
+			} else if ("Losnummer".equals(fieldName)) {
+				value = data[index][AV_DETAIL_LOSNUMMER];
+			} else if ("Kunde".equals(fieldName)) {
+				value = data[index][AV_DETAIL_KUNDE];
+			} else if ("Auftrag".equals(fieldName)) {
+				value = data[index][AV_DETAIL_AUFTRAG];
+			} else if ("Projekt".equals(fieldName)) {
+				value = data[index][AV_DETAIL_PROJEKT];
+			} else if ("Kommentar".equals(fieldName)) {
+				value = data[index][AV_DETAIL_KOMMENTAR];
+			}
+
 		}
 			break;
 		case UC_HALBFERTIGFABRIKATSINVENTUR: {
@@ -1168,6 +1370,10 @@ public class FertigungReportFacBean extends LPReport implements
 				value = data[index][HF_POSITION_EKPREIS];
 			} else if ("Material".equals(fieldName)) {
 				value = data[index][HF_POSITION_MAT_ODER_AZ];
+			} else if ("Auftragsnummer".equals(fieldName)) {
+				value = data[index][HF_AUFTRAGSNUMMER];
+			} else if ("Fertigungsgruppe".equals(fieldName)) {
+				value = data[index][HF_FERTIGUNGSGRUPPE];
 			}
 		}
 			break;
@@ -1745,6 +1951,101 @@ public class FertigungReportFacBean extends LPReport implements
 			} else if ("Sollmenge".equals(fieldName)) {
 				value = data[index][ETI_SOLLMENGE];
 			}
+		}
+			break;
+		case UC_MASCHINEUNDMATERIAL: {
+			if ("Losnummer".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_LOSNUMMER];
+			} else if ("ArtikelnummerTaetigkeit".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_ARTIKELNUMMER_TAETIGKEIT];
+			} else if ("ArtikelbezeichnungTaetigkeit".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_ARTIKELBEZEICHNUNG_TAETIGKEIT];
+			} else if ("Arbeitsgang".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_ARBEITSGANG];
+			} else if ("Unterarbeitsgang".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_UNTERARBEITSGANG];
+			} else if ("AgArt".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_AG_ART];
+			} else if ("AgBeginn".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_AG_BEGINN];
+			} else if ("Aufspannung".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_AUFSPANNUNG];
+			} else if ("Person".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_PERSON];
+			} else if ("MaschineIdentifikationsnummer".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_MASCHINE_IDENTIFIKATIONSNUMMMER];
+			} else if ("MaschineBezeichnung".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_MASCHINE_BEZEICHNUNG];
+			} else if ("MaschineInventarnummer".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_MASCHINE_INVENTARNUMMMER];
+			} else if ("NurMaschinenzeit".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NUR_MASCHINENZEIT];
+			} else if ("AutoStopBeiGeht".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_AUTO_STOP_BEI_GEHT];
+			} else if ("Kommentar".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_KOMMENTAR];
+			} else if ("KommentarLang".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_KOMMENTAR_LANG];
+			} else if ("Stueckzeit".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_STUECKZEIT];
+			} else if ("Ruestzeit".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_RUESTZEIT];
+			} else if ("ZeiteinheitArbeitsplan".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_ZEITEINHEIT_ARBEITSPLAN];
+			} else if ("ArtikelnummerMaterial".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_ARTIKELNUMMER_MATERIAL];
+			} else if ("ArtikelbezeichnungMaterial".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_ARTIKELBEZEICHNUNG_MATERIAL];
+			} else if ("GesamtzeitInStunden".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_GESAMTZEIT_IN_STUNDEN];
+			} else if ("MaschinenversatzMS".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_MASCHINENVERSATZ_MS];
+			} else if ("Next_ArtikelnummerTaetigkeit".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_ARTIKELNUMMER_TAETIGKEIT];
+			} else if ("Next_ArtikelbezeichnungTaetigkeit".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_ARTIKELBEZEICHNUNG_TAETIGKEIT];
+			} else if ("Next_Arbeitsgang".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_ARBEITSGANG];
+			} else if ("Next_Unterarbeitsgang".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_UNTERARBEITSGANG];
+			} else if ("Next_AgArt".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_AG_ART];
+			} else if ("Next_AgBeginn".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_AG_BEGINN];
+			} else if ("Next_Aufspannung".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_AUFSPANNUNG];
+			} else if ("Next_Person".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_PERSON];
+			} else if ("Next_MaschineIdentifikationsnummer".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_MASCHINE_IDENTIFIKATIONSNUMMMER];
+			} else if ("Next_MaschineBezeichnung".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_MASCHINE_BEZEICHNUNG];
+			} else if ("Next_MaschineInventarnummer".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_MASCHINE_INVENTARNUMMMER];
+			} else if ("Next_NurMaschinenzeit".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_NUR_MASCHINENZEIT];
+			} else if ("Next_AutoStopBeiGeht".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_AUTO_STOP_BEI_GEHT];
+			} else if ("Next_Kommentar".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_KOMMENTAR];
+			} else if ("Next_KommentarLang".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_KOMMENTAR_LANG];
+			} else if ("Next_Stueckzeit".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_STUECKZEIT];
+			} else if ("Next_Ruestzeit".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_RUESTZEIT];
+			} else if ("Next_ArtikelnummerMaterial".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_ARTIKELNUMMER_MATERIAL];
+			} else if ("Next_ArtikelbezeichnungMaterial".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_ARTIKELBEZEICHNUNG_MATERIAL];
+			} else if ("Next_GesamtzeitInStunden".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_GESAMTZEIT_IN_STUNDEN];
+			} else if ("Next_MaschinenversatzMS".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_NEXT_AG_MASCHINENVERSATZ_MS];
+			} else if ("KundeKbez".equals(fieldName)) {
+				value = data[index][MASCHINEUNDMATERIAL_KUNDE_KBEZ];
+			}
+
 		}
 			break;
 		case UC_ETIKETTA4: {
@@ -2826,7 +3127,7 @@ public class FertigungReportFacBean extends LPReport implements
 					artikelklasseIId, theClientDto);
 			LosDto losDto = getFertigungFac().losFindByPrimaryKey(losIId[0]);
 			mapParameter = getParameterAusgabeliste(losDto, lose, theClientDto);
-			ArrayList<Object> images = new ArrayList<Object>();
+
 			String sLosStuecklisteArtikelKommentar = "";
 			// Bild einfuegen
 			if (losDto.getStuecklisteIId() != null) {
@@ -2848,8 +3149,37 @@ public class FertigungReportFacBean extends LPReport implements
 				if (artikelkommentarDto != null
 						&& artikelkommentarDto.length > 0) {
 
+					ArrayList<Object[]> subreportArtikelkommentare = new ArrayList<Object[]>();
+
+					String[] fieldnames = new String[] { "F_KOMMENTARART",
+							"F_MIMETYPE", "F_BILD", "F_KOMMENTAR", };
+
+					int iFeld_Subreport_Kommentarart = 0;
+					int iFeld_Subreport_Mimetype = 1;
+					int iFeld_Subreport_Bild = 2;
+					int iFeld_Subreport_Kommentar = 3;
+					int iFeld_Subreport_iAnzahlSpalten = 4;
+
 					for (int j = 0; j < artikelkommentarDto.length; j++) {
 						if (artikelkommentarDto[j].getArtikelkommentarsprDto() != null) {
+
+							Object[] oZeileVorlage = new Object[iFeld_Subreport_iAnzahlSpalten];
+
+							ArtikelkommentarartDto artikelkommentarartDto = getArtikelkommentarFac()
+									.artikelkommentarartFindByPrimaryKey(
+											artikelkommentarDto[j]
+													.getArtikelkommentarartIId(),
+											theClientDto);
+
+							oZeileVorlage[iFeld_Subreport_Kommentarart] = artikelkommentarartDto
+									.getCNr();
+
+							oZeileVorlage[iFeld_Subreport_Mimetype] = artikelkommentarDto[j]
+									.getDatenformatCNr();
+							oZeileVorlage[iFeld_Subreport_Kommentar] = artikelkommentarDto[j]
+									.getArtikelkommentarsprDto()
+									.getXKommentar();
+
 							// Text Kommentar
 							if (artikelkommentarDto[j]
 									.getDatenformatCNr()
@@ -2866,6 +3196,10 @@ public class FertigungReportFacBean extends LPReport implements
 													.getArtikelkommentarsprDto()
 													.getXKommentar();
 								}
+
+								Object[] oZeile = oZeileVorlage.clone();
+								subreportArtikelkommentare.add(oZeile);
+
 							} else if (artikelkommentarDto[j]
 									.getDatenformatCNr()
 									.equals(MediaFac.DATENFORMAT_MIMETYPE_IMAGE_JPEG)
@@ -2881,7 +3215,12 @@ public class FertigungReportFacBean extends LPReport implements
 								if (bild != null) {
 									java.awt.Image myImage = Helper
 											.byteArrayToImage(bild);
-									images.add(myImage);
+
+									Object[] oZeile = oZeileVorlage.clone();
+									oZeile[iFeld_Subreport_Bild] = myImage;
+
+									subreportArtikelkommentare.add(oZeile);
+
 								}
 							} else if (artikelkommentarDto[j]
 									.getDatenformatCNr()
@@ -2895,13 +3234,78 @@ public class FertigungReportFacBean extends LPReport implements
 										.tiffToImageArray(bild);
 								if (tiffs != null) {
 									for (int k = 0; k < tiffs.length; k++) {
-										images.add(tiffs[k]);
+										Object[] oZeile = oZeileVorlage.clone();
+										oZeile[iFeld_Subreport_Bild] = tiffs[k];
+
+										subreportArtikelkommentare.add(oZeile);
 									}
+								}
+
+							} else if (artikelkommentarDto[j]
+									.getDatenformatCNr()
+									.equals(MediaFac.DATENFORMAT_MIMETYPE_APP_PDF)) {
+
+								byte[] pdf = artikelkommentarDto[j]
+										.getArtikelkommentarsprDto()
+										.getOMedia();
+
+								PDDocument document = null;
+
+								try {
+
+									InputStream myInputStream = new ByteArrayInputStream(
+											pdf);
+
+									document = PDDocument.load(myInputStream);
+									int numPages = document.getNumberOfPages();
+									PDFRenderer renderer = new PDFRenderer(
+											document);
+
+									for (int p = 0; p < numPages; p++) {
+
+										BufferedImage image = renderer
+												.renderImageWithDPI(p, 150); // Windows
+										Object[] oZeile = oZeileVorlage.clone();
+										oZeile[iFeld_Subreport_Bild] = image;
+
+										subreportArtikelkommentare.add(oZeile);
+
+									}
+								} catch (IOException e) {
+									e.printStackTrace();
+									throw new EJBExceptionLP(
+											EJBExceptionLP.FEHLER,
+											e.getMessage());
+
+								} finally {
+									if (document != null) {
+
+										try {
+											document.close();
+										} catch (IOException e) {
+											e.printStackTrace();
+											throw new EJBExceptionLP(
+													EJBExceptionLP.FEHLER,
+													e.getMessage());
+
+										}
+									}
+
 								}
 
 							}
 						}
 					}
+
+					Object[][] dataSub = new Object[subreportArtikelkommentare
+							.size()][fieldnames.length];
+					dataSub = (Object[][]) subreportArtikelkommentare
+							.toArray(dataSub);
+
+					// SP2801
+					mapParameter.put("P_SUBREPORT_ARTIKELKOMMENTAR",
+							new LPDatenSubreport(dataSub, fieldnames));
+
 				}
 			}
 			if (sLosStuecklisteArtikelKommentar != "") {
@@ -2932,25 +3336,7 @@ public class FertigungReportFacBean extends LPReport implements
 						theClientDto);
 			}
 
-			JasperPrintLP print = getReportPrint();
-			Integer cachedReportvariante = theClientDto.getReportvarianteIId();
-			if (images != null) {
-				for (int k = 0; k < images.size(); k++) {
-					mapParameter = new HashMap<String, Object>();
-					mapParameter.put("P_BILD", images.get(k));
-					this.useCase = UC_GANZSEITIGESBILD;
-					this.index = -1;
-					data = new Object[1][1];
-					data[0][0] = images.get(k);
-					theClientDto.setReportvarianteIId(cachedReportvariante);
-					initJRDS(mapParameter, REPORT_MODUL_ALLGEMEIN,
-							REPORT_GANZSEITIGESBILD, theClientDto.getMandant(),
-							theClientDto.getLocUi(), theClientDto);
-					print = Helper.addReport2Report(print, getReportPrint()
-							.getPrint());
-				}
-			}
-			return print;
+			return getReportPrint();
 		} catch (RemoteException t) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, t);
 		} finally {
@@ -3034,6 +3420,15 @@ public class FertigungReportFacBean extends LPReport implements
 				} else {
 					dLiefertermin = auftragDto.getDLiefertermin();
 				}
+			} else if (losDto.getKundeIId() != null) {
+				// Kunde holen
+				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
+						losDto.getKundeIId(), theClientDto);
+				sKunde = kundeDto.getPartnerDto()
+						.getCName1nachnamefirmazeile1();
+
+				sAbteilung = kundeDto.getPartnerDto()
+						.getCName3vorname2abteilung();
 			}
 
 			mapParameter.put("P_AUFTRAGNUMMER", sAuftragsnummer);
@@ -3243,17 +3638,15 @@ public class FertigungReportFacBean extends LPReport implements
 							.getArtikelsprDto().getCZbez2());
 				}
 
-				
-				
 				// Erste gefundene Version anzeigen
-				LagerbewegungDto[] lDto =getLagerFac()
+				LagerbewegungDto[] lDto = getLagerFac()
 						.lagerbewegungFindByBelegartCNrBelegartPositionIId(
 								LocaleFac.BELEGART_LOSABLIEFERUNG,
 								losablieferungDto.getIId());
 				if (lDto != null && lDto.length > 0) {
-					parameter.put("P_VERSION",lDto[0].getCVersion());
+					parameter.put("P_VERSION", lDto[0].getCVersion());
 				}
-				
+
 				MandantDto mandantDto = getMandantFac()
 						.mandantFindByPrimaryKey(theClientDto.getMandant(),
 								theClientDto);
@@ -3349,8 +3742,18 @@ public class FertigungReportFacBean extends LPReport implements
 
 			parameter.put("P_LOSNUMMER", losDto.getCNr());
 			parameter.put("P_ABLIEFERDATUM", losablieferungDto.getTAendern());
-			parameter.put("P_PROJEKT", losDto.getCKommentar());
+			parameter.put("P_PROJEKT", losDto.getCProjekt());
 			parameter.put("P_KOMMENTAR", losDto.getCKommentar());
+
+			// PJ18617
+			PersonalDto personalDto = getPersonalFac()
+					.personalFindByPrimaryKey(
+							losablieferungDto.getPersonalIIdAendern(),
+							theClientDto);
+			parameter.put("P_PERSON_ABGELIEFERT_KURZZEICHEN",
+					personalDto.getCKurzzeichen());
+			parameter.put("P_PERSON_ABGELIEFERT",
+					personalDto.formatFixUFTitelName2Name1());
 
 			parameter.put("P_SNRCHNR", SeriennrChargennrMitMengeDto
 					.erstelleStringAusMehrerenSeriennummern(losablieferungDto
@@ -3369,6 +3772,21 @@ public class FertigungReportFacBean extends LPReport implements
 							.getCSeriennrChargennr();
 
 					data[i][ABLIEFERETIKETT_SERIENNUMMER] = snr;
+
+					// PJ18632
+
+					LagerbewegungDto[] lagerbewDtos = getLagerFac()
+							.lagerbewegungFindByBelegartCNrBelegartPositionIIdCSeriennrchargennr(
+									LocaleFac.BELEGART_LOSABLIEFERUNG,
+									losablieferungDto.getIId(), snr);
+					if (lagerbewDtos != null && lagerbewDtos.length > 0) {
+						data[i][ABLIEFERETIKETT_I_ID_BUCHUNG] = lagerbewDtos[0]
+								.getIIdBuchung();
+					}
+
+					data[i][ABLIEFERETIKETT_VERSION] = losablieferungDto
+							.getSeriennrChargennrMitMenge().get(i)
+							.getCVersion();
 
 					GeraetesnrDto[] gsnrDto = getLagerFac()
 							.getGeraeteseriennummerEinerLagerbewegung(
@@ -3413,6 +3831,13 @@ public class FertigungReportFacBean extends LPReport implements
 						theClientDto);
 				print = print == null ? getReportPrint() : Helper
 						.addReport2Report(print, getReportPrint().getPrint());
+			}
+
+			if (print != null) {
+				PrintInfoDto values = new PrintInfoDto();
+				values.setDocPath(new DocPath(new DocNodeLosAblieferung(
+						losablieferungDto, losDto)));
+				print.setOInfoForArchive(values);
 			}
 
 			return print;
@@ -3528,6 +3953,7 @@ public class FertigungReportFacBean extends LPReport implements
 					data[i][BEGL_MATERIAL_REVISION] = material[i][AUSG_REVISION];
 					data[i][BEGL_MATERIAL_INDEX] = material[i][AUSG_INDEX];
 					data[i][BEGL_NURZURINFORMATION] = material[i][AUSG_NUR_ZUR_INFO];
+					data[i][BEGL_MATERIAL_SNRCHNR] = material[i][AUSG_SNRCHNR];
 
 				}
 
@@ -3786,7 +4212,18 @@ public class FertigungReportFacBean extends LPReport implements
 			mapParameter.put("P_DRUCKEUEBERSCHRIFTMATERIAL", new Boolean(
 					bDruckeUeberschriftMaterial));
 
-			ArrayList<Object> images = new ArrayList<Object>();
+			ArrayList<Object[]> subreportArtikelkommentare = new ArrayList<Object[]>();
+
+			String[] fieldnames = new String[] { "F_KOMMENTARART",
+					"F_MIMETYPE", "F_BILD", "F_KOMMENTAR", "F_PDF_OBJECT" };
+
+			int iFeld_Subreport_Kommentarart = 0;
+			int iFeld_Subreport_Mimetype = 1;
+			int iFeld_Subreport_Bild = 2;
+			int iFeld_Subreport_Kommentar = 3;
+			int iFeld_Subreport_Pdf = 4;
+			int iFeld_Subreport_iAnzahlSpalten = 5;
+
 			String sLosStuecklisteArtikelKommentar = "";
 			// Bild einfuegen
 			String sMengenEinheit = "";
@@ -3843,6 +4280,23 @@ public class FertigungReportFacBean extends LPReport implements
 
 					for (int j = 0; j < artikelkommentarDto.length; j++) {
 						if (artikelkommentarDto[j].getArtikelkommentarsprDto() != null) {
+
+							ArtikelkommentarartDto artikelkommentarartDto = getArtikelkommentarFac()
+									.artikelkommentarartFindByPrimaryKey(
+											artikelkommentarDto[j]
+													.getArtikelkommentarartIId(),
+											theClientDto);
+
+							Object[] oZeileVorlage = new Object[iFeld_Subreport_iAnzahlSpalten];
+							oZeileVorlage[iFeld_Subreport_Kommentarart] = artikelkommentarartDto
+									.getCNr();
+
+							oZeileVorlage[iFeld_Subreport_Mimetype] = artikelkommentarDto[j]
+									.getDatenformatCNr();
+							oZeileVorlage[iFeld_Subreport_Kommentar] = artikelkommentarDto[j]
+									.getArtikelkommentarsprDto()
+									.getXKommentar();
+
 							// Text Kommentar
 							if (artikelkommentarDto[j]
 									.getDatenformatCNr()
@@ -3859,6 +4313,10 @@ public class FertigungReportFacBean extends LPReport implements
 													.getArtikelkommentarsprDto()
 													.getXKommentar();
 								}
+
+								Object[] oZeile = oZeileVorlage.clone();
+								subreportArtikelkommentare.add(oZeile);
+
 							} else if (artikelkommentarDto[j]
 									.getDatenformatCNr()
 									.equals(MediaFac.DATENFORMAT_MIMETYPE_IMAGE_JPEG)
@@ -3872,9 +4330,14 @@ public class FertigungReportFacBean extends LPReport implements
 										.getArtikelkommentarsprDto()
 										.getOMedia();
 								if (bild != null) {
-									java.awt.Image myImage = Helper
+									java.awt.image.BufferedImage myImage = Helper
 											.byteArrayToImage(bild);
-									images.add(myImage);
+
+									Object[] oZeile = oZeileVorlage.clone();
+									oZeile[iFeld_Subreport_Bild] = myImage;
+
+									subreportArtikelkommentare.add(oZeile);
+
 								}
 							} else if (artikelkommentarDto[j]
 									.getDatenformatCNr()
@@ -3884,14 +4347,29 @@ public class FertigungReportFacBean extends LPReport implements
 										.getArtikelkommentarsprDto()
 										.getOMedia();
 
-								java.awt.Image[] tiffs = Helper
+								java.awt.image.BufferedImage[] tiffs = Helper
 										.tiffToImageArray(bild);
 								if (tiffs != null) {
 									for (int k = 0; k < tiffs.length; k++) {
-										images.add(tiffs[k]);
+
+										Object[] oZeile = oZeileVorlage.clone();
+										oZeile[iFeld_Subreport_Bild] = tiffs[k];
+
+										subreportArtikelkommentare.add(oZeile);
+
 									}
 								}
 
+							} else if (artikelkommentarDto[j]
+									.getDatenformatCNr()
+									.equals(MediaFac.DATENFORMAT_MIMETYPE_APP_PDF)) {
+								byte[] pdf = artikelkommentarDto[j]
+										.getArtikelkommentarsprDto()
+										.getOMedia();
+								HVPdfReport pdfObject = new HVPdfReport(pdf);
+								Object[] oZeile = oZeileVorlage.clone();
+								oZeile[iFeld_Subreport_Pdf] = pdfObject;
+								subreportArtikelkommentare.add(oZeile);
 							}
 						}
 					}
@@ -3990,13 +4468,13 @@ public class FertigungReportFacBean extends LPReport implements
 				}
 
 				if (stuecklisteeigenschaftDtos.length > 0) {
-					String[] fieldnames = new String[] { "F_EIGENSCHAFTART",
-							"F_BEZEICHNUNG" };
-					Object[][] dataSub = new Object[al.size()][fieldnames.length];
+					String[] fieldnamesEigenschaften = new String[] {
+							"F_EIGENSCHAFTART", "F_BEZEICHNUNG" };
+					Object[][] dataSub = new Object[al.size()][fieldnamesEigenschaften.length];
 					dataSub = (Object[][]) al.toArray(dataSub);
 
 					mapParameter.put("DATENSUBREPORT", new LPDatenSubreport(
-							dataSub, fieldnames));
+							dataSub, fieldnamesEigenschaften));
 				}
 
 			} else {
@@ -4011,6 +4489,13 @@ public class FertigungReportFacBean extends LPReport implements
 
 			mapParameter.put("P_SCHNELLANLAGE", bStammtVonSchnellanlage);
 
+			Object[][] dataSub = new Object[subreportArtikelkommentare.size()][fieldnames.length];
+			dataSub = (Object[][]) subreportArtikelkommentare.toArray(dataSub);
+
+			// SP2699
+			mapParameter.put("P_SUBREPORT_ARTIKELKOMMENTAR",
+					new LPDatenSubreport(dataSub, fieldnames));
+
 			// Formularnummer anhaengen, wenn vorhanden
 			String report = FertigungReportFac.REPORT_FERTIGUNGSBEGLEITSCHEIN;
 
@@ -4024,23 +4509,7 @@ public class FertigungReportFacBean extends LPReport implements
 					theClientDto);
 
 			JasperPrintLP print = getReportPrint();
-			Integer cachedReportvariante = theClientDto.getReportvarianteIId();
-			if (images != null) {
-				for (int k = 0; k < images.size(); k++) {
-					mapParameter = new HashMap<String, Object>();
-					mapParameter.put("P_BILD", images.get(k));
-					this.useCase = UC_GANZSEITIGESBILD;
-					this.index = -1;
-					data = new Object[1][1];
-					data[0][0] = images.get(k);
-					theClientDto.setReportvarianteIId(cachedReportvariante);
-					initJRDS(mapParameter, REPORT_MODUL_ALLGEMEIN,
-							REPORT_GANZSEITIGESBILD, theClientDto.getMandant(),
-							theClientDto.getLocUi(), theClientDto);
-					print = Helper.addReport2Report(print, getReportPrint()
-							.getPrint());
-				}
-			}
+
 			return print;
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -4770,6 +5239,347 @@ public class FertigungReportFacBean extends LPReport implements
 		} finally {
 			closeSession(session);
 		}
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printMaschineUndMaterial(Integer maschineIId,
+			DatumsfilterVonBis vonBis, TheClientDto theClientDto) {
+		this.useCase = UC_MASCHINEUNDMATERIAL;
+		this.index = -1;
+
+		Map<String, Object> mapParameter = new TreeMap<String, Object>();
+
+		mapParameter.put("P_VON", vonBis.getTimestampVon());
+		mapParameter.put("P_BIS", vonBis.getTimestampBisUnveraendert());
+
+		ParametermandantDto parameter = null;
+		try {
+			parameter = (ParametermandantDto) getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_STUECKLISTE,
+							ParameterFac.PARAMETER_STUECKLISTE_ARBEITSPLAN_ZEITEINHEIT);
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
+		}
+		String sEinheit = parameter.getCWert().trim();
+
+		String sQuery = " SELECT flroffeneags from FLROffeneags flroffeneags  "
+				+ "LEFT OUTER JOIN flroffeneags.flrartikel_taetigkeit.artikelsprset AS aspr_taetigkeit   "
+				+ "LEFT OUTER JOIN flroffeneags.flrartikel_stueckliste.artikelsprset AS aspr_stueckliste   "
+				+ "LEFT OUTER JOIN flroffeneags.flrartikel_sollmaterial.artikelsprset AS aspr_sollmaterial   "
+				+ "LEFT OUTER JOIN flroffeneags.flrmaschine AS flrmaschine  "
+				+ "LEFT OUTER JOIN flroffeneags.flrartikel_taetigkeit AS taetigkeit "
+				+ "LEFT OUTER JOIN flroffeneags.flrartikel_sollmaterial AS sollmaterial  "
+				+ "LEFT OUTER JOIN flroffeneags.flrartikel_stueckliste AS stueckliste "
+				+ "LEFT OUTER JOIN flroffeneags.flrlossollarbeitsplan AS sollarbeitsplan "
+				+ "" + "WHERE flroffeneags.mandant_c_nr = '"
+				+ theClientDto.getMandant() + "'";
+		if (vonBis.getTimestampVon() != null) {
+			sQuery += " AND flroffeneags.t_agbeginn>='"
+					+ Helper.formatTimestampWithSlashes(vonBis
+							.getTimestampVon()) + "'";
+		}
+
+		if (vonBis.getTimestampBis() != null) {
+			sQuery += " AND flroffeneags.t_agbeginn<'"
+					+ Helper.formatTimestampWithSlashes(vonBis
+							.getTimestampBis()) + "'";
+		}
+
+		if (maschineIId != null) {
+			sQuery += " AND flrmaschine=" + maschineIId + " ";
+			mapParameter.put("P_MASCHINE", getZeiterfassungFac()
+					.maschineFindByPrimaryKey(maschineIId).getBezeichnung());
+
+		}
+		sQuery += " ORDER BY flrmaschine.c_identifikationsnr ASC, sollmaterial.c_nr ASC,"
+				+ " flroffeneags.t_agbeginn ASC, flroffeneags.i_maschinenversatz_ms ASC";
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+		org.hibernate.Query hquery = session.createQuery(sQuery);
+		List<?> resultList = hquery.list();
+		Iterator<?> resultListIterator = resultList.iterator();
+		int i = 0;
+		ArrayList alDaten = new ArrayList();
+
+		while (resultListIterator.hasNext()) {
+			FLROffeneags flrOffeneags = (FLROffeneags) resultListIterator
+					.next();
+
+			Object[] oZeile = new Object[MASCHINEUNDMATERIAL_SPALTENANZAHL];
+
+			// AG
+
+			LossollarbeitsplanDto saDtoOriginal = getFertigungFac()
+					.lossollarbeitsplanFindByPrimaryKey(flrOffeneags.getI_id());
+
+			oZeile[MASCHINEUNDMATERIAL_AG_ART] = flrOffeneags
+					.getFlrlossollarbeitsplan().getAgart_c_nr();
+			oZeile[MASCHINEUNDMATERIAL_AG_BEGINN] = flrOffeneags
+					.getT_agbeginn();
+			oZeile[MASCHINEUNDMATERIAL_ARBEITSGANG] = flrOffeneags
+					.getFlrlossollarbeitsplan().getI_arbeitsgangsnummer();
+
+			if (flrOffeneags.getFlrlossollarbeitsplan().getFlrsollmaterial() != null) {
+				oZeile[MASCHINEUNDMATERIAL_ARTIKELNUMMER_MATERIAL] = flrOffeneags
+						.getFlrlossollarbeitsplan().getFlrsollmaterial()
+						.getFlrartikel().getC_nr();
+
+				ArtikelDto aDto = getArtikelFac()
+						.artikelFindByPrimaryKeySmall(
+								flrOffeneags.getFlrlossollarbeitsplan()
+										.getFlrsollmaterial().getFlrartikel()
+										.getI_id(), theClientDto);
+
+				oZeile[MASCHINEUNDMATERIAL_ARTIKELBEZEICHNUNG_MATERIAL] = aDto
+						.formatBezeichnung();
+
+			}
+
+			oZeile[MASCHINEUNDMATERIAL_ARTIKELNUMMER_TAETIGKEIT] = flrOffeneags
+					.getFlrlossollarbeitsplan().getFlrartikel().getC_nr();
+
+			ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
+					flrOffeneags.getFlrlossollarbeitsplan().getFlrartikel()
+							.getI_id(), theClientDto);
+
+			oZeile[MASCHINEUNDMATERIAL_ARTIKELBEZEICHNUNG_TAETIGKEIT] = aDto
+					.formatBezeichnung();
+
+			oZeile[MASCHINEUNDMATERIAL_AUFSPANNUNG] = flrOffeneags
+					.getFlrlossollarbeitsplan().getI_aufspannung();
+			oZeile[MASCHINEUNDMATERIAL_AUTO_STOP_BEI_GEHT] = Helper
+					.short2Boolean(saDtoOriginal.getBAutoendebeigeht());
+
+			oZeile[MASCHINEUNDMATERIAL_KOMMENTAR] = saDtoOriginal
+					.getCKomentar();
+			oZeile[MASCHINEUNDMATERIAL_KOMMENTAR_LANG] = saDtoOriginal
+					.getXText();
+			oZeile[MASCHINEUNDMATERIAL_LOSNUMMER] = flrOffeneags.getFlrlos()
+					.getC_nr();
+
+			if (flrOffeneags.getFlrkunde() != null) {
+
+				oZeile[MASCHINEUNDMATERIAL_KUNDE_KBEZ] = flrOffeneags
+						.getFlrkunde().getFlrpartner().getC_kbez();
+			}
+
+			if (flrOffeneags.getFlrlossollarbeitsplan().getFlrmaschine() != null) {
+				oZeile[MASCHINEUNDMATERIAL_MASCHINE_BEZEICHNUNG] = flrOffeneags
+						.getFlrlossollarbeitsplan().getFlrmaschine().getC_bez();
+				oZeile[MASCHINEUNDMATERIAL_MASCHINE_INVENTARNUMMMER] = flrOffeneags
+						.getFlrlossollarbeitsplan().getFlrmaschine()
+						.getC_inventarnummer();
+				oZeile[MASCHINEUNDMATERIAL_MASCHINE_IDENTIFIKATIONSNUMMMER] = flrOffeneags
+						.getFlrlossollarbeitsplan().getFlrmaschine()
+						.getC_identifikationsnr();
+			}
+
+			oZeile[MASCHINEUNDMATERIAL_MASCHINENVERSATZ_MS] = saDtoOriginal
+					.getIMaschinenversatzMs();
+			oZeile[MASCHINEUNDMATERIAL_NUR_MASCHINENZEIT] = Helper
+					.short2Boolean(saDtoOriginal.getBNurmaschinenzeit());
+
+			if (flrOffeneags.getFlrlossollarbeitsplan()
+					.getFlrpersonal_zugeordneter() != null) {
+
+				oZeile[MASCHINEUNDMATERIAL_PERSON] = HelperServer
+						.formatPersonAusFLRPartner(flrOffeneags
+								.getFlrlossollarbeitsplan()
+								.getFlrpersonal_zugeordneter().getFlrpartner());
+			}
+
+			oZeile[MASCHINEUNDMATERIAL_UNTERARBEITSGANG] = saDtoOriginal
+					.getIUnterarbeitsgang();
+			oZeile[MASCHINEUNDMATERIAL_ZEITEINHEIT_ARBEITSPLAN] = sEinheit;
+
+			double lStueckzeitOriginal = saDtoOriginal.getLStueckzeit();
+			double lRuestzeitOriginal = saDtoOriginal.getLRuestzeit();
+			double dRuestzeitOriginal = 0;
+			double dStueckzeitOriginal = 0;
+
+			if (sEinheit.equals(SystemFac.EINHEIT_STUNDE.trim())) {
+				dStueckzeitOriginal = lStueckzeitOriginal / 3600000;
+				dRuestzeitOriginal = lRuestzeitOriginal / 3600000;
+			} else if (sEinheit.equals(SystemFac.EINHEIT_MINUTE.trim())) {
+				dStueckzeitOriginal = lStueckzeitOriginal / 60000;
+				dRuestzeitOriginal = lRuestzeitOriginal / 60000;
+			} else if (sEinheit.equals(SystemFac.EINHEIT_SEKUNDE.trim())) {
+				dStueckzeitOriginal = lStueckzeitOriginal / 1000;
+				dRuestzeitOriginal = lRuestzeitOriginal / 1000;
+			}
+
+			oZeile[MASCHINEUNDMATERIAL_RUESTZEIT] = Helper.rundeKaufmaennisch(
+					new BigDecimal(dRuestzeitOriginal), 5);
+			oZeile[MASCHINEUNDMATERIAL_STUECKZEIT] = Helper.rundeKaufmaennisch(
+					new BigDecimal(dStueckzeitOriginal), 5);
+			oZeile[MASCHINEUNDMATERIAL_GESAMTZEIT_IN_STUNDEN] = Helper
+					.berechneGesamtzeitInStunden(saDtoOriginal.getLRuestzeit(),
+							saDtoOriginal.getLStueckzeit(), flrOffeneags
+									.getFlrlos().getN_losgroesse(), null,
+							saDtoOriginal.getIAufspannung());
+
+			// Naechster AG
+			Integer sollarbeitsplanIId_NaechterAG = null;
+
+			try {
+				LossollarbeitsplanDto[] sollDtos = getFertigungFac()
+						.lossollarbeitsplanFindByLosIId(
+								flrOffeneags.getFlrlos().getI_id());
+
+				for (int j = 0; j < sollDtos.length; j++) {
+
+					if (saDtoOriginal.getIId().equals(sollDtos[j].getIId())) {
+
+						// Der naechste ists dann
+						if (j < sollDtos.length - 1) {
+							sollarbeitsplanIId_NaechterAG = sollDtos[j + 1]
+									.getIId();
+						}
+
+					}
+
+				}
+
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+
+			if (sollarbeitsplanIId_NaechterAG != null) {
+
+				LossollarbeitsplanDto saDto_Next = getFertigungFac()
+						.lossollarbeitsplanFindByPrimaryKey(
+								sollarbeitsplanIId_NaechterAG);
+
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_AG_ART] = saDto_Next
+						.getAgartCNr();
+
+				if (saDto_Next.getIMaschinenversatztage() == null) {
+					oZeile[MASCHINEUNDMATERIAL_NEXT_AG_AG_BEGINN] = flrOffeneags
+							.getFlrlos().getT_produktionsbeginn();
+				} else {
+					oZeile[MASCHINEUNDMATERIAL_NEXT_AG_AG_BEGINN] = Helper
+							.addiereTageZuDatum(flrOffeneags.getFlrlos()
+									.getT_produktionsbeginn(), saDto_Next
+									.getIMaschinenversatztage());
+				}
+
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_ARBEITSGANG] = saDto_Next
+						.getIArbeitsgangnummer();
+
+				try {
+					if (saDto_Next.getLossollmaterialIId() != null) {
+						LossollmaterialDto sollmatDto = getFertigungFac()
+								.lossollmaterialFindByPrimaryKey(
+										saDto_Next.getLossollmaterialIId());
+
+						ArtikelDto aDtoSollmat = getArtikelFac()
+								.artikelFindByPrimaryKeySmall(
+										sollmatDto.getArtikelIId(),
+										theClientDto);
+						oZeile[MASCHINEUNDMATERIAL_NEXT_AG_ARTIKELNUMMER_MATERIAL] = aDtoSollmat
+								.getCNr();
+						oZeile[MASCHINEUNDMATERIAL_NEXT_AG_ARTIKELBEZEICHNUNG_MATERIAL] = aDtoSollmat
+								.formatBezeichnung();
+
+					}
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+
+				ArtikelDto aDtoSollarbeitsplan = getArtikelFac()
+						.artikelFindByPrimaryKeySmall(
+								saDto_Next.getArtikelIIdTaetigkeit(),
+								theClientDto);
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_ARTIKELNUMMER_TAETIGKEIT] = aDtoSollarbeitsplan
+						.getCNr();
+
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_ARTIKELBEZEICHNUNG_TAETIGKEIT] = aDtoSollarbeitsplan
+						.formatBezeichnung();
+
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_AUFSPANNUNG] = saDto_Next
+						.getIAufspannung();
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_AUTO_STOP_BEI_GEHT] = Helper
+						.short2Boolean(saDto_Next.getBAutoendebeigeht());
+
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_KOMMENTAR] = saDto_Next
+						.getCKomentar();
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_KOMMENTAR_LANG] = saDto_Next
+						.getXText();
+
+				if (saDto_Next.getMaschineIId() != null) {
+					MaschineDto mDto = getZeiterfassungFac()
+							.maschineFindByPrimaryKey(
+									saDto_Next.getMaschineIId());
+					oZeile[MASCHINEUNDMATERIAL_NEXT_AG_MASCHINE_BEZEICHNUNG] = mDto
+							.getCBez();
+					oZeile[MASCHINEUNDMATERIAL_NEXT_AG_MASCHINE_INVENTARNUMMMER] = mDto
+							.getCInventarnummer();
+					oZeile[MASCHINEUNDMATERIAL_NEXT_AG_MASCHINE_IDENTIFIKATIONSNUMMMER] = mDto
+							.getCIdentifikationsnr();
+				}
+
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_MASCHINENVERSATZ_MS] = saDto_Next
+						.getIMaschinenversatzMs();
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_NUR_MASCHINENZEIT] = Helper
+						.short2Boolean(saDto_Next.getBNurmaschinenzeit());
+
+				if (saDto_Next.getPersonalIIdZugeordneter() != null) {
+
+					PersonalDto personalDto = getPersonalFac()
+							.personalFindByPrimaryKey(
+									saDto_Next.getPersonalIIdZugeordneter(),
+									theClientDto);
+					oZeile[MASCHINEUNDMATERIAL_NEXT_AG_PERSON] = personalDto
+							.formatFixUFTitelName2Name1();
+				}
+
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_UNTERARBEITSGANG] = saDto_Next
+						.getIUnterarbeitsgang();
+
+				double lStueckzeit = saDto_Next.getLStueckzeit();
+				double lRuestzeit = saDto_Next.getLRuestzeit();
+				double dRuestzeit = 0;
+				double dStueckzeit = 0;
+
+				if (sEinheit.equals(SystemFac.EINHEIT_STUNDE.trim())) {
+					dStueckzeit = lStueckzeit / 3600000;
+					dRuestzeit = lRuestzeit / 3600000;
+				} else if (sEinheit.equals(SystemFac.EINHEIT_MINUTE.trim())) {
+					dStueckzeit = lStueckzeit / 60000;
+					dRuestzeit = lRuestzeit / 60000;
+				} else if (sEinheit.equals(SystemFac.EINHEIT_SEKUNDE.trim())) {
+					dStueckzeit = lStueckzeit / 1000;
+					dRuestzeit = lRuestzeit / 1000;
+				}
+
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_RUESTZEIT] = Helper
+						.rundeKaufmaennisch(new BigDecimal(dRuestzeit), 5);
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_STUECKZEIT] = Helper
+						.rundeKaufmaennisch(new BigDecimal(dStueckzeit), 5);
+				oZeile[MASCHINEUNDMATERIAL_NEXT_AG_GESAMTZEIT_IN_STUNDEN] = Helper
+						.berechneGesamtzeitInStunden(
+								saDto_Next.getLRuestzeit(), saDto_Next
+										.getLStueckzeit(), flrOffeneags
+										.getFlrlos().getN_losgroesse(), null,
+								saDto_Next.getIAufspannung());
+			}
+			alDaten.add(oZeile);
+
+		}
+		session.close();
+
+		data = new Object[alDaten.size()][MASCHINEUNDMATERIAL_SPALTENANZAHL];
+		data = (Object[][]) alDaten.toArray(data);
+
+		initJRDS(mapParameter, FertigungReportFac.REPORT_MODUL,
+				FertigungReportFac.REPORT_MASCHINEUNDMATERIAL,
+				theClientDto.getMandant(), theClientDto.getLocUi(),
+				theClientDto);
+
+		return getReportPrint();
+
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
@@ -6015,7 +6825,8 @@ public class FertigungReportFacBean extends LPReport implements
 	public JasperPrintLP printHalbfertigfabrikatsinventur(
 			java.sql.Timestamp tsStichtag, int iSortierung,
 			boolean bVerdichtet, Integer partnerIIdFertigungsort,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			boolean bSortiertNachFertigungsgruppe, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		Session session = null;
 		try {
 			Map<String, Object> mapParameter = new TreeMap<String, Object>();
@@ -6068,7 +6879,6 @@ public class FertigungReportFacBean extends LPReport implements
 				c.add(Restrictions.le(FertigungFac.FLR_LOS_T_AUSGABE,
 						tsStichtag));
 			}
-
 			// Sortierung nach Losnummer
 			c.addOrder(Order.asc(FertigungFac.FLR_LOS_C_NR));
 			List<?> list = c.list();
@@ -6079,26 +6889,45 @@ public class FertigungReportFacBean extends LPReport implements
 			for (Iterator<?> iter = list.iterator(); iter.hasNext(); i++) {
 				FLRLosReport item = (FLRLosReport) iter.next();
 
-				Object[] zeile = new Object[17];
+				Object[] zeileVorlage = new Object[HF_ANZAHL_SPALTEN];
 
-				zeile[HF_LOSNUMMER] = item.getC_nr();
-				zeile[HF_LOSGROESSE] = item.getN_losgroesse();
+				zeileVorlage[HF_LOSNUMMER] = item.getC_nr();
+				zeileVorlage[HF_LOSGROESSE] = item.getN_losgroesse();
+				// zeile[HF_AUFTRAGSNUMMER] = "";
+				// PJ18443
+				if (item.getFlrauftrag() != null) {
+					zeileVorlage[HF_AUFTRAGSNUMMER] = item.getFlrauftrag()
+							.getC_nr();
+				} else {
+					if (item.getFlrauftragposition() != null) {
+						zeileVorlage[HF_AUFTRAGSNUMMER] = item
+								.getFlrauftragposition().getFlrauftrag()
+								.getC_nr();
+					}
+				}
+
+				if (item.getFlrfertigungsgruppe() != null) {
+					zeileVorlage[HF_FERTIGUNGSGRUPPE] = item
+							.getFlrfertigungsgruppe().getC_bez();
+				} else {
+					zeileVorlage[HF_FERTIGUNGSGRUPPE] = "";
+				}
 
 				if (item.getFlrstueckliste() != null) {
-					zeile[HF_ARTIKELNUMMER] = item.getFlrstueckliste()
+					zeileVorlage[HF_ARTIKELNUMMER] = item.getFlrstueckliste()
 							.getFlrartikel().getC_nr();
 					ArtikelDto artikelDto = getArtikelFac()
 							.artikelFindByPrimaryKeySmall(
 									item.getFlrstueckliste().getFlrartikel()
 											.getI_id(), theClientDto);
-					zeile[HF_BEZEICHNUNG] = artikelDto.getArtikelsprDto()
-							.getCBez();
+					zeileVorlage[HF_BEZEICHNUNG] = artikelDto
+							.getArtikelsprDto().getCBez();
 					;
 				} else {
-					zeile[HF_ARTIKELNUMMER] = getTextRespectUISpr(
+					zeileVorlage[HF_ARTIKELNUMMER] = getTextRespectUISpr(
 							"fert.materialliste", theClientDto.getMandant(),
 							theClientDto.getLocUi());
-					zeile[HF_BEZEICHNUNG] = item.getC_projekt();
+					zeileVorlage[HF_BEZEICHNUNG] = item.getC_projekt();
 				}
 
 				LosablieferungDto[] losablieferungDtos = getFertigungFac()
@@ -6119,7 +6948,7 @@ public class FertigungReportFacBean extends LPReport implements
 					}
 
 				}
-				zeile[HF_ERLEDIGT] = bdAbgeliefert;
+				zeileVorlage[HF_ERLEDIGT] = bdAbgeliefert;
 
 				// Nun eine Zeile pro Position
 
@@ -6130,6 +6959,9 @@ public class FertigungReportFacBean extends LPReport implements
 				for (int j = 0; j < sollmat.length; j++) {
 					BigDecimal bdMenge = getFertigungFac().getAusgegebeneMenge(
 							sollmat[j].getIId(), tsStichtag, theClientDto);
+
+					Object[] zeile = zeileVorlage.clone();
+
 					zeile[HF_POSITION_AUSGEGEBEN] = bdMenge;
 
 					// Einkaufspreis des ersten Lieferanten hinzufuegen
@@ -6181,17 +7013,37 @@ public class FertigungReportFacBean extends LPReport implements
 					zeile[HF_POSITION_BEZEICHNUNG] = artikelDto
 							.formatBezeichnung();
 
-					if (bVerdichtet) {
+					// Verdichtet gibts bei Sortierung nach Auftrag nicht
+					if (bVerdichtet
+							&& iSortierung != FertigungReportFac.HF_OPTION_SORTIERUNG_AUFTRAGNR) {
 						if (iSortierung == FertigungReportFac.HF_OPTION_SORTIERUNG_ARTIKELNR) {
 							boolean bGefunden = false;
 							for (int k = 0; k < alDaten.size(); k++) {
 								Object[] zeileTemp = (Object[]) alDaten.get(k);
 
-								if (zeileTemp[HF_POSITION_ARTIKELNUMMMER]
-										.equals(zeile[HF_POSITION_ARTIKELNUMMMER])) {
+								String suchstring1 = (String) zeileTemp[HF_POSITION_ARTIKELNUMMMER];
+								String suchstring2 = (String) zeile[HF_POSITION_ARTIKELNUMMMER];
+
+								if (bSortiertNachFertigungsgruppe == true) {
+									suchstring1 = Helper
+											.fitString2Length(
+													(String) zeileTemp[HF_FERTIGUNGSGRUPPE],
+													40, ' ')
+											+ suchstring1;
+
+									suchstring2 = Helper
+											.fitString2Length(
+													(String) zeile[HF_FERTIGUNGSGRUPPE],
+													40, ' ')
+											+ suchstring2;
+
+								}
+
+								if (suchstring1.equals(suchstring2)) {
 									bGefunden = true;
 
-									zeileTemp[HF_LOSNUMMER] = "";
+									zeileTemp[HF_LOSNUMMER] = null;
+									zeileTemp[HF_AUFTRAGSNUMMER] = null;
 									zeileTemp[HF_POSITION_AUSGEGEBEN] = ((BigDecimal) zeileTemp[HF_POSITION_AUSGEGEBEN])
 											.add((BigDecimal) zeile[HF_POSITION_AUSGEGEBEN]);
 									zeileTemp[HF_POSITION_ABGELIFERT] = ((BigDecimal) zeileTemp[HF_POSITION_ABGELIFERT])
@@ -6237,8 +7089,26 @@ public class FertigungReportFacBean extends LPReport implements
 							for (int k = 0; k < alDaten.size(); k++) {
 								Object[] zeileTemp = (Object[]) alDaten.get(k);
 
-								if (zeileTemp[HF_LOSNUMMER]
-										.equals(zeile[HF_LOSNUMMER])) {
+								String suchstring1 = (String) zeileTemp[HF_LOSNUMMER];
+								String suchstring2 = (String) zeile[HF_LOSNUMMER];
+
+								if (bSortiertNachFertigungsgruppe == true) {
+									suchstring1 = Helper
+											.fitString2Length(
+													(String) zeileTemp[HF_FERTIGUNGSGRUPPE],
+													40, ' ')
+											+ suchstring1;
+
+									suchstring2 = Helper
+											.fitString2Length(
+													(String) zeile[HF_FERTIGUNGSGRUPPE],
+													40, ' ')
+											+ suchstring2;
+
+								}
+
+								if (suchstring1.equals(suchstring2)) {
+
 									bGefunden = true;
 
 									zeileTemp[HF_POSITION_ARTIKELNUMMMER] = "";
@@ -6289,8 +7159,7 @@ public class FertigungReportFacBean extends LPReport implements
 
 						alDaten.add(zeile);
 					}
-					zeile = new Object[17];
-					zeile[HF_LOSNUMMER] = item.getC_nr();
+
 				}
 
 				// Verbrauchte Arbeitszeit
@@ -6307,6 +7176,9 @@ public class FertigungReportFacBean extends LPReport implements
 									lossollarbeitsplanDto[j]
 											.getArtikelIIdTaetigkeit(),
 									theClientDto);
+
+					Object[] zeile = zeileVorlage.clone();
+
 					zeile[HF_POSITION_ARTIKELNUMMMER] = artikelDto.getCNr();
 					zeile[HF_POSITION_BEZEICHNUNG] = artikelDto
 							.formatBezeichnung();
@@ -6422,11 +7294,30 @@ public class FertigungReportFacBean extends LPReport implements
 							for (int k = 0; k < alDaten.size(); k++) {
 								Object[] zeileTemp = (Object[]) alDaten.get(k);
 
-								if (zeileTemp[HF_POSITION_ARTIKELNUMMMER]
-										.equals(zeile[HF_POSITION_ARTIKELNUMMMER])) {
+								String suchstring1 = (String) zeileTemp[HF_POSITION_ARTIKELNUMMMER];
+								String suchstring2 = (String) zeile[HF_POSITION_ARTIKELNUMMMER];
+
+								if (bSortiertNachFertigungsgruppe == true) {
+									suchstring1 = Helper
+											.fitString2Length(
+													(String) zeileTemp[HF_FERTIGUNGSGRUPPE],
+													40, ' ')
+											+ suchstring1;
+
+									suchstring2 = Helper
+											.fitString2Length(
+													(String) zeile[HF_FERTIGUNGSGRUPPE],
+													40, ' ')
+											+ suchstring2;
+
+								}
+
+								if (suchstring1.equals(suchstring2)) {
+
 									bGefunden = true;
 
-									zeileTemp[HF_LOSNUMMER] = "";
+									zeileTemp[HF_LOSNUMMER] = null;
+									zeileTemp[HF_AUFTRAGSNUMMER] = null;
 									zeileTemp[HF_POSITION_AUSGEGEBEN] = ((BigDecimal) zeileTemp[HF_POSITION_AUSGEGEBEN])
 											.add((BigDecimal) zeile[HF_POSITION_AUSGEGEBEN]);
 									zeileTemp[HF_POSITION_ABGELIFERT] = ((BigDecimal) zeileTemp[HF_POSITION_ABGELIFERT])
@@ -6472,8 +7363,25 @@ public class FertigungReportFacBean extends LPReport implements
 							for (int k = 0; k < alDaten.size(); k++) {
 								Object[] zeileTemp = (Object[]) alDaten.get(k);
 
-								if (zeileTemp[HF_LOSNUMMER]
-										.equals(zeile[HF_LOSNUMMER])) {
+								String suchstring1 = (String) zeileTemp[HF_LOSNUMMER];
+								String suchstring2 = (String) zeile[HF_LOSNUMMER];
+
+								if (bSortiertNachFertigungsgruppe == true) {
+									suchstring1 = Helper
+											.fitString2Length(
+													(String) zeileTemp[HF_FERTIGUNGSGRUPPE],
+													40, ' ')
+											+ suchstring1;
+
+									suchstring2 = Helper
+											.fitString2Length(
+													(String) zeile[HF_FERTIGUNGSGRUPPE],
+													40, ' ')
+											+ suchstring2;
+
+								}
+
+								if (suchstring1.equals(suchstring2)) {
 									bGefunden = true;
 
 									zeileTemp[HF_POSITION_ARTIKELNUMMMER] = "";
@@ -6524,51 +7432,117 @@ public class FertigungReportFacBean extends LPReport implements
 						alDaten.add(zeile);
 					}
 
-					zeile = new Object[17];
-					zeile[HF_LOSNUMMER] = item.getC_nr();
-
 				}
 
 			}
 			mapParameter.put(LPReport.P_WAEHRUNG,
 					theClientDto.getSMandantenwaehrung());
 			mapParameter.put("P_VERDICHTET", new Boolean(bVerdichtet));
+			mapParameter.put("P_SORTIERT_NACH_FERTIGUNGSGRUPPE", new Boolean(
+					bSortiertNachFertigungsgruppe));
 
 			if (iSortierung == FertigungReportFac.HF_OPTION_SORTIERUNG_LOSNR) {
-				// Sortierng nach Losnr
-				data = new Object[alDaten.size()][17];
-				data = (Object[][]) alDaten.toArray(data);
-
-				initJRDS(mapParameter, FertigungReportFac.REPORT_MODUL,
-						FertigungReportFac.REPORT_HALBFERTIGFABRIKATSINVENTUR,
-						theClientDto.getMandant(), theClientDto.getLocUi(),
-						theClientDto);
+				mapParameter.put("P_SORTIERUNG", "Losnummer");
 			} else if (iSortierung == FertigungReportFac.HF_OPTION_SORTIERUNG_ARTIKELNR) {
-
-				// Sortieren nach Identnr
-				for (int k = alDaten.size() - 1; k > 0; --k) {
-					for (int j = 0; j < k; ++j) {
-						Object[] a1 = (Object[]) alDaten.get(j);
-						Object[] a2 = (Object[]) alDaten.get(j + 1);
-
-						if (((String) a1[HF_POSITION_ARTIKELNUMMMER])
-								.compareTo((String) a2[HF_POSITION_ARTIKELNUMMMER]) > 0) {
-							alDaten.set(j, a2);
-							alDaten.set(j + 1, a1);
-						}
-					}
-				}
-				data = new Object[alDaten.size()][17];
-				data = (Object[][]) alDaten.toArray(data);
-
-				initJRDS(
-						mapParameter,
-						FertigungReportFac.REPORT_MODUL,
-						FertigungReportFac.REPORT_HALBFERTIGFABRIKATSINVENTUR_IDENT,
-						theClientDto.getMandant(), theClientDto.getLocUi(),
-						theClientDto);
-
+				mapParameter.put("P_SORTIERUNG", "Artikelnummer");
+			} else if (iSortierung == FertigungReportFac.HF_OPTION_SORTIERUNG_AUFTRAGNR) {
+				mapParameter.put("P_SORTIERUNG", "Auftragsnummer");
 			}
+
+			for (int k = alDaten.size() - 1; k > 0; --k) {
+				for (int j = 0; j < k; ++j) {
+					Object[] a1 = (Object[]) alDaten.get(j);
+					Object[] a2 = (Object[]) alDaten.get(j + 1);
+					String fertigungsgruppe1 = Helper.fitString2Length(
+							(String) a1[HF_FERTIGUNGSGRUPPE], 40, ' ');
+					String fertigungsgruppe2 = Helper.fitString2Length(
+							(String) a2[HF_FERTIGUNGSGRUPPE], 40, ' ');
+
+					String losnummer1 = (String) a1[HF_LOSNUMMER];
+					String losnummer2 = (String) a2[HF_LOSNUMMER];
+
+					if (losnummer1 == null) {
+						losnummer1 = "";
+					}
+					if (losnummer2 == null) {
+						losnummer2 = "";
+					}
+
+					losnummer1 = Helper.fitString2Length(losnummer1, 30, ' ');
+					losnummer2 = Helper.fitString2Length(losnummer2, 30, ' ');
+
+					String auftragsnummer1 = (String) a1[HF_AUFTRAGSNUMMER];
+					String auftragsnummer2 = (String) a2[HF_AUFTRAGSNUMMER];
+
+					if (auftragsnummer1 == null) {
+						auftragsnummer1 = "";
+					}
+					if (auftragsnummer2 == null) {
+						auftragsnummer2 = "";
+					}
+
+					auftragsnummer1 = Helper.fitString2Length(auftragsnummer1,
+							30, ' ');
+					auftragsnummer2 = Helper.fitString2Length(auftragsnummer2,
+							30, ' ');
+
+					String artikelnummer1 = (String) a1[HF_POSITION_ARTIKELNUMMMER];
+					String artikelnummer2 = (String) a2[HF_POSITION_ARTIKELNUMMMER];
+
+					if (artikelnummer1 == null) {
+						artikelnummer1 = "";
+					}
+					if (artikelnummer2 == null) {
+						artikelnummer2 = "";
+					}
+
+					artikelnummer1 = Helper.fitString2Length(artikelnummer1,
+							40, ' ');
+					artikelnummer2 = Helper.fitString2Length(artikelnummer2,
+							40, ' ');
+
+					String suchstring1 = null;
+					String suchstring2 = null;
+
+					if (iSortierung == FertigungReportFac.HF_OPTION_SORTIERUNG_LOSNR) {
+
+						suchstring1 = losnummer1 + artikelnummer1;
+						suchstring2 = losnummer2 + artikelnummer2;
+
+					} else if (iSortierung == FertigungReportFac.HF_OPTION_SORTIERUNG_ARTIKELNR) {
+
+						suchstring1 = artikelnummer1 + losnummer1;
+						suchstring2 = artikelnummer2 + losnummer2;
+
+					} else if (iSortierung == FertigungReportFac.HF_OPTION_SORTIERUNG_AUFTRAGNR) {
+
+						suchstring1 = auftragsnummer1 + losnummer1
+								+ artikelnummer1;
+						suchstring2 = auftragsnummer2 + losnummer2
+								+ artikelnummer2;
+
+					}
+
+					if (bSortiertNachFertigungsgruppe == true) {
+						suchstring1 = fertigungsgruppe1 + suchstring1;
+						suchstring2 = fertigungsgruppe2 + suchstring2;
+					}
+
+					if (suchstring1.compareTo(suchstring2) > 0) {
+						alDaten.set(j, a2);
+						alDaten.set(j + 1, a1);
+					}
+
+				}
+			}
+			data = new Object[alDaten.size()][HF_ANZAHL_SPALTEN];
+			data = (Object[][]) alDaten.toArray(data);
+
+			initJRDS(mapParameter, FertigungReportFac.REPORT_MODUL,
+					FertigungReportFac.REPORT_HALBFERTIGFABRIKATSINVENTUR,
+					theClientDto.getMandant(), theClientDto.getLocUi(),
+					theClientDto);
+
 			return getReportPrint();
 		} catch (RemoteException t) {
 			throwEJBExceptionLPRespectOld(t);
@@ -6764,6 +7738,31 @@ public class FertigungReportFacBean extends LPReport implements
 
 		try {
 
+			// hole alle Stkl-Positionen, wg. Kommentar und
+
+			HashMap<Integer, ArrayList> hmStklPositionenAllerLose = new HashMap<Integer, ArrayList>();
+
+			for (int i = 0; i < losIId.length; i++) {
+
+				LosDto losDto = getFertigungFac()
+						.losFindByPrimaryKey(losIId[i]);
+				if (losDto.getStuecklisteIId() != null) {
+					StuecklistepositionDto[] stklPosDtos = getStuecklisteFac()
+							.stuecklistepositionFindByStuecklisteIId(
+									losDto.getStuecklisteIId(), theClientDto);
+
+					ArrayList<StuecklistepositionDto> hmPositionen = new ArrayList<StuecklistepositionDto>();
+
+					for (int j = 0; j < stklPosDtos.length; j++) {
+						hmPositionen.add(stklPosDtos[j]);
+
+					}
+
+					hmStklPositionenAllerLose.put(losIId[i], hmPositionen);
+
+				}
+			}
+
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			session = factory.openSession();
 			Criteria c = session.createCriteria(FLRLossollmaterial.class);
@@ -6844,6 +7843,37 @@ public class FertigungReportFacBean extends LPReport implements
 
 				} catch (RemoteException ex3) {
 					throwEJBExceptionLPRespectOld(ex3);
+				}
+
+				// Stuecklistepositionskommentar + Position aus Stueckliste
+				String positionAusStueckliste = null;
+				String kommentarAusStueckliste = null;
+				if (sollmat.getFlrlos().getStueckliste_i_id() != null) {
+
+					ArrayList<StuecklistepositionDto> alPositionen = hmStklPositionenAllerLose
+							.get(sollmat.getFlrlos().getI_id());
+
+					for (int u = 0; u < alPositionen.size(); u++) {
+
+						if (sollmat.getFlrartikel().getI_id()
+								.equals(alPositionen.get(u).getArtikelIId())
+								&& sollmat.getN_menge().equals(
+										alPositionen.get(u).getNMenge())
+								&& sollmat.getMontageart_i_id().equals(
+										alPositionen.get(u).getMontageartIId())) {
+							// wenn Menge und Artikel und Montageart gleich
+
+							kommentarAusStueckliste = alPositionen.get(u)
+									.getCKommentar();
+							positionAusStueckliste = alPositionen.get(u)
+									.getCPosition();
+							alPositionen.remove(u);
+							break;
+
+						}
+
+					}
+
 				}
 
 				if (mat.length == 0) {
@@ -6952,34 +7982,10 @@ public class FertigungReportFacBean extends LPReport implements
 					dto.setBdAnzahlBestellt(getArtikelbestelltFac()
 							.getAnzahlBestellt(artikelDto.getIId()));
 
-					// Stuecklistepositionskommentar
-					if (sollmat.getFlrlos().getStueckliste_i_id() != null) {
-						try {
-							StuecklistepositionDto[] stuecklistepositionDto = getStuecklisteFac()
-									.stuecklistepositionFindByStuecklisteIIdArtikelIId(
-											sollmat.getFlrlos()
-													.getStueckliste_i_id(),
-											artikelDto.getIId(), theClientDto);
+					// Stuecklistepositionskommentar + Position aus Stueckliste
 
-							StringBuffer sbKommentarStuecklistepos = new StringBuffer();
-							// wenn ein Artikel mehrfach vorkommt und ich ja
-							// nicht entscheiden kann, an
-							// welcher Stelle ich bin, alle Kommentar
-							// aneinanderhaengen
-							for (int k = 0; k < stuecklistepositionDto.length; k++) {
-								sbKommentarStuecklistepos
-										.append(stuecklistepositionDto[0]
-												.getCKommentar());
-
-							}
-							if (sbKommentarStuecklistepos.length() > 0) {
-								dto.setSKommentarStueckliste(sbKommentarStuecklistepos
-										.toString());
-							}
-						} catch (EJBExceptionLP e) {
-							// ok
-						}
-					}
+					dto.setSKommentarStueckliste(kommentarAusStueckliste);
+					dto.setSPositionStueckliste(positionAusStueckliste);
 
 					// key ist -i_id, damit ich keine vorhandenen eintraege
 					// ueberschreibe
@@ -7012,6 +8018,40 @@ public class FertigungReportFacBean extends LPReport implements
 										dto.setNAusgabe(dto.getNAusgabe().add(
 												temp.getNAusgabe()));
 
+										String skommenarStuecklisteVorhanden = temp
+												.getSKommentarStueckliste();
+
+										if (skommenarStuecklisteVorhanden == null) {
+											skommenarStuecklisteVorhanden = "";
+										}
+
+										if (dto.getSKommentarStueckliste() != null) {
+											if (skommenarStuecklisteVorhanden
+													.length() > 0) {
+												skommenarStuecklisteVorhanden = skommenarStuecklisteVorhanden
+														+ ","
+														+ dto.getSKommentarStueckliste();
+											}
+										}
+										dto.setSKommentarStueckliste(skommenarStuecklisteVorhanden);
+
+										String sPositionStuecklisteVorhanden = temp
+												.getSPositionStueckliste();
+
+										if (sPositionStuecklisteVorhanden == null) {
+											sPositionStuecklisteVorhanden = "";
+										}
+
+										if (dto.getSPositionStueckliste() != null) {
+											if (sPositionStuecklisteVorhanden
+													.length() > 0) {
+												sPositionStuecklisteVorhanden = sPositionStuecklisteVorhanden
+														+ ","
+														+ dto.getSPositionStueckliste();
+											}
+										}
+										dto.setSPositionStueckliste(sPositionStuecklisteVorhanden);
+
 										listVerdichtet.put((Integer) key, dto);
 
 										continue;
@@ -7027,6 +8067,9 @@ public class FertigungReportFacBean extends LPReport implements
 					}
 
 				} else {
+
+					HashMap<Integer, ArrayList> hmStklPositionenAllerLoseKopie = (HashMap<Integer, ArrayList>) hmStklPositionenAllerLose
+							.clone();
 
 					for (int i = 0; i < mat.length; i++) {
 						BigDecimal ausgabemenge = new BigDecimal(0);
@@ -7131,7 +8174,7 @@ public class FertigungReportFacBean extends LPReport implements
 								|| Helper.short2boolean(artikelDto
 										.getBChargennrtragend())) {
 							List<SeriennrChargennrMitMengeDto> snrChnrDtos = getLagerFac()
-									.getAllSeriennrchargennrEinerBelegartposition(
+									.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 											LocaleFac.BELEGART_LOS,
 											mat[i].getIId());
 							if (snrChnrDtos != null) {
@@ -7189,35 +8232,8 @@ public class FertigungReportFacBean extends LPReport implements
 							dto.setSMontageart(montageartDto.getCBez());
 						}
 
-						// Stuecklistepositionskommentar
-						if (sollmat.getFlrlos().getStueckliste_i_id() != null) {
-							try {
-								StuecklistepositionDto[] stuecklistepositionDto = getStuecklisteFac()
-										.stuecklistepositionFindByStuecklisteIIdArtikelIId(
-												sollmat.getFlrlos()
-														.getStueckliste_i_id(),
-												artikelDto.getIId(),
-												theClientDto);
-
-								StringBuffer sbKommentarStuecklistepos = new StringBuffer();
-								// wenn ein Artikel mehrfach vorkommt und ich ja
-								// nicht entscheiden kann, an
-								// welcher Stelle ich bin, alle Kommentar
-								// aneinanderhaengen
-								for (int k = 0; k < stuecklistepositionDto.length; k++) {
-									sbKommentarStuecklistepos
-											.append(stuecklistepositionDto[0]
-													.getCKommentar());
-
-								}
-								if (sbKommentarStuecklistepos.length() > 0) {
-									dto.setSKommentarStueckliste(sbKommentarStuecklistepos
-											.toString());
-								}
-							} catch (EJBExceptionLP e) {
-								// ok
-							}
-						}
+						dto.setSKommentarStueckliste(kommentarAusStueckliste);
+						dto.setSPositionStueckliste(positionAusStueckliste);
 
 						// verdichten nach ident
 						Iterator<Integer> it = listVerdichtet.keySet()
@@ -7346,6 +8362,8 @@ public class FertigungReportFacBean extends LPReport implements
 				dataLokal[i][AUSG_IN_FERTIGUNG] = item.getNInFertigung();
 				dataLokal[i][AUSG_STUECKLISTE_KOMMENTAR] = item
 						.getSKommentarStueckliste();
+				dataLokal[i][AUSG_STUECKLISTE_POSITION] = item
+						.getSPositionStueckliste();
 			}
 
 		} catch (Exception t) {
@@ -7702,13 +8720,13 @@ public class FertigungReportFacBean extends LPReport implements
 				bdAbgeliefert = (BigDecimal) o[1];
 			}
 
-			if (los.getFlrauftragposition() != null
-					&& !hmPositionen.containsKey(los.getFlrauftragposition())) {
-				hmPositionen.put(los.getFlrauftragposition().getI_id(), "");
-			}
-
 			if (bdAbgeliefert.doubleValue() < los.getN_losgroesse()
 					.doubleValue()) {
+				if (los.getFlrauftragposition() != null
+						&& !hmPositionen.containsKey(los
+								.getFlrauftragposition())) {
+					hmPositionen.put(los.getFlrauftragposition().getI_id(), "");
+				}
 
 				Object[] oZeile = new Object[AUSLIEFERLISTE_SPALTENANZAHL];
 				oZeile[AUSLIEFERLISTE_AUFTRAGSNUMMER] = "";
@@ -8206,6 +9224,9 @@ public class FertigungReportFacBean extends LPReport implements
 
 			if (auftragDto != null) {
 
+				oZeile[AUSLIEFERLISTE_AUFTRAGSPOENALE] = Helper
+						.short2Boolean(auftragDto.getBPoenale());
+
 				oZeile[AUSLIEFERLISTE_AUFTRAGSNUMMER] = auftragDto.getCNr();
 				oZeile[AUSLIEFERLISTE_PROJEKT] = auftragDto
 						.getCBezProjektbezeichnung();
@@ -8288,6 +9309,332 @@ public class FertigungReportFacBean extends LPReport implements
 		}
 
 		return oZeile;
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printAuslastungsvorschauDetailliert(
+			java.sql.Timestamp tStichtag, TheClientDto theClientDto) {
+
+		this.useCase = UC_AUSLASTUNGSVORSCHAU_DETAILIERT;
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+		String sQuery = "SELECT lr,(SELECT sum(la.n_menge) FROM FLRLosablieferung la WHERE la.los_i_id=lr.i_id   ) FROM FLRLosReport lr WHERE lr.t_produktionsbeginn <='"
+				+ Helper.formatDateWithSlashes(new java.sql.Date(tStichtag
+						.getTime()))
+				+ "' AND lr.status_c_nr IN ('"
+				+ LocaleFac.STATUS_ANGELEGT
+				+ "','"
+				+ LocaleFac.STATUS_IN_PRODUKTION
+				+ "','"
+				+ LocaleFac.STATUS_TEILERLEDIGT
+				+ "') AND lr.mandant_c_nr='"
+				+ theClientDto.getMandant() + "'";
+
+		java.sql.Timestamp tSpaetestesDatum = new Timestamp(
+				System.currentTimeMillis());
+
+		ArrayList alDaten = new ArrayList();
+
+		HashMap<Integer, String> hmArtikelgruppen = new HashMap<Integer, String>();
+
+		Query qResult = session.createQuery(sQuery);
+		List<?> results = qResult.list();
+		Iterator<?> resultListIterator = results.iterator();
+		while (resultListIterator.hasNext()) {
+			Object[] o = (Object[]) resultListIterator.next();
+
+			FLRLosReport flrLosReport = (FLRLosReport) o[0];
+			BigDecimal bdAbgeliefert = new BigDecimal(0);
+
+			if (o[1] != null) {
+				bdAbgeliefert = (BigDecimal) o[1];
+			}
+
+			if (bdAbgeliefert.doubleValue() < flrLosReport.getN_losgroesse()
+					.doubleValue()) {
+				BigDecimal sollsatzfaktor = new BigDecimal(1);
+				if (flrLosReport.getT_produktionsende().after(tSpaetestesDatum)) {
+					tSpaetestesDatum = new Timestamp(flrLosReport
+							.getT_produktionsende().getTime());
+				}
+
+				if (bdAbgeliefert.doubleValue() > 0) {
+					sollsatzfaktor = bdAbgeliefert.divide(
+							flrLosReport.getN_losgroesse(), 4,
+							BigDecimal.ROUND_HALF_EVEN);
+				}
+
+				try {
+
+					LossollarbeitsplanDto[] sollDtos = getFertigungFac()
+							.lossollarbeitsplanFindByLosIId(
+									flrLosReport.getI_id());
+
+					if (sollDtos.length > 0) {
+
+						for (int i = 0; i < sollDtos.length; i++) {
+
+							LossollarbeitsplanDto saDto = sollDtos[i];
+
+							if (Helper.short2boolean(saDto.getBFertig()) == false) {
+								if (Helper.short2boolean(saDto
+										.getBNurmaschinenzeit()) == false) {
+									ArtikelDto artikelDto = getArtikelFac()
+											.artikelFindByPrimaryKeySmall(
+													sollDtos[i]
+															.getArtikelIIdTaetigkeit(),
+													theClientDto);
+									// sollzeit berechnen
+									double dSollzeit = sollDtos[i]
+											.getNGesamtzeit().doubleValue()
+											* sollsatzfaktor.doubleValue();
+
+									java.util.Date beginnDatum = flrLosReport
+											.getT_produktionsbeginn();
+									if (saDto.getIMaschinenversatztage() != null) {
+										beginnDatum = Helper
+												.addiereTageZuDatum(
+														flrLosReport
+																.getT_produktionsbeginn(),
+														saDto.getIMaschinenversatztage());
+									}
+
+									Timestamp tsBginn = new Timestamp(
+											beginnDatum.getTime());
+
+									Object[] oZeile = new Object[AV_DETAIL_ANZAHL_SPALTEN];
+
+									oZeile[AV_DETAIL_DAUER] = new Double(
+											dSollzeit);
+
+									if (tsBginn.before(Helper
+											.cutTimestamp(new Timestamp(System
+													.currentTimeMillis())))) {
+										tsBginn = Helper
+												.cutTimestamp(new Timestamp(
+														System.currentTimeMillis()));
+									}
+
+									oZeile[AV_DETAIL_BEGINN_DATUM] = tsBginn;
+
+									oZeile[AV_DETAIL_ARTIKELNUMMER] = artikelDto
+											.getCNr();
+
+									if (artikelDto.getArtikelsprDto() != null) {
+										oZeile[AV_DETAIL_BEZEICHNUNG] = artikelDto
+												.getArtikelsprDto().getCBez();
+									}
+
+									if (artikelDto.getArtgruIId() != null) {
+
+										if (!hmArtikelgruppen
+												.containsKey(artikelDto
+														.getArtgruIId())) {
+
+											ArtgruDto agDto = getArtikelFac()
+													.artgruFindByPrimaryKey(
+															artikelDto
+																	.getArtgruIId(),
+															theClientDto);
+											hmArtikelgruppen.put(
+													artikelDto.getArtgruIId(),
+													agDto.getBezeichnung());
+										}
+										oZeile[AV_DETAIL_ARTIKELGRUPPE] = hmArtikelgruppen
+												.get(artikelDto.getArtgruIId());
+
+									} else {
+										oZeile[AV_DETAIL_ARTIKELGRUPPE] = "";
+										hmArtikelgruppen.put(null, "");
+
+									}
+									oZeile[AV_DETAIL_LOSNUMMER] = flrLosReport
+											.getC_nr();
+									oZeile[AV_DETAIL_PROJEKT] = flrLosReport
+											.getC_projekt();
+									oZeile[AV_DETAIL_ARBEITSGANG] = saDto
+											.getIArbeitsgangnummer();
+									oZeile[AV_DETAIL_UNTERARBEITSGANG] = saDto
+											.getIUnterarbeitsgang();
+
+									oZeile[AV_DETAIL_KOMMENTAR] = flrLosReport
+											.getC_kommentar();
+
+									oZeile[AV_DETAIL_SORT_VERFUEGBARKEIT] = "1";
+
+									if (flrLosReport.getFlrauftrag() != null) {
+
+										oZeile[AV_DETAIL_AUFTRAG] = flrLosReport
+												.getFlrauftrag().getC_nr();
+
+										oZeile[AV_DETAIL_KUNDE] = flrLosReport
+												.getFlrauftrag()
+												.getFlrkunde()
+												.getFlrpartner()
+												.getC_name1nachnamefirmazeile1();
+
+									}
+
+									alDaten.add(oZeile);
+
+								}
+							}
+
+						}
+
+					}
+
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+
+			}
+		}
+
+		try {
+			SollverfuegbarkeitDto[] dtos = getZeiterfassungFac()
+					.getVerfuegbareSollzeit(
+							Helper.cutTimestamp(new Timestamp(System
+									.currentTimeMillis())), tSpaetestesDatum,
+							theClientDto);
+			for (int i = 0; i < dtos.length; i++) {
+				if (dtos[i].isBMannarbeitszeit()) {
+
+					Object[] oZeile = new Object[AV_DETAIL_ANZAHL_SPALTEN];
+
+					if (dtos[i].getIGruppeid() != null) {
+
+						if (!hmArtikelgruppen.containsKey(dtos[i]
+								.getIGruppeid())) {
+
+							ArtgruDto agDto = getArtikelFac()
+									.artgruFindByPrimaryKey(
+											dtos[i].getIGruppeid(),
+											theClientDto);
+							hmArtikelgruppen.put(dtos[i].getIGruppeid(),
+									agDto.getBezeichnung());
+						}
+						oZeile[AV_DETAIL_ARTIKELGRUPPE] = hmArtikelgruppen
+								.get(dtos[i].getIGruppeid());
+
+					} else {
+						oZeile[AV_DETAIL_ARTIKELGRUPPE] = "";
+					}
+
+					oZeile[AV_DETAIL_BEGINN_DATUM] = dtos[i].getTDatum();
+					oZeile[AV_DETAIL_VERFUEGBARKEIT] = dtos[i]
+							.getNSollstunden();
+
+					oZeile[AV_DETAIL_SORT_VERFUEGBARKEIT] = "0";
+
+					alDaten.add(oZeile);
+
+				}
+			}
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		// Fehlende Tage auffuellen
+
+		Timestamp tHeute = Helper.cutTimestamp(new Timestamp(System
+				.currentTimeMillis()));
+		while (tHeute.before(tSpaetestesDatum)) {
+
+			Iterator it = hmArtikelgruppen.keySet().iterator();
+
+			while (it.hasNext()) {
+
+				Integer artikelgruppeIId = (Integer) it.next();
+				String artikelgruppe = hmArtikelgruppen.get(artikelgruppeIId);
+
+				boolean gefunden = false;
+				for (int i = 0; i < alDaten.size(); i++) {
+					Object[] oZeile = (Object[]) alDaten.get(i);
+
+					Timestamp tBeginnDatum = (Timestamp) oZeile[AV_DETAIL_BEGINN_DATUM];
+
+					String artikelgruppeVorhanden = (String) oZeile[AV_DETAIL_ARTIKELGRUPPE];
+
+					if (artikelgruppeVorhanden == null) {
+						artikelgruppeVorhanden = "";
+					}
+
+					if (tBeginnDatum.equals(tHeute)
+							&& artikelgruppeVorhanden.equals(artikelgruppe)) {
+						gefunden = true;
+						break;
+					}
+
+				}
+				if (gefunden == false) {
+					Object[] oZeile = new Object[AV_DETAIL_ANZAHL_SPALTEN];
+
+					oZeile[AV_DETAIL_BEGINN_DATUM] = tHeute;
+					oZeile[AV_DETAIL_SORT_VERFUEGBARKEIT] = "0";
+					oZeile[AV_DETAIL_ARTIKELGRUPPE] = artikelgruppe;
+					alDaten.add(oZeile);
+				}
+			}
+			tHeute = Helper.cutTimestamp(Helper.addiereTageZuTimestamp(tHeute,
+					1));
+
+		}
+
+		// Nun zuerst nach Artikelgruppe, dann nach Datum und dann nach
+		// SortVerfuegbarkeit sortieren
+		for (int k = alDaten.size() - 1; k > 0; --k) {
+			for (int j = 0; j < k; ++j) {
+				Object[] a1 = (Object[]) alDaten.get(j);
+				Object[] a2 = (Object[]) alDaten.get(j + 1);
+
+				String s1 = (String) a1[AV_DETAIL_ARTIKELGRUPPE];
+				String s2 = (String) a2[AV_DETAIL_ARTIKELGRUPPE];
+
+				if (s1 == null) {
+					s1 = "";
+				}
+				if (s2 == null) {
+					s2 = "";
+				}
+
+				if (s1.compareTo(s2) > 0) {
+					alDaten.set(j, a2);
+					alDaten.set(j + 1, a1);
+				} else if (s1.compareTo(s2) == 0) {
+					Timestamp t1 = (Timestamp) a1[AV_DETAIL_BEGINN_DATUM];
+					Timestamp t2 = (Timestamp) a2[AV_DETAIL_BEGINN_DATUM];
+
+					if (t1.after(t2)) {
+						alDaten.set(j, a2);
+						alDaten.set(j + 1, a1);
+					} else if (t1.compareTo(t2) == 0) {
+						String v1 = (String) a1[AV_DETAIL_SORT_VERFUEGBARKEIT];
+						String v2 = (String) a2[AV_DETAIL_SORT_VERFUEGBARKEIT];
+
+						if (v1.compareTo(v2) > 0) {
+							alDaten.set(j, a2);
+							alDaten.set(j + 1, a1);
+						}
+					}
+				}
+
+			}
+
+		}
+
+		Map<String, Object> mapParameter = new TreeMap<String, Object>();
+		mapParameter.put("P_STICHTAG", new Timestamp(
+				tStichtag.getTime() - 3600000 * 24));
+
+		data = new Object[alDaten.size()][AV_DETAIL_ANZAHL_SPALTEN];
+		data = (Object[][]) alDaten.toArray(data);
+
+		initJRDS(mapParameter, FertigungReportFac.REPORT_MODUL,
+				FertigungReportFac.REPORT_AUSLASTUNGSVORSCHAU_DETAILIERT,
+				theClientDto.getMandant(), theClientDto.getLocUi(),
+				theClientDto);
+		return getReportPrint();
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
@@ -9374,6 +10721,14 @@ public class FertigungReportFacBean extends LPReport implements
 							losDto.getFertigungsgruppeIId());
 			mapParameter.put("P_FERTIGUNGSGRUPPE", fertGruppeDto.getCBez());
 
+			// PJ18776
+			ParametermandantDto parametermandantDto = getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_FERTIGUNG,
+							ParameterFac.PARAMETER_ISTZEITEN_GLEICH_SOLLZEITEN);
+			mapParameter.put("P_ISTZEITEN_GLEICH_SOLLZEITEN",
+					(java.lang.Boolean) parametermandantDto.getCWertAsObject());
+
 			// Materialliste?
 			if (losDto.getStuecklisteIId() != null) {
 				StuecklisteDto stkDto = getStuecklisteFac()
@@ -9484,6 +10839,420 @@ public class FertigungReportFacBean extends LPReport implements
 				theClientDto.getLocUi(), theClientDto);
 
 		return getReportPrint();
+	}
+
+	private ArrayList getDatenGesamtkalkulation(ArrayList alDaten,
+			Integer losIId, int iEbene, BigDecimal mengenfaktor,
+			TheClientDto theClientDto) {
+
+		LosDto losDto = null;
+		BigDecimal gesamtAbgeliefert = null;
+		try {
+			losDto = getFertigungFac().losFindByPrimaryKey(losIId);
+
+			gesamtAbgeliefert = getFertigungFac().getErledigteMenge(
+					losDto.getIId(), theClientDto);
+
+		} catch (RemoteException e1) {
+			throwEJBExceptionLPRespectOld(e1);
+		}
+		iEbene = iEbene + 1;
+		// Zuerst Arbeit andrucken
+
+		Session session = FLRSessionFactory.getFactory().openSession();
+
+		String sQueryArbeitsplan = "FROM FLRLossollarbeitsplan AS s WHERE s.flrlos.i_id="
+				+ losIId + "ORDER BY s.flrartikel.c_nr ";
+
+		org.hibernate.Query hqueryArbeitsplan = session
+				.createQuery(sQueryArbeitsplan);
+
+		AuftragzeitenDto[] belegzeitenDtos = getZeiterfassungFac()
+				.getAllZeitenEinesBeleges(LocaleFac.BELEGART_LOS, losIId, null,
+						null, null, null, true, false, false, theClientDto);
+
+		List<?> resultListArbeitsplan = hqueryArbeitsplan.list();
+		Iterator<?> resultListIteratorArbeitsplan = resultListArbeitsplan
+				.iterator();
+
+		LinkedHashMap<Integer, Object[]> hmArbeitsplanEinesLoses = new LinkedHashMap();
+
+		while (resultListIteratorArbeitsplan.hasNext()) {
+			FLRLossollarbeitsplan arbeitsplan = (FLRLossollarbeitsplan) resultListIteratorArbeitsplan
+					.next();
+
+			Object[] zeile = new Object[GESAMTKALKULATION_ANZAHL_SPALTEN];
+			zeile[GESAMTKALKULATION_ARTIKELNUMMER] = arbeitsplan
+					.getFlrartikel().getC_nr();
+
+			ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
+					arbeitsplan.getFlrartikel().getI_id(), theClientDto);
+
+			if (aDto.getArtikelsprDto() != null) {
+				zeile[GESAMTKALKULATION_ARTIKELBEZEICHNUNG] = aDto
+						.getArtikelsprDto().getCBez();
+				zeile[GESAMTKALKULATION_ZUSATZBEZEICHNUNG] = aDto
+						.getArtikelsprDto().getCZbez();
+			}
+
+			zeile[GESAMTKALKULATION_EINHEIT] = arbeitsplan.getFlrartikel()
+					.getEinheit_c_nr();
+			zeile[GESAMTKALKULATION_SOLLMENGE] = arbeitsplan.getN_gesamtzeit();
+			zeile[GESAMTKALKULATION_ISTMENGE] = BigDecimal.ZERO;
+			zeile[GESAMTKALKULATION_ISTPREIS] = BigDecimal.ZERO;
+			zeile[GESAMTKALKULATION_LOSGROESSE] = arbeitsplan.getFlrlos()
+					.getN_losgroesse();
+			zeile[GESAMTKALKULATION_EBENE] = new Integer(iEbene);
+			zeile[GESAMTKALKULATION_ARBEITSZEIT] = Boolean.TRUE;
+			zeile[GESAMTKALKULATION_MENGENFAKTOR] = mengenfaktor;
+
+			if (!hmArbeitsplanEinesLoses.containsKey(arbeitsplan
+					.getFlrartikel().getI_id())) {
+				hmArbeitsplanEinesLoses.put(arbeitsplan.getFlrartikel()
+						.getI_id(), zeile);
+			}
+		}
+		session.close();
+
+		// Nun Zeiten addieren
+		for (int i = 0; i < belegzeitenDtos.length; i++) {
+
+			AuftragzeitenDto azDto = belegzeitenDtos[i];
+
+			Object[] zeile = null;
+
+			if (hmArbeitsplanEinesLoses.containsKey(azDto.getArtikelIId())) {
+
+				zeile = hmArbeitsplanEinesLoses.get(azDto.getArtikelIId());
+
+			} else {
+				ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
+						azDto.getArtikelIId(), theClientDto);
+
+				zeile = new Object[GESAMTKALKULATION_ANZAHL_SPALTEN];
+				zeile[GESAMTKALKULATION_ARTIKELNUMMER] = aDto.getCNr();
+
+				if (aDto.getArtikelsprDto() != null) {
+					zeile[GESAMTKALKULATION_ARTIKELBEZEICHNUNG] = aDto
+							.getArtikelsprDto().getCBez();
+					zeile[GESAMTKALKULATION_ZUSATZBEZEICHNUNG] = aDto
+							.getArtikelsprDto().getCZbez();
+				}
+
+				zeile[GESAMTKALKULATION_EINHEIT] = aDto.getEinheitCNr();
+				zeile[GESAMTKALKULATION_SOLLMENGE] = BigDecimal.ZERO;
+				zeile[GESAMTKALKULATION_ISTMENGE] = BigDecimal.ZERO;
+				zeile[GESAMTKALKULATION_ISTPREIS] = BigDecimal.ZERO;
+				zeile[GESAMTKALKULATION_LOSGROESSE] = losDto.getNLosgroesse();
+				zeile[GESAMTKALKULATION_EBENE] = new Integer(iEbene);
+				zeile[GESAMTKALKULATION_ARBEITSZEIT] = Boolean.TRUE;
+				zeile[GESAMTKALKULATION_MENGENFAKTOR] = mengenfaktor;
+			}
+
+			BigDecimal bIst = (BigDecimal) zeile[GESAMTKALKULATION_ISTMENGE];
+			if (bIst == null) {
+				bIst = BigDecimal.ZERO;
+			}
+			bIst = bIst.add(new BigDecimal(azDto.getDdDauer().doubleValue()));
+
+			zeile[GESAMTKALKULATION_ISTMENGE] = bIst;
+
+			BigDecimal bKosten = (BigDecimal) zeile[GESAMTKALKULATION_ARBEITSZEIT_KOSTEN];
+			if (bKosten == null) {
+				bKosten = BigDecimal.ZERO;
+			}
+
+			bKosten = bKosten.add(new BigDecimal(azDto.getBdKosten()
+					.doubleValue()));
+			zeile[GESAMTKALKULATION_ARBEITSZEIT_KOSTEN] = bKosten;
+
+			hmArbeitsplanEinesLoses.put(azDto.getArtikelIId(), zeile);
+
+		}
+
+		Iterator it = hmArbeitsplanEinesLoses.keySet().iterator();
+		while (it.hasNext()) {
+			Object[] zeile = hmArbeitsplanEinesLoses.get(it.next());
+
+			BigDecimal bIst = (BigDecimal) zeile[GESAMTKALKULATION_ISTMENGE];
+			if (bIst == null) {
+				bIst = BigDecimal.ZERO;
+			}
+
+			BigDecimal bKosten = (BigDecimal) zeile[GESAMTKALKULATION_ARBEITSZEIT_KOSTEN];
+			if (bKosten == null) {
+				bKosten = BigDecimal.ZERO;
+			}
+
+			if (bIst.doubleValue() != 0) {
+				zeile[GESAMTKALKULATION_ISTPREIS] = bKosten.divide(bIst, 4,
+						BigDecimal.ROUND_HALF_EVEN);
+				zeile[GESAMTKALKULATION_EINSTANDSPREIS] = bKosten.divide(bIst,
+						4, BigDecimal.ROUND_HALF_EVEN);
+			}
+
+			alDaten.add(zeile);
+
+		}
+
+		Session sessionSub = FLRSessionFactory.getFactory().openSession();
+		String sQuerySub = "FROM FLRLossollmaterial AS s WHERE s.flrlos.i_id="
+				+ losIId + "ORDER BY s.flrartikel.c_nr, s.t_aendern ";
+
+		org.hibernate.Query hquerySub = sessionSub.createQuery(sQuerySub);
+		List<?> resultListSub = hquerySub.list();
+		Iterator<?> resultListIteratorSub = resultListSub.iterator();
+
+		while (resultListIteratorSub.hasNext()) {
+			FLRLossollmaterial sollmaterial = (FLRLossollmaterial) resultListIteratorSub
+					.next();
+
+			Object[] zeile = new Object[GESAMTKALKULATION_ANZAHL_SPALTEN];
+			zeile[GESAMTKALKULATION_ARTIKELNUMMER] = sollmaterial
+					.getFlrartikel().getC_nr();
+
+			ArtikelDto aDto = getArtikelFac().artikelFindByPrimaryKeySmall(
+					sollmaterial.getFlrartikel().getI_id(), theClientDto);
+
+			if (aDto.getArtikelsprDto() != null) {
+				zeile[GESAMTKALKULATION_ARTIKELBEZEICHNUNG] = aDto
+						.getArtikelsprDto().getCBez();
+				zeile[GESAMTKALKULATION_ZUSATZBEZEICHNUNG] = aDto
+						.getArtikelsprDto().getCZbez();
+			}
+
+			zeile[GESAMTKALKULATION_EINHEIT] = sollmaterial.getFlrartikel()
+					.getEinheit_c_nr();
+			zeile[GESAMTKALKULATION_SOLLMENGE] = sollmaterial.getN_menge();
+			zeile[GESAMTKALKULATION_SOLLPREIS] = sollmaterial.getN_sollpreis();
+			zeile[GESAMTKALKULATION_ISTMENGE] = BigDecimal.ZERO;
+			zeile[GESAMTKALKULATION_ISTPREIS] = BigDecimal.ZERO;
+			zeile[GESAMTKALKULATION_LOSGROESSE] = sollmaterial.getFlrlos()
+					.getN_losgroesse();
+			zeile[GESAMTKALKULATION_EBENE] = new Integer(iEbene);
+			zeile[GESAMTKALKULATION_ARBEITSZEIT] = Boolean.FALSE;
+			zeile[GESAMTKALKULATION_MENGENFAKTOR] = mengenfaktor;
+
+			boolean bZeileHinzugefuegt = false;
+
+			for (Iterator<?> iter = sollmaterial.getIstmaterialset().iterator(); iter
+					.hasNext();) {
+				FLRLosistmaterial item = (FLRLosistmaterial) iter.next();
+				zeile[GESAMTKALKULATION_ISTMENGE] = item.getN_menge();
+
+				BigDecimal einstandswert = BigDecimal.ZERO;
+
+				List<SeriennrChargennrMitMengeDto> snrs = getLagerFac()
+						.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
+								LocaleFac.BELEGART_LOS, item.getI_id());
+
+				for (int m = 0; m < snrs.size(); m++) {
+
+					try {
+
+						BigDecimal bdEinstandwert = getLagerFac()
+								.getEinstandspreis(LocaleFac.BELEGART_LOS,
+										item.getI_id(),
+										snrs.get(m).getCSeriennrChargennr());
+						if (bdEinstandwert != null) {
+							einstandswert = einstandswert.add(bdEinstandwert);
+						}
+					} catch (RemoteException e) {
+						throwEJBExceptionLPRespectOld(e);
+					}
+				}
+
+				// lt. WH muss hier durch durch ist-Menge anstatt der
+				// abliefermenge dividiert werden
+				if (item.getN_menge().doubleValue() != 0
+						&& mengenfaktor != null) {
+					zeile[GESAMTKALKULATION_EINSTANDSPREIS] = new BigDecimal(
+							einstandswert.doubleValue()
+									/ item.getN_menge().doubleValue()
+									* mengenfaktor.doubleValue());
+				}
+
+				try {
+					LosistmaterialDto istmatDto = getFertigungFac()
+							.losistmaterialFindByPrimaryKey(item.getI_id());
+
+					// Ist der Ursprung aus einer Stueckliste
+
+					BigDecimal bdPreis = null;
+					if (Helper.short2boolean(istmatDto.getBAbgang())) {
+
+						bdPreis = getLagerFac()
+								.getGemittelterGestehungspreisEinerAbgangsposition(
+										LocaleFac.BELEGART_LOS,
+										istmatDto.getIId());
+
+					} else {
+						bdPreis = getLagerFac()
+								.getGemittelterEinstandspreisEinerZugangsposition(
+										LocaleFac.BELEGART_LOS,
+										istmatDto.getIId());
+
+					}
+
+					ArrayList<WarenzugangsreferenzDto> alZu = getLagerFac()
+							.getWareneingangsreferenz(
+									LocaleFac.BELEGART_LOS,
+									item.getI_id(),
+									getLagerFac()
+											.getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
+													LocaleFac.BELEGART_LOS,
+													item.getI_id()), false,
+									theClientDto);
+
+					for (int i = 0; i < alZu.size(); i++) {
+
+						WarenzugangsreferenzDto wzuDto = alZu.get(i);
+
+						Object[] zeileWarenzugang = zeile.clone();
+
+						zeileWarenzugang[GESAMTKALKULATION_BELEGART_ZUGANG] = wzuDto
+								.getBelegart();
+						zeileWarenzugang[GESAMTKALKULATION_BELEGNUMMER_ZUGANG] = wzuDto
+								.getBelegnummer();
+
+						zeileWarenzugang[GESAMTKALKULATION_VERBRAUCHTE_MENGE] = wzuDto
+								.getMenge();
+						zeileWarenzugang[GESAMTKALKULATION_ISTMENGE] = wzuDto
+								.getMenge();
+						zeileWarenzugang[GESAMTKALKULATION_ISTPREIS] = bdPreis;
+
+						alDaten.add(zeileWarenzugang);
+						// Wenn Ursprung aus LosAblieferung, dann rekursiv
+
+						if (wzuDto.getBelegart().equals(
+								LocaleFac.BELEGART_LOSABLIEFERUNG)) {
+
+							// Losablieferung holen
+							LosablieferungDto laDto = getFertigungFac()
+									.losablieferungFindByPrimaryKeyOhneExc(
+											wzuDto.getBelegartpositionIId(),
+											false, theClientDto);
+
+							BigDecimal mngfaktor = null;
+							if (laDto != null
+									&& wzuDto.getMenge().doubleValue() != 0
+									&& item.getN_menge().doubleValue() != 0) {
+								mngfaktor = wzuDto.getMenge().divide(
+										item.getN_menge(), 4,
+										BigDecimal.ROUND_HALF_EVEN);
+							}
+
+							alDaten = getDatenGesamtkalkulation(alDaten,
+									wzuDto.getBelegartIId(), iEbene, mngfaktor,
+									theClientDto);
+						}
+
+					}
+
+				} catch (RemoteException e) {
+					throwEJBExceptionLPRespectOld(e);
+				}
+
+				bZeileHinzugefuegt = true;
+
+			}
+
+			if (bZeileHinzugefuegt == false) {
+				alDaten.add(zeile);
+			}
+
+		}
+
+		return alDaten;
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printGesamtkalkulation(Integer losIId,
+			TheClientDto theClientDto) {
+		try {
+			this.useCase = UC_GESAMTKALKULATION;
+			LosDto losDto = getFertigungFac().losFindByPrimaryKey(losIId);
+
+			Map<String, Object> mapParameter = new TreeMap<String, Object>();
+
+			mapParameter.put("P_LOSNUMMER", losDto.getCNr());
+			mapParameter.put("P_PRODUKTIONSBEGINN",
+					losDto.getTProduktionsbeginn());
+			mapParameter.put("P_PRODUKTIONSENDE", losDto.getTProduktionsende());
+
+			if (losDto.getStuecklisteIId() != null) {
+				StuecklisteDto stkDto = getStuecklisteFac()
+						.stuecklisteFindByPrimaryKey(
+								losDto.getStuecklisteIId(), theClientDto);
+				mapParameter.put("P_STUECKLISTENUMMER", stkDto.getArtikelDto()
+						.getCNr());
+				mapParameter.put("P_STUECKLISTEBEZEICHNUNG", stkDto
+						.getArtikelDto().getArtikelsprDto().getCBez());
+
+			}
+
+			String sAuftragsnummer = null;
+			String sKunde = null;
+			if (losDto.getAuftragIId() != null) {
+				// Auftrag holen
+				AuftragDto auftragDto = getAuftragFac()
+						.auftragFindByPrimaryKey(losDto.getAuftragIId());
+				sAuftragsnummer = auftragDto.getCNr();
+
+				// Kunde holen
+				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
+						auftragDto.getKundeIIdAuftragsadresse(), theClientDto);
+
+				sKunde = kundeDto.getPartnerDto()
+						.getCName1nachnamefirmazeile1();
+
+				if (auftragDto.getProjektIId() != null) {
+					mapParameter.put(
+							"P_PROJEKTNUMMER",
+							getProjektFac().projektFindByPrimaryKey(
+									auftragDto.getProjektIId()).getCNr());
+				}
+
+			} else {
+				sAuftragsnummer = "";
+
+				if (losDto.getKundeIId() != null) {
+					KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
+							losDto.getKundeIId(), theClientDto);
+
+					sKunde = kundeDto.getPartnerDto()
+							.getCName1nachnamefirmazeile1();
+				} else {
+					sKunde = "";
+				}
+
+			}
+
+			mapParameter.put("P_AUFTRAGSNUMMER", sAuftragsnummer);
+			mapParameter.put("P_KUNDE", sKunde);
+
+			mapParameter.put("P_PROJEKT", losDto.getCProjekt());
+			mapParameter.put("P_KOMMENTAR", losDto.getCKommentar());
+			mapParameter.put("P_TEXT", losDto.getXText());
+
+			ArrayList alDaten = new ArrayList();
+
+			alDaten = getDatenGesamtkalkulation(alDaten, losIId, 0,
+					BigDecimal.ONE, theClientDto);
+
+			data = new Object[alDaten.size()][GESAMTKALKULATION_ANZAHL_SPALTEN];
+			data = (Object[][]) alDaten.toArray(data);
+
+			initJRDS(mapParameter, FertigungReportFac.REPORT_MODUL,
+					FertigungReportFac.REPORT_GESAMTALKULATION,
+					theClientDto.getMandant(), theClientDto.getLocUi(),
+					theClientDto);
+
+		} catch (RemoteException ex) {
+			throwEJBExceptionLPRespectOld(ex);
+		}
+		return getReportPrint();
+
 	}
 
 	public JasperPrintLP printNachkalkulation(Integer losIId,
@@ -9750,11 +11519,12 @@ public class FertigungReportFacBean extends LPReport implements
 
 			}
 
-			mapParameter.put("P_VKPREIS_AUFTRAGSPOSITION", vkPreisAuftragsposition);
-			mapParameter.put("P_VKPREISBASIS_STUECKLISTE", vkPreisbasisStueckliste);
+			mapParameter.put("P_VKPREIS_AUFTRAGSPOSITION",
+					vkPreisAuftragsposition);
+			mapParameter.put("P_VKPREISBASIS_STUECKLISTE",
+					vkPreisbasisStueckliste);
 			mapParameter.put("P_VKPREIS_STUECKLISTE", vkPreisStueckliste);
-			
-			
+
 			mapParameter.put("P_AUFTRAGNUMMER", sAuftragsnummer);
 			mapParameter.put("P_AUFTRAG_INTERNERKOMMENTAR", sInternerKommentar);
 			mapParameter.put("P_AUFTRAG_KUNDE_ABTEILUNG", sAbteilung);
@@ -9768,20 +11538,18 @@ public class FertigungReportFacBean extends LPReport implements
 			mapParameter.put("P_KUNDE", sKunde);
 			mapParameter.put("P_KUNDE_LIEFERADRESSE", sKundeLieferadresse);
 			mapParameter.put("P_LOSGROESSE", losDto.getNLosgroesse());
-			
-			
-			BigDecimal abgeliefert=BigDecimal.ZERO;
-			
-			
+
+			BigDecimal abgeliefert = BigDecimal.ZERO;
 
 			LosablieferungDto[] losablieferungDtos = getFertigungFac()
 					.losablieferungFindByLosIId(losDto.getIId(), false,
 							theClientDto);
 			BigDecimal bdAbgeliefert = new BigDecimal(0.0000);
 			for (int j = 0; j < losablieferungDtos.length; j++) {
-				abgeliefert=abgeliefert.add(losablieferungDtos[j].getNMenge());
+				abgeliefert = abgeliefert
+						.add(losablieferungDtos[j].getNMenge());
 			}
-			
+
 			mapParameter.put("P_ABGELIEFERTEMENGE", abgeliefert);
 
 			mapParameter.put("P_LOSNUMMER", losDto.getCNr());
@@ -9812,8 +11580,8 @@ public class FertigungReportFacBean extends LPReport implements
 
 				mapParameter.put("P_MENGENEINHEIT", stkDto.getArtikelDto()
 						.getEinheitCNr());
-				mapParameter.put("P_MINDESTDECKUNGSBEITRAG", stkDto.getArtikelDto()
-						.getFMindestdeckungsbeitrag());
+				mapParameter.put("P_MINDESTDECKUNGSBEITRAG", stkDto
+						.getArtikelDto().getFMindestdeckungsbeitrag());
 				mapParameter.put("P_STUECKLISTEBEZEICHNUNG", stkDto
 						.getArtikelDto().getArtikelsprDto().getCBez());
 
@@ -9907,7 +11675,7 @@ public class FertigungReportFacBean extends LPReport implements
 			// PJ17759
 			LosgutschlechtDto[] lgsDtos = getFertigungFac()
 					.losgutschlechtFindAllFehler(losIId);
-			Object[][] oSubData = new Object[lgsDtos.length][8];
+			Object[][] oSubData = new Object[lgsDtos.length][12];
 
 			for (int i = 0; i < lgsDtos.length; i++) {
 				LossollarbeitsplanDto sollDto = getFertigungFac()
@@ -9949,16 +11717,25 @@ public class FertigungReportFacBean extends LPReport implements
 						lgsDtos[i].getFehlerIId(), theClientDto);
 
 				oSubData[i][4] = fDto.getCBez();
-				oSubData[i][5] = lgsDtos[i].getCKommentar();
 
-				oSubData[i][6] = person;
-				oSubData[i][7] = zeitpunkt;
+				if (fDto.getFehlersprDto() != null) {
+					oSubData[i][5] = fDto.getFehlersprDto().getCBez();
+				}
+
+				oSubData[i][6] = lgsDtos[i].getCKommentar();
+
+				oSubData[i][7] = person;
+				oSubData[i][8] = zeitpunkt;
+				oSubData[i][9] = lgsDtos[i].getNGut();
+				oSubData[i][10] = lgsDtos[i].getNSchlecht();
+				oSubData[i][11] = lgsDtos[i].getNInarbeit();
 
 			}
 
 			String[] fieldnames = new String[] { "F_AGNUMMER", "F_UAGNUMMER",
-					"F_ARTIKEL", "F_BEZEICHNUNG", "F_FEHLER",
-					"F_FEHLER_KOMMENTAR", "F_PERSONMASCHINE", "F_ZEITPUNKT" };
+					"F_ARTIKEL", "F_BEZEICHNUNG", "F_FEHLER", "F_FEHLERSPR",
+					"F_FEHLER_KOMMENTAR", "F_PERSONMASCHINE", "F_ZEITPUNKT",
+					"F_GUT", "F_SCHLECHT", "F_INARBEIT" };
 
 			mapParameter.put("P_SUBREPORT_FEHLER", new LPDatenSubreport(
 					oSubData, fieldnames));
@@ -9976,23 +11753,31 @@ public class FertigungReportFacBean extends LPReport implements
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printFehlerstatistik(java.sql.Timestamp tVon,
 			java.sql.Timestamp tBis, Integer iSortierung,
-			TheClientDto theClientDto) {
+			boolean bAlleAnzeigen, TheClientDto theClientDto) {
 		this.useCase = UC_FEHLERSTATISTIK;
 		Map<String, Object> mapParameter = new TreeMap<String, Object>();
 
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		org.hibernate.Session session = factory.openSession();
 
-		String queryString = "SELECT lgs FROM FLRLosgutschlecht lgs LEFT OUTER JOIN lgs.flrfehler fehler LEFT OUTER JOIN lgs.flrlossollarbeitsplan.flrlos.flrstueckliste.flrartikel flra WHERE  ((lgs.flrlossollarbeitsplan.flrlos.t_erledigt>=' "
-				+ Helper.formatTimestampWithSlashes(tVon)
-				+ "' AND lgs.flrlossollarbeitsplan.flrlos.t_erledigt<' "
-				+ Helper.formatTimestampWithSlashes(tBis)
-				+ "') OR (lgs.flrlossollarbeitsplan.flrlos.t_manuellerledigt>=' "
-				+ Helper.formatTimestampWithSlashes(tVon)
-				+ "' AND lgs.flrlossollarbeitsplan.flrlos.t_manuellerledigt<' "
-				+ Helper.formatTimestampWithSlashes(tBis)
-				+ "')) AND lgs.flrlossollarbeitsplan.flrlos.status_c_nr<>'"
-				+ FertigungFac.STATUS_STORNIERT + "' ";
+		String queryString = "SELECT lgs FROM FLRLosgutschlecht lgs LEFT OUTER JOIN lgs.flrfehler fehler LEFT OUTER JOIN lgs.flrlossollarbeitsplan.flrlos.flrstueckliste.flrartikel flra WHERE lgs.flrlossollarbeitsplan.flrlos.status_c_nr<>'"
+				+ FertigungFac.STATUS_STORNIERT + "'";
+
+		if (bAlleAnzeigen == false) {
+			queryString += " AND ((lgs.flrlossollarbeitsplan.flrlos.t_erledigt>=' "
+					+ Helper.formatTimestampWithSlashes(tVon)
+					+ "' AND lgs.flrlossollarbeitsplan.flrlos.t_erledigt<' "
+					+ Helper.formatTimestampWithSlashes(tBis)
+					+ "') OR (lgs.flrlossollarbeitsplan.flrlos.t_manuellerledigt>=' "
+					+ Helper.formatTimestampWithSlashes(tVon)
+					+ "' AND lgs.flrlossollarbeitsplan.flrlos.t_manuellerledigt<' "
+					+ Helper.formatTimestampWithSlashes(tBis) + "')) ";
+		} else {
+			queryString += " AND lgs.flrlossollarbeitsplan.flrlos.t_produktionsbeginn>=' "
+					+ Helper.formatTimestampWithSlashes(tVon)
+					+ "' AND lgs.flrlossollarbeitsplan.flrlos.t_produktionsbeginn<' "
+					+ Helper.formatTimestampWithSlashes(tBis) + "' ";
+		}
 
 		String sortierung = "";
 		if (iSortierung == FertigungReportFac.SORTIERUNG_FEHLERSTATISTIK_ARTIKELNUMMER) {
@@ -10113,6 +11898,7 @@ public class FertigungReportFacBean extends LPReport implements
 
 		mapParameter.put("P_VON", tVon);
 		mapParameter.put("P_BIS", new Timestamp(tBis.getTime() - 3600000));
+		mapParameter.put("P_ALLE_LOSE_ANZEIGEN", new Boolean(bAlleAnzeigen));
 
 		data = new Object[alDaten.size()][FEHLERSTATISTIK_SPALTENANZAHL];
 		data = (Object[][]) alDaten.toArray(data);
@@ -10265,36 +12051,40 @@ public class FertigungReportFacBean extends LPReport implements
 							.getFlrauftragposition()
 							.getN_nettogesamtpreisplusversteckteraufschlagminusrabatte();
 				} else {
-					
+
 					if (los.getFlrstueckliste() != null) {
-						
-						Integer kundeIId=null;
-						
-						if(los.getFlrauftrag()!=null){
-							kundeIId=los.getFlrauftrag().getFlrkunde().getI_id();
+
+						Integer kundeIId = null;
+
+						if (los.getFlrauftrag() != null) {
+							kundeIId = los.getFlrauftrag().getFlrkunde()
+									.getI_id();
 						}
-						if(kundeIId==null && los.getFlrkunde()!=null){
-							kundeIId=los.getFlrkunde().getI_id();
+						if (kundeIId == null && los.getFlrkunde() != null) {
+							kundeIId = los.getFlrkunde().getI_id();
 						}
-						
-						
-						if(kundeIId != null){
-							KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
-									kundeIId, theClientDto);
+
+						if (kundeIId != null) {
+							KundeDto kundeDto = getKundeFac()
+									.kundeFindByPrimaryKey(kundeIId,
+											theClientDto);
 
 							MwstsatzDto mwstsatzDtoAktuell = getMandantFac()
 									.mwstsatzFindByMwstsatzbezIIdAktuellster(
-											kundeDto.getMwstsatzbezIId(), theClientDto);
+											kundeDto.getMwstsatzbezIId(),
+											theClientDto);
 
 							VkpreisfindungDto vkpreisfindungDto = getVkPreisfindungFac()
 									.verkaufspreisfindung(
-											los.getFlrstueckliste().getArtikel_i_id(),
+											los.getFlrstueckliste()
+													.getArtikel_i_id(),
 											kundeIId,
 											losDto.getNLosgroesse(),
 											losDto.getTProduktionsende(),
 											kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
 											mwstsatzDtoAktuell.getIId(),
-											theClientDto.getSMandantenwaehrung(),
+											theClientDto
+													.getSMandantenwaehrung(),
 											theClientDto);
 
 							VerkaufspreisDto kundenVKPreisDto = Helper
@@ -10306,17 +12096,17 @@ public class FertigungReportFacBean extends LPReport implements
 							VkPreisfindungEinzelverkaufspreisDto vkpreisDto = getVkPreisfindungFac()
 									.getArtikeleinzelverkaufspreis(
 											los.getFlrstueckliste()
-													.getArtikel_i_id(), null,
-											theClientDto.getSMandantenwaehrung(),
+													.getArtikel_i_id(),
+											null,
+											theClientDto
+													.getSMandantenwaehrung(),
 											theClientDto);
 							if (vkpreisDto != null
 									&& vkpreisDto.getNVerkaufspreisbasis() != null) {
 								vkPreis = vkpreisDto.getNVerkaufspreisbasis();
 							}
 						}
-						
-						
-						
+
 					}
 				}
 
@@ -10355,7 +12145,7 @@ public class FertigungReportFacBean extends LPReport implements
 							Timestamp tsBuchungszeit = null;
 
 							List<SeriennrChargennrMitMengeDto> snrDtos = getLagerFac()
-									.getAllSeriennrchargennrEinerBelegartposition(
+									.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 											LocaleFac.BELEGART_LOS,
 											item.getI_id());
 
@@ -10451,7 +12241,7 @@ public class FertigungReportFacBean extends LPReport implements
 								Timestamp tsBuchungszeit = null;
 
 								List<SeriennrChargennrMitMengeDto> snrDtos = getLagerFac()
-										.getAllSeriennrchargennrEinerBelegartposition(
+										.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 												LocaleFac.BELEGART_LOS,
 												item.getI_id());
 
@@ -10956,8 +12746,10 @@ public class FertigungReportFacBean extends LPReport implements
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printAblieferungsstatistik(java.sql.Date dVon,
 			java.sql.Date dBis, Integer artikelIId,
-			boolean bSortiertNachArtikel, boolean bVerdichtetNachArtikel,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			int iSortierungAblieferungsstatistik,
+			boolean bVerdichtetNachArtikel,
+			boolean bNurKopfloseanhandStueckliste, TheClientDto theClientDto)
+			throws EJBExceptionLP {
 		Session session = null;
 		try {
 
@@ -10967,89 +12759,164 @@ public class FertigungReportFacBean extends LPReport implements
 			this.index = -1;
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			session = factory.openSession();
-			Criteria c = session.createCriteria(FLRLosablieferung.class);
+
+			String sQuery = "SELECT l,(SELECT COUNT(*) FROM FLRStuecklisteposition s WHERE s.flrartikel=l.flrlos.flrstueckliste.artikel_i_id) FROM FLRLosablieferung l WHERE l.flrlos.mandant_c_nr='"
+					+ theClientDto.getMandant() + "'";
+
 			if (dVon != null) {
 				dVon = Helper.cutDate(dVon);
 
-				c.add(Restrictions.ge(
-						FertigungFac.FLR_LOSABLIEFERUNG_T_AENDERN, dVon));
+				sQuery += " AND l.t_aendern>='"
+						+ Helper.formatDateWithSlashes(dVon) + "'";
 
 				mapParameter.put("P_VON", new Timestamp(dVon.getTime()));
 
 			}
 			if (dBis != null) {
 
-				c.add(Restrictions.lt(
-						FertigungFac.FLR_LOSABLIEFERUNG_T_AENDERN, Helper
-								.cutTimestamp(new Timestamp(
-										dBis.getTime() + 24 * 3600000))));
+				sQuery += " AND l.t_aendern<='"
+						+ Helper.formatDateWithSlashes(new java.sql.Date(Helper
+								.cutTimestamp(
+										new Timestamp(
+												dBis.getTime() + 24 * 3600000))
+								.getTime())) + "'";
 
 				mapParameter.put("P_BIS", new Timestamp(dBis.getTime()));
 
 			}
-			Criteria cLos = c
-					.createCriteria(FertigungFac.FLR_LOSABLIEFERUNG_FLRLOS);
-			// Filter nach Mandant
-			cLos.add(Restrictions.eq(FertigungFac.FLR_LOS_MANDANT_C_NR,
-					theClientDto.getMandant()));
 
-			Criteria cStueckliste = cLos
-					.createCriteria(FertigungFac.FLR_LOS_FLRSTUECKLISTE);
-			Criteria cArtikel = cStueckliste
-					.createCriteria(StuecklisteFac.FLR_STUECKLISTE_FLRARTIKEL);
 			if (artikelIId != null) {
-				cArtikel.add(Restrictions.eq("i_id", artikelIId));
+				sQuery += " AND l.flrlos.flrstueckliste.artikel_i_id="
+						+ artikelIId;
+
 			}
 
 			mapParameter.put("P_VERDICHTET",
 					new Boolean(bVerdichtetNachArtikel));
 
-			if (bSortiertNachArtikel) {
-				cArtikel.addOrder(Order.asc("c_nr"));
+			mapParameter.put("P_NURKOPFLOSE_ANHAND_STUECKLISTE", new Boolean(
+					bNurKopfloseanhandStueckliste));
+
+			if (iSortierungAblieferungsstatistik == ABLIEFERSTATISTIK_OPTION_SORTIERUNG_ARTIKEL) {
+
+				sQuery += " ORDER BY l.flrlos.flrstueckliste.flrartikel.c_nr, l.t_aendern";
+
 				mapParameter.put(
 						LPReport.P_SORTIERUNG,
 						getTextRespectUISpr("artikel.artikelnummerlang",
 								theClientDto.getMandant(),
 								theClientDto.getLocUi()));
-			} else {
+			} else if (iSortierungAblieferungsstatistik == ABLIEFERSTATISTIK_OPTION_SORTIERUNG_ABLIEFERDATUM) {
 
 				mapParameter.put(
 						LPReport.P_SORTIERUNG,
 						getTextRespectUISpr("fert.ablieferdatum",
 								theClientDto.getMandant(),
 								theClientDto.getLocUi()));
+				sQuery += " ORDER BY l.t_aendern";
+			} else if (iSortierungAblieferungsstatistik == ABLIEFERSTATISTIK_OPTION_SORTIERUNG_AUFTRAG) {
+
+				mapParameter
+						.put(LPReport.P_SORTIERUNG,
+								getTextRespectUISpr(
+										"fert.ablieferstatistik.sortierung.auftragsnummer",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()));
+				sQuery += " ORDER BY l.flrlos.flrstueckliste.flrartikel.c_nr, l.t_aendern";
 			}
 
-			c.addOrder(Order.desc(FertigungFac.FLR_LOSABLIEFERUNG_T_AENDERN));
+			org.hibernate.Query hquery = session.createQuery(sQuery);
 
-			List<?> list = c.list();
-			data = new Object[list.size()][10];
-			int i = 0;
-			for (Iterator<?> iter = list.iterator(); iter.hasNext(); i++) {
-				FLRLosablieferung losab = (FLRLosablieferung) iter.next();
-				ArtikelDto artikelDto = getArtikelFac()
-						.artikelFindByPrimaryKeySmall(
-								losab.getFlrlos().getFlrstueckliste()
-										.getFlrartikel().getI_id(),
-								theClientDto);
-				data[i][ABLIEF_LOSNUMMER] = losab.getFlrlos().getC_nr();
-				data[i][ABLIEF_IDENT] = artikelDto.getCNr();
-				data[i][ABLIEF_BEZEICHNUNG] = artikelDto.getArtikelsprDto()
-						.getCBez();
-				if (artikelDto.getArtikelsprDto().getCZbez() != null) {
-					data[i][ABLIEF_ZUSATZBEZEICHNUNG] = artikelDto
-							.getArtikelsprDto().getCZbez();
-				} else {
-					data[i][ABLIEF_ZUSATZBEZEICHNUNG] = "";
+			List<?> list = hquery.list();
+			ArrayList alDaten = new ArrayList();
+
+			Iterator<?> iter = list.iterator();
+
+			while (iter.hasNext()) {
+				Object[] o = (Object[]) iter.next();
+				FLRLosablieferung losab = (FLRLosablieferung) o[0];
+
+				Long verwendungsanzahlInstuecklisten = (Long) o[1];
+
+				if (bNurKopfloseanhandStueckliste) {
+
+					if (verwendungsanzahlInstuecklisten != null
+							&& verwendungsanzahlInstuecklisten.longValue() > 0) {
+						continue;
+					}
+
 				}
-				data[i][ABLIEF_DATUM] = losab.getT_aendern();
-				data[i][ABLIEF_MENGE] = losab.getN_menge();
-				data[i][ABLIEF_ABLIEFERPREIS] = losab.getN_gestehungspreis();
-				data[i][ABLIEF_MATERIALWERT] = losab.getN_materialwert();
-				data[i][ABLIEF_ARBEITSZEITWERT] = losab.getN_arbeitszeitwert();
-				data[i][ABLIEF_WERT] = losab.getN_gestehungspreis().multiply(
-						losab.getN_menge());
+
+				if (losab.getFlrlos().getFlrstueckliste() != null) {
+
+					ArtikelDto artikelDto = getArtikelFac()
+							.artikelFindByPrimaryKeySmall(
+									losab.getFlrlos().getFlrstueckliste()
+											.getFlrartikel().getI_id(),
+									theClientDto);
+
+					Object[] oZeile = new Object[ABLIEF_ANZAHL_SPALTEN];
+
+					oZeile[ABLIEF_LOSNUMMER] = losab.getFlrlos().getC_nr();
+					oZeile[ABLIEF_IDENT] = artikelDto.getCNr();
+					oZeile[ABLIEF_BEZEICHNUNG] = artikelDto.getArtikelsprDto()
+							.getCBez();
+					if (artikelDto.getArtikelsprDto().getCZbez() != null) {
+						oZeile[ABLIEF_ZUSATZBEZEICHNUNG] = artikelDto
+								.getArtikelsprDto().getCZbez();
+					} else {
+						oZeile[ABLIEF_ZUSATZBEZEICHNUNG] = "";
+					}
+					oZeile[ABLIEF_DATUM] = losab.getT_aendern();
+					oZeile[ABLIEF_MENGE] = losab.getN_menge();
+					oZeile[ABLIEF_ABLIEFERPREIS] = losab.getN_gestehungspreis();
+					oZeile[ABLIEF_MATERIALWERT] = losab.getN_materialwert();
+					oZeile[ABLIEF_ARBEITSZEITWERT] = losab
+							.getN_arbeitszeitwert();
+					oZeile[ABLIEF_WERT] = losab.getN_gestehungspreis()
+							.multiply(losab.getN_menge());
+
+					// Auftrag
+					String auftragsnummer = null;
+
+					if (losab.getFlrlosreport().getFlrauftrag() != null) {
+						auftragsnummer = losab.getFlrlosreport()
+								.getFlrauftrag().getC_nr();
+					} else if (losab.getFlrlosreport().getFlrauftragposition() != null) {
+						auftragsnummer = losab.getFlrlosreport()
+								.getFlrauftragposition().getFlrauftrag()
+								.getC_nr();
+					}
+
+					oZeile[ABLIEF_AUFRAGSNUMMER] = auftragsnummer;
+					alDaten.add(oZeile);
+				}
 			}
+
+			// PJ18868
+			if (iSortierungAblieferungsstatistik == ABLIEFERSTATISTIK_OPTION_SORTIERUNG_AUFTRAG) {
+				for (int k = alDaten.size() - 1; k > 0; --k) {
+					for (int j = 0; j < k; ++j) {
+						String a1 = (String) ((Object[]) alDaten.get(j))[ABLIEF_AUFRAGSNUMMER];
+						if (a1 == null) {
+							a1 = "";
+						}
+						String a2 = (String) ((Object[]) alDaten.get(j + 1))[ABLIEF_AUFRAGSNUMMER];
+						if (a2 == null) {
+							a2 = "";
+						}
+						if (a1.compareTo(a2) > 0) {
+							Object[] zeileTemp = (Object[]) alDaten.get(j);
+							alDaten.set(j, alDaten.get(j + 1));
+							alDaten.set(j + 1, zeileTemp);
+
+						}
+					}
+				}
+			}
+
+			data = new Object[alDaten.size()][ABLIEF_ANZAHL_SPALTEN];
+			data = (Object[][]) alDaten.toArray(data);
 
 			initJRDS(mapParameter, FertigungReportFac.REPORT_MODUL,
 					FertigungReportFac.REPORT_ABLIEFERUNGSSTATISTIK,
@@ -11355,6 +13222,10 @@ public class FertigungReportFacBean extends LPReport implements
 				lagerstand = new BigDecimal(99999999);
 			}
 			oZeile[FT_LAGERSTAND] = lagerstand;
+
+			oZeile[FT_FRUEHESTER_EINTREFFTERMIN] = getFertigungFac()
+					.getFruehesterEintrefftermin(artikelDto.getIId(),
+							theClientDto);
 
 			String einrueckung = "";
 			for (int i = 0; i < iEbene; i++) {
@@ -12050,7 +13921,7 @@ public class FertigungReportFacBean extends LPReport implements
 
 		mapParameter.put("P_NUREIGENGEFERTIGTEARTIKEL", new Boolean(
 				bNurEigengefertigteArtikel));
-		mapParameter.put("P_ALLEOHNEEIGENGEFERTIGTEARTIEL", new Boolean(
+		mapParameter.put("P_ALLEOHNEEIGENGEFERTIGTEARTIKEL", new Boolean(
 				bAlleOhneEigengefertigteArtikel));
 
 		initJRDS(mapParameter, FertigungReportFac.REPORT_MODUL,
@@ -12094,7 +13965,7 @@ public class FertigungReportFacBean extends LPReport implements
 					FLRLosistmaterial item = (FLRLosistmaterial) iter.next();
 
 					List<SeriennrChargennrMitMengeDto> snrDtos = getLagerFac()
-							.getAllSeriennrchargennrEinerBelegartposition(
+							.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 									LocaleFac.BELEGART_LOS, item.getI_id());
 
 					for (int k = 0; k < snrDtos.size(); k++) {
@@ -12180,12 +14051,15 @@ public class FertigungReportFacBean extends LPReport implements
 				}
 
 				zeile[MATERIAL_SOLLMENGE] = sollmaterial.getN_menge();
+
 				zeile[MATERIAL_ISTMENGE] = bdAusgegeben;
 				zeile[MATERIAL_SOLLPREIS] = sollmaterial.getN_sollpreis();
 				zeile[MATERIAL_ISTPREIS] = preis;
 
 				LossollmaterialDto sollMatDto = getFertigungFac()
 						.lossollmaterialFindByPrimaryKey(sollmaterial.getI_id());
+
+				zeile[MATERIAL_EINHEIT] = sollMatDto.getEinheitCNr();
 
 				ArtikellieferantDto dto = getArtikelFac()
 						.getArtikelEinkaufspreis(

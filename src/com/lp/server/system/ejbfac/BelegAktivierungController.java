@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,7 +34,10 @@ package com.lp.server.system.ejbfac;
 
 import java.rmi.RemoteException;
 import java.sql.Timestamp;
+import java.util.Collections;
+import java.util.List;
 
+import com.lp.server.system.service.BelegPruefungDto;
 import com.lp.server.system.service.IAktivierbarControlled;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Validator;
@@ -49,7 +52,7 @@ public class BelegAktivierungController implements IAktivierbarControlled {
 	}
 
 	@Override
-	public void aktiviereBelegControlled(Integer iid, Timestamp t, TheClientDto theClientDto)
+	public BelegPruefungDto aktiviereBelegControlled(Integer iid, Timestamp t, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
 		
 		Validator.notNull(iid, "iid");
@@ -57,21 +60,61 @@ public class BelegAktivierungController implements IAktivierbarControlled {
 		Validator.notNull(t, "t");
 		
 		facbean.pruefeAktivierbar(iid, theClientDto);
-		if(facbean.hatAenderungenNach(iid, t)) {
+		List<Timestamp> timestamps = facbean.getAenderungsZeitpunkte(iid);
+		timestamps.removeAll(Collections.singleton(null));
+		Timestamp tAendern = Collections.max(timestamps);
+		
+		if(tAendern.after(t)) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_AKTIVIEREN_BELEG_WURDE_GEAENDERT,
 					"Berechnungszeitpunkt: " + t.toString());
 		}
 		facbean.aktiviereBeleg(iid, theClientDto);
+		return null ;
 	}
 
 	@Override
-	public Timestamp berechneBelegControlled(Integer iid, TheClientDto theClientDto)
+	public BelegPruefungDto berechneBelegControlled(Integer iid, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
 		Validator.notNull(iid, "iid");
 		Validator.notNull(theClientDto, "theClientDto");
 		facbean.pruefeAktivierbar(iid, theClientDto);
-		facbean.berechneBeleg(iid, theClientDto);
-		return new Timestamp(System.currentTimeMillis());
+		Timestamp t = facbean.berechneBeleg(iid, theClientDto);
+		t = roundUpLikeDB(t);
+		
+		BelegPruefungDto pruefungDto = new BelegPruefungDto(iid) ;
+		pruefungDto.setBerechnungsZeitpunkt(t) ;
+		return pruefungDto ;
 	}
-
+	
+	
+	public BelegPruefungDto berechneAktiviereBelegControlled(Integer iid, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		BelegPruefungDto pruefungDto = berechneBelegControlled(iid, theClientDto) ;
+		aktiviereBelegControlled(iid, pruefungDto.getBerechnungsZeitpunkt(), theClientDto);
+		return pruefungDto ;
+	}
+	
+	/**
+	 * Rundet die Millisekunden des <code>Timestamp t</code> <b>AUF</b>,
+	 * wie es der Typ <code>datetime</code> der MSSQL DB macht.<br>
+	 * <b>Es wird immer nur aufgerundet, nicht ab!</b><br>
+	 * 2 wird aufgerundet auf 3<br>
+	 * 5 -> 7<br>
+	 * 6 -> 7<br>
+	 * 9 ->10<br>
+	 * 
+	 * Alle anderen Werte werden nicht ver&auml;ndert.
+	 * @param t
+	 * @return den aufgerundeten Timestamp
+	 */
+	protected Timestamp roundUpLikeDB(Timestamp t) {
+		int ms = (int) (t.getTime() % 10);
+		int msRounded = 0;
+		
+		if(ms == 2) msRounded = 3;
+		else if(ms == 5 || ms == 6) msRounded = 7;
+		else if(ms == 9) msRounded = 10;
+		else msRounded = ms;
+		
+		return new Timestamp(t.getTime()-ms+msRounded);
+	}
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -46,7 +46,7 @@ import com.lp.server.util.ICNr;
 import com.lp.server.util.IShopgruppeData;
 
 @NamedQueries({
-		@NamedQuery(name = Shopgruppe.QueryFindByMandantCNr, query = "SELECT OBJECT(o) FROM Shopgruppe o WHERE o.mandantCNr = ?1 ORDER BY o.iSort ASC"),
+		@NamedQuery(name = Shopgruppe.QueryFindByMandantCNr, query = "SELECT OBJECT(o) FROM Shopgruppe o WHERE o.mandantCNr = :mandant ORDER BY o.iSort ASC"),
 		@NamedQuery(name = "ShopgruppefindAllRoot", query = "SELECT OBJECT(o) FROM Shopgruppe o WHERE o.shopgruppeIId IS NULL"),
 		@NamedQuery(name = Shopgruppe.QueryFindByParentIId, query = "SELECT OBJECT(o) FROM Shopgruppe o WHERE o.shopgruppeIId= :id"),
 		@NamedQuery(name = Shopgruppe.QueryFindByCNrMandantCNr, query = "SELECT OBJECT(o) FROM Shopgruppe o WHERE o.cNr = ?1 AND o.mandantCNr = ?2"),

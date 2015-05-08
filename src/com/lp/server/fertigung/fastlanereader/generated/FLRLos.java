@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,21 +19,22 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.fertigung.fastlanereader.generated;
 
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport;
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
+import com.lp.server.projekt.fastlanereader.generated.FLRProjekt;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRFertigungsgruppe;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRStueckliste;
 import java.io.Serializable;
@@ -95,10 +96,16 @@ public class FLRLos implements Serializable {
     private Integer kostenstelle_i_id;
 
     /** nullable persistent field */
+    private Double f_bewertung;
+
+    /** nullable persistent field */
     private FLRStueckliste flrstueckliste;
 
     /** nullable persistent field */
     private FLRAuftragReport flrauftrag;
+
+    /** nullable persistent field */
+    private FLRProjekt flrprojekt;
 
     /** nullable persistent field */
     private FLRFertigungsgruppe flrfertigungsgruppe;
@@ -113,7 +120,7 @@ public class FLRLos implements Serializable {
     private Set technikerset;
 
     /** full constructor */
-    public FLRLos(String mandant_c_nr, String c_nr, String status_c_nr, String c_projekt, Integer stueckliste_i_id, Integer personal_i_id_techniker, Integer fertigungsgruppe_i_id, Date t_produktionsende, Date t_produktionsbeginn, Date t_ausgabe, Date t_erledigt, Date t_manuellerledigt, Date t_produktionsstop, BigDecimal n_losgroesse, Integer kostenstelle_i_id, FLRStueckliste flrstueckliste, FLRAuftragReport flrauftrag, FLRFertigungsgruppe flrfertigungsgruppe, FLRKunde flrkunde, Set ablieferungset, Set technikerset) {
+    public FLRLos(String mandant_c_nr, String c_nr, String status_c_nr, String c_projekt, Integer stueckliste_i_id, Integer personal_i_id_techniker, Integer fertigungsgruppe_i_id, Date t_produktionsende, Date t_produktionsbeginn, Date t_ausgabe, Date t_erledigt, Date t_manuellerledigt, Date t_produktionsstop, BigDecimal n_losgroesse, Integer kostenstelle_i_id, Double f_bewertung, FLRStueckliste flrstueckliste, FLRAuftragReport flrauftrag, FLRProjekt flrprojekt, FLRFertigungsgruppe flrfertigungsgruppe, FLRKunde flrkunde, Set ablieferungset, Set technikerset) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
         this.status_c_nr = status_c_nr;
@@ -129,8 +136,10 @@ public class FLRLos implements Serializable {
         this.t_produktionsstop = t_produktionsstop;
         this.n_losgroesse = n_losgroesse;
         this.kostenstelle_i_id = kostenstelle_i_id;
+        this.f_bewertung = f_bewertung;
         this.flrstueckliste = flrstueckliste;
         this.flrauftrag = flrauftrag;
+        this.flrprojekt = flrprojekt;
         this.flrfertigungsgruppe = flrfertigungsgruppe;
         this.flrkunde = flrkunde;
         this.ablieferungset = ablieferungset;
@@ -275,6 +284,14 @@ public class FLRLos implements Serializable {
         this.kostenstelle_i_id = kostenstelle_i_id;
     }
 
+    public Double getF_bewertung() {
+        return this.f_bewertung;
+    }
+
+    public void setF_bewertung(Double f_bewertung) {
+        this.f_bewertung = f_bewertung;
+    }
+
     public FLRStueckliste getFlrstueckliste() {
         return this.flrstueckliste;
     }
@@ -289,6 +306,14 @@ public class FLRLos implements Serializable {
 
     public void setFlrauftrag(FLRAuftragReport flrauftrag) {
         this.flrauftrag = flrauftrag;
+    }
+
+    public FLRProjekt getFlrprojekt() {
+        return this.flrprojekt;
+    }
+
+    public void setFlrprojekt(FLRProjekt flrprojekt) {
+        this.flrprojekt = flrprojekt;
     }
 
     public FLRFertigungsgruppe getFlrfertigungsgruppe() {

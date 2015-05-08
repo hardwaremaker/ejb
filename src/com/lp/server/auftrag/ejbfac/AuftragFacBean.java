@@ -1,33 +1,33 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.auftrag.ejbfac;
@@ -60,6 +60,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.naming.NamingException;
 import javax.net.ssl.HttpsURLConnection;
@@ -86,6 +87,7 @@ import org.jboss.annotation.ejb.TransactionTimeout;
 import com.lp.server.artikel.service.ArtgruDto;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.artikel.service.ArtikellieferantDto;
 import com.lp.server.artikel.service.ArtikelreservierungDto;
 import com.lp.server.artikel.service.LagerDto;
 import com.lp.server.artikel.service.VerkaufspreisDto;
@@ -108,12 +110,12 @@ import com.lp.server.auftrag.service.AuftragzeitenDto;
 import com.lp.server.auftrag.service.IOrderResponse;
 import com.lp.server.auftrag.service.IOrderResponseProducer;
 import com.lp.server.auftrag.service.OrderResponseCC;
-import com.lp.server.auftrag.service.SichtLieferstatusDto;
 import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.bestellung.service.BestellungDto;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungAuftragszuordnungDto;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.finanz.service.KontoDto;
+import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferschein;
 import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.lieferschein.service.LieferscheinpositionDto;
 import com.lp.server.partner.ejb.Kunde;
@@ -148,7 +150,7 @@ import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLSHIPMENTPARTIES;
 import com.lp.server.schema.opentrans.cc.orderresponse.XMLXMLSUPPLIERPARTY;
 import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.system.ejb.Versandweg;
-import com.lp.server.system.ejbfac.BelegAktivierungController;
+import com.lp.server.system.ejbfac.BelegAktivierungFac;
 import com.lp.server.system.ejbfac.CleverCureProducer;
 import com.lp.server.system.ejbfac.IAktivierbar;
 import com.lp.server.system.jcr.service.JCRDocDto;
@@ -159,6 +161,7 @@ import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.format.LpBelegnummer;
 import com.lp.server.system.pkgenerator.format.LpBelegnummerFormat;
+import com.lp.server.system.service.BelegPruefungDto;
 import com.lp.server.system.service.IVersandwegPartnerDto;
 import com.lp.server.system.service.LandDto;
 import com.lp.server.system.service.LocaleFac;
@@ -174,7 +177,10 @@ import com.lp.server.system.service.VersandwegCCPartnerDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.HelperWebshop;
 import com.lp.server.util.Validator;
+import com.lp.server.util.ZwsPositionMapper;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.service.BelegDto;
+import com.lp.service.BelegpositionDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
@@ -183,6 +189,9 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	@PersistenceContext
 	private EntityManager em;
 
+	@EJB
+	private BelegAktivierungFac belegAktivierungFac ;
+	
 	// Referenzen auf CMPs
 
 	// Auftrag
@@ -190,7 +199,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 	/**
 	 * Anlegen eines neuen Auftragskopfes in der DB.
-	 * 
+	 *
 	 * @param oAuftragDtoI
 	 *            die Daten des Auftragkopfes
 	 * @param theClientDto
@@ -242,7 +251,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 					oAuftragDtoI.getLieferartIId(),
 					oAuftragDtoI.getZahlungszielIId(),
 					oAuftragDtoI.getSpediteurIId(),
-					oAuftragDtoI.getAuftragstatusCNr(),
+					oAuftragDtoI.getStatusCNr(),
 					oAuftragDtoI.getPersonalIIdAnlegen(),
 					oAuftragDtoI.getPersonalIIdAendern(),
 					oAuftragDtoI.getKostIId(),
@@ -311,7 +320,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 	/**
 	 * Parameter pruefen.
-	 * 
+	 *
 	 * @param auftragDto
 	 *            AuftragDto
 	 * @throws EJBExceptionLP
@@ -336,7 +345,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 	/**
 	 * Aktualisieren der Kopfdaten eines Auftrags.
-	 * 
+	 *
 	 * @param auftragDtoI
 	 *            die Daten des Auftrags
 	 * @param waehrungOriCNrI
@@ -639,10 +648,11 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 	/**
 	 * Die Begr&uuml;ndung des Auftrags auf den neuen Wert setzen
-	 * 
+	 *
 	 * @param auftragIId
 	 *            PK des Auftrags
-	 * @param begruendungIId die IId der neuen Auftragbegruendung
+	 * @param begruendungIId
+	 *            die IId der neuen Auftragbegruendung
 	 * @param theClientDto
 	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
@@ -707,7 +717,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	/**
 	 * Einen bestehenden Auftrag als storniert kennzeichnen. <br>
 	 * Artikelreservierungen werden zurueckgenommen.
-	 * 
+	 *
 	 * @param iiAuftragI
 	 *            pk des Auftrags
 	 * @param theClientDto
@@ -720,8 +730,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 		try {
 			AuftragDto auftragDto = this.auftragFindByPrimaryKey(iiAuftragI);
-			auftragDto
-					.setAuftragstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_STORNIERT);
+			auftragDto.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_STORNIERT);
 			auftragDto.setPersonalIIdStorniert(theClientDto.getIDPersonal());
 			auftragDto.setTStorniert(new Timestamp(System.currentTimeMillis()));
 
@@ -856,7 +865,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 	/**
 	 * Einen Auftrag manuell auf 'Erledigt' setzen.
-	 * 
+	 *
 	 * @param iIdAuftragI
 	 *            PK des Auftrags
 	 * @param theClientDto
@@ -874,7 +883,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
-			
+
 			if (auftrag.getAuftragstatusCNr().equals(
 					AuftragServiceFac.AUFTRAGSTATUS_OFFEN)
 					|| auftrag.getAuftragstatusCNr().equals(
@@ -966,7 +975,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	 * Den Status eines Auftrags von 'Erledigt' auf 'Erfasst' setzen. <br>
 	 * Diese Aktion ist nur moeglich, wenn der 'Erledigt' Status manuell gesetzt
 	 * wurde.
-	 * 
+	 *
 	 * @param iIdAuftragI
 	 *            PK des Auftrags
 	 * @param theClientDto
@@ -985,13 +994,14 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 			if (auftrag.getAuftragstatusCNr().equals(
 					AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT)) {
+				auftrag.setPersonalIIdManuellerledigt(null);
+				auftrag.setTManuellerledigt(null);
+				auftrag.setPersonalIIdErledigt(null);
+				auftrag.setTErledigt(null);
 				if (auftrag.getPersonalIIdManuellerledigt() != null
 						&& auftrag.getTManuellerledigt() != null) {
 					auftrag.setAuftragstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
-					auftrag.setPersonalIIdManuellerledigt(null);
-					auftrag.setTManuellerledigt(null);
-					auftrag.setPersonalIIdErledigt(null);
-					auftrag.setTErledigt(null);
+
 					AuftragpositionDto[] posDtos = null;
 					posDtos = getAuftragpositionFac()
 							.auftragpositionFindByAuftrag(iIdAuftragI);
@@ -1040,22 +1050,21 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 						}
 						auftrag.setAuftragstatusCNr(bOffen ? AuftragServiceFac.AUFTRAGSTATUS_OFFEN
 								: AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
-						
 
-						
 						// PJ18288
 						// Logging
 						PersonalDto personalDto = getPersonalFac()
-								.personalFindByPrimaryKey(theClientDto.getIDPersonal(),
+								.personalFindByPrimaryKey(
+										theClientDto.getIDPersonal(),
 										theClientDto);
 						String sMessage = personalDto.formatFixName1Name2()
-								+ " hat den Status von Auftrag " + auftrag.getCNr()
+								+ " hat den Status von Auftrag "
+								+ auftrag.getCNr()
 								+ " von Status Erledigt nach Status "
-								+ auftrag.getAuftragstatusCNr()
-								+ " geaendert ";
+								+ auftrag.getAuftragstatusCNr() + " geaendert ";
 
 						myLogger.logKritisch(sMessage);
-						
+
 					}
 				} else {
 					auftrag.setAuftragstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
@@ -1079,7 +1088,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 	/**
 	 * Einen Auftrag ueber seinen PK aus der DB holen.
-	 * 
+	 *
 	 * @param iId
 	 *            Integer
 	 * @throws EJBExceptionLP
@@ -1107,7 +1116,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	/**
 	 * Einen Auftrag ueber seinen PK holen. <br>
 	 * Diese Methode wirft keine Exceptions.
-	 * 
+	 *
 	 * @param iIdAuftragI
 	 *            PK des Auftrags
 	 * @return AuftragDto der Auftrag
@@ -1122,6 +1131,103 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 		}
 
 		return auftragDto;
+	}
+
+	public Integer erzeugeAuftragUeberSchnellanlage(AuftragDto auftragDto,
+			ArtikelDto artikelDto, PaneldatenDto[] paneldatenDtos,
+			TheClientDto theClientDto) {
+		Integer auftragIId = null;
+		try {
+			// Zuerst Auftrag anlegen
+			auftragIId = getAuftragFac().createAuftrag(auftragDto, theClientDto);
+
+			auftragDto = getAuftragFac().auftragFindByPrimaryKey(auftragIId);
+
+			// Artikelnummer zusammenbauen
+
+			ParametermandantDto parameter = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_AUFTRAG,
+							ParameterFac.PARAMETER_TRENNZEICHEN_ARTIKELGRUPPE_AUFTRAGSNUMMER);
+
+			String trennzeichen = (String) parameter.getCWertAsObject();
+
+			ArtgruDto agDto = getArtikelFac().artgruFindByPrimaryKey(
+					artikelDto.getArtgruIId(), theClientDto);
+
+			String artikelnummer = agDto.getCNr() + trennzeichen
+					+ auftragDto.getCNr();
+
+			artikelDto.setCNr(artikelnummer);
+			// Dann Artikel anlegen
+			Integer artikelIId = getArtikelFac().createArtikel(artikelDto,
+					theClientDto);
+
+			// Dann Artikeleigenschaften anlegen
+			for (int i = 0; i < paneldatenDtos.length; i++) {
+				paneldatenDtos[i].setCKey(artikelIId + "");
+			}
+			getPanelFac().createPaneldaten(paneldatenDtos);
+
+			KundeDto kdDto = getKundeFac().kundeFindByPrimaryKey(
+					auftragDto.getKundeIIdRechnungsadresse(), theClientDto);
+
+			// Dann Auftragsposition anlegen
+			AuftragpositionDto auftragpositionDto = new AuftragpositionDto();
+			auftragpositionDto.setBelegIId(auftragIId);
+			auftragpositionDto.setArtikelIId(artikelIId);
+			auftragpositionDto
+					.setPositionsartCNr(AuftragServiceFac.AUFTRAGPOSITIONART_IDENT);
+			auftragpositionDto
+					.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN);
+			auftragpositionDto.setBArtikelbezeichnunguebersteuert(Helper
+					.boolean2Short(false));
+			auftragpositionDto.setBNettopreisuebersteuert(Helper
+					.boolean2Short(false));
+			auftragpositionDto.setNMenge(new BigDecimal(1));
+			auftragpositionDto.setNOffeneMenge(new BigDecimal(1));
+			auftragpositionDto.setEinheitCNr(SystemFac.EINHEIT_STUECK);
+			auftragpositionDto.setFRabattsatz(new Double(0));
+
+			auftragpositionDto.setBRabattsatzuebersteuert(Helper
+					.boolean2Short(false));
+
+			MwstsatzDto mwstsatzDtoAktuell = getMandantFac()
+					.mwstsatzFindByMwstsatzbezIIdAktuellster(
+							kdDto.getMwstsatzbezIId(), theClientDto);
+
+			auftragpositionDto.setMwstsatzIId(mwstsatzDtoAktuell.getIId());
+			auftragpositionDto.setBMwstsatzuebersteuert(Helper
+					.boolean2Short(false));
+			auftragpositionDto.setNEinzelpreis(new BigDecimal(0));
+			auftragpositionDto.setNRabattbetrag(new BigDecimal(0));
+			auftragpositionDto.setNNettoeinzelpreis(new BigDecimal(0));
+			auftragpositionDto
+					.setNEinzelpreisplusversteckteraufschlag(new BigDecimal(0));
+			auftragpositionDto
+					.setNNettoeinzelpreisplusversteckteraufschlag(new BigDecimal(
+							0));
+			auftragpositionDto
+					.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(new BigDecimal(
+							0));
+			auftragpositionDto.setNMwstbetrag(new BigDecimal(0));
+			auftragpositionDto.setNBruttoeinzelpreis(new BigDecimal(30));
+			auftragpositionDto.setTUebersteuerbarerLiefertermin(auftragDto
+					.getTBelegdatum());
+			auftragpositionDto.setBDrucken(Helper.boolean2Short(false));
+			auftragpositionDto.setFZusatzrabattsatz(new Double(0));
+			auftragpositionDto.setISort(new Integer(1));
+
+			getAuftragpositionFac().createAuftragposition(auftragpositionDto,
+					theClientDto);
+			aktiviereAuftrag(auftragIId, theClientDto);
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+		return auftragIId;
 	}
 
 	public AuftragDto auftragFindByMandantCNrCNr(String cNrMandantI,
@@ -1287,8 +1393,8 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 		auftrag.setAnsprechpartnerIIdLieferadresse(auftragDto
 				.getAnsprechpartnerIIdLieferadresse());
 
-		if (auftragDto.getAuftragstatusCNr() != null) {
-			auftrag.setAuftragstatusCNr(auftragDto.getAuftragstatusCNr());
+		if (auftragDto.getStatusCNr() != null) {
+			auftrag.setAuftragstatusCNr(auftragDto.getStatusCNr());
 		}
 		if (auftragDto.getTBelegdatum() != null) {
 			auftrag.setTBelegdatum(auftragDto.getTBelegdatum());
@@ -1369,7 +1475,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	/**
 	 * Auftraege duerfen nur in bestimmten Stati geaendert werden. <br>
 	 * Nachdem ein Auftrag geaendert wurde, befindet er sich im Status ANGELEGT.
-	 * 
+	 *
 	 * @param iIdAuftragI
 	 *            pk des Auftrags
 	 * @param theClientDto
@@ -1416,7 +1522,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 	/**
 	 * AuftragpositionDto auf null pruefen.
-	 * 
+	 *
 	 * @param auftragspositionDto
 	 *            AuftragpositionDto
 	 * @throws EJBExceptionLP
@@ -1431,7 +1537,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 	/**
 	 * Die Anrede fuer einen Kunden bauen.
-	 * 
+	 *
 	 * @param iIdKundeI
 	 *            PK des Kunden
 	 * @param theClientDto
@@ -1453,7 +1559,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	/**
 	 * Die Anschrift fuer einen Kunden bauen. <br>
 	 * Es muss keine Anschrift geben.
-	 * 
+	 *
 	 * @param iIdKundeI
 	 *            PK des Kunden
 	 * @param theClientDto
@@ -1478,7 +1584,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	/**
 	 * Die Anrede fuer einen Ansprechpartner bauen. <br>
 	 * Es muss keinen Ansprechpartner geben.
-	 * 
+	 *
 	 * @param iIdAnsprechpartnerI
 	 *            pk des Ansprechpartners
 	 * @param theClientDto
@@ -1505,7 +1611,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	 * In der Auftrag Nachkalkulation wird eine extra Zeile geschrieben, wenn es
 	 * auf einem Lieferschein mit Bezug zum relevanten Auftrag eine
 	 * mengenbehaftete Position gibt, die im Auftrag nicht geplant war.
-	 * 
+	 *
 	 * @param auftragDto
 	 *            AuftragDto
 	 * @param oLieferscheinpositionDto
@@ -1530,21 +1636,21 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 		 * try { ArtikelDto oArtikelDto =
 		 * getArtikelFac().artikelFindByPrimaryKey(
 		 * oLieferscheinpositionDto.getArtikelIId(), sUserI);
-		 * 
+		 *
 		 * StringBuffer sbArtikelInfo = new StringBuffer();
-		 * 
+		 *
 		 * // die Artikelbezeichnung zum Andrucken if
 		 * (oLieferscheinpositionDto.getLieferscheinpositionartCNr
 		 * ().equals(LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT)) {
 		 * sbArtikelInfo.append(oArtikelDto.getCNr());
-		 * 
+		 *
 		 * if (oLieferscheinpositionDto.getCBezeichnung() != null) {
 		 * sbArtikelInfo.append(oLieferscheinpositionDto.getCBezeichnung()); }
 		 * else { if (oArtikelDto.getArtikelsprDto() != null &&
 		 * oArtikelDto.getArtikelsprDto().getCBez() != null) {
 		 * sbArtikelInfo.append
 		 * ("\n").append(oArtikelDto.getArtikelsprDto().getCBez()); } }
-		 * 
+		 *
 		 * if (oArtikelDto.getArtikelsprDto() != null &&
 		 * oArtikelDto.getArtikelsprDto().getCZbez() != null) {
 		 * sbArtikelInfo.append
@@ -1552,63 +1658,63 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 		 * (oLieferscheinpositionDto.getLieferscheinpositionartCNr().equals(
 		 * LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_HANDEINGABE)) {
 		 * sbArtikelInfo.append(oArtikelDto.getArtikelsprDto().getCBez());
-		 * 
+		 *
 		 * if (oArtikelDto.getArtikelsprDto().getCZbez() != null) {
 		 * sbArtikelInfo
 		 * .append("\n").append(oArtikelDto.getArtikelsprDto().getCZbez()); } }
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
 		 * oNachkalkulationDto.setSArtikelcnrbezeichnung(sbArtikelInfo.toString()
 		 * );
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
 		 * oNachkalkulationDto.setBdMengeist(oLieferscheinpositionDto.getNMenge()
 		 * );
-		 * 
+		 *
 		 * if
 		 * (oArtikelDto.getArtikelartCNr().equals(ArtikelFac.ARTIKELART_ARBEITSZEIT
 		 * )) {
@@ -1617,34 +1723,34 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 		 * // sonst Material
 		 * oNachkalkulationDto.setBdMaterialpreisist(oLieferscheinpositionDto
 		 * .getNNettogesamtpreisPlusVersteckterAufschlagMinusRabatt()); }
-		 * 
+		 *
 		 * BigDecimal bdEinzelsummeist =
 		 * oLieferscheinpositionDto.getNMenge().multiply(
 		 * oLieferscheinpositionDto
 		 * .getNNettogesamtpreisPlusVersteckterAufschlagMinusRabatt());
-		 * 
+		 *
 		 * oNachkalkulationDto.setBdSummeist(bdEinzelsummeist);
-		 * 
+		 *
 		 * // Gestehungspreise der Lieferscheinposition, es gilt das Lager des
 		 * Lieferscheins LieferscheinDto oLieferscheinDto =
 		 * getLieferscheinFac().
 		 * lieferscheinFindByPrimaryKey(oLieferscheinpositionDto
 		 * .getLieferscheinIId());
-		 * 
+		 *
 		 * LagerDto oLagerDto =
 		 * getLagerFac().lagerFindByPrimaryKey(oLieferscheinDto.getLagerIId());
-		 * 
+		 *
 		 * // Grundlage ist der Gestehungspreis des Artikels am Lager des
 		 * Lieferscheins BigDecimal bdGestehungspreisIst =
 		 * getLagerFac().getGestehungspreis( oArtikelDto.getIId(),
 		 * oLagerDto.getIId());
-		 * 
+		 *
 		 * // umrechnen in Auftragwaehrung bdGestehungspreisIst =
 		 * getLocaleFac().rechneUmInAndereWaehrung( bdGestehungspreisIst,
 		 * Currency
 		 * .getInstance(getTheClient(sUserI).getLocMandant()).getCurrencyCode(),
 		 * sAuftragswaehrungI);
-		 * 
+		 *
 		 * if
 		 * (oArtikelDto.getArtikelartCNr().equals(ArtikelFac.ARTIKELART_ARBEITSZEIT
 		 * )) {
@@ -1652,30 +1758,30 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 		 * else { // sonst Material
 		 * oNachkalkulationDto.setBdGestpreismaterialist(bdGestehungspreisIst);
 		 * }
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
+		 *
 		 * oNachkalkulationDto.setBdGestpreissummeist(bdGestehungspreisIst.multiply
 		 * (oLieferscheinpositionDto.getNMenge())); } catch(Throwable t) { throw
 		 * new EJBExceptionLP(EJBExceptionLP.FEHLER, t); }
@@ -1855,7 +1961,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	 * Der Materialwert einer Artikelposition errechnet sich aus Menge x
 	 * Gestehungspreis des enthaltenen Artikels. <br>
 	 * Der Gestehungspreis eines Artikels ist in Mandantenwaehrung abgelegt.
-	 * 
+	 *
 	 * @param iIdAuftragI
 	 *            pk des Auftrags
 	 * @param theClientDto
@@ -1925,7 +2031,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	 * Nettoauftragswert in Abhaengigkeit vom aktuellen Mandanten bestimmen. <br>
 	 * Beruecksichtigt werden koennen entweder alle offenen Auftraege oder alle
 	 * eingegangenen Auftraege.
-	 * 
+	 *
 	 * @param cNrAuftragartI
 	 *            die Auftragart (Frei, Rahmen, Abruf)
 	 * @param whichKriteriumI
@@ -2079,7 +2185,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	 * Hier wird der Auftragsnettowert fuer eine Hibernate Liste von offenen
 	 * Auftraegen bestimmt (Status Offen oder Teilerledigt). <br>
 	 * Dabei werden alle Auftragswerte in Mandantenwaehrung beruecksichtigt.
-	 * 
+	 *
 	 * @param listFLRAuftragFuerUebersichtI
 	 *            Liste von FLRAuftragFuerUebersicht Objekten
 	 * @param sessionI
@@ -2163,7 +2269,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	 * Hier wird der Auftragsnettowert fuer eine Hibernate Liste von
 	 * eingegangenen Auftraegen bestimmt (Status Offen, Teilerledigt, Erledigt). <br>
 	 * Dabei werden alle Auftragswerte in Mandantenwaehrung beruecksichtigt.
-	 * 
+	 *
 	 * @param listFLRAuftragFuerUebersichtI
 	 *            Liste von FLRAuftragFuerUebersicht Objekten
 	 * @param theClientDto
@@ -2225,8 +2331,8 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	 * - Allgemeiner Rabatt <br>
 	 * - Projektierungsrabatt <br>
 	 * Beruecksichtigt werden alle mengenbehafteten Positionen.
-	 * 
-	 * @param aAuftragpositionDto 
+	 *
+	 * @param aAuftragpositionDto
 	 * @param theClientDto
 	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
@@ -2262,7 +2368,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 			AuftragDto auftragDto = auftragFindByPrimaryKey(iIdAuftragI);
 
 			if (auftragDto.getNGesamtauftragswertInAuftragswaehrung() == null
-					|| auftragDto.getAuftragstatusCNr().equals(
+					|| auftragDto.getStatusCNr().equals(
 							AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT)) {
 				// Step 1: Wenn der Gesamtauftragswert NULL und der Status
 				// ANGELEGT ist, dann den Wert aus den Positionen berechnen
@@ -2279,12 +2385,12 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 				 * for (int i = 0; i < aAuftragpositionDto.length; i++) {
 				 * AuftragpositionDto auftragpositionDto =
 				 * aAuftragpositionDto[i];
-				 * 
+				 *
 				 * // alle mengenbehafteten Positionen beruecksichtigen if
 				 * (auftragpositionDto.getNMenge() != null) {
-				 * 
+				 *
 				 * BigDecimal menge = auftragpositionDto.getNMenge();
-				 * 
+				 *
 				 * // Grundlage ist der
 				 * NettogesamtwertPlusVersteckterAufschlagMinusRabatte der
 				 * Position in Auftragswaehrung // BigDecimal wertDerPosition =
@@ -2298,20 +2404,20 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 				 * BigDecimal(auftragDto.getFAllgemeinerRabattsatz().
 				 * doubleValue()).movePointLeft(2); bdAllgemeinerRabattSatz =
 				 * Helper.rundeKaufmaennisch(bdAllgemeinerRabattSatz, 4);
-				 * 
+				 *
 				 * BigDecimal bdAllgemeinerRabatt =
 				 * auftragswert.multiply(bdAllgemeinerRabattSatz); // auf 4
 				 * Stellen runden bdAllgemeinerRabatt =
 				 * Helper.rundeKaufmaennisch(bdAllgemeinerRabatt, 4);
-				 * 
+				 *
 				 * auftragswert=auftragswert.subtract(bdAllgemeinerRabatt);
-				 * 
+				 *
 				 * // - Projektierungsrabatt BigDecimal bdProjektierungsRabatt =
 				 * new BigDecimal(auftragDto.
 				 * getFProjektierungsrabattsatz().doubleValue
 				 * ()).movePointLeft(2); bdProjektierungsRabatt =
 				 * Helper.rundeKaufmaennisch(bdProjektierungsRabatt, 4);
-				 * 
+				 *
 				 * BigDecimal bdNettogesamtpreisProjektierungsrabattSumme =
 				 * auftragswert.multiply( bdProjektierungsRabatt); // auf 4
 				 * Stellen runden bdNettogesamtpreisProjektierungsrabattSumme =
@@ -2330,16 +2436,16 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 										auftragPositionDto, theClientDto);
 					}
 				}
-			} else if (auftragDto.getAuftragstatusCNr().equals(
+			} else if (auftragDto.getStatusCNr().equals(
 					AuftragServiceFac.AUFTRAGSTATUS_STORNIERT)) {
 				// Step 2: Wenn der status STORNIERT ist, 0 zurueckgeben obwohl
 				// der Auftragswert noch in der Tabelle steht
 				auftragswert = Helper.getBigDecimalNull();
-			} else if (auftragDto.getAuftragstatusCNr().equals(
+			} else if (auftragDto.getStatusCNr().equals(
 					AuftragServiceFac.AUFTRAGSTATUS_OFFEN)
-					|| auftragDto.getAuftragstatusCNr().equals(
+					|| auftragDto.getStatusCNr().equals(
 							AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT)
-					|| auftragDto.getAuftragstatusCNr().equals(
+					|| auftragDto.getStatusCNr().equals(
 							AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT)) {
 				// Step 3: Wenn der status OFFEN, TEILERLEDIGT oder ERLEDIGT
 				// ist, den Auftragswert aus der Tabelle holen
@@ -2364,7 +2470,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	/**
 	 * Berechnet den Nettoauftragswert fuer einen Kunden in einem bestimmten
 	 * Zeitintervall.
-	 * 
+	 *
 	 * @param iIdKundeI
 	 *            pk des Kunden
 	 * @param datVonI
@@ -2425,7 +2531,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	 * Berechnet den Nettoauftragswert fuer alle Auftraege eines Kunden
 	 * innerhalb eines bestimmten Zeitintervalls, die sich in einem bestimmten
 	 * Status befinden.
-	 * 
+	 *
 	 * @param sStatusI
 	 *            der gewuenschte Status
 	 * @param iIdKundeI
@@ -2495,7 +2601,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 	/**
 	 * Den Status des Auftrags aendern.
-	 * 
+	 *
 	 * @param pkAuftrag
 	 *            PK des Auftrags
 	 * @param status
@@ -2510,8 +2616,8 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		boolean statusGeaendert = false;
 		AuftragDto auftragDto = auftragFindByPrimaryKey(pkAuftrag);
-		String sStautsVorAenderung = auftragDto.getAuftragstatusCNr();
-		auftragDto.setAuftragstatusCNr(status);
+		String sStautsVorAenderung = auftragDto.getStatusCNr();
+		auftragDto.setStatusCNr(status);
 		// wenn der Status auf angelegt wechselt, die Auftragswerte
 		// zuruecksetzen
 		if (status.equals(AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT)) {
@@ -2565,44 +2671,18 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 		return statusGeaendert;
 	}
 
-	/**
-	 * Alle Informationen fuer die Sicht des Auftrags auf den Lieferstatus
-	 * sammeln. <br>
-	 * Es muessen auch jene Positionen in den Lieferscheinen beruecksichtigt
-	 * werden, die im Nachhinein erfasst wurden und im Auftrag selbst nicht
-	 * aufscheinen.
-	 * 
-	 * @param iIdAuftragI
-	 *            pk des Auftrag
-	 * @param theClientDto
-	 *            String
-	 * @throws EJBExceptionLP
-	 *             Ausnahme
-	 * @return SichtLieferstatusDto[] Infos, NULL wenn es keine gibt
-	 */
-	public SichtLieferstatusDto[] getSichtLieferstatus(Integer iIdAuftragI,
-			TheClientDto theClientDto) throws EJBExceptionLP {
-		final String METHOD_NAME = "getSichtLieferstatus";
-		myLogger.entry();
-		SichtLieferstatusDto[] aSichtLieferstatus = null;
-		try {
-			// alle lieferscheine, die zu diesem auftrag gehoeren holen
-			LieferscheinDto[] aLieferscheinDto = getLieferscheinFac()
-					.lieferscheinFindByAuftrag(iIdAuftragI, theClientDto);
-			// in diesen lieferscheinen gibt es jetzt positionen, die zu einer
-			// auftragposition gehoeren und freie positionen, die in der Ansicht
-			// ebenfalls auftauchen muessen
-		} catch (RemoteException ex) {
-			throwEJBExceptionLPRespectOld(ex);
-		}
-
-		return aSichtLieferstatus;
+	public void korrekturbetragZuruecknehmen(Integer auftragIId) {
+		Auftrag auftrag = em.find(Auftrag.class, auftragIId);
+		auftrag.setNKorrekturbetrag(null);
+		em.merge(auftrag);
+		em.flush();
 	}
+
 
 	/**
 	 * Der Auftragstatus ergibt sich aus der Summe der Stati der einzelnen
 	 * Positionen.
-	 * 
+	 *
 	 * @param iIdAuftragI
 	 *            pk des Auftrag
 	 * @param theClientDto
@@ -2619,9 +2699,9 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 			// muss man die stati der positionen nicht weiter ansehen
 			AuftragDto auftragDto = auftragFindByPrimaryKey(iIdAuftragI);
 
-			if (!auftragDto.getAuftragstatusCNr().equals(
+			if (!auftragDto.getStatusCNr().equals(
 					AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT)
-					&& !auftragDto.getAuftragstatusCNr().equals(
+					&& !auftragDto.getStatusCNr().equals(
 							AuftragServiceFac.AUFTRAGSTATUS_STORNIERT)) {
 				AuftragpositionDto[] aAuftragpositionDto = getAuftragpositionFac()
 						.auftragpositionFindByAuftragIIdNMengeNotNull(
@@ -2638,9 +2718,9 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 				if (iAnzahlOffen == aAuftragpositionDto.length) {
 					auftragDto
-							.setAuftragstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_OFFEN);
+							.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_OFFEN);
 				} else if (iAnzahlErledigt == aAuftragpositionDto.length) {
-					//PJ18288
+					// PJ18288
 					ParametermandantDto parameterDto = getParameterFac()
 							.getMandantparameter(
 									theClientDto.getMandant(),
@@ -2648,18 +2728,18 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 									ParameterFac.PARAMETER_AUFTRAG_AUTOMATISCH_VOLLSTAENDIG_ERLEDIGEN);
 					if ((Boolean) parameterDto.getCWertAsObject() == true) {
 						auftragDto
-						.setAuftragstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT);
+								.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_ERLEDIGT);
 					} else {
 						auftragDto
-						.setAuftragstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
+								.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
 					}
 				} else {
 					auftragDto
-							.setAuftragstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
+							.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
 				}
 
 				aendereAuftragstatus(auftragDto.getIId(),
-						auftragDto.getAuftragstatusCNr(), theClientDto);
+						auftragDto.getStatusCNr(), theClientDto);
 				if (AuftragServiceFac.AUFTRAGART_ABRUF.equals(auftragDto
 						.getAuftragartCNr())) {
 					getAuftragRahmenAbrufFac().pruefeUndSetzeRahmenstatus(
@@ -2667,7 +2747,8 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 							theClientDto);
 				}
 			}
-			updateAuftragOhneWeitereAktion(auftragDto, theClientDto);
+			//wg. SP2983 auskommentiert, da ansonsten das T_ERLEDIGT wieder auf null gesetzt wird
+			//updateAuftragOhneWeitereAktion(auftragDto, theClientDto);
 		} catch (EJBExceptionLP ex) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
@@ -2679,7 +2760,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	/**
 	 * Anzahl eines bestimmten Status in einer Liste von Auftragpositionen
 	 * bestimmen.
-	 * 
+	 *
 	 * @param aAuftragpositionDtoI
 	 *            Liste der Auftragpositionen
 	 * @param sStatusI
@@ -2712,7 +2793,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	 * NettoVerkaufspreisPlusAufschlaegeMinusRabatte pro Stueck * geplanter
 	 * Menge) bezogen auf eine bestimmte Artikelart berechnen. <br>
 	 * Beruecksichtigt werden alle mengenbehafteten Auftragpositionen.
-	 * 
+	 *
 	 * @param iIdAuftragI
 	 *            PK des Auftrags
 	 * @param sArtikelartI
@@ -2805,7 +2886,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	 * Gestehungspreis am Hauptlager des Mandanten pro Stueck * geplanter Menge)
 	 * bezogen auf eine bestimmte Artikelart berechnen. <br>
 	 * Beruecksichtigt werden alle mengenbehafteten Auftragpositionen.
-	 * 
+	 *
 	 * @param iIdAuftragI
 	 *            PK des Auftrags
 	 * @param sArtikelartI
@@ -2817,11 +2898,90 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	 * @throws EJBExceptionLP
 	 *             Ausnahme
 	 */
+
+	private BigDecimal getGestehungswertSoll(
+			AuftragpositionDto aAuftragpositionDto, AuftragDto auftragDto,
+			TheClientDto theClientDto) {
+
+		BigDecimal bdGestehungspreisSoll = new BigDecimal(0);
+		if (aAuftragpositionDto.getPositioniIdArtikelset() == null
+				&& aAuftragpositionDto.getArtikelIId() != null) {
+
+			try {
+				LagerDto lDto = getLagerFac().getHauptlagerDesMandanten(
+						theClientDto);
+
+				Query query = em
+						.createNamedQuery("AuftragpositionfindByPositionIIdArtikelset");
+				query.setParameter(1, aAuftragpositionDto.getIId());
+				Collection<?> angebotpositionDtos = query.getResultList();
+				AuftragpositionDto[] zugehoerigeABPosDtos = AuftragpositionDtoAssembler
+						.createDtos(angebotpositionDtos);
+
+				if (zugehoerigeABPosDtos.length == 0) {
+
+					ParametermandantDto parametermandantDto = getParameterFac()
+							.getMandantparameter(theClientDto.getMandant(),
+									ParameterFac.KATEGORIE_ANGEBOT,
+									ParameterFac.PARAMETER_LIEFERANT_ANGEBEN);
+
+					boolean bLieferantAngeben = (Boolean) parametermandantDto
+							.getCWertAsObject();
+
+					if (bLieferantAngeben == true) {
+						if (aAuftragpositionDto.getBdEinkaufpreis() != null) {
+							// Als erstes zaehlt der EK-reis aus der Position
+							return aAuftragpositionDto.getBdEinkaufpreis()
+									.multiply(aAuftragpositionDto.getNMenge());
+						} else {
+							// anosonsten der Lief1Preis
+							ArtikellieferantDto alDto = getArtikelFac()
+									.getArtikelEinkaufspreis(
+											aAuftragpositionDto.getArtikelIId(),
+											aAuftragpositionDto.getNMenge(),
+											auftragDto.getCAuftragswaehrung(),
+											theClientDto);
+							if (alDto != null && alDto.getNNettopreis() != null) {
+								return alDto.getNNettopreis().multiply(
+										aAuftragpositionDto.getNMenge());
+							}
+
+						}
+					}
+
+					bdGestehungspreisSoll = getLagerFac()
+							.getGestehungspreisZumZeitpunkt(
+									aAuftragpositionDto.getArtikelIId(),
+									lDto.getIId(), auftragDto.getTBelegdatum(),
+									theClientDto);
+					if (bdGestehungspreisSoll != null) {
+						bdGestehungspreisSoll = bdGestehungspreisSoll
+								.multiply(aAuftragpositionDto.getNMenge());
+					}
+
+				} else {
+
+					for (int k = 0; k < zugehoerigeABPosDtos.length; k++) {
+						AuftragpositionDto apDtoSetartikel = getAuftragpositionFac()
+								.auftragpositionFindByPrimaryKey(
+										zugehoerigeABPosDtos[k].getIId());
+						bdGestehungspreisSoll = bdGestehungspreisSoll
+								.add(getGestehungswertSoll(apDtoSetartikel,
+										auftragDto, theClientDto));
+					}
+				}
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+
+		}
+		return bdGestehungspreisSoll;
+
+	}
+
 	public BigDecimal berechneGestehungswertSoll(Integer iIdAuftragI,
 			String sArtikelartI, boolean bMitEigengefertigtenStuecklisten,
 			TheClientDto theClientDto) throws EJBExceptionLP {
-		final String METHOD_NAME = "berechneGestehungswertSoll";
-		myLogger.entry();
 		if (iIdAuftragI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
 					new Exception("iIdAuftragI == null"));
@@ -2861,66 +3021,26 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 						}
 					}
 
-					// das Hauptlager des Mandanten
-					LagerDto oHauptlagerDto = getLagerFac()
-							.getHauptlagerDesMandanten(theClientDto);
-
 					// Grundlage ist der Gestehungspreis des Artikels am
 					// Hauptlager des Mandanten
-					BigDecimal bdGestehungspreisSoll = new BigDecimal(0);
-					if (aAuftragpositionDtos[i].getPositioniIdArtikelset() == null) {
-
-						Query query = em
-								.createNamedQuery("AuftragpositionfindByPositionIIdArtikelset");
-						query.setParameter(1, aAuftragpositionDtos[i].getIId());
-						Collection<?> angebotpositionDtos = query
-								.getResultList();
-						AuftragpositionDto[] zugehoerigeABPosDtos = AuftragpositionDtoAssembler
-								.createDtos(angebotpositionDtos);
-
-						if (zugehoerigeABPosDtos.length == 0) {
-							bdGestehungspreisSoll = getLagerFac()
-									.getGestehungspreisZumZeitpunkt(
-											oArtikelDto.getIId(),
-											oHauptlagerDto.getIId(),
-											auftragDto.getTBelegdatum(),
-											theClientDto);
-						} else {
-
-							for (int k = 0; k < zugehoerigeABPosDtos.length; k++) {
-								bdGestehungspreisSoll = bdGestehungspreisSoll
-										.add(getLagerFac()
-												.getGestehungspreisZumZeitpunkt(
-														zugehoerigeABPosDtos[k]
-																.getArtikelIId(),
-														oHauptlagerDto.getIId(),
-														auftragDto
-																.getTBelegdatum(),
-														theClientDto));
-							}
-						}
-
-					}
+					BigDecimal bdGestehungspreisSoll = getGestehungswertSoll(
+							aAuftragpositionDtos[i], auftragDto, theClientDto);
 
 					// je nach Artikelart beruecksichtigen
 
 					if (bdGestehungspreisSoll != null) {
-
-						BigDecimal bdBeitragDieserPosition = aAuftragpositionDtos[i]
-								.getNMenge().multiply(bdGestehungspreisSoll);
-
 						if (sArtikelartI
 								.equals(ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
 							if (oArtikelDto.getArtikelartCNr().equals(
 									ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
 								bdGestehungswertSollO = bdGestehungswertSollO
-										.add(bdBeitragDieserPosition);
+										.add(bdGestehungspreisSoll);
 							}
 						} else {
 							if (!oArtikelDto.getArtikelartCNr().equals(
 									ArtikelFac.ARTIKELART_ARBEITSZEIT)) {
 								bdGestehungswertSollO = bdGestehungswertSollO
-										.add(bdBeitragDieserPosition);
+										.add(bdGestehungspreisSoll);
 							}
 						}
 					}
@@ -2940,7 +3060,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	/**
 	 * Die Anzahl der Belege holen, die zu einem bestimmten Auftrag existieren. <br>
 	 * Als Beleg gilt auch, wenn Auftragzeiten zu diesem Auftrag erfasst wurden.
-	 * 
+	 *
 	 * @param iIdAuftragI
 	 *            PK des Auftrags
 	 * @param theClientDto
@@ -2994,7 +3114,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 		return iAnzahlBelegeO;
 	}
-	
+
 	public void aktiviereAuftrag(Integer iIdAuftragI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
 		Validator.notNull(iIdAuftragI, "iIdAuftragI");
@@ -3014,9 +3134,8 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		// Ohne Positionen darf der Beleg nicht aktiviert werden.
-		if (getAuftragpositionFac()
-				.getAnzahlMengenbehafteteAuftragpositionen(oAuftrag.getIId(),
-						theClientDto) == 0) {
+		if (getAuftragpositionFac().getAnzahlMengenbehafteteAuftragpositionen(
+				oAuftrag.getIId(), theClientDto) == 0) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BELEG_HAT_KEINE_POSITIONEN, "");
 		}
@@ -3029,16 +3148,16 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 					"FEHLER_KEINE_BERECHTIGUNG_BELEG_AKTIVIEREN");
 		}
 	}
-	
+
 	@Override
 	public void aktiviereBeleg(Integer iIdAuftragI, TheClientDto theClientDto) {
 		Auftrag oAuftrag = em.find(Auftrag.class, iIdAuftragI);
 		if (oAuftrag.getAuftragstatusCNr().equals(
 				AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT)) {
-			
+
 			oAuftrag.setTGedruckt(getTimestamp());
 			oAuftrag.setAuftragstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_OFFEN);
-			
+
 			// PJ 15710
 			Kunde kunde = em.find(Kunde.class,
 					oAuftrag.getKundeIIdAuftragsadresse());
@@ -3049,9 +3168,10 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	};
 
 	@Override
-	public void berechneBeleg(Integer iIdAuftragI, TheClientDto theClientDto) throws EJBExceptionLP ,RemoteException {
+	public Timestamp berechneBeleg(Integer iIdAuftragI,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		Auftrag oAuftrag = em.find(Auftrag.class, iIdAuftragI);
-		myLogger.entry();		
+		myLogger.entry();
 
 		if (oAuftrag.getAuftragstatusCNr().equals(
 				AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT)) {
@@ -3065,10 +3185,9 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 						.add(oAuftrag.getNKorrekturbetrag());
 			}
 
-			BigDecimal bdWechselkurs = Helper
-					.getKehrwert(new BigDecimal(
-							oAuftrag.getFWechselkursmandantwaehrungzuauftragswaehrung()
-									.doubleValue()));
+			BigDecimal bdWechselkurs = Helper.getKehrwert(new BigDecimal(
+					oAuftrag.getFWechselkursmandantwaehrungzuauftragswaehrung()
+							.doubleValue()));
 			BigDecimal bdAuftragswertInMandantenwaehrung = bdAuftragswertInAuftragswaehrung
 					.multiply(bdWechselkurs);
 			bdAuftragswertInMandantenwaehrung = Helper.rundeKaufmaennisch(
@@ -3096,6 +3215,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 			em.flush();
 
 		}
+		return getTimestamp();
 	}
 
 	public boolean checkPositionFormat(Integer iIdAuftragI,
@@ -3134,7 +3254,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	/**
 	 * Die vollstaendig Artikelbezeichnung einer Auftragposition zum Andrucken
 	 * zusammenbauen.
-	 * 
+	 *
 	 * @param oAuftragpositionDtoI
 	 *            die Auftragposition
 	 * @param theClientDto
@@ -3187,7 +3307,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	 * Methode zum Erzeugen eines neues Auftrags als Kopie eines bestehenden
 	 * Auftrags. <br>
 	 * Es werden auch die Positionen kopiert.
-	 * 
+	 *
 	 * @param iIdAuftragI
 	 *            PK des bestehenden Auftrags
 	 * @param theClientDto
@@ -3332,22 +3452,30 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 					}
 				} else {
 					if (aAuftragpositionBasis[i].isIntelligenteZwischensumme()) {
-						Integer von = getAuftragpositionFac()
-								.getPositionNummer(
-										aAuftragpositionBasis[i]
-												.getZwsVonPosition());
-						auftragpositionDto
-								.setZwsVonPosition(getAuftragpositionFac()
-										.getPositionIIdFromPositionNummer(
-												iIdAuftragKopie, von));
-						Integer bis = getAuftragpositionFac()
-								.getPositionNummer(
-										aAuftragpositionBasis[i]
-												.getZwsBisPosition());
-						auftragpositionDto
-								.setZwsBisPosition(getAuftragpositionFac()
-										.getPositionIIdFromPositionNummer(
-												iIdAuftragKopie, bis));
+						ZwsPositionMapper mapper = new ZwsPositionMapper(
+								getAuftragpositionFac(),
+								getAuftragpositionFac());
+						mapper.map(aAuftragpositionBasis[i],
+								auftragpositionDto, iIdAuftragKopie);
+						//
+						// auftragpositionDto.setBZwsPositionspreisDrucken(
+						// aAuftragpositionBasis[i].getBZwsPositionspreisZeigen());
+						// Integer von = getAuftragpositionFac()
+						// .getPositionNummer(
+						// aAuftragpositionBasis[i]
+						// .getZwsVonPosition());
+						// auftragpositionDto
+						// .setZwsVonPosition(getAuftragpositionFac()
+						// .getPositionIIdFromPositionNummer(
+						// iIdAuftragKopie, von));
+						// Integer bis = getAuftragpositionFac()
+						// .getPositionNummer(
+						// aAuftragpositionBasis[i]
+						// .getZwsBisPosition());
+						// auftragpositionDto
+						// .setZwsBisPosition(getAuftragpositionFac()
+						// .getPositionIIdFromPositionNummer(
+						// iIdAuftragKopie, bis));
 					}
 
 					if (auftragpositionDto.getPositioniIdArtikelset() == null) {
@@ -3480,13 +3608,42 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 		return iIdAuftragI;
 	}
 
+	public Integer vorhandenenLieferscheinEinesAuftagsHolenBzwNeuAnlegen(
+			Integer auftragIId, TheClientDto theClientDto) {
+		// PJ18738
+		// Nachsehen, ob es zu dem Auftrag bereits einen LS gibt, der 'Angelegt'
+		// ist
+
+		Session session3 = FLRSessionFactory.getFactory().openSession();
+		String sQuery3 = "FROM FLRLieferschein flrLieferschein WHERE flrLieferschein.auftrag_i_id="
+				+ auftragIId
+				+ " AND flrLieferschein.lieferscheinstatus_status_c_nr='"
+				+ LocaleFac.STATUS_ANGELEGT
+				+ "' ORDER BY flrLieferschein.c_nr ASC";
+
+		org.hibernate.Query query3 = session3.createQuery(sQuery3);
+		query3.setMaxResults(1);
+
+		List<?> results3 = query3.list();
+		Iterator<?> resultListIterator3 = results3.iterator();
+		if (resultListIterator3.hasNext()) {
+			// wenn ja, dann den zurueckliefern
+			FLRLieferschein ls = (FLRLieferschein) resultListIterator3.next();
+			return ls.getI_id();
+		} else {
+			// wenn nein, dann einen LS aus dem Auftrag anlegen
+			return erzeugeLieferscheinAusAuftrag(auftragIId, null, null,
+					theClientDto);
+		}
+	}
+
 	/**
 	 * Methode zum Erzeugen eines eines Lieferscheins aus einem bestehenden
 	 * Auftrag. <br>
 	 * Nicht mengenbehaftete Positionen werden ebebfalls kopiert,
 	 * mengenbehaftete Positionen muessen vom Benutzer gezielt uebernommen
 	 * werden.
-	 * 
+	 *
 	 * @param iIdAuftragI
 	 *            PK des bestehenden Auftrags
 	 * @param lieferscheinDtoI
@@ -3511,6 +3668,16 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 		try {
 			LieferscheinDto lieferscheinDto = (LieferscheinDto) auftragBasisDto
 					.cloneAsLieferscheinDto();
+
+			// PJ18344
+
+			ParametermandantDto parameterDto = getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_LIEFERSCHEIN,
+							ParameterFac.PARAMETER_LS_DEFAULT_VERRECHENBAR);
+
+			lieferscheinDto.setBVerrechenbar(Helper
+					.boolean2Short((Boolean) parameterDto.getCWertAsObject()));
 
 			if (dRabattAusRechnungsadresse != null) {
 				lieferscheinDto
@@ -3620,7 +3787,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 	/**
 	 * Alle Auftraege holen, die zu einem bestimmten Angebot erfasst wurden.
-	 * 
+	 *
 	 * @param iIdAngebotI
 	 *            PK des Angebots
 	 * @param theClientDto
@@ -3808,7 +3975,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 	/**
 	 * Alle Auftraege eines Mandanten und einer Auftrags-Art holen holen.
-	 * 
+	 *
 	 * @param mandantCNrI
 	 *            String
 	 * @param auftragartCNrI
@@ -3842,7 +4009,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 	/**
 	 * Alle Auftraege eines Mandanten und einer Auftrags-Art holen holen.
-	 * 
+	 *
 	 * @param mandantCNrI
 	 *            String
 	 * @param auftragartCNrI
@@ -3878,7 +4045,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 
 	/**
 	 * Liefert alle Abrufeauftraege zu einem bestimmten Rahmenauftrag.
-	 * 
+	 *
 	 * @param iIdRahmenauftragI
 	 *            PK des Rahmenauftrags
 	 * @param theClientDto
@@ -3931,7 +4098,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	/**
 	 * Den Auftrag mit Daten aktualisieren. Der Status bleibt dabei
 	 * unveraendert.
-	 * 
+	 *
 	 * @param auftragDtoI
 	 *            der Auftrag
 	 * @param theClientDto
@@ -4036,7 +4203,7 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 		}
 
 		if (!AuftragServiceFac.AUFTRAGSTATUS_OFFEN.equals(auftragDto
-				.getAuftragstatusCNr())) {
+				.getStatusCNr())) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_STATUS,
 					new Exception(auftragDto.getStatusCNr()));
 		}
@@ -4681,32 +4848,58 @@ public class AuftragFacBean extends Facade implements AuftragFac, IAktivierbar {
 	}
 
 	@Override
-	public void aktiviereBelegControlled(Integer iid, Timestamp t,
-			TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException {
-		new BelegAktivierungController(this).aktiviereBelegControlled(iid, t, theClientDto);
-	}
-	
-	@Override
-	public Timestamp berechneBelegControlled(Integer iid,
+	public BelegPruefungDto aktiviereBelegControlled(Integer iid, Timestamp t,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		return new BelegAktivierungController(this).berechneBelegControlled(iid, theClientDto);
+		return belegAktivierungFac.aktiviereBelegControlled(this, iid, t, theClientDto) ;
+//		new BelegAktivierungController(this).aktiviereBelegControlled(iid, t,
+//				theClientDto);
 	}
 
 	@Override
-	public boolean hatAenderungenNach(Integer iid, Timestamp t)
+	public BelegPruefungDto berechneBelegControlled(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return belegAktivierungFac.berechneBelegControlled(this, iid, theClientDto) ;
+//		return new BelegAktivierungController(this).berechneBelegControlled(
+//				iid, theClientDto);
+	}
+
+	@Override
+	public List<Timestamp> getAenderungsZeitpunkte(Integer iid)
 			throws EJBExceptionLP, RemoteException {
 		AuftragDto a = auftragFindByPrimaryKey(iid);
-		if(a.getTAendern() != null && a.getTAendern().after(t))
-			return true;
-		if(a.getTBegruendung() != null && a.getTBegruendung().after(t))
-			return true;
-		if(a.getTErledigt() != null && a.getTErledigt().after(t))
-			return true;
-		if(a.getTManuellerledigt() != null && a.getTManuellerledigt().after(t))
-			return true;
-		if(a.getTStorniert() != null && a.getTStorniert().after(t))
-			return true;
-		return false;
+		List<Timestamp> timestamps = new ArrayList<Timestamp>();
+		timestamps.add(a.getTAendern());
+		timestamps.add(a.getTBegruendung());
+		timestamps.add(a.getTErledigt());
+		timestamps.add(a.getTManuellerledigt());
+		timestamps.add(a.getTStorniert());
+		return timestamps;
+	}
+
+	@Override
+	public BelegPruefungDto berechneAktiviereBelegControlled(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return belegAktivierungFac.berechneAktiviereControlled(this, iid, theClientDto) ;
+//		new BelegAktivierungController(this).berechneAktiviereControlled(iid, theClientDto);
+	}
+	
+	@Override
+	public BelegDto getBelegDto(Integer iid, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
+		BelegDto belegDto = auftragFindByPrimaryKey(iid) ;
+		belegDto.setBelegartCNr(LocaleFac.BELEGART_AUFTRAG); 
+		return belegDto ;
+	}
+	
+	@Override
+	public BelegpositionDto[] getBelegPositionDtos(Integer iid,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return getAuftragpositionFac().auftragpositionFindByAuftrag(iid);
+	}
+	
+	@Override
+	public Integer getKundeIdDesBelegs(BelegDto belegDto,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		return ((AuftragDto)belegDto).getKundeIIdRechnungsadresse();
 	}
 }

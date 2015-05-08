@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -57,6 +57,7 @@ import com.lp.server.system.service.SystemServicesFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.HelperServer;
 import com.lp.server.util.LPReport;
+import com.lp.server.util.ServerConfiguration;
 import com.lp.util.EJBExceptionLP;
 
 @Stateless
@@ -342,12 +343,20 @@ public class SystemServicesFacBean implements SystemServicesFac {
 			return cZertifikatName ;
 		}
 
-		String dir = HelperServer.getLPResourceBundle().getString(
-				"ssl.root.dir") ;
+		String dir = ServerConfiguration.getSSLCertificateDir() ;
 		if(!dir.endsWith(File.separator)) {
 			dir += File.separator ;
 		}
 
 		return dir + cZertifikatName ;
+	}
+	
+	/**
+	 * Das Verzeichnis in dem die Scripts liegen
+	 * 
+	 * @return das Verzeichnis (kompletter Pfad) der Skripts
+	 */
+	static public String getScriptDir() {
+		return ServerConfiguration.getScriptDir() ;
 	}
 }

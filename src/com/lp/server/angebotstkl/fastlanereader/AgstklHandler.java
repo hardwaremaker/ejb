@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -51,12 +51,9 @@ import com.lp.server.partner.service.LieferantFac;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.system.fastlanereader.generated.FLRLandplzort;
-import com.lp.server.system.jcr.service.JCRDocFac;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeAgStueckliste;
-import com.lp.server.system.jcr.service.docnode.DocNodeAngebot;
 import com.lp.server.system.jcr.service.docnode.DocPath;
-import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
@@ -220,7 +217,7 @@ public class AgstklHandler extends UseCaseHandler {
 								sValue = super.buildWhereBelegnummer(
 										filterKriterien[i], true);
 							}
-							where.append(" " + "agstkl."
+							where.append(" " + ""
 									+ filterKriterien[i].kritName);
 							where.append(" " + filterKriterien[i].operator);
 							where.append(" " + sValue);
@@ -228,12 +225,16 @@ public class AgstklHandler extends UseCaseHandler {
 							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
 									new Exception(ex));
 						}
-					} else {
+					} else if (filterKriterien[i].kritName.equals("angebotspositionen.flrangebot.c_nr")) {
+
+						whereAngebot(where, filterKriterien[i]);
+
+					}  else {
 						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" upper(" + "agstkl."
+							where.append(" upper(" + ""
 									+ filterKriterien[i].kritName + ")");
 						} else {
-							where.append(" " + "agstkl."
+							where.append(" " + ""
 									+ filterKriterien[i].kritName);
 						}
 
@@ -276,7 +277,7 @@ public class AgstklHandler extends UseCaseHandler {
 								orderBy.append(", ");
 							}
 							sortAdded = true;
-							orderBy.append("agstkl." + kriterien[i].kritName);
+							orderBy.append("" + kriterien[i].kritName);
 							orderBy.append(" ");
 							orderBy.append(kriterien[i].value);
 						}
@@ -318,9 +319,29 @@ public class AgstklHandler extends UseCaseHandler {
 		return "from FLRAgstkl agstkl "
 				+ " left join agstkl.flrkunde.flrpartner.flrlandplzort as flrlandplzort "
 				+ " left join agstkl.flrkunde.flrpartner.flrlandplzort.flrort as flrort "
+				+ " left join agstkl.angebotspositionen as angebotspositionen "
 				+ " left join agstkl.flrkunde.flrpartner.flrlandplzort.flrland as flrland ";
 	}
 
+	private void whereAngebot(StringBuffer where,
+			FilterKriterium filterKriterium) {
+		try {
+
+			String sValue = super.buildWhereBelegnummer(filterKriterium, false);
+
+			// Belegnummernsuche auch in "altem" Jahr, wenn im
+			// neuen noch keines vorhanden ist
+			if (!istBelegnummernInJahr("FLRAngebot", sValue)) {
+				sValue = super.buildWhereBelegnummer(filterKriterium, true);
+			}
+			where.append(" " + filterKriterium.kritName);
+			where.append(" " + filterKriterium.operator);
+			where.append(" " + sValue);
+		} catch (Exception ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, ex);
+		}
+	}
+	
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
 			Object selectedId) throws EJBExceptionLP {
 		this.getQuery().setSortKrit(sortierKriterien);
@@ -334,7 +355,7 @@ public class AgstklHandler extends UseCaseHandler {
 
 			try {
 				session = factory.openSession();
-				String queryString = "select agstkl.i_id from FLRAgstkl agstkl "
+				String queryString = "select agstkl.i_id from FLRAgstkl agstkl left join agstkl.angebotspositionen as angebotspositionen  "
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
@@ -401,14 +422,14 @@ public class AgstklHandler extends UseCaseHandler {
 
 					new String[] {
 							"i_id",
-							"c_nr",
-							AngebotstklFac.FLR_AGSTKL_FLRKUNDE
+							"agstkl.c_nr",
+							"agstkl."+AngebotstklFac.FLR_AGSTKL_FLRKUNDE
 									+ "."
 									+ KundeFac.FLR_PARTNER
 									+ "."
 									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
 
-							AngebotstklFac.FLR_AGSTKL_FLRKUNDE + "."
+									"agstkl."+AngebotstklFac.FLR_AGSTKL_FLRKUNDE + "."
 									+ LieferantFac.FLR_PARTNER + "."
 									+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
 									+ "." + SystemFac.FLR_LP_FLRLAND + "."
@@ -418,7 +439,7 @@ public class AgstklHandler extends UseCaseHandler {
 									+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
 									+ "." + SystemFac.FLR_LP_LANDPLZORTPLZ,
 
-							"c_bez", AngebotstklFac.FLR_AGSTKL_T_BELEGDATUM }));
+									"agstkl.c_bez", "agstkl."+AngebotstklFac.FLR_AGSTKL_T_BELEGDATUM }));
 		}
 
 		return super.getTableInfo();

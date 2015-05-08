@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -225,29 +225,31 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 				// ist das geschaeftsjahr schon angelegt
 				if (getSystemFac().geschaeftsjahrFindByPrimaryKeyOhneExc(
 						geschaeftsjahr, mandantCNr) == null) {
-					GeschaeftsjahrMandantDto gDto = new GeschaeftsjahrMandantDto();
-					// Beginndatum berechnen
-					GregorianCalendar gcBeginn = new GregorianCalendar();
-					gcBeginn.set(GregorianCalendar.DATE, 1);
-					ParametermandantDto pmBeginnMonat = null;
-					pmBeginnMonat = getParameterFac().getMandantparameter(
-							mandantCNr, ParameterFac.KATEGORIE_ALLGEMEIN,
-							ParameterFac.PARAMETER_GESCHAEFTSJAHRBEGINNMONAT);
-					int beginnMonat = Integer
-							.parseInt(pmBeginnMonat.getCWert());
-					beginnMonat = beginnMonat - 1; // wegen Jaenner = 0, Feb. =
-					// 1 etc.
-					gcBeginn.set(GregorianCalendar.YEAR, geschaeftsjahr);
-					gcBeginn.set(GregorianCalendar.MONTH, beginnMonat);
-					gDto.setDBeginndatum(new Timestamp(gcBeginn
-							.getTimeInMillis()));
+					createGeschaeftsjahr(geschaeftsjahr, theClientDto);
 					
-
-					gDto.setIGeschaeftsjahr(geschaeftsjahr);
-					gDto.setMandantCnr(mandantCNr) ;
-					gDto.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
-					gDto.setTAnlegen(new Timestamp(System.currentTimeMillis()));
-					getSystemFac().createGeschaeftsjahr(gDto);
+//					GeschaeftsjahrMandantDto gDto = new GeschaeftsjahrMandantDto();
+//					// Beginndatum berechnen
+//					GregorianCalendar gcBeginn = new GregorianCalendar();
+//					gcBeginn.set(GregorianCalendar.DATE, 1);
+//					ParametermandantDto pmBeginnMonat = null;
+//					pmBeginnMonat = getParameterFac().getMandantparameter(
+//							mandantCNr, ParameterFac.KATEGORIE_ALLGEMEIN,
+//							ParameterFac.PARAMETER_GESCHAEFTSJAHRBEGINNMONAT);
+//					int beginnMonat = Integer
+//							.parseInt(pmBeginnMonat.getCWert());
+//					beginnMonat = beginnMonat - 1; // wegen Jaenner = 0, Feb. =
+//					// 1 etc.
+//					gcBeginn.set(GregorianCalendar.YEAR, geschaeftsjahr);
+//					gcBeginn.set(GregorianCalendar.MONTH, beginnMonat);
+//					gDto.setDBeginndatum(new Timestamp(gcBeginn
+//							.getTimeInMillis()));
+//					
+//
+//					gDto.setIGeschaeftsjahr(geschaeftsjahr);
+//					gDto.setMandantCnr(mandantCNr) ;
+//					gDto.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
+//					gDto.setTAnlegen(new Timestamp(System.currentTimeMillis()));
+//					getSystemFac().createGeschaeftsjahr(gDto);
 				}
 				Integer iStartwert = new Integer(0);
 				// Fuer Rechnungen und Lose kann der Startwert gesetzt werden
@@ -570,5 +572,34 @@ public class BNGeneratorFacBean extends Facade implements BNGeneratorFacLocal {
 			String name, String mandantCNr, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		return getNextBelegNr(geschaeftsjahr, name, name, mandantCNr, false, theClientDto);
+	}
+	
+	private void createGeschaeftsjahr(Integer geschaeftsjahr, TheClientDto theClientDto) throws RemoteException, EJBExceptionLP {
+		int beginnMonat = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+				ParameterFac.KATEGORIE_ALLGEMEIN,
+				ParameterFac.PARAMETER_GESCHAEFTSJAHRBEGINNMONAT).asInteger() - 1;
+		boolean plusEins = getParameterFac().getMandantparameter(theClientDto.getMandant(),
+				ParameterFac.KATEGORIE_ALLGEMEIN,
+				ParameterFac.PARAMETER_GESCHAEFTSJAHRPLUSEINS).asBoolean() ;
+
+		int kalenderjahr = geschaeftsjahr ;
+		if(plusEins) {
+			--kalenderjahr ;
+		}
+		
+		GregorianCalendar gcBeginn = new GregorianCalendar();
+		gcBeginn.set(GregorianCalendar.DATE, 1);
+		gcBeginn.set(GregorianCalendar.YEAR, kalenderjahr);
+		gcBeginn.set(GregorianCalendar.MONTH, beginnMonat);
+
+		GeschaeftsjahrMandantDto gDto = new GeschaeftsjahrMandantDto();
+		gDto.setDBeginndatum(new Timestamp(gcBeginn
+				.getTimeInMillis()));
+		
+		gDto.setIGeschaeftsjahr(geschaeftsjahr);
+		gDto.setMandantCnr(theClientDto.getMandant()) ;
+		gDto.setPersonalIIdAnlegen(theClientDto.getIDPersonal());
+		gDto.setTAnlegen(new Timestamp(System.currentTimeMillis()));
+		getSystemFac().createGeschaeftsjahr(gDto);
 	}
 }

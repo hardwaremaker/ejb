@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -41,10 +41,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
@@ -62,7 +64,6 @@ import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Property;
 import org.hibernate.criterion.Restrictions;
 import org.jboss.annotation.ejb.TransactionTimeout;
-import org.jboss.logging.Logger;
 
 import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.bestellung.fastlanereader.generated.FLRWareneingangspositionen;
@@ -80,6 +81,7 @@ import com.lp.server.finanz.bl.datevexport.BuchungsjournalDatevExportHeaderForma
 import com.lp.server.finanz.bl.datevexport.BuchungsjournalExportDatevBuchung;
 import com.lp.server.finanz.bl.datevexport.BuchungsjournalExportDatevFormatter;
 import com.lp.server.finanz.bl.hvraw.BuchungsjournalExportHVRawFormatter;
+import com.lp.server.finanz.bl.rzlexport.BuchungsjournalExportRzlFormatter;
 import com.lp.server.finanz.ejb.Exportdaten;
 import com.lp.server.finanz.ejb.Exportlauf;
 import com.lp.server.finanz.fastlanereader.generated.FLRFinanzBuchung;
@@ -102,7 +104,6 @@ import com.lp.server.finanz.service.FinanzamtDto;
 import com.lp.server.finanz.service.IBuchungsjournalExportFormatter;
 import com.lp.server.finanz.service.IntrastatDto;
 import com.lp.server.finanz.service.SteuerkategorieDto;
-import com.lp.server.finanz.service.SteuerkategoriekontoDto;
 import com.lp.server.finanz.service.WarenverkehrsnummerDto;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition;
 import com.lp.server.lieferschein.service.LieferscheinFac;
@@ -127,6 +128,7 @@ import com.lp.server.system.service.GeschaeftsjahrMandantDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
 import com.lp.server.system.service.MwstsatzDto;
+import com.lp.server.system.service.MwstsatzbezDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.SystemFac;
@@ -342,15 +344,17 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public List<String> exportiereBuchungsjournal(String format, Date von, Date bis,
-			boolean mitAutoEB, boolean mitManEB, boolean mitAutoB, String bezeichnung,
+			boolean mitAutoEB, boolean mitManEB, boolean mitAutoB, boolean mitStornierte, String bezeichnung,
 			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP { 
 		
 		
 		IBuchungsjournalExportFormatter formatter = null;
-		if(format.equals(DATEV))
+		if(DATEV.equals(format))
 			formatter = getBuchungsjournalExportFormatterDatev(von, bis, mitAutoEB, mitManEB, mitAutoB, bezeichnung, theClientDto);
-		else if(format.equals(HV_RAW))
-			formatter = getBuchungsjournalExportFormatterHVRaw(von, bis, mitAutoEB, mitManEB, mitAutoB, bezeichnung, theClientDto);
+		else if(HV_RAW.equals(format))
+			formatter = getBuchungsjournalExportFormatterHVRaw(von, bis, mitAutoEB, mitManEB, mitAutoB, mitStornierte, bezeichnung, theClientDto);
+		else if(RZL_CSV.equals(format))
+			formatter = getBuchungsjournalExportFormatterRzl(von, bis, mitAutoEB, mitManEB, mitAutoB, bezeichnung, theClientDto);
 		
 		if(formatter == null)
 			return null;
@@ -359,7 +363,7 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 	
 	private IBuchungsjournalExportFormatter getBuchungsjournalExportFormatterHVRaw(
 			Date von, Date bis, boolean mitAutoEB, boolean mitManEB,
-			boolean mitAutoB, String bezeichnung, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+			boolean mitAutoB, boolean mitStornierte, String bezeichnung, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 
 		List<Integer> mitlaufendeKonten = getIIdsMitlaufendeKonten(theClientDto);
 		Session session = FLRSessionFactory.getFactory().openSession();
@@ -372,6 +376,8 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		if (!mitManEB)
 			c.add(Restrictions.not(Restrictions.like("b.buchungsart_c_nr",
 					FinanzFac.BUCHUNGSART_EROEFFNUNG)));
+		if(!mitStornierte)
+			c.add(Restrictions.isNull("b.t_storniert"));
 		c.add(Restrictions.ge("b.d_buchungsdatum", von))
 				.add(Restrictions.le("b.d_buchungsdatum", bis))
 				.add(Restrictions.like("ks.mandant_c_nr", theClientDto.getMandant()))
@@ -405,7 +411,7 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 //												"" + detail.getFlrkonto().getC_bez());
 //				} else
 				if(!mitlaufendeKonten.contains(detail.getKonto_i_id())) { 
-					details.add(detail); // nicht mitlaufende Konten mussen immer dabei sein.
+					details.add(detail); // nicht mitlaufende Konten muessen immer dabei sein.
 				} else {
 					boolean mitlaufend = false;
 					for(FLRFinanzBuchungDetail nichtSKDetail : nichtSachkonto) {
@@ -429,7 +435,7 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			}
 			
 		}		
-		return new BuchungsjournalExportHVRawFormatter(details);
+		return new BuchungsjournalExportHVRawFormatter(details, mitStornierte);
 	}
 	
 	private IBuchungsjournalExportFormatter getBuchungsjournalExportFormatterDatev(
@@ -455,6 +461,31 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 						.getTime(), kontostellen, von.getTime(), bis.getTime(),
 				bezeichnung, mDto.getWaehrungCNr());
 		return new BuchungsjournalExportDatevFormatter(head, buchungen);
+	}
+
+	private IBuchungsjournalExportFormatter getBuchungsjournalExportFormatterRzl(
+			Date von, Date bis, boolean mitAutoEB, boolean mitManEB,
+			boolean mitAutoB, String bezeichnung, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		ParametermandantDto pBerater = getParameterFac().getMandantparameter(
+				theClientDto.getMandant(), ParameterFac.KATEGORIE_FINANZ, ParameterFac.PARAMETER_EXPORT_DATEV_BERATER);
+		ParametermandantDto pMandant = getParameterFac().getMandantparameter(
+				theClientDto.getMandant(), ParameterFac.KATEGORIE_FINANZ, ParameterFac.PARAMETER_EXPORT_DATEV_MANDANT);
+		ParametermandantDto pKontostellen = getParameterFac().getMandantparameter(
+				theClientDto.getMandant(), ParameterFac.KATEGORIE_FINANZ, ParameterFac.PARAMETER_KONTONUMMER_STELLENANZAHL_SACHKONTEN);
+		String berater = pBerater.getCWert();
+		String mandant = pMandant.getCWert();
+		Integer kontostellen = new Integer(pKontostellen.getCWert());
+		
+		Integer gf = getBuchenFac().findGeschaeftsjahrFuerDatum(von, theClientDto.getMandant());
+		GeschaeftsjahrMandantDto gfDto = getSystemFac().geschaeftsjahrFindByPrimaryKey(gf, theClientDto.getMandant());
+		
+		MandantDto mDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto);
+		List<BuchungsjournalExportDatevBuchung> buchungen = getBuchungen(von, bis, mitAutoEB, mitManEB, mitAutoB, theClientDto);
+		BuchungsjournalDatevExportHeaderFormatter head = new BuchungsjournalDatevExportHeaderFormatter(
+				theClientDto, berater, mandant, gfDto.getDBeginndatum()
+						.getTime(), kontostellen, von.getTime(), bis.getTime(),
+				bezeichnung, mDto.getWaehrungCNr());
+		return new BuchungsjournalExportRzlFormatter(head, buchungen);
 	}
 
 	private List<Integer> getIIdsMitlaufendeKonten(TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
@@ -487,43 +518,21 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 		List<String> kontoklassenOhneUst = Arrays.asList(pKontoklassenOhneUst.getCWert().split(","));
 		
 		FinanzamtDto[] finanzaemter = getFinanzFac().finanzamtFindAll(theClientDto);
-		List<Integer> mitlaufendeKonten = new ArrayList<Integer>();
+		
 		Map<Integer, Integer> mwstKonten = new HashMap<Integer, Integer>();
+		Set<Integer> mitlaufendeKonten = new HashSet<Integer>();
 		for(FinanzamtDto amt : finanzaemter) {
-			SteuerkategorieDto[] stkDtos = getFinanzServiceFac().steuerkategorieFindByFinanzamtIId(amt.getPartnerIId(), theClientDto);
-			for(SteuerkategorieDto stkat : stkDtos) {
-				if(stkat.getKontoIIdForderungen() != null)
-					mitlaufendeKonten.add(stkat.getKontoIIdForderungen());
-				if(stkat.getKontoIIdVerbindlichkeiten() != null)
-					mitlaufendeKonten.add(stkat.getKontoIIdVerbindlichkeiten());
-				
-				SteuerkategoriekontoDto[] stkks = getFinanzServiceFac().steuerkategoriekontoFindAll(stkat.getIId());
-				for (SteuerkategoriekontoDto stkk : stkks) {
-					if(mwstKonten.containsKey(stkk.getKontoIIdEk()))
-							mwstKonten.put(stkk.getKontoIIdEk(), null);
-					else mwstKonten.put(stkk.getKontoIIdEk(), stkk.getMwstsatzbezIId());
-
-					if(mwstKonten.containsKey(stkk.getKontoIIdVk()))
-						mwstKonten.put(stkk.getKontoIIdVk(), null);
-					else mwstKonten.put(stkk.getKontoIIdVk(), stkk.getMwstsatzbezIId());
-					
-					if(mwstKonten.containsKey(stkk.getKontoIIdEinfuhrUst()))
-						mwstKonten.put(stkk.getKontoIIdEinfuhrUst(), null);
-					else mwstKonten.put(stkk.getKontoIIdEinfuhrUst(), stkk.getMwstsatzbezIId());
-					//gibt es fuer ein Konto mehrere zugewiesene MwstSaetze, null in die Map schreiben
-					//so weiss man, dass das Konto entweder nur einen MwstSatz haben kann oder aber
-					//wenn vorhanden in der Map aber null, dann MwstSatz berechnen.
-				}
-			}
+			mwstKonten.putAll(getFinanzServiceFac().getAllIIdsSteuerkontoMitIIdMwstBez(amt.getPartnerIId(), theClientDto));
+			mitlaufendeKonten.addAll(getFinanzServiceFac().getAllMitlaufendeKonten(amt.getPartnerIId(), theClientDto));
 		}
 		List<BuchungsjournalExportDatevBuchung> buchungen = new ArrayList<BuchungsjournalExportDatevBuchung>();
 		Session session = FLRSessionFactory.getFactory().openSession();
 		Criteria c = session.createCriteria(FLRFinanzBuchung.class);
 		c.createAlias("flrkostenstelle", "ks");
 		if (!mitAutoB)
-			c.add(Restrictions.like("b_autombuchung", 0));
+			c.add(Restrictions.like("b_autombuchung", Helper.getShortFalse()));
 		if (!mitAutoEB)
-			c.add(Restrictions.like("b_autombuchungeb", 0));
+			c.add(Restrictions.like("b_autombuchungeb", Helper.getShortFalse()));
 		if (!mitManEB)
 			c.add(Restrictions.not(Restrictions.like("buchungsart_c_nr",
 					FinanzFac.BUCHUNGSART_EROEFFNUNG)));
@@ -640,7 +649,8 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 							}
 							fibuCode = mwstDto.getIFibumwstcode();
 							if(fibuCode == null) {
-								throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_EXPORT_KEIN_MWSTCODE, "", mwstDto.getMwstsatzbezDto().getCBezeichnung());
+								MwstsatzbezDto mwstsatzbezDto = getMandantFac().mwstsatzbezFindByPrimaryKey(mwstDto.getIIMwstsatzbezId(), theClientDto);
+								throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_EXPORT_KEIN_MWSTCODE, "", mwstsatzbezDto.getCBezeichnung());
 							}
 							umsatz = b.getN_betrag().add(mwstBuchung.getN_betrag()).abs();
 							i++;
@@ -761,7 +771,7 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 
 	private FLREingangsrechnung[] getVerbuchbareEingangsrechnungen(
 			java.sql.Date dStichtag, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+			throws EJBExceptionLP, RemoteException {
 		Session session = null;
 		try {
 			SessionFactory factory = FLRSessionFactory.getFactory();
@@ -770,6 +780,12 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			// Filter nach Mandant
 			c.add(Restrictions.eq(EingangsrechnungFac.FLR_ER_MANDANT_C_NR,
 					theClientDto.getMandant()));
+			if (!anzahlungenExportieren(theClientDto)) {
+				// keine Anzahlungen wenn Parameter = 0
+				c.add(Restrictions.not(Restrictions.eq(
+						EingangsrechnungFac.FLR_ER_EINGANGSRECHNUNGART_C_NR,
+						EingangsrechnungFac.EINGANGSRECHNUNGART_ANZAHLUNG)));
+			}
 			// Noch nicht verbuchte
 			c.add(Restrictions
 					.isNull(EingangsrechnungFac.FLR_ER_T_FIBUUEBERNAHME));
@@ -798,21 +814,34 @@ public class FibuExportFacBean extends Facade implements FibuExportFac {
 			}
 		}
 	}
+	
+	private boolean anzahlungenExportieren(TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		ParametermandantDto parameterAnzahlungen =
+				getParameterFac().parametermandantFindByPrimaryKey(
+						ParameterFac.PARAMETER_FINANZ_EXPORT_ANZAHLUNGSRECHNUNG,
+						ParameterFac.KATEGORIE_FINANZ, theClientDto.getMandant());
+		return parameterAnzahlungen.asBoolean();
+	}
 
 	private FLRRechnung[] getVerbuchbareRechnungen(java.sql.Date dStichtag,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		Session session = null;
 		try {
 			pruefeAufAngelegte(dStichtag, theClientDto,
 					RechnungFac.RECHNUNGTYP_RECHNUNG);
+			
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			session = factory.openSession();
 			Criteria c = session.createCriteria(FLRRechnung.class);
 			// nur Rechnungen
-			c.createCriteria(RechnungFac.FLR_RECHNUNG_FLRRECHNUNGART).add(
+			Criteria rechnungart = c.createCriteria(RechnungFac.FLR_RECHNUNG_FLRRECHNUNGART).add(
 					Restrictions.eq(
 							RechnungFac.FLR_RECHNUNGART_RECHNUNGTYP_C_NR,
 							RechnungFac.RECHNUNGTYP_RECHNUNG));
+			if(!anzahlungenExportieren(theClientDto)) {
+				// keine Anzahlung wenn Parameter = 0
+				rechnungart.add(Restrictions.not(Restrictions.eq(RechnungFac.FLR_RECHNUNGART_C_NR, RechnungFac.RECHNUNGART_ANZAHLUNG)));
+			}
 			// Filter nach Mandant
 			c.add(Restrictions.eq(RechnungFac.FLR_RECHNUNG_MANDANT_C_NR,
 					theClientDto.getMandant()));

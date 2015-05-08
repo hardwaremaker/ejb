@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -37,6 +37,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import javax.ejb.Stateless;
@@ -49,14 +50,14 @@ import javax.persistence.Query;
 
 import org.hibernate.Session;
 
-import com.lp.server.auftrag.ejb.Auftrag;
-import com.lp.server.auftrag.service.AuftragDto;
+import com.lp.server.partner.ejb.HvTypedQuery;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.personal.service.PersonalDto;
 import com.lp.server.projekt.ejb.History;
 import com.lp.server.projekt.ejb.Projekt;
 import com.lp.server.projekt.ejb.Projektstatus;
 import com.lp.server.projekt.ejb.ProjektstatusPK;
+import com.lp.server.projekt.fastlanereader.ProjektverlaufHandler;
 import com.lp.server.projekt.service.HistoryDto;
 import com.lp.server.projekt.service.HistoryDtoAssembler;
 import com.lp.server.projekt.service.HistoryartDto;
@@ -65,15 +66,21 @@ import com.lp.server.projekt.service.ProjektDtoAssembler;
 import com.lp.server.projekt.service.ProjektFac;
 import com.lp.server.projekt.service.ProjektServiceFac;
 import com.lp.server.projekt.service.ProjektStatusDto;
+import com.lp.server.projekt.service.ProjektVerlaufHelperDto;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.pkgenerator.format.LpBelegnummer;
 import com.lp.server.system.pkgenerator.format.LpBelegnummerFormat;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
+import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.fastlanereader.service.query.FilterBlock;
+import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
@@ -123,21 +130,14 @@ public class ProjektFacBean extends Facade implements ProjektFac {
 			TheClientDto theClientDto) {
 		double dSchaetzung = 0.0;
 		String mandantCNr = theClientDto.getMandant();
-		try {
-			Query query = em
-					.createNamedQuery("ProjektfindByPersonalIIdMandantCNrISort");
-			query.setParameter(1, personal_i_id_zugewiesener);
-			query.setParameter(2, mandantCNr);
-			Collection<Projekt> cl = query.getResultList();
-			Iterator<?> iterator = cl.iterator();
-			while (iterator.hasNext()) {
-				Projekt projekt = (Projekt) iterator.next();
-				if (projekt.getFDauer() != null)
-					dSchaetzung = dSchaetzung
-							+ projekt.getFDauer().doubleValue();
-			}
-		} catch (NoResultException e) {
-			return 0.0;
+		HvTypedQuery<Projekt> query = new HvTypedQuery<Projekt>(
+				em.createNamedQuery("ProjektfindByPersonalIIdMandantCNrISort"));
+		query.setParameter(1, personal_i_id_zugewiesener);
+		query.setParameter(2, mandantCNr);
+		Collection<Projekt> cl = query.getResultList();
+		for (Projekt projekt : cl) {
+			if (projekt.getFDauer() != null)
+				dSchaetzung = dSchaetzung + projekt.getFDauer();
 		}
 		return dSchaetzung;
 	}
@@ -357,12 +357,43 @@ public class ProjektFacBean extends Facade implements ProjektFac {
 					ProjektServiceFac.PROJEKT_STATUS_ERLEDIGT))
 				projektDto.setISort(null);
 		// 15547
-		if (projekt.getProjProjektstatusCNr().equals(
-				ProjektServiceFac.PROJEKT_STATUS_ERLEDIGT)
-				&& projektDto.getStatusCNr().equals(
-						ProjektServiceFac.PROJEKT_STATUS_ERLEDIGT)) {
-			projektDto.setTErledigt(projekt.getTErledigt());
+
+		try {
+
+			boolean bVorherErledigt = false;
+
+			ProjektStatusDto statusDtoVorher = getProjektServiceFac()
+					.projektStatusFindByPrimaryKey(
+							projekt.getProjProjektstatusCNr(), theClientDto);
+			if (Helper.short2boolean(statusDtoVorher.getBErledigt())) {
+				bVorherErledigt = true;
+			}
+
+			ProjektStatusDto statusDtoJetzt = getProjektServiceFac()
+					.projektStatusFindByPrimaryKey(projektDto.getStatusCNr(),
+							theClientDto);
+
+			boolean bJetztErledigt = false;
+
+			if (Helper.short2boolean(statusDtoJetzt.getBErledigt())) {
+				bJetztErledigt = true;
+			}
+
+			if (bVorherErledigt == true && bJetztErledigt == true) {
+
+			} else if (bVorherErledigt == false && bJetztErledigt == true) {
+				projektDto.setTErledigt(new Timestamp(System.currentTimeMillis()));
+				projektDto
+						.setPersonalIIdErlediger(theClientDto.getIDPersonal());
+			} else if (bVorherErledigt == true && bJetztErledigt == false) {
+				projektDto.setTErledigt(null);
+				projektDto.setPersonalIIdErlediger(null);
+			}
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
 		}
+
 
 		setProjektFromProjektDto(projekt, projektDto);
 
@@ -406,6 +437,30 @@ public class ProjektFacBean extends Facade implements ProjektFac {
 		// }
 	}
 
+	public LinkedHashMap<String, ProjektVerlaufHelperDto> getProjektVerlauf(Integer projektIId,TheClientDto theClientDto){
+		try {
+			FilterKriterium[] filterKrit = new FilterKriterium[1];
+			FilterKriterium krit1 = new FilterKriterium("projekt_i_id", true,
+					projektIId.toString(), FilterKriterium.OPERATOR_EQUAL,
+					false);
+
+			filterKrit[0] = krit1;
+
+			QueryParameters p = new QueryParameters(
+					QueryParameters.UC_ID_PROJEKTVERLAUF, null, new FilterBlock(
+							filterKrit, "AND"), null, null);
+
+			ProjektverlaufHandler pv = new ProjektverlaufHandler();
+			pv.setCurrentUser(theClientDto);
+			pv.setQuery(p);
+
+			return pv.setInhalt();
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+			return null;
+		}
+	}
+	
 	public ProjektDto[] projektFindByPartnerIIdMandantCNrOhneExc(
 			Integer iPartnerId, String cNrMandant) throws EJBExceptionLP {
 		// try {
@@ -425,7 +480,7 @@ public class ProjektFacBean extends Facade implements ProjektFac {
 		Query query = em.createNamedQuery("ProjektfindByCNrMandantCNr");
 		query.setParameter(1, cNrI);
 		query.setParameter(2, cNrMandantI);
-		
+
 		Projekt projekt;
 		try {
 			projekt = (Projekt) query.getSingleResult();
@@ -434,10 +489,10 @@ public class ProjektFacBean extends Facade implements ProjektFac {
 			return null;
 		}
 	}
-	
+
 	public ProjektDto[] projektFindByCNrMandantCNr(String cNr, String mandantCNr) {
 		javax.persistence.Query query = em
-				.createNamedQuery("ProjektfindByPartnerIIdMandantCNr");
+				.createNamedQuery("ProjektfindByCNrMandantCNr");
 		query.setParameter(1, cNr);
 		query.setParameter(2, mandantCNr);
 		Collection<?> projekt = query.getResultList();
@@ -458,13 +513,11 @@ public class ProjektFacBean extends Facade implements ProjektFac {
 
 	public ArrayList<String> getVorgaengerProjekte(Integer projektIId) {
 		ArrayList<String> projekte = new ArrayList<String>();
-		javax.persistence.Query query = em
-				.createNamedQuery("ProjektfindByProjektIIdNachfolger");
+		HvTypedQuery<Projekt> query = new HvTypedQuery<Projekt>(
+				em.createNamedQuery("ProjektfindByProjektIIdNachfolger"));
 		query.setParameter(1, projektIId);
-		Collection<?> cl = query.getResultList();
-		Iterator it = cl.iterator();
-		while (it.hasNext()) {
-			Projekt projekt = (Projekt) it.next();
+		Collection<Projekt> cl = query.getResultList();
+		for (Projekt projekt : cl) {
 			projekte.add(getProjektServiceFac().bereichFindByPrimaryKey(
 					projekt.getBereichIId()).getCBez()
 					+ " " + projekt.getCNr());
@@ -532,6 +585,8 @@ public class ProjektFacBean extends Facade implements ProjektFac {
 		projekt.setTInternerledigt(projektDto.getTInternerledigt());
 		projekt.setPersonalIIdInternerledigt(projektDto
 				.getPersonalIIdInternerledigt());
+		projekt.setBuildNumber(projektDto.getBuildNumber());
+		projekt.setDeployNumber(projektDto.getDeployNumber());
 		em.merge(projekt);
 		em.flush();
 	}
@@ -583,6 +638,9 @@ public class ProjektFacBean extends Facade implements ProjektFac {
 					.setTBelegDatum(new Timestamp(System.currentTimeMillis()));
 		}
 
+		if(historyDto.getBHtml() == null) {
+			historyDto.setBHtml(Helper.getShortFalse());
+		}		
 		zielterminUpdaten(historyDto);
 
 		historyDto.setPersonalIId(theClientDto.getIDPersonal());
@@ -590,12 +648,14 @@ public class ProjektFacBean extends Facade implements ProjektFac {
 		try {
 			History history = new History(historyDto.getIId(),
 					historyDto.getPersonalIId(), historyDto.getTBelegDatum(),
-					historyDto.getXText(), projekt);
+					historyDto.getXText(), projekt, historyDto.getBHtml());
 			em.persist(history);
 			em.flush();
 			setHistoryFromHistoryDto(history, historyDto);
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
+		} catch(Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception());			
 		}
 
 		return historyIId;
@@ -708,6 +768,7 @@ public class ProjektFacBean extends Facade implements ProjektFac {
 		history.setCTitel(historyDto.getCTitel());
 		history.setHistoryartIId(historyDto.getHistoryartIId());
 		// history.setProjektIId(historyDto.getProjektIId());
+		history.setBHtml(historyDto.getBHtml());
 		em.merge(history);
 		em.flush();
 	}
@@ -772,6 +833,20 @@ public class ProjektFacBean extends Facade implements ProjektFac {
 		oProjekt2.setISort(new Integer(-1));
 		oProjekt.setISort(iSort2);
 		oProjekt2.setISort(iSort1);
+	}
+
+	public String getBelegnr(Integer projektNummer, Integer geschaeftsjahr,
+			TheClientDto theClientDto) throws RemoteException {
+		LpBelegnummerFormat f = getBelegnummerGeneratorObj()
+				.getBelegnummernFormat(theClientDto.getMandant());
+
+		ParametermandantDto pm = getParameterFac().getMandantparameter(
+				theClientDto.getMandant(), ParameterFac.KATEGORIE_ALLGEMEIN,
+				ParameterFac.PARAMETER_BELEGNUMMER_MANDANTKENNUNG);
+		String mk = pm.getCWert().trim();
+
+		LpBelegnummer bnr = new LpBelegnummer(geschaeftsjahr, mk, projektNummer);
+		return f.format(bnr);
 	}
 
 }

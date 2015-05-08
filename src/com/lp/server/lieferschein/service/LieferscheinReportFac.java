@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -134,7 +134,14 @@ public interface LieferscheinReportFac {
 	public final static int REPORT_LIEFERSCHEIN_AUFTRAG_BESTAETIGUNG_TERMIN = 74 ;
 	public final static int REPORT_LIEFERSCHEIN_AUFTRAG_VERSANDWEG = 75 ;
 	public final static int REPORT_LIEFERSCHEIN_LAGER_UEBERSTEUERT = 76 ;
-	public final static int REPORT_LIEFERSCHEIN_ANZAHL_ZEILEN = 77 ;
+	public final static int REPORT_LIEFERSCHEIN_VERSION = 77 ;
+	public final static int REPORT_LIEFERSCHEIN_ZWSPOSPREISDRUCKEN = 78 ;
+	public final static int REPORT_LIEFERSCHEIN_LIEFERSCHEIN_NUMMER = 79;
+	public final static int REPORT_LIEFERSCHEIN_LIEFERSCHEIN_BELEGDATUM = 80;
+	public final static int REPORT_LIEFERSCHEIN_LIEFERSCHEIN_PROJEKT = 81;
+	public final static int REPORT_LIEFERSCHEIN_LIEFERSCHEIN_BESTELLNUMMER = 82;
+	public final static int REPORT_LIEFERSCHEIN_LIEFERSCHEIN_KOMMISSION = 83;
+	public final static int REPORT_LIEFERSCHEIN_ANZAHL_ZEILEN = 84 ;
 
 	public final static int REPORT_LIEFERSCHEIN_OFFENE_LIEFERSCHEINCNR = 0;
 	public final static int REPORT_LIEFERSCHEIN_OFFENE_LIEFERSCHEINKUNDE = 1;
@@ -188,7 +195,8 @@ public interface LieferscheinReportFac {
 	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_KBEZ = 15;
 	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_INDEX = 16;
 	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_REVISION = 17;
-	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ANZAHL_SPALTEN = 18;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_SUBREPORT_SNRCHNR = 18;
+	public final static int REPORT_LIEFERSCHEIN_WA_ETIKETT_ANZAHL_SPALTEN = 19;
 
 	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ANLIEFERMENGE = 0;
 	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_IDENT = 1;
@@ -207,11 +215,12 @@ public interface LieferscheinReportFac {
 	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_KBEZ = 14;
 	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_INDEX = 15;
 	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_REVISION = 16;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_PAKETMENGE = 17;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_AKTUELLESPAKET = 18;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_VERPACKUNGSMENGE = 19;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_POSITION = 20;
-	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ANZAHL_SPALTEN = 21;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_SUBREPORT_SNRCHNR = 17;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_PAKETMENGE = 18;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_AKTUELLESPAKET = 19;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_VERPACKUNGSMENGE = 20;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_POSITION = 21;
+	public final static int REPORT_LIEFERSCHEIN_VERSANDETIKETT_ANZAHL_SPALTEN = 22;
 
 	public JasperPrintLP[] printLieferschein(Integer iIdLieferscheinI,
 			Integer iAnzahlKopienI, Boolean bMitLogo, TheClientDto theClientDto)
@@ -245,6 +254,6 @@ public interface LieferscheinReportFac {
 
 	public JasperPrintLP printLieferscheinWAEtikett(Integer iIdLieferscheinI,
 			Integer iPaketnummer, Integer iIdLieferscheinPositionI,
-			BigDecimal bdHandmenge, TheClientDto theClientDto)
+			BigDecimal bdHandmenge, Integer iExemplare,TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 }

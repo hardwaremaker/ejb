@@ -1,36 +1,24 @@
 <?xml version="1.0"?>
-<!--
-  HELIUM V, Open Source ERP software for sustained success
-  at small and medium-sized enterprises.
-  Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
-  
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Affero General Public License as published 
-  by the Free Software Foundation, either version 3 of theLicense, or 
-  (at your option) any later version.
-  
-  According to sec. 7 of the GNU Affero General Public License, version 3, 
-  the terms of the AGPL are supplemented with the following terms:
-  
-  "HELIUM V" and "HELIUM 5" are registered trademarks of 
-  HELIUM V IT-Solutions GmbH. The licensing of the program under the 
-  AGPL does not imply a trademark license. Therefore any rights, title and
-  interest in our trademarks remain entirely with us. If you want to propagate
-  modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
-  you may only do so if you have a written permission by HELIUM V IT-Solutions 
-  GmbH (to acquire a permission please contact HELIUM V IT-Solutions
-  at trademark@heliumv.com).
-  
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Affero General Public License for more details.
-  
-  You should have received a copy of the GNU Affero General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  
-  Contact: developers@heliumv.com
--->
+<!-- HELIUM V, Open Source ERP software for sustained success at small and 
+	medium-sized enterprises. Copyright (C) 2004 - 2014 HELIUM V IT-Solutions 
+	GmbH This program is free software: you can redistribute it and/or modify 
+	it under the terms of the GNU Affero General Public License as published 
+	by the Free Software Foundation, either version 3 of theLicense, or (at your 
+	option) any later version. According to sec. 7 of the GNU Affero General 
+	Public License, version 3, the terms of the AGPL are supplemented with the 
+	following terms: "HELIUM V" and "HELIUM 5" are registered trademarks of HELIUM 
+	V IT-Solutions GmbH. The licensing of the program under the AGPL does not 
+	imply a trademark license. Therefore any rights, title and interest in our 
+	trademarks remain entirely with us. If you want to propagate modified versions 
+	of the Program under the name "HELIUM V" or "HELIUM 5", you may only do so 
+	if you have a written permission by HELIUM V IT-Solutions GmbH (to acquire 
+	a permission please contact HELIUM V IT-Solutions at trademark@heliumv.com). 
+	This program is distributed in the hope that it will be useful, but WITHOUT 
+	ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+	FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+	details. You should have received a copy of the GNU Affero General Public 
+	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
+	Contact: developers@heliumv.com -->
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 <hibernate-mapping package="com.lp.server.auftrag.fastlanereader.generated">
 
@@ -124,11 +112,13 @@
 		<many-to-one name="flrlieferkunde"
 			class="com.lp.server.partner.fastlanereader.generated.FLRKunde"
 			column="KUNDE_I_ID_LIEFERADRESSE" unique="true" insert="false"
-			update="false" /> 
+			update="false" />
 		<property name="ansprechpartner_i_id_lieferadresse" column="ANSPRECHPARTNER_I_ID_LIEFERADRESSE"
 			type="java.lang.Integer" />
-		<property name="x_internerkommentar" column="X_INTERNERKOMMENTAR" type="java.lang.String" />
-		<property name="x_externerkommentar" column="X_EXTERNERKOMMENTAR" type="java.lang.String" />				
+		<property name="x_internerkommentar" column="X_INTERNERKOMMENTAR"
+			type="java.lang.String" />
+		<property name="x_externerkommentar" column="X_EXTERNERKOMMENTAR"
+			type="java.lang.String" />
 	</class>
 	<class name="FLRAuftragReport" table="AUFT_AUFTRAG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
@@ -206,6 +196,15 @@
 		<many-to-one name="flrauftragtextsuche"
 			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftragtextsuche"
 			column="I_ID" insert="false" update="false" />
+		<many-to-one name="flrprojekt"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjekt"
+			column="PROJEKT_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrauftrag_rahmenauftrag"
+			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag"
+			column="AUFTRAG_I_ID_RAHMENAUFTRAG" insert="false" update="false" />
+
+
 	</class>
 	<class name="FLRAuftragtextsuche" table="AUFT_TEXTSUCHE">
 		<id name="i_id" column="I_ID" type="java.lang.String">
@@ -312,6 +311,9 @@
 			type="java.lang.Short" />
 		<property name="t_verrechenbar" column="T_VERRECHENBAR" type="java.sql.Timestamp"
 			not-null="false" />
+		<property name="waehrung_c_nr_auftragswaehrung" column="WAEHRUNG_C_NR_AUFTRAGSWAEHRUNG"
+			type="java.lang.String" />
+
 		<many-to-one name="flrpersonalverrechenbar"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID_VERRECHENBAR" unique="true" insert="false"
@@ -527,6 +529,56 @@
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID_ANLEGEN" unique="true" />
 	</class>
+	<class name="FLRZeitplan" table="AUFT_ZEITPLAN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_termin_vor_liefertermin" column="I_TERMIN_VOR_LIEFERTERMIN"
+			type="java.lang.Integer" />
+		<property name="n_material" column="N_MATERIAL" type="java.math.BigDecimal" />
+		<property name="n_dauer" column="N_DAUER" type="java.math.BigDecimal" />
+		<property name="c_kommentar" column="C_KOMMENTAR" type="java.lang.String" />
+		<property name="x_text" column="X_TEXT" type="java.lang.String" />
+		<many-to-one name="flrauftrag"
+			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport"
+			column="AUFTRAG_I_ID" unique="true" />
+
+	</class>
+	<class name="FLRZahlungsplanmeilenstein" table="AUFT_ZAHLUNGSPLANMEILENSTEIN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="zahlungsplan_i_id" column="ZAHLUNGSPLAN_I_ID"
+			type="java.lang.Integer" />
+		<property name="meilenstein_i_id" column="MEILENSTEIN_I_ID"
+			type="java.lang.Integer" />
+		<property name="c_kommentar" column="C_KOMMENTAR" type="java.lang.String" />
+		<property name="x_text" column="X_TEXT" type="java.lang.String" />
+		<property name="t_erledigt" column="T_ERLEDIGT" type="java.sql.Date" />
+		<many-to-one name="flrmeilenstein"
+			class="com.lp.server.auftrag.fastlanereader.generated.FLRMeilenstein"
+			column="MEILENSTEIN_I_ID" unique="true" insert="false" update="false" />
+
+	</class>
+	<class name="FLRZahlungsplan" table="AUFT_ZAHLUNGSPLAN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_tage_vor_liefertermin" column="I_TAGE_VOR_LIEFERTERMIN"
+			type="java.lang.Integer" />
+		<property name="n_betrag" column="N_BETRAG" type="java.math.BigDecimal" />
+		<many-to-one name="flrauftrag"
+			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftragReport"
+			column="AUFTRAG_I_ID" unique="true" />
+
+		<set name="flrzahlungsplanmeilenstein">
+			<key column="ZAHLUNGSPLAN_I_ID" />
+			<one-to-many
+				class="com.lp.server.auftrag.fastlanereader.generated.FLRZahlungsplanmeilenstein" />
+		</set>
+
+
+	</class>
 	<class name="FLRPositionenSichtAuftrag" table="AUFT_AUFTRAGPOSITION">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
@@ -567,6 +619,32 @@
 		<property name="mediaart_c_nr" column="MEDIAART_C_NR" type="java.lang.String" />
 		<property name="x_textinhalt" column="X_TEXTINHALT" type="java.lang.String" />
 	</class>
+
+	<class name="FLRMeilenstein" table="AUFT_MEILENSTEIN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<set name="meilensteinspr_set" inverse="true">
+			<key column="MEILENSTEIN_I_ID" />
+			<one-to-many
+				class="com.lp.server.auftrag.fastlanereader.generated.FLRMeilensteinspr" />
+			<filter name="filterLocale" condition=":paramLocale = LOCALE_C_NR" />
+		</set>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+
+	</class>
+	<class name="FLRMeilensteinspr" table="AUFT_MEILENSTEINSPR">
+		<composite-id>
+			<key-many-to-one name="meilenstein" column="MEILENSTEIN_I_ID"
+				class="com.lp.server.auftrag.fastlanereader.generated.FLRMeilenstein" />
+			<key-many-to-one name="locale" column="LOCALE_C_NR"
+				class="com.lp.server.system.fastlanereader.generated.FLRLocale" />
+		</composite-id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+	</class>
+
+
 	<class name="FLRAuftragart" table="AUFT_AUFTRAGART">
 		<id name="c_nr" column="C_NR" type="java.lang.String">
 			<generator class="native" />

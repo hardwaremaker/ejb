@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -47,7 +47,7 @@ public class SiPrefixParserDemo extends JFrame {
 	private static final long serialVersionUID = 5444152935811211143L;
 	private JTextField input = new JTextField();
 	private JTextField output = new JTextField();
-	private SiPrefixParserAlternatives parser = new SiPrefixParserAlternatives();
+	private ISiPrefixParser parser = new DefaultSiPrefixParser();
 
 	public SiPrefixParserDemo() {
 		setSize(300, 100);
@@ -56,9 +56,6 @@ public class SiPrefixParserDemo extends JFrame {
 		
 		Container c = getContentPane();
 		c.setLayout(new GridBagLayout());
-
-		parser.setUnits("R", "F");
-		parser.setMicroAlternative("u");
 		
 		input.addKeyListener(new KeyAdapter() {
 			@Override

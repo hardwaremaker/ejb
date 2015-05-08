@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.system.service;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+
 
 public class ZahlungszielDto implements Serializable {
 	/**
@@ -68,6 +69,17 @@ public class ZahlungszielDto implements Serializable {
 
 	public void setMandantCNr(String mandantCNr) {
 		this.mandantCNr = mandantCNr;
+	}
+
+	private Short bInzahlungsvorschlagberuecksichtigen;
+
+	public Short getBInzahlungsvorschlagberuecksichtigen() {
+		return bInzahlungsvorschlagberuecksichtigen;
+	}
+
+	public void setBInzahlungsvorschlagberuecksichtigen(
+			Short bInzahlungsvorschlagberuecksichtigen) {
+		this.bInzahlungsvorschlagberuecksichtigen = bInzahlungsvorschlagberuecksichtigen;
 	}
 
 	public String getCBez() {
@@ -134,6 +146,45 @@ public class ZahlungszielDto implements Serializable {
 		this.bVersteckt = bVersteckt;
 	}
 
+	private Short bStichtag;
+
+	private Short bStichtagMonatsletzter;
+	private Integer iStichtag;
+	private Integer iFolgemonat;
+
+	public Short getBStichtag() {
+		return bStichtag;
+	}
+
+	public void setBStichtag(Short bStichtag) {
+		this.bStichtag = bStichtag;
+	}
+
+	public Short getBStichtagMonatsletzter() {
+		return bStichtagMonatsletzter;
+	}
+
+	public void setBStichtagMonatsletzter(Short bStichtagMonatsletzter) {
+		this.bStichtagMonatsletzter = bStichtagMonatsletzter;
+	}
+
+	public Integer getIStichtag() {
+		return iStichtag;
+	}
+
+	public void setIStichtag(Integer iStichtag) {
+		this.iStichtag = iStichtag;
+	}
+
+	public Integer getIFolgemonat() {
+		return iFolgemonat;
+	}
+
+	public void setIFolgemonat(Integer iFolgemonat) {
+		this.iFolgemonat = iFolgemonat;
+	}
+
+	
 	public boolean equals(Object obj) {
 		if (this == obj) {
 			return true;

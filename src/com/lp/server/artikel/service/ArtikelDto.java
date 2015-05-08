@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -40,7 +40,6 @@ import com.lp.server.artikel.ejb.Artgru;
 import com.lp.server.artikel.ejb.Artkla;
 import com.lp.server.artikel.ejb.Material;
 import com.lp.server.artikel.ejb.Shopgruppe;
-import com.lp.server.partner.ejb.Lflfliefergruppe;
 import com.lp.server.partner.ejb.Lfliefergruppe;
 import com.lp.server.system.service.HvDtoLogClass;
 import com.lp.server.system.service.HvDtoLogComplex;
@@ -60,6 +59,36 @@ public class ArtikelDto implements Serializable, IIId {
 	private Integer herstellerIId;
 	private Integer artgruIId;
 	private Integer artklaIId;
+
+	private Double fFertigungsVpe;
+
+	public Double getFFertigungsVpe() {
+		return fFertigungsVpe;
+	}
+
+	public void setFFertigungsVpe(Double fFertigungsVpe) {
+		this.fFertigungsVpe = fFertigungsVpe;
+	}
+
+	private String cEccn;
+
+	public String getCEccn() {
+		return cEccn;
+	}
+
+	public void setCEccn(String cEccn) {
+		this.cEccn = cEccn;
+	}
+
+	private Double fUeberproduktion;
+
+	public Double getFUeberproduktion() {
+		return fUeberproduktion;
+	}
+
+	public void setFUeberproduktion(Double fUeberproduktion) {
+		this.fUeberproduktion = fUeberproduktion;
+	}
 
 	private Short bKalkulatorisch;
 
@@ -753,6 +782,16 @@ public class ArtikelDto implements Serializable, IIId {
 		this.farbcodeIId = farbcodeIId;
 	}
 
+	private Integer vorzugIId;
+
+	public Integer getVorzugIId() {
+		return vorzugIId;
+	}
+
+	public void setVorzugIId(Integer vorzugIId) {
+		this.vorzugIId = vorzugIId;
+	}
+
 	public void setEinheitCNrBestellung(String einheitCNrBestellung) {
 		this.einheitCNrBestellung = einheitCNrBestellung;
 	}
@@ -775,6 +814,52 @@ public class ArtikelDto implements Serializable, IIId {
 
 	public void setLandIIdUrsprungsland(Integer landIIdUrsprungsland) {
 		this.landIIdUrsprungsland = landIIdUrsprungsland;
+	}
+
+	private String cUL;
+	private Integer reachIId;
+	private Integer rohsIId;
+	private Integer automotiveIId;
+	private Integer medicalIId;
+
+	public String getCUL() {
+		return cUL;
+	}
+
+	public void setCUL(String cUL) {
+		this.cUL = cUL;
+	}
+
+	public Integer getReachIId() {
+		return reachIId;
+	}
+
+	public void setReachIId(Integer reachIId) {
+		this.reachIId = reachIId;
+	}
+
+	public Integer getRohsIId() {
+		return rohsIId;
+	}
+
+	public void setRohsIId(Integer rohsIId) {
+		this.rohsIId = rohsIId;
+	}
+
+	public Integer getAutomotiveIId() {
+		return automotiveIId;
+	}
+
+	public void setAutomotiveIId(Integer automotiveIId) {
+		this.automotiveIId = automotiveIId;
+	}
+
+	public Integer getMedicalIId() {
+		return medicalIId;
+	}
+
+	public void setMedicalIId(Integer medicalIId) {
+		this.medicalIId = medicalIId;
 	}
 
 	public boolean equals(Object obj) {

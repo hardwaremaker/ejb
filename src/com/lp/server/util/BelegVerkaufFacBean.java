@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -36,6 +36,7 @@ import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -140,6 +141,19 @@ public class BelegVerkaufFacBean extends Facade implements BelegVerkaufFac {
 		thePosition.setZwsNettoSumme(wert);
 		thePosition.setNMenge(BigDecimal.ONE);
 
+//		int vonIndex = getIndexOfBelegPosition(thePosition.getZwsVonPosition(), belegpositionVerkaufDtos) ;
+//		int bisIndex = getIndexOfBelegPosition(thePosition.getZwsBisPosition(), belegpositionVerkaufDtos) ;
+//		if(vonIndex != -1 && bisIndex != -1) {
+//			BigDecimal rabattSatz = new BigDecimal(thePosition.getFRabattsatz()).movePointLeft(2);
+//			rabattSatz = Helper.rundeKaufmaennisch(rabattSatz, 4);
+//
+//			for(int index = vonIndex; index <= bisIndex; ++index) {
+//				belegpositionVerkaufDtos[index].setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(
+//						calculateIntZwsNettoEinzelpreis(belegpositionVerkaufDtos[index].getNNettoeinzelpreisplusversteckteraufschlagminusrabatte(), rabattSatz));
+//				
+//			}
+//		}
+//		
 		return rabattSumme;
 	}
 
@@ -343,6 +357,60 @@ public class BelegVerkaufFacBean extends Facade implements BelegVerkaufFac {
 		return belegpositionVerkaufDto;
 	}
 
+	public BelegpositionVerkaufDto berechneBelegpositionVerkauf(
+			BigDecimal zwsRabatt, 
+			BelegpositionVerkaufDto belegpositionVerkaufDto, BelegVerkaufDto belegVerkaufDto) {
+		Integer iNachkommastellenPreis = getUINachkommastellenPreisVK(belegVerkaufDto
+				.getMandantCNr());
+		belegpositionVerkaufDto
+				.setNEinzelpreisplusversteckteraufschlag(getBdNEinzelpreisplusversteckteraufschlag(
+						belegpositionVerkaufDto,
+						belegVerkaufDto.getFVersteckterAufschlag(),
+						iNachkommastellenPreis));
+		belegpositionVerkaufDto
+				.setNNettoeinzelpreisplusversteckteraufschlag(getBdNNettoeinzelpreisplusversteckteraufschlag(
+						belegpositionVerkaufDto,
+						belegVerkaufDto.getFVersteckterAufschlag(),
+						iNachkommastellenPreis));
+		if(zwsRabatt != null && zwsRabatt.signum() != 0) {
+			belegpositionVerkaufDto.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(
+					calculateIntZwsNettoEinzelpreis(
+							belegpositionVerkaufDto.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte(), zwsRabatt));
+		}
+		belegpositionVerkaufDto
+				.setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(getBdNEinzelpreisplusversteckteraufschlagminusrabatte(
+						belegpositionVerkaufDto,
+						belegVerkaufDto.getFAllgemeinerRabattsatz(),
+						belegVerkaufDto.getFProjektierungsrabattsatz(),
+						iNachkommastellenPreis));
+
+		return belegpositionVerkaufDto;		
+	}
+
+	private int getIndexFirstZwsPosition(BelegpositionVerkaufDto[] allePositionenDto) {
+		for (int i = 0 ; i < allePositionenDto.length; i++) {
+			if(allePositionenDto[i].isIntelligenteZwischensumme()) {
+				return i ;
+			}
+		}
+
+		return -1 ;
+	}
+	
+	public BelegpositionVerkaufDto berechneBelegpositionVerkauf(
+			BelegpositionVerkaufDto belegpositionVerkaufDto,
+			BelegVerkaufDto belegVerkaufDto, BelegpositionVerkaufDto[] allePositionenDto, Set<Integer> modifiedPositions) {
+		int index = getIndexFirstZwsPosition(allePositionenDto) ;
+		if(index != -1) {
+			prepareIntZwsPositions(allePositionenDto) ;
+			modifiedPositions.addAll(
+					adaptIntZwsPositions(allePositionenDto)) ;
+		} else {
+			berechneBelegpositionVerkauf(belegpositionVerkaufDto, belegVerkaufDto) ;
+		}
+		return belegpositionVerkaufDto;
+	}
+	
 	public BelegpositionVerkaufDto berechnePauschalposition(
 			BelegpositionVerkaufDto belegpositionVerkaufDto,
 			BelegVerkaufDto belegVerkaufDto, BigDecimal neuWert,
@@ -487,6 +555,9 @@ public class BelegVerkaufFacBean extends Facade implements BelegVerkaufFac {
 			BelegpositionVerkaufDto belegpositionVerkaufDto,
 			Double dVersteckterAufschlag, Integer iNachkommastellenPreis) {
 		BigDecimal bdEinzelpreis = belegpositionVerkaufDto.getNEinzelpreis();
+		if(bdEinzelpreis == null) {
+			bdEinzelpreis = BigDecimal.ZERO ;
+		}
 		BigDecimal bdNNettoeinzelpreisplusversteckteraufschlag = bdEinzelpreis;
 		if (dVersteckterAufschlag != 0) {
 			BigDecimal bdVersteckterAufschlag = new BigDecimal(
@@ -513,6 +584,9 @@ public class BelegVerkaufFacBean extends Facade implements BelegVerkaufFac {
 			Integer iNachkommastellenPreis) {
 		BigDecimal bdNettoeinzelpreis = belegpositionVerkaufDto
 				.getNNettoeinzelpreisplusversteckteraufschlag();
+		if(bdNettoeinzelpreis == null) {
+			bdNettoeinzelpreis = BigDecimal.ZERO ;
+		}
 		BigDecimal bdNNettoeinzelpreisplusversteckteraufschlagminusrabatte = bdNettoeinzelpreis;
 		// - Allgemeiner Rabatt
 		if (dAllgemeinerRabattsatz != null && dAllgemeinerRabattsatz != 0.0) {
@@ -1426,4 +1500,61 @@ public class BelegVerkaufFacBean extends Facade implements BelegVerkaufFac {
 		return true;
 	}
 
+	private BigDecimal calculateIntZwsNettoEinzelpreis(BigDecimal originalPrice, BigDecimal rabattSatz) {
+		if(originalPrice == null) return null ;
+		if(rabattSatz.signum() == 0) return originalPrice ;
+		
+		BigDecimal value = originalPrice.multiply(rabattSatz) ;
+		BigDecimal sum = Helper.rundeKaufmaennisch(value, 4) ;
+		BigDecimal result = originalPrice.subtract(sum) ;
+		return result ;
+	}
+	
+	public Set<Integer> adaptIntZwsPositions(BelegpositionVerkaufDto[] positionDtos) {
+		Set<Integer> modifiedPositions = new HashSet<Integer>() ;
+		for (BelegpositionVerkaufDto positionDto : positionDtos) {
+			if(!positionDto.isIntelligenteZwischensumme()) continue ;
+			
+			if(positionDto.getZwsVonPosition() == null || positionDto.getZwsBisPosition() == null) continue ;
+			
+			int vonIndex = getIndexOfBelegPosition(positionDto.getZwsVonPosition(), positionDtos) ;
+			int bisIndex = getIndexOfBelegPosition(positionDto.getZwsBisPosition(), positionDtos) ;
+			if(vonIndex == -1 || bisIndex == -1) continue ;
+			
+			BigDecimal rabattSatz = new BigDecimal(positionDto.getFRabattsatz()).movePointLeft(2);
+			rabattSatz = Helper.rundeKaufmaennisch(rabattSatz, 4);
+
+			for(int i = vonIndex ; i <= bisIndex; i++) {
+//				positionDtos[i].setNNettoeinzelpreisplusversteckteraufschlag(
+//						calculateIntZwsNettoEinzelpreis(positionDtos[i].getNNettoeinzelpreisplusversteckteraufschlag(), rabattSatz));
+				positionDtos[i].setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(
+						calculateIntZwsNettoEinzelpreis(positionDtos[i].getNNettoeinzelpreisplusversteckteraufschlagminusrabatte(), rabattSatz));
+				modifiedPositions.add(i) ;
+			}
+		}
+		return modifiedPositions ;
+	}
+
+
+	public Set<Integer> prepareIntZwsPositions(BelegpositionVerkaufDto[] positionDtos) {
+		Set<Integer> modifiedPositions = new HashSet<Integer>() ;
+		for (BelegpositionVerkaufDto positionDto : positionDtos) {
+			if(!positionDto.isIntelligenteZwischensumme()) continue ;
+			
+			if(positionDto.getZwsVonPosition() == null || positionDto.getZwsBisPosition() == null) continue ;
+
+			int vonIndex = getIndexOfBelegPosition(positionDto.getZwsVonPosition(), positionDtos) ;
+			int bisIndex = getIndexOfBelegPosition(positionDto.getZwsBisPosition(), positionDtos) ;
+
+			if(vonIndex == -1 || bisIndex == -1) continue ;
+			
+			for(int i = vonIndex ; i <= bisIndex; i++) {
+				positionDtos[i].setNNettoeinzelpreisplusversteckteraufschlag(positionDtos[i].getNNettoeinzelpreis()) ;
+				positionDtos[i].setNNettoeinzelpreisplusversteckteraufschlagminusrabatte(
+						positionDtos[i].getNNettoeinzelpreis());
+				modifiedPositions.add(i) ;
+			}
+		}
+		return modifiedPositions ;
+	}
 }

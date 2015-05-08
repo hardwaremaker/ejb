@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -76,6 +76,17 @@ public class EingangsrechnungAuftragszuordnung implements Serializable {
 
 	@Column(name = "PERSONAL_I_ID_AENDERN")
 	private Integer personalIIdAendern;
+	
+	@Column(name = "B_KEINE_AUFTRAGSWERTUNG")
+	private Short bKeineAuftragswertung;
+
+	public Short getBKeineAuftragswertung() {
+		return bKeineAuftragswertung;
+	}
+
+	public void setBKeineAuftragswertung(Short bKeineAuftragswertung) {
+		this.bKeineAuftragswertung = bKeineAuftragswertung;
+	}
 
 	private static final long serialVersionUID = 1L;
 
@@ -85,13 +96,14 @@ public class EingangsrechnungAuftragszuordnung implements Serializable {
 
 	public EingangsrechnungAuftragszuordnung(Integer id,
 			Integer eingangsrechnungIId, Integer auftragIId, BigDecimal betrag,
-			Integer personalIIdAnlegen2, Integer personalIIdAendern2) {
+			Integer personalIIdAnlegen2, Integer personalIIdAendern2,Short bKeineAuftragswertung) {
 		setIId(id);
 		setEingangsrechnungIId(eingangsrechnungIId);
 		setAuftragIId(auftragIId);
 		setNBetrag(betrag);
 		setPersonalIIdAnlegen(personalIIdAnlegen2);
 		setPersonalIIdAendern(personalIIdAendern2);
+		setBKeineAuftragswertung(bKeineAuftragswertung);
 		// Setzen der NOT NULL Felder
 		java.sql.Timestamp timestamp = new java.sql.Timestamp(System
 				.currentTimeMillis());

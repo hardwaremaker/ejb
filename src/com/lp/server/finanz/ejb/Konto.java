@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -53,8 +53,8 @@ import com.lp.server.finanz.ejb.FinanzamtPK;
 		@NamedQuery(name = Konto.QUERY_ALL_KONTOTYP_MANDANT, query = "SELECT OBJECT(o) FROM Konto o WHERE o.kontotypCNr=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = Konto.QUERY_ALL_KONTOART_MANDANT, query = "SELECT OBJECT(o) FROM Konto o WHERE o.kontoartCNr=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = Konto.QUERY_ALL_KONTOART_MANDANT_FINANZAMT, query = "SELECT OBJECT(o) FROM Konto o WHERE o.kontoartCNr=?1 AND o.mandantCNr=?2 AND o.finanzamtIId=?3"),
-		@NamedQuery(name = "KontofindByErgebnisgruppeMandant", query = "SELECT OBJECT(o) FROM Konto o WHERE o.ergebnisgruppeIId=?1 AND o.mandantCNr=?2"),
-		@NamedQuery(name = "KontofindByErgebnisgruppeNegativMandant", query = "SELECT OBJECT(o) FROM Konto o WHERE o.ergebnisgruppeIId_negativ=?1 AND o.mandantCNr=?2")
+		@NamedQuery(name = "KontofindByErgebnisgruppeMandant", query = "SELECT OBJECT(o) FROM Konto o WHERE o.ergebnisgruppeIId=?1 AND o.mandantCNr=?2 ORDER BY o.cNr"),
+		@NamedQuery(name = "KontofindByErgebnisgruppeNegativMandant", query = "SELECT OBJECT(o) FROM Konto o WHERE o.ergebnisgruppeIId_negativ=?1 AND o.mandantCNr=?2 ORDER BY o.cNr")
 		})
 
 @Entity
@@ -116,10 +116,21 @@ public class Konto implements Serializable {
 
 	@Column(name = "ERGEBNISGRUPPE_I_ID_NEGATIV")
 	private Integer ergebnisgruppeIId_negativ;
-	
+
 	@Column(name = "B_OHNEUST")
 	private Short bOhneUst;
 	
+	@Column(name = "C_STEUERART")
+	private String cSteuerart;
+	
+	public String getcSteuerart() {
+		return cSteuerart;
+	}
+
+	public void setcSteuerart(String cSteuerart) {
+		this.cSteuerart = cSteuerart;
+	}
+
 	public Integer getErgebnisgruppeIId_negativ() {
 		return ergebnisgruppeIId_negativ;
 	}

@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,17 +19,17 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.artikel.fastlanereader.generated;
 
 import java.io.Serializable;
@@ -60,14 +60,18 @@ public class FLRArtikelkommentar implements Serializable {
     /** nullable persistent field */
     private com.lp.server.artikel.fastlanereader.generated.FLRArtikelkommentarart flrartikelkommentarart;
 
+    /** nullable persistent field */
+    private com.lp.server.artikel.fastlanereader.generated.FLRArtikel flrartikel;
+
     /** full constructor */
-    public FLRArtikelkommentar(Integer artikel_i_id, String datenformat_c_nr, Short b_defaultbild, Integer i_art, Integer i_sort, com.lp.server.artikel.fastlanereader.generated.FLRArtikelkommentarart flrartikelkommentarart) {
+    public FLRArtikelkommentar(Integer artikel_i_id, String datenformat_c_nr, Short b_defaultbild, Integer i_art, Integer i_sort, com.lp.server.artikel.fastlanereader.generated.FLRArtikelkommentarart flrartikelkommentarart, com.lp.server.artikel.fastlanereader.generated.FLRArtikel flrartikel) {
         this.artikel_i_id = artikel_i_id;
         this.datenformat_c_nr = datenformat_c_nr;
         this.b_defaultbild = b_defaultbild;
         this.i_art = i_art;
         this.i_sort = i_sort;
         this.flrartikelkommentarart = flrartikelkommentarart;
+        this.flrartikel = flrartikel;
     }
 
     /** default constructor */
@@ -128,6 +132,14 @@ public class FLRArtikelkommentar implements Serializable {
 
     public void setFlrartikelkommentarart(com.lp.server.artikel.fastlanereader.generated.FLRArtikelkommentarart flrartikelkommentarart) {
         this.flrartikelkommentarart = flrartikelkommentarart;
+    }
+
+    public com.lp.server.artikel.fastlanereader.generated.FLRArtikel getFlrartikel() {
+        return this.flrartikel;
+    }
+
+    public void setFlrartikel(com.lp.server.artikel.fastlanereader.generated.FLRArtikel flrartikel) {
+        this.flrartikel = flrartikel;
     }
 
     public String toString() {

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -62,10 +62,11 @@ public class Projektstatus implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	public Projektstatus( Integer iSort,String mandantCNr,String cNr,Short bAenderungprotokollieren) {
+	public Projektstatus( Integer iSort,String mandantCNr,String cNr,Short bAenderungprotokollieren,Short bErledigt) {
 		ProjektstatusPK pk = new ProjektstatusPK(cNr, mandantCNr);
 		setPk(pk);
 		setBAenderungprotokollieren(bAenderungprotokollieren);
+		setBErledigt(bErledigt);
 		setISort(iSort);
 	}
 
@@ -78,6 +79,18 @@ public class Projektstatus implements Serializable {
 
 	public void setBAenderungprotokollieren(Short bAenderungprotokollieren) {
 		this.bAenderungprotokollieren = bAenderungprotokollieren;
+	}
+
+	
+	@Column(name = "B_ERLEDIGT")
+	private Short bErledigt;
+	
+	public Short getBErledigt() {
+		return bErledigt;
+	}
+
+	public void setBErledigt(Short bErledigt) {
+		this.bErledigt = bErledigt;
 	}
 
 	public ProjektstatusPK getPk() {

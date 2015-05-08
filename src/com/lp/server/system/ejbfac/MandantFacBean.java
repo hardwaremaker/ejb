@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -37,6 +37,7 @@ import java.rmi.RemoteException;
 import java.sql.Timestamp;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -650,8 +651,8 @@ public class MandantFacBean extends Facade implements MandantFac {
 	/**
 	 * Alle MWST-Saetze eines Mandanten ab einem Datum finden.
 	 * 
-	 * @param mwstsatzbezIId die IId der Mehrwertsteuersatzbezeichnung
-	 *            String
+	 * @param mwstsatzbezIId
+	 *            die IId der Mehrwertsteuersatzbezeichnung String
 	 * @param tDatum
 	 *            Timestamp: optional
 	 * @return MwstsatzDto[]
@@ -676,10 +677,8 @@ public class MandantFacBean extends Facade implements MandantFac {
 			return null;
 		}
 
-		
-		
 	}
-	
+
 	public MwstsatzDto getMwstSatzVonBruttoBetragUndUst(String mandant,
 			Timestamp tBelegDatum, BigDecimal bruttoBetrag,
 			BigDecimal mwstBetrag) {
@@ -695,6 +694,31 @@ public class MandantFacBean extends Facade implements MandantFac {
 			BigDecimal satz = new BigDecimal(mwstsatzDto.getFMwstsatz());
 			BigDecimal mwst = Helper
 					.getMehrwertsteuerBetrag(bruttoBetrag, satz);
+			BigDecimal diff = mwstBetrag.subtract(mwst).abs();
+			if (minDiff == null || diff.compareTo(minDiff) < 0) {
+				minDiff = diff;
+				selectedMwstSatz = mwstsatzDto;
+			}
+		}
+
+		return selectedMwstSatz;
+	}
+
+	public MwstsatzDto getMwstSatzVonNettoBetragUndUst(String mandant,
+			Timestamp tBelegDatum, BigDecimal nettoBetrag, BigDecimal mwstBetrag) {
+		if (null == mwstBetrag || mwstBetrag.signum() == 0) {
+			mwstBetrag = BigDecimal.ZERO;
+		}
+
+		MwstsatzDto[] mwstdtos = getMandantFac().mwstsatzfindAllByMandant(
+				mandant, tBelegDatum, false);
+
+		BigDecimal minDiff = null;
+		MwstsatzDto selectedMwstSatz = null;
+		for (MwstsatzDto mwstsatzDto : mwstdtos) {
+			BigDecimal satz = new BigDecimal(mwstsatzDto.getFMwstsatz());
+			BigDecimal mwst = Helper.getMehrwertsteuerBetragFuerNetto(
+					nettoBetrag, satz);
 			BigDecimal diff = mwstBetrag.subtract(mwst).abs();
 			if (minDiff == null || diff.compareTo(minDiff) < 0) {
 				minDiff = diff;
@@ -1309,9 +1333,25 @@ public class MandantFacBean extends Facade implements MandantFac {
 		if (oZahlungszielDtoI.getBVersteckt() == null) {
 			oZahlungszielDtoI.setBVersteckt(Helper.boolean2Short(false));
 		}
+		if (oZahlungszielDtoI.getBInzahlungsvorschlagberuecksichtigen() == null) {
+			oZahlungszielDtoI.setBInzahlungsvorschlagberuecksichtigen(Helper
+					.boolean2Short(true));
+		}
+		if (oZahlungszielDtoI.getBStichtag() == null) {
+			oZahlungszielDtoI.setBStichtag(Helper.boolean2Short(false));
+		}
+		if (oZahlungszielDtoI.getBStichtagMonatsletzter() == null) {
+			oZahlungszielDtoI.setBStichtagMonatsletzter(Helper
+					.boolean2Short(false));
+		}
+		if (oZahlungszielDtoI.getBInzahlungsvorschlagberuecksichtigen() == null) {
+			oZahlungszielDtoI.setBInzahlungsvorschlagberuecksichtigen(Helper
+					.boolean2Short(true));
+		}
 		if (oZahlungszielDtoI.getAnzahlZieltageFuerNetto() == null) {
 			oZahlungszielDtoI.setAnzahlZieltageFuerNetto(0);
 		}
+
 		try {
 			// duplicateunique: Pruefung: Artikelgruppe bereits vorhanden.
 			Query query = em
@@ -1333,11 +1373,15 @@ public class MandantFacBean extends Facade implements MandantFac {
 			iIdZahlungszielO = getPKGeneratorObj().getNextPrimaryKey(
 					PKConst.PK_ZAHLUNGSZIEL);
 
-			Zahlungsziel zahlungsziel = new Zahlungsziel(iIdZahlungszielO,
+			Zahlungsziel zahlungsziel = new Zahlungsziel(
+					iIdZahlungszielO,
 					oZahlungszielDtoI.getMandantCNr(),
 					oZahlungszielDtoI.getCBez(),
 					oZahlungszielDtoI.getBVersteckt(),
-					oZahlungszielDtoI.getAnzahlZieltageFuerNetto());
+					oZahlungszielDtoI.getAnzahlZieltageFuerNetto(),
+					oZahlungszielDtoI.getBInzahlungsvorschlagberuecksichtigen(),
+					oZahlungszielDtoI.getBStichtag(), oZahlungszielDtoI
+							.getBStichtagMonatsletzter());
 			em.persist(zahlungsziel);
 			em.flush();
 
@@ -1595,6 +1639,15 @@ public class MandantFacBean extends Facade implements MandantFac {
 		zahlungsziel.setISkontoanzahltage2(zahlungszielDto
 				.getSkontoAnzahlTage2());
 		zahlungsziel.setBVersteckt(zahlungszielDto.getBVersteckt());
+		zahlungsziel.setBInzahlungsvorschlagberuecksichtigen(zahlungszielDto
+				.getBInzahlungsvorschlagberuecksichtigen());
+
+		zahlungsziel.setBStichtag(zahlungszielDto.getBStichtag());
+		zahlungsziel.setBStichtagMonatsletzter(zahlungszielDto
+				.getBStichtagMonatsletzter());
+		zahlungsziel.setIFolgemonat(zahlungszielDto.getIFolgemonat());
+		zahlungsziel.setIStichtag(zahlungszielDto.getIStichtag());
+
 		em.merge(zahlungsziel);
 		em.flush();
 	}
@@ -1828,6 +1881,10 @@ public class MandantFacBean extends Facade implements MandantFac {
 					theClientDto);
 			// modifizieren und fuer den neuen Mandanten anlegen.
 			mwstbezDtoUrmandant.setIId(null);
+
+			// SP3212
+			mwstbezDtoUrmandant.setFinanzamtIId(null);
+
 			mwstbezDtoUrmandant.setMandantCNr(mandantDtoI.getCNr());
 			Integer iIdMwstbezNeuerMandant = createMwstsatzbez(
 					mwstbezDtoUrmandant, theClientDto);
@@ -2013,7 +2070,9 @@ public class MandantFacBean extends Facade implements MandantFac {
 		mandant.setIBenutzerMax(mandantDto.getIBenutzermax());
 		mandant.setKundeIIdStueckliste(mandantDto.getKundeIIdStueckliste());
 		mandant.setPartnerIIdFinanzamt(mandantDto.getPartnerIIdFinanzamt());
-		mandant.setJahreRueckdatierbar(mandantDto.getJahreRueckdatierbar() == null ? 1 : mandantDto.getJahreRueckdatierbar());
+		mandant.setJahreRueckdatierbar(mandantDto.getJahreRueckdatierbar() == null ? 1
+				: mandantDto.getJahreRueckdatierbar());
+		mandant.setKostenstelleIIdFibu(mandantDto.getKostenstelleIIdFibu());
 		em.merge(mandant);
 		em.flush();
 	}
@@ -2271,13 +2330,60 @@ public class MandantFacBean extends Facade implements MandantFac {
 	public java.sql.Date berechneZielDatumFuerBelegdatum(
 			java.util.Date dBelegdatum, ZahlungszielDto zahlungszielDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
-		if (zahlungszielDto != null
+
+		if (Helper.short2boolean(zahlungszielDto.getBStichtag()) == true) {
+			return berechneFaelligkeitAnhandStichtag(dBelegdatum,
+					zahlungszielDto, theClientDto);
+		} else if (zahlungszielDto != null
 				&& zahlungszielDto.getAnzahlZieltageFuerNetto() != null) {
 			return Helper.addiereTageZuDatum(dBelegdatum, zahlungszielDto
 					.getAnzahlZieltageFuerNetto().intValue());
 		} else {
 			return new java.sql.Date(dBelegdatum.getTime());
 		}
+	}
+
+	public java.sql.Date berechneFaelligkeitAnhandStichtag(
+			java.util.Date dBelegdatum, ZahlungszielDto zahlungszielDto,
+			TheClientDto theClientDto) {
+
+		java.sql.Date dFaellig = new java.sql.Date(dBelegdatum.getTime());
+		if (Helper.short2boolean(zahlungszielDto.getBStichtag()) == true) {
+
+			if (zahlungszielDto.getIFolgemonat() != null) {
+
+				Calendar cFaellig = Calendar.getInstance();
+				cFaellig.setTime(dBelegdatum);
+				int iTagBelegdatum = cFaellig.get(Calendar.DAY_OF_MONTH);
+
+				if (Helper.short2boolean(zahlungszielDto
+						.getBStichtagMonatsletzter())) {
+					cFaellig.set(Calendar.DAY_OF_MONTH, 1);
+
+					cFaellig.add(Calendar.MONTH,
+							zahlungszielDto.getIFolgemonat());
+					cFaellig.set(Calendar.DAY_OF_MONTH,
+							cFaellig.getActualMaximum(Calendar.DAY_OF_MONTH));
+				} else {
+					cFaellig.set(Calendar.DAY_OF_MONTH, 1);
+
+					cFaellig.add(Calendar.MONTH,
+							zahlungszielDto.getIFolgemonat());
+					cFaellig.set(Calendar.DAY_OF_MONTH,
+							zahlungszielDto.getIStichtag());
+
+					if (iTagBelegdatum > zahlungszielDto.getIStichtag()) {
+						cFaellig.add(Calendar.MONTH, 1);
+					}
+
+				}
+
+				return new java.sql.Date(cFaellig.getTime().getTime());
+
+			}
+
+		}
+		return dFaellig;
 	}
 
 	public boolean hatZusatzfunktionberechtigung(String zusatzfunktionCNr,
@@ -2314,8 +2420,17 @@ public class MandantFacBean extends Facade implements MandantFac {
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		ZahlungszielDto zahlungszielDto = zahlungszielFindByPrimaryKey(
 				zahlungszielIId, theClientDto);
-		return Helper.addiereTageZuDatum(dBelegdatum, zahlungszielDto
-				.getSkontoAnzahlTage1().intValue());
+
+		if (Helper.short2boolean(zahlungszielDto.getBStichtag()) == true) {
+			java.sql.Date dFaellig = berechneFaelligkeitAnhandStichtag(
+					dBelegdatum, zahlungszielDto, theClientDto);
+			return Helper.addiereTageZuDatum(dFaellig, -zahlungszielDto
+					.getSkontoAnzahlTage1().intValue());
+		} else {
+			return Helper.addiereTageZuDatum(dBelegdatum, zahlungszielDto
+					.getSkontoAnzahlTage1().intValue());
+		}
+
 	}
 
 	/**
@@ -2335,8 +2450,17 @@ public class MandantFacBean extends Facade implements MandantFac {
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		ZahlungszielDto zahlungszielDto = zahlungszielFindByPrimaryKey(
 				zahlungszielIId, theClientDto);
-		return Helper.addiereTageZuDatum(dBelegdatum, zahlungszielDto
-				.getSkontoAnzahlTage2().intValue());
+
+		if (Helper.short2boolean(zahlungszielDto.getBStichtag()) == true) {
+			java.sql.Date dFaellig = berechneFaelligkeitAnhandStichtag(
+					dBelegdatum, zahlungszielDto, theClientDto);
+			return Helper.addiereTageZuDatum(dFaellig, -zahlungszielDto
+					.getSkontoAnzahlTage2().intValue());
+		} else {
+			return Helper.addiereTageZuDatum(dBelegdatum, zahlungszielDto
+					.getSkontoAnzahlTage2().intValue());
+		}
+
 	}
 
 	public void createModulberechtigung(
@@ -2598,6 +2722,16 @@ public class MandantFacBean extends Facade implements MandantFac {
 		parameter = getParameterFac().getMandantparameter(mandantCNr,
 				ParameterFac.KATEGORIE_ALLGEMEIN,
 				ParameterFac.PARAMETER_PREISERABATTE_UI_NACHKOMMASTELLEN_EK);
+		Integer iPreisRabatte = (Integer) parameter.getCWertAsObject();
+		return iPreisRabatte;
+	}
+
+	public Integer getNachkommastellenPreisWE(String mandantCNr)
+			throws EJBExceptionLP, RemoteException {
+		ParametermandantDto parameter = null;
+		parameter = getParameterFac().getMandantparameter(mandantCNr,
+				ParameterFac.KATEGORIE_ALLGEMEIN,
+				ParameterFac.PARAMETER_PREISERABATTE_UI_NACHKOMMASTELLEN_WE);
 		Integer iPreisRabatte = (Integer) parameter.getCWertAsObject();
 		return iPreisRabatte;
 	}

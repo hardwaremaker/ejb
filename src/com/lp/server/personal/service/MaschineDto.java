@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -46,7 +46,6 @@ public class MaschineDto implements Serializable {
 	private String mandantCNr;
 	private String cInventarnummer;
 	private String cBez;
-	private Double fVerfuegbarkeitinprozent;
 	private Short bAutoendebeigeht;
 	private Timestamp tKaufdatum;
 	private Short bVersteckt;
@@ -107,13 +106,6 @@ public class MaschineDto implements Serializable {
 		this.cBez = cBez;
 	}
 
-	public Double getFVerfuegbarkeitinprozent() {
-		return fVerfuegbarkeitinprozent;
-	}
-
-	public void setFVerfuegbarkeitinprozent(Double fVerfuegbarkeitinprozent) {
-		this.fVerfuegbarkeitinprozent = fVerfuegbarkeitinprozent;
-	}
 
 	public Short getBAutoendebeigeht() {
 		return bAutoendebeigeht;
@@ -164,10 +156,6 @@ public class MaschineDto implements Serializable {
 		if (!(that.cBez == null ? this.cBez == null : that.cBez
 				.equals(this.cBez)))
 			return false;
-		if (!(that.fVerfuegbarkeitinprozent == null ? this.fVerfuegbarkeitinprozent == null
-				: that.fVerfuegbarkeitinprozent
-						.equals(this.fVerfuegbarkeitinprozent)))
-			return false;
 		if (!(that.bAutoendebeigeht == null ? this.bAutoendebeigeht == null
 				: that.bAutoendebeigeht.equals(this.bAutoendebeigeht)))
 			return false;
@@ -183,7 +171,6 @@ public class MaschineDto implements Serializable {
 		result = 37 * result + this.mandantCNr.hashCode();
 		result = 37 * result + this.cInventarnummer.hashCode();
 		result = 37 * result + this.cBez.hashCode();
-		result = 37 * result + this.fVerfuegbarkeitinprozent.hashCode();
 		result = 37 * result + this.bAutoendebeigeht.hashCode();
 		result = 37 * result + this.tKaufdatum.hashCode();
 		return result;

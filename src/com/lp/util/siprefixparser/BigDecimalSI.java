@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -151,10 +151,27 @@ public class BigDecimalSI extends BigDecimal {
 	}
 	
 	@Override
-	public boolean equals(Object x) {
-		if(!(x instanceof BigDecimalSI)) return false;
-		if(!x.toString().equals(toString())) return false;
-		if(!((BigDecimalSI)x).unit.equals(unit)) return false;
+	public int hashCode() {
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime * result + ((unit == null) ? 0 : unit.hashCode());
+		return result;
+	}
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (!(obj instanceof BigDecimalSI))
+			return false;
+		BigDecimalSI other = (BigDecimalSI) obj;
+		if (unit == null) {
+			if (other.unit != null)
+				return false;
+		} else if (!unit.equals(other.unit))
+			return false;
 		return true;
 	}
+	
 }

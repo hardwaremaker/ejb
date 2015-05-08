@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,17 +19,17 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.rechnung.fastlanereader.generated;
 
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
@@ -52,6 +52,12 @@ public class FLRRechnung implements Serializable {
 
     /** nullable persistent field */
     private String c_nr;
+
+    /** nullable persistent field */
+    private String c_bez;
+
+    /** nullable persistent field */
+    private String c_bestellnummer;
 
     /** nullable persistent field */
     private Integer i_geschaeftsjahr;
@@ -138,9 +144,11 @@ public class FLRRechnung implements Serializable {
     private FLRKostenstelle flrkostenstelle;
 
     /** full constructor */
-    public FLRRechnung(String mandant_c_nr, String c_nr, Integer i_geschaeftsjahr, Integer ansprechpartner_i_id, Date d_belegdatum, String waehrung_c_nr, String status_c_nr, BigDecimal n_wertfw, BigDecimal n_wert, BigDecimal n_wertust, BigDecimal n_wertustfw, BigDecimal n_kurs, Integer auftrag_i_id, Integer projekt_i_id, Integer lieferschein_i_id, Integer rechnung_i_id_zurechnung, Integer kunde_i_id_statistikadresse, Date t_mahnsperrebis, Date t_fibuuebernahme, Date t_bezahltdatum, Date t_versandzeitpunkt, Date t_aendern, String c_versandtype, FLRKunde flrkunde, com.lp.server.rechnung.fastlanereader.generated.FLRRechnungart flrrechnungart, FLRPersonal flrvertreter, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer, FLRKunde flrstatistikadresse, FLRKostenstelle flrkostenstelle) {
+    public FLRRechnung(String mandant_c_nr, String c_nr, String c_bez, String c_bestellnummer, Integer i_geschaeftsjahr, Integer ansprechpartner_i_id, Date d_belegdatum, String waehrung_c_nr, String status_c_nr, BigDecimal n_wertfw, BigDecimal n_wert, BigDecimal n_wertust, BigDecimal n_wertustfw, BigDecimal n_kurs, Integer auftrag_i_id, Integer projekt_i_id, Integer lieferschein_i_id, Integer rechnung_i_id_zurechnung, Integer kunde_i_id_statistikadresse, Date t_mahnsperrebis, Date t_fibuuebernahme, Date t_bezahltdatum, Date t_versandzeitpunkt, Date t_aendern, String c_versandtype, FLRKunde flrkunde, com.lp.server.rechnung.fastlanereader.generated.FLRRechnungart flrrechnungart, FLRPersonal flrvertreter, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer, FLRKunde flrstatistikadresse, FLRKostenstelle flrkostenstelle) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
+        this.c_bez = c_bez;
+        this.c_bestellnummer = c_bestellnummer;
         this.i_geschaeftsjahr = i_geschaeftsjahr;
         this.ansprechpartner_i_id = ansprechpartner_i_id;
         this.d_belegdatum = d_belegdatum;
@@ -197,6 +205,22 @@ public class FLRRechnung implements Serializable {
 
     public void setC_nr(String c_nr) {
         this.c_nr = c_nr;
+    }
+
+    public String getC_bez() {
+        return this.c_bez;
+    }
+
+    public void setC_bez(String c_bez) {
+        this.c_bez = c_bez;
+    }
+
+    public String getC_bestellnummer() {
+        return this.c_bestellnummer;
+    }
+
+    public void setC_bestellnummer(String c_bestellnummer) {
+        this.c_bestellnummer = c_bestellnummer;
     }
 
     public Integer getI_geschaeftsjahr() {

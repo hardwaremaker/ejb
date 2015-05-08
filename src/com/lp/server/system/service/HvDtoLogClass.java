@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -54,6 +54,8 @@ public @interface HvDtoLogClass {
 	public final static String ZEITDATEN               = "Zeitdaten" ;
 	public final static String LIEFERSCHEIN            = "Lieferschein" ;
 	public final static String EINGANGSRECHNUNG        = "Eingangsrechnung" ;
+	public final static String ZEITABSCHLUSS           = "Zeitabschluss" ;
+	public final static String KONTO                   = "Konto" ;
 	
 	/*
 	 * Der Name der Entity, beispielsweise "Artikel", oder auch ArtikelDto

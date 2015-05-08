@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -33,7 +33,6 @@
 package com.lp.webapp.heliumv;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -91,6 +90,7 @@ public class HeliumVServlet extends FrameServlet {
 	 */
 	private static final long serialVersionUID = 1L;
 	private static final String sUser = "lpwebappzemecs";
+	private static final String sPassword = "lpwebappzemecs";
 	private ZeiterfassungFac zeiterfassungFac = null;
 	private LogonFac logonFac = null;
 	private String idUser = null;
@@ -105,9 +105,10 @@ public class HeliumVServlet extends FrameServlet {
 			logonFac = (LogonFac) context.lookup("lpserver/LogonFacBean/remote");
 			TheClientDto theClientDto = logonFac.logon( 
 					Helper.getFullUsername(sUser),				
-					Helper.getMD5Hash((sUser + "lpwebappzemecs").toCharArray()),
-					new Locale("de", "AT"), null, null, new java.sql.Timestamp(
+					Helper.getMD5Hash((sUser + sPassword).toCharArray()),
+					new Locale("de", "AT"), null, new java.sql.Timestamp(
 							System.currentTimeMillis()));
+			logonFac.logout(theClientDto);
 
 			personalFac = (PersonalFac) context.lookup("lpserver/PersonalFacBean/remote");
 		} catch (Exception e) {
@@ -156,13 +157,6 @@ public class HeliumVServlet extends FrameServlet {
 		// get the name filter
 		String mandant = request.getParameter("mandant");
 
-		String sUser= "lpwebappzemecs";
-		TheClientDto theClientDto = logonFac.logon(
-				Helper.getFullUsername(sUser),		
-				Helper.getMD5Hash((sUser + new String("lpwebappzemecs")).toCharArray()), 
-				new Locale("de", "AT"), mandant, null, 
-				new java.sql.Timestamp(System.currentTimeMillis()));
-
 		JasperPrintLP jasperprint = null;
 		if (auswertung == null) {
 			// Keine Auswertung angegeben
@@ -172,7 +166,13 @@ public class HeliumVServlet extends FrameServlet {
 		}
 
 		if (auswertung.equals("anwesenheitsliste")) {
+			TheClientDto theClientDto = logonFac.logon(
+					Helper.getFullUsername(sUser),		
+					Helper.getMD5Hash((sUser + new String("lpwebappzemecs")).toCharArray()), 
+					new Locale("de", "AT"), mandant, 
+					new java.sql.Timestamp(System.currentTimeMillis()));
 			jasperprint = zeiterfassungFac.printAnwesenheitsliste(theClientDto);
+			logonFac.logout(theClientDto);
 		} else {
 			response.sendError(HttpServletResponse.SC_BAD_REQUEST,
 					"Kein zul\u00E4ssiger Parameter angegeben!");

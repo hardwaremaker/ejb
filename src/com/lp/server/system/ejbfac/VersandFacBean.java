@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -103,7 +103,9 @@ import com.lp.server.system.service.VersandstatusDto;
 import com.lp.server.system.service.VersandstatusDtoAssembler;
 import com.lp.server.util.Facade;
 import com.lp.server.util.HelperServer;
+import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.report.LpHtmlMailText;
 import com.lp.server.util.report.LpMailText;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
@@ -973,7 +975,8 @@ public class VersandFacBean extends Facade implements VersandFac {
 	public String getDefaultBetreffForBelegEmail(MailtextDto mailtextDto,
 			String belegartCNr, Integer iIdBeleg, Locale locSprache,
 			TheClientDto theClientDto) throws EJBExceptionLP {
-		LpMailText mt = createLpMailText(mailtextDto, theClientDto);
+		LpMailText mt = createLpMailText(new LpMailText(), mailtextDto,
+				theClientDto);
 		if (mt != null) {
 			String betreff = mt.transformBetreff(mailtextDto, theClientDto);
 			if (betreff != null)
@@ -990,14 +993,10 @@ public class VersandFacBean extends Facade implements VersandFac {
 		}
 	}
 
-	private LpMailText createLpMailText(MailtextDto mailtextDto,
+	private LpMailText createLpMailText(LpMailText mt, MailtextDto mailtextDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
-		if (mailtextDto == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PARAMETER_IS_NULL,
-					new Exception("mailtextDto == null"));
-		}
+		Validator.notNull(mailtextDto, "mailtextDto");
 		try {
-			LpMailText mt = new LpMailText();
 			String sAnrede;
 			Locale locDruck;
 			if (mailtextDto.getParamLocale() != null) {
@@ -1076,6 +1075,8 @@ public class VersandFacBean extends Facade implements VersandFac {
 					personRpt.getSTitel());
 			mt.addParameter(VersandFac.MAIL_PARAMETER_VERTRETER_VORNAME,
 					personRpt.getSVorname());
+			mt.addParameter(VersandFac.MAIL_PARAMETER_VERTRETER_NTITEL,
+					personRpt.getSNtitel());
 
 			mt.addParameter(VersandFac.MAIL_PARAMETER_VERTRETER_DIREKTFAX,
 					personRpt.getSDirektfax());
@@ -1115,6 +1116,8 @@ public class VersandFacBean extends Facade implements VersandFac {
 					personRpt.getSTitel());
 			mt.addParameter(VersandFac.MAIL_PARAMETER_BEARBEITER_VORNAME,
 					personRpt.getSVorname());
+			mt.addParameter(VersandFac.MAIL_PARAMETER_BEARBEITER_NTITEL,
+					personRpt.getSNtitel());
 
 			// PJ14540
 			mt.addParameter(VersandFac.MAIL_PARAMETER_BEARBEITER_DIREKTFAX,
@@ -1187,10 +1190,16 @@ public class VersandFacBean extends Facade implements VersandFac {
 	public String getDefaultTextForBelegEmail(MailtextDto mailtextDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 
-		LpMailText mt = createLpMailText(mailtextDto, theClientDto);
-		if (mt != null)
-			return mt.transformText(mailtextDto, theClientDto);
-		return null;
+		LpMailText mt = createLpMailText(new LpMailText(), mailtextDto,
+				theClientDto);
+		return mt != null ? mt.transformText(mailtextDto, theClientDto) : null;
+	}
+
+	public String getDefaultTextForBelegHtmlEmail(MailtextDto mailtextDto,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+		LpMailText mt = createLpMailText(new LpHtmlMailText(), mailtextDto,
+				theClientDto);
+		return mt != null ? mt.transformText(mailtextDto, theClientDto) : null;
 	}
 
 	public String getVersandstatus(String belegartCNr, Integer i_belegIId,
@@ -1769,8 +1778,7 @@ public class VersandFacBean extends Facade implements VersandFac {
 	}
 
 	public VersandanhangDto createVersandanhang(
-			VersandanhangDto versandanhangDto, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException {
+			VersandanhangDto versandanhangDto, TheClientDto theClientDto) {
 		myLogger.logData(versandanhangDto, theClientDto.getIDUser());
 		Integer iId = getPKGeneratorObj().getNextPrimaryKey(
 				PKConst.PK_VERSANDANHANG);
@@ -1791,6 +1799,18 @@ public class VersandFacBean extends Facade implements VersandFac {
 			return versandanhangDto;
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
+		} catch (Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
+					new Exception());
 		}
+	}
+
+	public void createVersandanhaenge(ArrayList<VersandanhangDto> alAnhaenge,
+			TheClientDto theClientDto)  {
+
+		for (int i = 0; i < alAnhaenge.size(); i++) {
+			createVersandanhang(alAnhaenge.get(i), theClientDto);
+		}
+
 	}
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -45,6 +45,7 @@ import javax.persistence.Table;
 
 @NamedQueries({
 		@NamedQuery(name = "ArtikellieferantstaffelfindByArtikellieferantIIdFMenge", query = "SELECT OBJECT(o) FROM Artikellieferantstaffel o WHERE o.artikellieferantIId = ?1 AND o.nMenge <= ?2 AND o.tPreisgueltigab <= ?3 AND (o.tPreisgueltigbis >= ?3  OR o.tPreisgueltigbis IS NULL) ORDER BY o.nMenge DESC"),
+		@NamedQuery(name = "ArtikellieferantstaffelfindByArtikellieferantIIdFMengeGroesser", query = "SELECT OBJECT(o) FROM Artikellieferantstaffel o WHERE o.artikellieferantIId = ?1 AND o.nMenge > ?2 AND o.tPreisgueltigab <= ?3 AND (o.tPreisgueltigbis >= ?3  OR o.tPreisgueltigbis IS NULL) ORDER BY o.nMenge DESC"),
 		@NamedQuery(name = "ArtikellieferantstaffelfindbyArtikellieferantIIdFMengeUK", query = "SELECT OBJECT(o) FROM Artikellieferantstaffel o WHERE o.artikellieferantIId = ?1 AND o.nMenge=?2"),
 		@NamedQuery(name = "ArtikellieferantstaffelfindByArtikellieferantIId", query = "SELECT OBJECT(o) FROM Artikellieferantstaffel o WHERE o.artikellieferantIId = ?1 ORDER BY o.nMenge DESC"),
 		@NamedQuery(name = "ArtikellieferantstaffelfindByArtikellieferantIIdFMengeTPreisgueltigab", query = "SELECT OBJECT(o) FROM Artikellieferantstaffel o WHERE o.artikellieferantIId = ?1 AND o.nMenge=?2 AND o.tPreisgueltigab=?3"),

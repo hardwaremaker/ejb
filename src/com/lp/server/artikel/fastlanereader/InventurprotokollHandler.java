@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.artikel.fastlanereader;
 
+import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -57,8 +58,8 @@ import com.lp.util.EJBExceptionLP;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Inventuren implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Inventuren implementiert.
+ * Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -114,8 +115,14 @@ public class InventurprotokollHandler extends UseCaseHandler {
 						.artikelFindByPrimaryKeySmall(
 								inventurprotokoll.getFlrinventurliste()
 										.getFlrartikel().getI_id(),
-										theClientDto);
-				rows[row][col++] = artikelDto.formatBezeichnung();
+								theClientDto);
+				if (artikelDto.getArtikelsprDto() != null) {
+					rows[row][col++] = artikelDto.getArtikelsprDto().getCBez();
+					rows[row][col++] = artikelDto.getArtikelsprDto().getCZbez();
+				} else {
+					rows[row][col++] = null;
+					rows[row][col++] = null;
+				}
 				rows[row][col++] = inventurprotokoll.getFlrinventurliste()
 						.getFlrlager().getC_nr();
 				rows[row][col++] = new java.sql.Timestamp(inventurprotokoll
@@ -245,8 +252,7 @@ public class InventurprotokollHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy
-						.append("inventurprotokoll.flrinventurliste.flrartikel.c_nr ASC ");
+				orderBy.append("inventurprotokoll.flrinventurliste.flrartikel.c_nr ASC ");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf("inventurprotokoll.i_id") < 0) {
@@ -333,48 +339,73 @@ public class InventurprotokollHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							String.class, java.sql.Timestamp.class,
-							String.class, java.math.BigDecimal.class },
-					new String[] {
-							"ID",
-							getTextRespectUISpr("artikel.artikelnummer",
-									theClientDto.getMandant(), theClientDto
-											.getLocUi()),
-							getTextRespectUISpr("lp.bezeichnung", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.lager", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.datum", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.snrchargennr", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.menge", theClientDto
-									.getMandant(), theClientDto.getLocUi()) },
-					new int[] {
-							-1, // diese Spalte wird ausgeblendet
-							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XM, 15,
-							QueryParameters.FLR_BREITE_L,
-							QueryParameters.FLR_BREITE_PREIS },
-					new String[] {
-							"i_id",
-							InventurFac.FLR_INVENTURPROTOKOLL_FLRINVENTURLISTE
-									+ "."
-									+ InventurFac.FLR_INVENTURLISTE_FLRARTIKEL
-									+ ".c_nr",
-							com.lp.server.util.Facade.NICHT_SORTIERBAR,
-							InventurFac.FLR_INVENTURPROTOKOLL_FLRINVENTURLISTE
-									+ "."
-									+ InventurFac.FLR_INVENTURLISTE_FLRARTIKEL
-									+ ".c_nr",
-							InventurFac.FLR_INVENTURPROTOKOLL_T_ZEITPUNKT,
-							InventurFac.FLR_INVENTURPROTOKOLL_FLRINVENTURLISTE
-									+ "."
-									+ InventurFac.FLR_INVENTURLISTE_C_SERIENNRCHARGENNR,
-							InventurFac.FLR_INVENTURPROTOKOLL_N_KORREKTURMENGE }));
+
+			try {
+				int iNachkommastellenMenge = getMandantFac()
+						.getNachkommastellenMenge(theClientDto.getMandant());
+
+				setTableInfo(new TableInfo(
+						new Class[] {
+								Integer.class,
+								String.class,
+								String.class,
+								String.class,
+								String.class,
+								java.sql.Timestamp.class,
+								String.class,
+								super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge) },
+						new String[] {
+								"ID",
+								getTextRespectUISpr("artikel.artikelnummer",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()),
+								getTextRespectUISpr("lp.bezeichnung",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()),
+								getTextRespectUISpr("artikel.zusatzbez",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()),
+								getTextRespectUISpr("lp.lager",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()),
+								getTextRespectUISpr("lp.datum",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()),
+								getTextRespectUISpr("lp.snrchargennr",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()),
+								getTextRespectUISpr("lp.menge",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()) },
+						new int[] {
+								-1, // diese Spalte wird ausgeblendet
+								QueryParameters.FLR_BREITE_XM,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_XM, 15,
+								QueryParameters.FLR_BREITE_L,
+								QueryParameters.FLR_BREITE_PREIS },
+						new String[] {
+								"i_id",
+								InventurFac.FLR_INVENTURPROTOKOLL_FLRINVENTURLISTE
+										+ "."
+										+ InventurFac.FLR_INVENTURLISTE_FLRARTIKEL
+										+ ".c_nr",
+								com.lp.server.util.Facade.NICHT_SORTIERBAR,
+								com.lp.server.util.Facade.NICHT_SORTIERBAR,
+								InventurFac.FLR_INVENTURPROTOKOLL_FLRINVENTURLISTE
+										+ "."
+										+ InventurFac.FLR_INVENTURLISTE_FLRARTIKEL
+										+ ".c_nr",
+								InventurFac.FLR_INVENTURPROTOKOLL_T_ZEITPUNKT,
+								InventurFac.FLR_INVENTURPROTOKOLL_FLRINVENTURLISTE
+										+ "."
+										+ InventurFac.FLR_INVENTURLISTE_C_SERIENNRCHARGENNR,
+								InventurFac.FLR_INVENTURPROTOKOLL_N_KORREKTURMENGE }));
+			} catch (RemoteException ex) {
+				throwEJBExceptionLPRespectOld(ex);
+				return null;
+			}
 		}
 		return super.getTableInfo();
 	}

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -49,6 +49,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -290,7 +291,7 @@ public class ParameteranwenderHandler extends UseCaseHandler {
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-				boolean idFound = false;
+//				boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {
@@ -327,30 +328,31 @@ public class ParameteranwenderHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] { Object.class, String.class, String.class,
-							String.class, String.class, String.class, },
-					new String[] {
-							"PK",
-							getTextRespectUISpr("lp.bezeichnung", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.kategorie", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.wert", mandantCNr, locUI),
-							getTextRespectUISpr("lp.bemerkung", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.datentyp", mandantCNr,
-									locUI) },
-					new String[] {
-							"compId",
-							ParameterFac.FLR_PARAMETERANWENDER_ID_COMP
-									+ ".c_nr",
-							ParameterFac.FLR_PARAMETERANWENDER_ID_COMP
-									+ "."
-									+ ParameterFac.FLR_PARAMETERANWENDER_C_KATEGORIE,
-							ParameterFac.FLR_PARAMETERANWENDER_C_WERT,
-							ParameterFac.FLR_PARAMETERANWENDER_C_BEMERKUNGSMALL,
-							ParameterFac.FLR_PARAMETERANWENDER_C_DATENTYP }));
+			setTableInfo(new TableInfo(new Class[] { Object.class,
+					String.class, String.class, String.class, String.class,
+					String.class, }, new String[] { "PK",
+					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+					getTextRespectUISpr("lp.kategorie", mandantCNr, locUI),
+					getTextRespectUISpr("lp.wert", mandantCNr, locUI),
+					getTextRespectUISpr("lp.bemerkung", mandantCNr, locUI),
+					getTextRespectUISpr("lp.datentyp", mandantCNr, locUI) },
+
+			new int[] {
+					-1, // diese Spalte wird ausgeblendet
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
+			new String[] {
+					"compId",
+					ParameterFac.FLR_PARAMETERANWENDER_ID_COMP + ".c_nr",
+					ParameterFac.FLR_PARAMETERANWENDER_ID_COMP + "."
+							+ ParameterFac.FLR_PARAMETERANWENDER_C_KATEGORIE,
+					ParameterFac.FLR_PARAMETERANWENDER_C_WERT,
+					ParameterFac.FLR_PARAMETERANWENDER_C_BEMERKUNGSMALL,
+					ParameterFac.FLR_PARAMETERANWENDER_C_DATENTYP }));
 
 		}
 		return super.getTableInfo();

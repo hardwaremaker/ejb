@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,7 +32,6 @@
  ******************************************************************************/
 package com.lp.server.stueckliste.fastlanereader;
 
-import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -45,12 +44,12 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.stueckliste.fastlanereader.generated.FLRPosersatz;
-import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -260,7 +259,7 @@ public class PosersatzHandler extends UseCaseHandler {
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-				boolean idFound = false;
+//				boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {
@@ -296,14 +295,31 @@ public class PosersatzHandler extends UseCaseHandler {
 		if (super.getTableInfo() == null) {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class }, new String[] {
-					"Id",
-					getTextRespectUISpr("artikel.artikelnummerlang",
-							mandantCNr, locUI),
-					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI) },
-					new String[] { "id", "flrartikel.c_nr",
-							Facade.NICHT_SORTIERBAR }));
+			setTableInfo(new TableInfo(
+					new Class[] {
+							Integer.class,
+							String.class,
+							String.class
+					},
+					
+					new String[] {
+							"Id",
+							getTextRespectUISpr("artikel.artikelnummerlang", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI)
+					},
+					
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST
+					},
+					
+					new String[] {
+							"id",
+							"flrartikel.c_nr",
+							Facade.NICHT_SORTIERBAR
+					})
+			);
 		}
 
 		return super.getTableInfo();

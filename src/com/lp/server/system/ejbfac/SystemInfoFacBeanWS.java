@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -49,7 +49,7 @@ import javax.xml.ws.soap.MTOM;
 import org.jboss.wsf.spi.annotation.WebContext;
 
 import com.lp.server.util.Facade;
-import com.lp.server.util.HelperServer;
+import com.lp.server.util.ServerConfiguration;
 import com.lp.server.util.logger.webservice.WebserviceCallInterceptor;
 
 @Stateless
@@ -65,8 +65,7 @@ public class SystemInfoFacBeanWS extends Facade implements WebshopSystemInfoServ
 	public WebshopPingResult ping() {
 		WebshopPingResult result = new WebshopPingResult() ;
 
-		result.setSystemBuildNumber(HelperServer
-				.getLPResourceBundle().getString("lp.version.server.build")) ;
+		result.setSystemBuildNumber(ServerConfiguration.getBuildNumber().toString()) ;
 		result.setTimestamp(System.currentTimeMillis()) ;
 		result.setOkay() ;
  		return result ;

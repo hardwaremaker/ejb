@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -33,6 +33,7 @@
 package com.lp.server.finanz.fastlanereader;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
@@ -134,7 +135,7 @@ public class BuchungDetailHandler extends UseCaseHandler {
 
 				rows[row][col++] = buchungDetail.getI_id();
 				rows[row][col++] = buchung.getD_buchungsdatum();
-				rows[row][col++] = buchung.getC_belegnummer();
+				rows[row][col++] = buchung.getC_belegnummer().trim();
 				rows[row][col++] = buchungdetailText
 						.getTextFuerAutomatischeEBBuchung(buchung);
 				rows[row][col++] = buchungdetailText
@@ -234,33 +235,23 @@ public class BuchungDetailHandler extends UseCaseHandler {
 					}
 					filterAdded = true;
 
-					if (filterKriterien[i].kritName.equals("c_belegnummer")) {
+					if (filterKriterien[i].kritName.equals(FinanzFac.FLR_BUCHUNG_C_BELEGNUMMER)) {
 
-						// MANDANTENKENNUNG WIRD DERZEIT NICHT UNTERSTUETZT
-						try {
-							String sValue = filterKriterien[i].value;
-							sValue = sValue.replaceAll("%", "");
-
-							sValue = Helper.fitString2LengthAlignRight(sValue,
-									stellenBelegnummer, '0');
-
-							sValue = "'%" + trennzeichen + sValue + "'";
-							where.append(" buchungdetail.flrbuchung.c_belegnummer");
-							where.append(" " + filterKriterien[i].operator);
-							where.append(" " + sValue);
-						} catch (Exception ex) {
-							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
-									ex);
-						}
+						where.append(buildWhereClauseRTrim("buchungdetail.flrbuchung.", filterKriterien[i]));
+//						try {
+//							String sValue = filterKriterien[i].value;
+//							where.append(" rtrim(buchungdetail.flrbuchung.c_belegnummer)");
+//							where.append(" " + filterKriterien[i].operator);
+//							where.append(" " + sValue);
+//						} catch (Exception ex) {
+//							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
+//									ex);
+//						}
 					} else if (filterKriterien[i].kritName
 							.equals(FinanzFac.FILTER_BUCHUNGDETAILS_NUR_OFFENE)) {
 						where.append(BuchungDetailQueryBuilder.buildNurOffeneBuchungDetails("buchungdetail"));
 					} else {
-
-						where.append(" buchungdetail."
-								+ filterKriterien[i].kritName);
-						where.append(" " + filterKriterien[i].operator);
-						where.append(" " + filterKriterien[i].value);
+						where.append(buildWhereClausePart("buchungdetail.", filterKriterien[i]));
 					}
 				}
 			}

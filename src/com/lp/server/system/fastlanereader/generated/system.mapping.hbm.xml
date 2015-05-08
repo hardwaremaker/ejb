@@ -1,36 +1,24 @@
 <?xml version="1.0"?>
-<!--
-  HELIUM V, Open Source ERP software for sustained success
-  at small and medium-sized enterprises.
-  Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
-  
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Affero General Public License as published 
-  by the Free Software Foundation, either version 3 of theLicense, or 
-  (at your option) any later version.
-  
-  According to sec. 7 of the GNU Affero General Public License, version 3, 
-  the terms of the AGPL are supplemented with the following terms:
-  
-  "HELIUM V" and "HELIUM 5" are registered trademarks of 
-  HELIUM V IT-Solutions GmbH. The licensing of the program under the 
-  AGPL does not imply a trademark license. Therefore any rights, title and
-  interest in our trademarks remain entirely with us. If you want to propagate
-  modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
-  you may only do so if you have a written permission by HELIUM V IT-Solutions 
-  GmbH (to acquire a permission please contact HELIUM V IT-Solutions
-  at trademark@heliumv.com).
-  
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Affero General Public License for more details.
-  
-  You should have received a copy of the GNU Affero General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  
-  Contact: developers@heliumv.com
--->
+<!-- HELIUM V, Open Source ERP software for sustained success at small and 
+	medium-sized enterprises. Copyright (C) 2004 - 2014 HELIUM V IT-Solutions 
+	GmbH This program is free software: you can redistribute it and/or modify 
+	it under the terms of the GNU Affero General Public License as published 
+	by the Free Software Foundation, either version 3 of theLicense, or (at your 
+	option) any later version. According to sec. 7 of the GNU Affero General 
+	Public License, version 3, the terms of the AGPL are supplemented with the 
+	following terms: "HELIUM V" and "HELIUM 5" are registered trademarks of HELIUM 
+	V IT-Solutions GmbH. The licensing of the program under the AGPL does not 
+	imply a trademark license. Therefore any rights, title and interest in our 
+	trademarks remain entirely with us. If you want to propagate modified versions 
+	of the Program under the name "HELIUM V" or "HELIUM 5", you may only do so 
+	if you have a written permission by HELIUM V IT-Solutions GmbH (to acquire 
+	a permission please contact HELIUM V IT-Solutions at trademark@heliumv.com). 
+	This program is distributed in the hope that it will be useful, but WITHOUT 
+	ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+	FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+	details. You should have received a copy of the GNU Affero General Public 
+	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
+	Contact: developers@heliumv.com -->
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 <!-- flr: 1 so ein file anlegen -->
 
@@ -56,6 +44,9 @@
 			not-null="true" />
 		<property name="t_loggedout" column="T_LOGGEDOUT" type="java.sql.Timestamp"
 			not-null="true" />
+		<many-to-one name="flrsystemrolle"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
+			column="SYSTEMROLLE_I_ID" insert="false" update="false" />
 	</class>
 	<!-- flr: 4 wenn du fertig bist den generator (jb tools) abfahren -->
 
@@ -509,6 +500,22 @@
 		<property name="c_datentyp" column="C_DATENTYP" type="java.lang.String" />
 	</class>
 
+	<class name="FLRParametermandantgueltigab" table="LP_PARAMETERMANDANTGUELTIGAB">
+		<composite-id name="id_comp"
+			class="com.lp.server.system.fastlanereader.generated.service.FLRParametermandantgueltigabPK">
+			<key-property name="c_nr" column="C_NR" type="java.lang.String" />
+			<key-property name="mandant_c_nr" column="MANDANT_C_NR"
+				type="java.lang.String" />
+			<key-property name="c_kategorie" column="C_KATEGORIE"
+				type="java.lang.String" />
+			<key-property name="t_gueltigab" column="T_GUELTIGAB"
+				type="java.sql.Timestamp" />
+		</composite-id>
+
+		<property name="c_wert" column="C_WERT" type="java.lang.String" />
+
+	</class>
+
 
 	<class name="FLRPanel" table="LP_PANEL">
 		<id name="c_nr" column="C_NR" type="java.lang.String">
@@ -531,6 +538,7 @@
 		<property name="i_gridy" column="I_GRIDY" type="java.lang.Integer" />
 		<property name="b_mandantory" column="B_MANDATORY" type="java.lang.Short" />
 		<property name="artgru_i_id" column="ARTGRU_I_ID" type="java.lang.Integer" />
+		<property name="c_default" column="C_DEFAULT" type="java.lang.String" />
 	</class>
 
 	<class name="FLRPaneldaten" table="LP_PANELDATEN">
@@ -611,6 +619,18 @@
 		</id>
 		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
 		<property name="belegart_c_nr" column="BELEGART_C_NR" type="java.lang.String" />
+	</class>
+
+
+
+	<class name="FLRReportvariante" table="LP_REPORTVARIANTE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_reportname" column="C_REPORTNAME" type="java.lang.String" />
+		<property name="c_reportnamevariante" column="C_REPORTNAMEVARIANTE"
+			type="java.lang.String" />
+		<property name="c_ressource" column="C_RESSOURCE" type="java.lang.String" />
 	</class>
 
 
@@ -748,6 +768,9 @@
 			<generator class="native" />
 		</id>
 		<property name="i_anzahl" column="I_ANZAHL" type="java.lang.Integer" />
+		<many-to-one name="flrsystemrolle"
+			class="com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle"
+			column="SYSTEMROLLE_I_ID" insert="false" update="false" />
 	</class>
 
 

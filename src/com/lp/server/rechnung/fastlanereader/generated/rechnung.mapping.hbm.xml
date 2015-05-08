@@ -72,6 +72,8 @@
 		</id>
 		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="c_bestellnummer" column="C_BESTELLNUMMER" type="java.lang.String" />
 		<property name="i_geschaeftsjahr" column="I_GESCHAEFTSJAHR"
 			type="java.lang.Integer" />
 			<property name="ansprechpartner_i_id" column="ANSPRECHPARTNER_I_ID"

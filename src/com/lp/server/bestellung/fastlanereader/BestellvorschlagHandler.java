@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,6 +35,8 @@ package com.lp.server.bestellung.fastlanereader;
 import java.awt.Color;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -50,9 +52,11 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.angebot.service.AngebotDto;
 import com.lp.server.angebot.service.AngebotpositionDto;
+import com.lp.server.artikel.fastlanereader.generated.FLRArtikelbestellt;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikellieferant;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikellieferantDto;
+import com.lp.server.artikel.service.ArtikellieferantstaffelDto;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragpositionDto;
 import com.lp.server.bestellung.fastlanereader.generated.FLRBestellvorschlag;
@@ -64,6 +68,7 @@ import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.partner.service.LieferantFac;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.HelperServer;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
@@ -85,6 +90,8 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 	private static final long serialVersionUID = 1L;
 	public static final String FLR_BESTELLVORSCHLAG = "flrbestellvorschlag.";
 	public static final String FLR_BESTELLVORSCHLAG_FROM_CLAUSE = " from FLRBestellvorschlag flrbestellvorschlag ";
+
+	boolean bZentralerArtikelstamm = false;
 
 	/**
 	 * gets the data page for the specified row using the current query. The row
@@ -118,6 +125,7 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 			List<?> resultList = query.list();
 			Iterator<?> resultListIterator = resultList.iterator();
 			Object[][] rows = new Object[resultList.size()][colCount];
+			String[] tooltipData = new String[resultList.size()];
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
@@ -225,6 +233,10 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 						rows[row][col++] = null;
 					}
 				}
+				if (bZentralerArtikelstamm) {
+					rows[row][col++] = bestellvorschlag.getMandant_c_nr();
+				}
+
 				rows[row][col++] = bestellvorschlag.getN_zubestellendemenge();
 				rows[row][col++] = bestellvorschlag.getT_liefertermin();
 				if (bestellvorschlag.getLieferant_i_id() != null) {
@@ -245,8 +257,29 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 
 						if (al.getLieferant_i_id().equals(
 								bestellvorschlag.getLieferant_i_id())) {
-							iWiederbeschaffungszeit = al
-									.getI_wiederbeschaffungszeit();
+
+							ArtikellieferantstaffelDto[] staffeln = getArtikelFac()
+									.artikellieferantstaffelFindByArtikellieferantIIdFMenge(
+											al.getI_id(),
+											bestellvorschlag
+													.getN_zubestellendemenge(),
+											new java.sql.Date(bestellvorschlag
+													.getT_liefertermin()
+													.getTime()));
+
+							if (staffeln.length > 0) {
+								ArtikellieferantstaffelDto staffel = staffeln[0];
+								if (staffel.getIWiederbeschaffungszeit() != null) {
+									iWiederbeschaffungszeit = staffel
+											.getIWiederbeschaffungszeit();
+								}
+
+							}
+
+							if (iWiederbeschaffungszeit == null) {
+								iWiederbeschaffungszeit = al
+										.getI_wiederbeschaffungszeit();
+							}
 						}
 
 					}
@@ -310,16 +343,58 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 					rows[row][col++] = null;
 				}
 
+				if (bestellvorschlag.getX_textinhalt() != null
+						&& !bestellvorschlag.getX_textinhalt().equals("")) {
+					rows[row][col++] = new Boolean(true);
+					String text = bestellvorschlag.getX_textinhalt();
+					text = text.replaceAll("\n", "<br>");
+					text = "<html>" + text + "</html>";
+					tooltipData[row] = text;
+				} else {
+					rows[row][col++] = new Boolean(false);
+				}
+
+				// PJ18566
+
+				Calendar c = Calendar.getInstance();
+				c.setTime(bestellvorschlag.getT_liefertermin());
+				c.add(Calendar.DATE, 1);
+				Collection cl = getArtikelbestelltFac().getArtikelbestellt(
+						bestellvorschlag.getArtikel_i_id(),
+						Helper.cutDate(new java.sql.Date(c.getTimeInMillis())),
+						null);
+				Iterator itBest = cl.iterator();
+
+				boolean bEsgibtPositiveBestellungenNachTermin = false;
+
+				while (itBest.hasNext()) {
+					FLRArtikelbestellt flrbest = (FLRArtikelbestellt) itBest
+							.next();
+					if (flrbest.getN_menge().doubleValue() > 0) {
+						bEsgibtPositiveBestellungenNachTermin = true;
+						break;
+					}
+				}
+
 				if (!Helper.short2boolean(bestellvorschlag.getFlrartikelliste()
 						.getB_lagerbewirtschaftet())) {
-					rows[row][col++] = new Color(0, 0, 255);
+					if (bEsgibtPositiveBestellungenNachTermin == true) {
+						rows[row][col++] = new Color(139, 139, 0);
+					} else {
+						rows[row][col++] = Color.BLUE;
+					}
+
+				} else {
+					if (bEsgibtPositiveBestellungenNachTermin == true) {
+						rows[row][col++] = new Color(34, 139, 34);
+					}
 				}
 
 				row++;
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+					endIndex, 0, tooltipData);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -614,61 +689,141 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 	 */
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
+
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+					theClientDto)) {
+				bZentralerArtikelstamm = true;
+			}
+
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, Icon.class, String.class,
-							String.class, BigDecimal.class, Date.class,
-							String.class, Integer.class, BigDecimal.class,
-							String.class, String.class, Color.class },
-					new String[] {
-							"i_id",
-							"S",
-							getTextRespectUISpr("bes.artikelcnr", mandantCNr,
-									locUI),
-							getTextRespectUISpr("bes.artikelbezeichnung",
-									mandantCNr, locUI),
-							getTextRespectUISpr("bes.zubestellendeMenge",
-									mandantCNr, locUI),
-							getTextRespectUISpr("bes.bestelltermin",
-									mandantCNr, locUI),
-							getTextRespectUISpr("bes.lieferantcnr", mandantCNr,
-									locUI),
-							getTextRespectUISpr(
-									"artikel.wiederbeschaffungszeit.short",
-									mandantCNr, locUI),
-							getTextRespectUISpr(
-									"bes.nettogesamtpreisminusrabatte",
-									mandantCNr, locUI),
-							getTextRespectUISpr("bes.belegart", mandantCNr,
-									locUI),
-							getTextRespectUISpr("bes.belegartnummer",
-									mandantCNr, locUI), "" },
-					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_S,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XL,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XS,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M, 1 },
-					new String[] {
-							"i_id",
-							Facade.NICHT_SORTIERBAR,
-							"c_nr",
-							"c_bez",
-							BestellvorschlagFac.FLR_BESTELLVORSCHLAG_N_ZUBESTELLENDEMENGE,
-							BestellvorschlagFac.FLR_BESTELLVORSCHLAG_T_LIEFERTERMIN,
-							BestellvorschlagFac.FLR_BESTELLVORSCHLAG_FLRLIEFERANT
-									+ "." + LieferantFac.FLR_LIEFERANT_I_ID,
-							Facade.NICHT_SORTIERBAR,
-							BestellvorschlagFac.FLR_BESTELLVORSCHLAG_N_NETTOGESAMTPREISMINUSRABATTE,
-							BestellvorschlagFac.FLR_BESTELLVORSCHLAG_BELEGART_C_NR,
-							BestellvorschlagFac.FLR_BESTELLVORSCHLAG_I_BELEGARTID,
-							"" }));
+
+			if (bZentralerArtikelstamm == false) {
+				setTableInfo(new TableInfo(
+						new Class[] { Integer.class, Icon.class, String.class,
+								String.class, BigDecimal.class, Date.class,
+								String.class, Integer.class, BigDecimal.class,
+								String.class, String.class, Boolean.class,
+								Color.class },
+						new String[] {
+								"i_id",
+								"S",
+								getTextRespectUISpr("bes.artikelcnr",
+										mandantCNr, locUI),
+								getTextRespectUISpr("bes.artikelbezeichnung",
+										mandantCNr, locUI),
+								getTextRespectUISpr("bes.zubestellendeMenge",
+										mandantCNr, locUI),
+								getTextRespectUISpr("bes.bestelltermin",
+										mandantCNr, locUI),
+								getTextRespectUISpr("bes.lieferantcnr",
+										mandantCNr, locUI),
+								getTextRespectUISpr(
+										"artikel.wiederbeschaffungszeit.short",
+										mandantCNr, locUI),
+								getTextRespectUISpr(
+										"bes.nettogesamtpreisminusrabatte",
+										mandantCNr, locUI),
+								getTextRespectUISpr("bes.belegart", mandantCNr,
+										locUI),
+								getTextRespectUISpr("bes.belegartnummer",
+										mandantCNr, locUI),
+								getTextRespectUISpr("lp.text",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()), "" },
+						new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_S,
+								QueryParameters.FLR_BREITE_XM,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_M,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_XS,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_M,
+								QueryParameters.FLR_BREITE_M, 3, 1 },
+						new String[] {
+								"i_id",
+								Facade.NICHT_SORTIERBAR,
+								"c_nr",
+								"c_bez",
+								BestellvorschlagFac.FLR_BESTELLVORSCHLAG_N_ZUBESTELLENDEMENGE,
+								BestellvorschlagFac.FLR_BESTELLVORSCHLAG_T_LIEFERTERMIN,
+								BestellvorschlagFac.FLR_BESTELLVORSCHLAG_FLRLIEFERANT
+										+ "." + LieferantFac.FLR_LIEFERANT_I_ID,
+								Facade.NICHT_SORTIERBAR,
+								BestellvorschlagFac.FLR_BESTELLVORSCHLAG_N_NETTOGESAMTPREISMINUSRABATTE,
+								BestellvorschlagFac.FLR_BESTELLVORSCHLAG_BELEGART_C_NR,
+								BestellvorschlagFac.FLR_BESTELLVORSCHLAG_I_BELEGARTID,
+								Facade.NICHT_SORTIERBAR, "" }));
+
+			} else {
+
+				setTableInfo(new TableInfo(
+						new Class[] { Integer.class, Icon.class, String.class,
+								String.class, String.class, BigDecimal.class,
+								Date.class, String.class, Integer.class,
+								BigDecimal.class, String.class, String.class,
+								Boolean.class, Color.class },
+						new String[] {
+								"i_id",
+								"S",
+								getTextRespectUISpr("bes.artikelcnr",
+										mandantCNr, locUI),
+								getTextRespectUISpr("bes.artikelbezeichnung",
+										mandantCNr, locUI),
+								getTextRespectUISpr("report.mandant",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()),
+								getTextRespectUISpr("bes.zubestellendeMenge",
+										mandantCNr, locUI),
+								getTextRespectUISpr("bes.bestelltermin",
+										mandantCNr, locUI),
+								getTextRespectUISpr("bes.lieferantcnr",
+										mandantCNr, locUI),
+								getTextRespectUISpr(
+										"artikel.wiederbeschaffungszeit.short",
+										mandantCNr, locUI),
+								getTextRespectUISpr(
+										"bes.nettogesamtpreisminusrabatte",
+										mandantCNr, locUI),
+								getTextRespectUISpr("bes.belegart", mandantCNr,
+										locUI),
+								getTextRespectUISpr("bes.belegartnummer",
+										mandantCNr, locUI),
+								getTextRespectUISpr("lp.text",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()), "" },
+						new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_S,
+								QueryParameters.FLR_BREITE_XM,
+								QueryParameters.FLR_BREITE_XS,
+
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_M,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_XS,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_M,
+								QueryParameters.FLR_BREITE_M, 3, 1 },
+						new String[] {
+								"i_id",
+								Facade.NICHT_SORTIERBAR,
+								"c_nr",
+								"c_bez",
+								"mandant_c_nr",
+								BestellvorschlagFac.FLR_BESTELLVORSCHLAG_N_ZUBESTELLENDEMENGE,
+								BestellvorschlagFac.FLR_BESTELLVORSCHLAG_T_LIEFERTERMIN,
+								BestellvorschlagFac.FLR_BESTELLVORSCHLAG_FLRLIEFERANT
+										+ "." + LieferantFac.FLR_LIEFERANT_I_ID,
+								Facade.NICHT_SORTIERBAR,
+								BestellvorschlagFac.FLR_BESTELLVORSCHLAG_N_NETTOGESAMTPREISMINUSRABATTE,
+								BestellvorschlagFac.FLR_BESTELLVORSCHLAG_BELEGART_C_NR,
+								BestellvorschlagFac.FLR_BESTELLVORSCHLAG_I_BELEGARTID,
+								Facade.NICHT_SORTIERBAR, "" }));
+			}
 		}
 		return super.getTableInfo();
 	}
@@ -682,7 +837,7 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 	 * @return String
 	 */
 	private static String buildBestellvorschlagWhereClause(
-			FilterKriterium[] aFilterKriteriumI) {
+			FilterKriterium[] aFilterKriteriumI, String mandantCNr) {
 		StringBuffer where = new StringBuffer("");
 
 		if (aFilterKriteriumI != null && aFilterKriteriumI.length > 0) {
@@ -700,12 +855,12 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 
 		String whereString = "";
 
-		if (where.length() > 0) {
-			where.insert(0, " WHERE ");
+		
+			where.insert(0, " WHERE  "+FLR_BESTELLVORSCHLAG+"mandant_c_nr='"+mandantCNr+"' AND ");
 			whereString = where.substring(0, where.length() - 5); // das letzte
 			// " AND "
 			// abschneiden
-		}
+		
 
 		return whereString;
 	}
@@ -781,7 +936,7 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 	 */
 	public static BestellvorschlagDto[] getListeBestellvorschlaege(
 			FilterKriterium[] aFilterKriteriumI,
-			SortierKriterium[] aSortierKriteriumI, String whichFilter)
+			SortierKriterium[] aSortierKriteriumI, String whichFilter, String mandantCNr)
 			throws EJBExceptionLP {
 		BestellvorschlagDto[] aResult = null;
 		SessionFactory factory = FLRSessionFactory.getFactory();
@@ -794,7 +949,7 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 					.equals(BestellvorschlagFac.BES_NACH_BV_FUER_JEDEN_LF_UND_GLEICHE_TERMIN)) {
 				queryString = FLR_BESTELLVORSCHLAG_FROM_CLAUSE
 						+ BestellvorschlagHandler
-								.buildBestellvorschlagWhereClause(aFilterKriteriumI)
+								.buildBestellvorschlagWhereClause(aFilterKriteriumI,mandantCNr)
 						+ BestellvorschlagHandler
 								.buildBestellvorschlagOrderByClause();
 
@@ -804,7 +959,7 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 					.equals(BestellvorschlagFac.BES_NACH_BV_FUER_JEDEN_LF)) {
 				queryString = FLR_BESTELLVORSCHLAG_FROM_CLAUSE
 						+ BestellvorschlagHandler
-								.buildBestellvorschlagWhereClause(aFilterKriteriumI)
+								.buildBestellvorschlagWhereClause(aFilterKriteriumI,mandantCNr)
 						+ BestellvorschlagHandler
 								.buildBestellvorschlagOrderByClause();
 
@@ -812,12 +967,12 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 					.equals(BestellvorschlagFac.BES_NACH_BV_FUER_BESTIMMTEN_LF_UND_TERMIN)) {
 				queryString = FLR_BESTELLVORSCHLAG_FROM_CLAUSE
 						+ BestellvorschlagHandler
-								.buildBestellvorschlagWhereClause(aFilterKriteriumI);
+								.buildBestellvorschlagWhereClause(aFilterKriteriumI,mandantCNr);
 			} else if (whichFilter
 					.equals(BestellvorschlagFac.BES_NACH_BV_FUER_BESTIMMTEN_LF)) {
 				queryString = FLR_BESTELLVORSCHLAG_FROM_CLAUSE
 						+ BestellvorschlagHandler
-								.buildBestellvorschlagWhereClause(aFilterKriteriumI)
+								.buildBestellvorschlagWhereClause(aFilterKriteriumI,mandantCNr)
 						+ BestellvorschlagHandler
 								.buildBestellvorschlagOrderByClause();
 
@@ -825,7 +980,7 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 					.equals(BestellvorschlagFac.BES_ABRUFE_ZU_RAHMEN)) {
 				queryString = FLR_BESTELLVORSCHLAG_FROM_CLAUSE
 						+ BestellvorschlagHandler
-								.buildBestellvorschlagWhereClause(aFilterKriteriumI)
+								.buildBestellvorschlagWhereClause(aFilterKriteriumI,mandantCNr)
 						+ BestellvorschlagHandler
 								.buildBestellvorschlagOrderByClause();
 			}
@@ -872,6 +1027,8 @@ public class BestellvorschlagHandler extends UseCaseHandler {
 								.getB_nettopreisuebersteuert());
 				bestellvorschlagDto.setProjektIId(flrbestellvorschlag
 						.getProjekt_i_id());
+				bestellvorschlagDto.setXTextinhalt(flrbestellvorschlag
+						.getX_textinhalt());
 
 				aResult[iIndex] = bestellvorschlagDto;
 				iIndex++;

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -614,7 +614,10 @@ public interface SystemFac {
 	public ExtralisteRueckgabeTabelleDto generiereExtraliste(
 			Integer extralisteIId, TheClientDto theClientDto)
 			throws RemoteException, EJBExceptionLP;
-	public  byte[][] konvertierePDFFileInEinzelneBilder(String pdfFile, int resolution);
+	public byte[][] konvertierePDFFileInEinzelneBilder(String pdfFile,
+			int resolution) throws Throwable;
+	public byte[][] konvertierePDFFileInEinzelneBilder(byte[] pdf,
+			int resolution);
 	public void removeOrt(OrtDto ortDto) throws EJBExceptionLP, RemoteException;
 
 	public void updateOrt(OrtDto ortDtoI, TheClientDto theClientDto)
@@ -868,5 +871,33 @@ public interface SystemFac {
 	public boolean enthaeltEineVKPositionKeineMwstObwohlKundeSteuerpflichtig(
 			Integer kundeIId,
 			BelegpositionVerkaufDto[] belegpositionVerkaufDtos,
-			BelegVerkaufDto belegVerkaufDto, TheClientDto theClientDto);
+			BelegVerkaufDto belegVerkaufDto, TheClientDto theClientDto) throws RemoteException;
+	
+	
+	/**
+	 * Den Script-Inhalt auslesen
+	 * 
+	 * @param modulI das betreffende Modul "projekt", "stueckliste", ...  AnfrageReportFac.REPORT_MODUL;
+	 * @param filenameI der Dateiname
+	 * @param mandantCNrI der Mandant f&uuml;r den das Script geladen werden soll
+	 * @param spracheI die Locale
+	 * @param cSubdirectory ein optionales (null) Unterverzeichnis
+	 * @return liefert null bei Fehlern, ansonsten den Script-Inhalt
+	 */
+	String getScriptContentFromLPDir(String modulI, String filenameI,
+			String mandantCNrI, Locale spracheI, String cSubdirectory) ; 	
+
+	/**
+	 * Liefert den http Port auf dem der JBoss seine Web-Dienste anbietet
+	 * @return den Port
+	 */
+	String getServerWebPort();
+	
+	/**
+	 *Liefert die Java Server Info
+	 *
+	 * @return die Java Server Info
+	 */
+	JavaInfoDto getServerJavaInfo();
+
 }

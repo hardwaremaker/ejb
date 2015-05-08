@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -49,7 +49,7 @@ import com.lp.server.system.service.HvDtoLogIdCnr;
 import com.lp.server.system.service.HvDtoLogIgnore;
 import com.lp.server.util.IIId;
 
-@HvDtoLogClass(name=HvDtoLogClass.STUECKLISTE)
+@HvDtoLogClass(name = HvDtoLogClass.STUECKLISTE)
 public class StuecklisteDto implements Serializable, IIId {
 	/**
 	 * 
@@ -94,6 +94,7 @@ public class StuecklisteDto implements Serializable, IIId {
 	public void setBDruckeinlagerstandsdetail(Short bDruckeinlagerstandsdetail) {
 		this.bDruckeinlagerstandsdetail = bDruckeinlagerstandsdetail;
 	}
+
 	private Integer stuecklisteIIdEk;
 
 	public Integer getStuecklisteIIdEk() {
@@ -106,7 +107,7 @@ public class StuecklisteDto implements Serializable, IIId {
 
 	private Integer lagerIIdZiellager;
 
-	@HvDtoLogIdCnr(entityClass=Lager.class)
+	@HvDtoLogIdCnr(entityClass = Lager.class)
 	public Integer getLagerIIdZiellager() {
 		return lagerIIdZiellager;
 	}
@@ -115,12 +116,42 @@ public class StuecklisteDto implements Serializable, IIId {
 		this.lagerIIdZiellager = lagerIIdZiellager;
 	}
 
+	private Short bKeineAutomatischeMaterialbuchung;
+
+	public Short getBKeineAutomatischeMaterialbuchung() {
+		return bKeineAutomatischeMaterialbuchung;
+	}
+
+	public void setBKeineAutomatischeMaterialbuchung(
+			Short bKeineAutomatischeMaterialbuchung) {
+		this.bKeineAutomatischeMaterialbuchung = bKeineAutomatischeMaterialbuchung;
+	}
+
 	public Integer getIErfassungsfaktor() {
 		return iErfassungsfaktor;
 	}
 
 	public void setIErfassungsfaktor(Integer erfassungsfaktor) {
 		iErfassungsfaktor = erfassungsfaktor;
+	}
+
+	private Integer personalIIdFreigabe;
+	private Timestamp tFreigabe;
+
+	public Integer getPersonalIIdFreigabe() {
+		return personalIIdFreigabe;
+	}
+
+	public void setPersonalIIdFreigabe(Integer personalIIdFreigabe) {
+		this.personalIIdFreigabe = personalIIdFreigabe;
+	}
+
+	public Timestamp getTFreigabe() {
+		return tFreigabe;
+	}
+
+	public void setTFreigabe(Timestamp tFreigabe) {
+		this.tFreigabe = tFreigabe;
 	}
 
 	public Integer getIId() {
@@ -138,7 +169,7 @@ public class StuecklisteDto implements Serializable, IIId {
 		this.iId = iId;
 	}
 
-	@HvDtoLogIdCnr(entityClass=Artikel.class)
+	@HvDtoLogIdCnr(entityClass = Artikel.class)
 	public Integer getArtikelIId() {
 		return artikelIId;
 	}
@@ -155,7 +186,7 @@ public class StuecklisteDto implements Serializable, IIId {
 		this.bFremdfertigung = bFremdfertigung;
 	}
 
-	@HvDtoLogIdCnr(entityClass=Auftrag.class)
+	@HvDtoLogIdCnr(entityClass = Auftrag.class)
 	public Integer getAuftragIIdLeitauftrag() {
 		return auftragIIdLeitauftrag;
 	}
@@ -164,7 +195,7 @@ public class StuecklisteDto implements Serializable, IIId {
 		this.auftragIIdLeitauftrag = auftragIIdLeitauftrag;
 	}
 
-	@HvDtoLogIdCBez(entityClass=Fertigungsgruppe.class)
+	@HvDtoLogIdCBez(entityClass = Fertigungsgruppe.class)
 	public Integer getFertigungsgruppeIId() {
 		return fertigungsgruppeIId;
 	}
@@ -224,7 +255,7 @@ public class StuecklisteDto implements Serializable, IIId {
 		return mandantCNr;
 	}
 
-	@HvDtoLogIdCBez(entityClass=Partner.class)
+	@HvDtoLogIdCBez(entityClass = Partner.class)
 	public Integer getPartnerIId() {
 		return partnerIId;
 	}
@@ -325,9 +356,10 @@ public class StuecklisteDto implements Serializable, IIId {
 	}
 
 	public boolean isMaterialbuchungbeiablieferung() {
-		return bMaterialbuchungbeiablieferung == null ? false : ((short)1 == bMaterialbuchungbeiablieferung) ;
+		return bMaterialbuchungbeiablieferung == null ? false
+				: ((short) 1 == bMaterialbuchungbeiablieferung);
 	}
-	
+
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;

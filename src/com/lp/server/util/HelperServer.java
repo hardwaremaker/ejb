@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,14 +35,18 @@ package com.lp.server.util;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
@@ -59,6 +63,9 @@ import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
 
 import com.lp.server.benutzer.service.BenutzerFac;
+import com.lp.server.finanz.service.BuchungdetailDto;
+import com.lp.server.finanz.service.FinanzFac;
+import com.lp.server.finanz.service.KontoDto;
 import com.lp.server.partner.fastlanereader.generated.FLRPartner;
 import com.lp.server.system.jms.service.LPInfoTopicBean;
 import com.lp.server.system.jms.service.LPTopicFertBean;
@@ -70,16 +77,17 @@ import com.lp.server.system.pkgenerator.format.LpBelegnummerFormat;
 import com.lp.server.system.pkgenerator.format.LpDefaultBelegnummerFormat;
 import com.lp.server.system.pkgenerator.format.LpMandantBelegnummerFormat;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.logger.ILPLogger;
 import com.lp.server.util.logger.LPLogService;
 import com.lp.util.EJBExceptionLP;
 
 public class HelperServer {
+	protected final static ILPLogger myLogger = LPLogService.getInstance().getLogger(HelperServer.class);
 
-	private static ResourceBundle lpBundel = null;
-	static final private String RESOURCE_BUNDEL_LP = "com.lp.server.res.lp";
 	static private ResourceBundle messagesBundel = null;
 	static final public String RESOURCE_BUNDEL_ALLG = "com.lp.server.res.messages";
-
+	static private DecimalFormat fibuFormat ;
+	
 	public static BigDecimal getBigDecimalWithScalingFromDB(String dbValue, int length) {
 		if(length % 2 != 0) throw new IllegalArgumentException("length muss eine gerade Zahl sein (wegen Symetrie)");
 		if(dbValue == null) return null;
@@ -95,6 +103,118 @@ public class HelperServer {
 		}
 		
 		return new BigDecimal(encoded + "E" + scale);
+	}
+
+	/**
+	 * {@link #printBuchungssatz(List, FinanzFac, PrintStream)}
+	 * @param list
+	 * @param bean
+	 * @return ein formatierter String, zur Ausgabe in die Console oder die Anzeige in Monospaced
+	 */
+	public static String printBuchungssatz(List<BuchungdetailDto> list, FinanzFac bean) {
+		return printBuchungssatz(list, bean, null);
+	}
+
+	/**
+	 * {@link #printBuchungssatz(List, FinanzFac, PrintStream)}
+	 * @param list
+	 * @param bean
+	 * @return ein formatierter String, zur Ausgabe in die Console oder die Anzeige in Monospaced
+	 */
+	public static String printBuchungssatz(BuchungdetailDto[] list, FinanzFac bean) {
+		return printBuchungssatz(list, bean, null);
+	}
+
+	/**
+	 * {@link #printBuchungssatz(List, FinanzFac, PrintStream)}
+	 * @param list
+	 * @param bean
+	 * @param out wenn != null wird der zur&uuml;ckgegebene String in diesen {@link PrintStream} geschrieben
+	 * @return ein formatierter String, zur Ausgabe in die Console oder die Anzeige in Monospaced
+	 */
+	public static String printBuchungssatz(BuchungdetailDto[] list, FinanzFac bean, PrintStream out) {
+		return printBuchungssatz(Arrays.asList(list), bean, out);
+	}
+	
+	private static DecimalFormat getFibuFormat() {
+		if(fibuFormat == null) {
+			DecimalFormat df = new DecimalFormat() ;
+			df.setMaximumFractionDigits(2);
+			df.setMinimumFractionDigits(2);
+			df.setGroupingUsed(true);
+			fibuFormat = df ;
+		}
+		return fibuFormat ;
+	}
+	
+	/**
+	 * Formatiert die Details einer Buchung zum Anzeigen mit einer Schrift mit fixer Zeichenbreite (zB Monospaced).
+	 * @param list
+	 * @param bean
+	 * @param out wenn != null wird der zur&uuml;ckgegebene String in diesen {@link PrintStream} geschrieben
+	 * @return ein formatierter String, zur Ausgabe in die Console oder die Anzeige in Monospaced
+	 */
+	public static String printBuchungssatz(List<BuchungdetailDto> list, FinanzFac bean, PrintStream out) {
+		StringBuffer bf = new StringBuffer("\n");
+		//_________<-------30-------------------> <-----10-> <-----16------->|<------16------>
+		bf.append("Konto                            Kontonr.            SOLL | HABEN\n"); 
+		bf.append("__________________________________________________________|________________\n");
+		Map<Integer, KontoDto> map = new HashMap<Integer, KontoDto>();
+		
+		BigDecimal soll = BigDecimal.ZERO ; 
+		BigDecimal haben = BigDecimal.ZERO ;
+		for(BuchungdetailDto dto : list) {
+			Integer id = dto.getKontoIId();			
+			KontoDto kontoDto = map.get(id) ;
+			if(kontoDto == null) {
+				try {
+					map.put(id, bean.kontoFindByPrimaryKey(id));
+				} catch(Throwable t) {
+					kontoDto = new KontoDto() ;
+					kontoDto.setIId(id);
+					kontoDto.setCBez("[id=" + id + " not found]") ;
+					kontoDto.setCNr("[cnr=" + id + "]") ;
+					map.put(id, kontoDto) ;
+				}				
+				kontoDto = map.get(id) ;
+			}
+//			if(!map.containsKey(id)) {
+//				try {
+//					map.put(id, bean.kontoFindByPrimaryKey(id));
+//				} catch(Throwable t) {
+//				}
+//			}
+//			String bez;
+//			String nr;
+//			if(map.get(id) == null) {
+//				bez = id+"";
+//				nr = "";
+//			} else {
+//				bez = map.get(id).getCBez();
+//				nr = map.get(id).getCNr();
+//			}
+			if(dto.getNBetrag() != null) {
+				if(dto.isSollBuchung()) {
+					soll = soll.add(dto.getNBetrag()) ;
+				} else {
+					haben = haben.add(dto.getNBetrag()) ;
+				}
+			}
+			String betrag = getFibuFormat().format(dto.getNBetrag()) ;
+			bf.append(String.format("%30.30s %10.10s %16s|%16s%n",
+					kontoDto.getCBez(), kontoDto.getCNr(), dto.isSollBuchung() ? betrag : "",
+					dto.isHabenBuchung() ? betrag : ""));
+		}
+		bf.append("__________________________________________________________|________________\n");
+		bf.append(String.format("%30.30s %10.10s %16s|%16s%n",
+				"SUMME:", "", getFibuFormat().format(soll), getFibuFormat().format(haben)));
+		String s = bf.toString() ;
+		if(out != null) {
+			out.println(s) ;
+		}
+
+		myLogger.info(s);
+		return s ;
 	}
 	
 	public static String getDBValueFromBigDecimal(BigDecimal bd, int length) {
@@ -115,25 +235,6 @@ public class HelperServer {
 		return decoded.toString();
 	}
 	
-	static public ResourceBundle getLPResourceBundle() {
-		if (lpBundel == null) {
-			lpBundel = ResourceBundle.getBundle(RESOURCE_BUNDEL_LP);
-		}
-		return lpBundel;
-	}
-
-	/**
-	 * getReportDir
-	 * 
-	 * @return String
-	 */
-	static public String getPdfDir() {
-		if (lpBundel == null) {
-			lpBundel = ResourceBundle.getBundle(RESOURCE_BUNDEL_LP);
-		}
-		return lpBundel.getString("drucken.pdf.output.dir");
-	}
-
 	/**
 	 * getTextRespectUISpr Ermittelt den Wert der Property sTokenI
 	 * Property-Datei message_<loI>
@@ -187,6 +288,16 @@ public class HelperServer {
 			s = flrPartner.getC_name1nachnamefirmazeile1();
 			if (flrPartner.getC_name2vornamefirmazeile2() != null) {
 				s += " " + flrPartner.getC_name2vornamefirmazeile2();
+			}
+		}
+		return s;
+	}
+	public static String formatPersonAusFLRPartner(FLRPartner flrPartner) {
+		String s = null;
+		if (flrPartner != null) {
+			s = flrPartner.getC_name1nachnamefirmazeile1();
+			if (flrPartner.getC_name2vornamefirmazeile2() != null) {
+				s = flrPartner.getC_name2vornamefirmazeile2()+ " " +s;
 			}
 		}
 		return s;
@@ -543,4 +654,14 @@ public class HelperServer {
 		return retval;
 	}	
 
+	public static boolean isLPAdmin(TheClientDto theClientDto) {
+		if(theClientDto == null) return false ;
+		String benutzername = theClientDto.getBenutzername();
+		if(benutzername == null) return false ;
+
+		benutzername = benutzername.trim().substring(0,
+				benutzername.indexOf("|"));
+		return benutzername.equalsIgnoreCase(
+				ServerConfiguration.getAdminUsername());
+	}
 }

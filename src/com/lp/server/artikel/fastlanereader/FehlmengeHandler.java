@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,14 +34,12 @@ package com.lp.server.artikel.fastlanereader;
 
 import java.awt.Color;
 import java.math.BigDecimal;
-import java.util.Collection;
-import java.util.Date;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
 import javax.swing.Icon;
-import javax.swing.UIManager;
 
 import org.hibernate.Query;
 import org.hibernate.ScrollableResults;
@@ -50,14 +48,13 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRFehlmenge;
 import com.lp.server.artikel.service.ArtikelFac;
-import com.lp.server.bestellung.ejbfac.BestellpositionFacBean;
 import com.lp.server.bestellung.service.BestellpositionDto;
-import com.lp.server.bestellung.service.BestellpositionDtoAssembler;
 import com.lp.server.bestellung.service.BestellpositionFac;
+import com.lp.server.bestellung.service.BestellungDto;
+import com.lp.server.bestellung.service.BestellungFac;
+import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.fertigung.service.LoslagerentnahmeDto;
-import com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklisteposition;
 import com.lp.server.system.service.LocaleFac;
-import com.lp.server.system.service.ParameterFac;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -106,8 +103,6 @@ public class FehlmengeHandler extends UseCaseHandler {
 			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
 			int endIndex = startIndex + pageSize - 1;
 
-			BestellpositionDto bestellpositionDtos[] = null;
-
 			session = factory.openSession();
 			String queryString = this.getFromClause() + this.buildWhereClause()
 					+ this.buildOrderByClause();
@@ -133,32 +128,9 @@ public class FehlmengeHandler extends UseCaseHandler {
 				rows[row][col++] = fm.getN_menge();
 				rows[row][col++] = fm.getT_liefertermin();
 
-				java.sql.Date dFruehesterEintreffTermin = null;
-
-				bestellpositionDtos = getBestellpositionFac()
-						.bestellpositionfindByArtikelOrderByTAuftragsbestaetigungstermin(
+				rows[row][col++] = getFertigungFac()
+						.getFruehesterEintrefftermin(
 								fm.getFlrartikel().getI_id(), theClientDto);
-				if (bestellpositionDtos != null) {
-					for (int i = 0; i < bestellpositionDtos.length; i++) {
-						if (!bestellpositionDtos[i]
-								.getBestellpositionstatusCNr()
-								.equals(BestellpositionFac.BESTELLPOSITIONSTATUS_ERLEDIGT)) {
-
-							if (bestellpositionDtos[i].getNOffeneMenge() == null
-									|| bestellpositionDtos[i].getNOffeneMenge()
-											.doubleValue() > 0) {
-
-								dFruehesterEintreffTermin = bestellpositionDtos[i]
-										.getTAuftragsbestaetigungstermin();
-								break;
-
-							}
-						}
-					}
-
-				}
-
-				rows[row][col++] = dFruehesterEintreffTermin;
 
 				if (fm.getFlrlossollmaterial() != null
 						&& fm.getFlrlossollmaterial().getFlrlos()
@@ -437,7 +409,8 @@ public class FehlmengeHandler extends UseCaseHandler {
 							FLR_FEHLMENGE + ArtikelFac.FLR_FEHLMENGE_N_MENGE,
 							FLR_FEHLMENGE
 									+ ArtikelFac.FLR_FEHLMENGE_T_LIEFERTERMIN,
-							FLR_FEHLMENGE + ArtikelFac.FLR_FEHLMENGE_AB_TERMIN,
+							Facade.NICHT_SORTIERBAR, // FLR_FEHLMENGE +
+														// ArtikelFac.FLR_FEHLMENGE_AB_TERMIN,
 							"stkl.b_materialbuchungbeiablieferung",
 							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
 							Facade.NICHT_SORTIERBAR }));

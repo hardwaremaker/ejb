@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -165,6 +165,32 @@ public class MaterialbedarfDto implements Serializable {
 
 	public void setProjektIId(Integer projektIId) {
 		this.projektIId = projektIId;
+	}
+	
+	private String xTextinhalt = null;
+	public final String getXTextinhalt() {
+		return this.xTextinhalt;
+	}
+
+	public final void setXTextinhalt(String xTextinhalt) {
+		this.xTextinhalt = xTextinhalt;
+	}
+	private BigDecimal nEinkaufpreis;
+	public BigDecimal getNEinkaufpreis() {
+		return nEinkaufpreis;
+	}
+
+	public void setNEinkaufpreis(BigDecimal bdEinkaufpreis) {
+		this.nEinkaufpreis = bdEinkaufpreis;
+	}
+	
+	private Integer lieferantIId;
+	public Integer getLieferantIId() {
+		return lieferantIId;
+	}
+
+	public void setLieferantIId(Integer lieferantIId) {
+		this.lieferantIId = lieferantIId;
 	}
 	
 }

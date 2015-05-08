@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -199,10 +199,25 @@ public abstract class UseCaseHandler extends Facade implements Serializable {
 			return result;
 		} else {
 			this.queryParameters = queryParameters;
-
-			this.rowCount = this.getRowCountFromDataBase();
-			QueryResult result = this.sort(queryParameters.getSortKrit(),
-					this.queryParameters.getKeyOfSelectedRow());
+			setRowCount(getRowCountFromDataBase());
+			
+			QueryResult result = null ;
+			if(queryParameters.getIsApi()) {
+				if(queryParameters.getSortKrit() != null) {
+					result = sort(queryParameters.getSortKrit(), 
+							queryParameters.getKeyOfSelectedRow()) ;
+				} else {				
+					Integer rowIndex = (Integer) queryParameters.getKeyOfSelectedRow() ;
+					if(rowIndex == null) {
+						rowIndex = 0 ;
+					}
+					result = getPageAt(rowIndex) ;
+				}
+			} else {
+				result = this.sort(queryParameters.getSortKrit(),
+						this.queryParameters.getKeyOfSelectedRow());
+			}
+			
 			if (result != null) {
 				result.setRowCount(this.getRowCount());
 			}
@@ -248,6 +263,15 @@ public abstract class UseCaseHandler extends Facade implements Serializable {
 	 */
 	public void setCurrentUser(TheClientDto theClientDto) {
 		this.theClientDto = theClientDto;
+	}
+	
+	//SP 2015
+	protected void logQuery(String query) {
+		StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+		if(stack != null && stack.length > 2)
+			myLogger.warn(stack[2].getMethodName());
+//		myLogger.warn(String.format("uuid = %s; sTable = %s; IDUser = %s; Login Time = %s; Query = %s",
+//				getUuid(), getSTable(), theClientDto.getIDUser(), theClientDto.getDLoggedin().toString(), query));
 	}
 
 	/**
@@ -414,7 +438,7 @@ public abstract class UseCaseHandler extends Facade implements Serializable {
 		this.tableInfo = tableInfo;
 	}
 
-	public void setRowCount(int rowCount) {
+	public void setRowCount(long rowCount) {
 		this.rowCount = rowCount;
 	}
 
@@ -616,6 +640,27 @@ public abstract class UseCaseHandler extends Facade implements Serializable {
 		}
 		return where.toString();
 	}
+	
+	protected final String buildWhereClauseRTrim(String flr, FilterKriterium filterKriterium) {
+		StringBuffer where = new StringBuffer();
+		try {
+			String sValue = filterKriterium.value;
+			where.append(" rtrim(");
+			if(filterKriterium.isBIgnoreCase())
+				where.append("lower(");
+			where.append(flr)
+				.append(filterKriterium.kritName)
+				.append(")");
+			if(filterKriterium.isBIgnoreCase())
+				where.append(")");
+			where.append(filterKriterium.operator);
+			where.append(sValue);
+			return where.toString();
+		} catch (Exception ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
+					ex);
+		}
+	}
 
 	public boolean istBelegnummernInJahr(String FLR, String value) {
 		TheClientDto theClient = theClientDto;
@@ -730,7 +775,16 @@ public abstract class UseCaseHandler extends Facade implements Serializable {
 	}
 	
 	protected Integer getLimit() {
-		return queryParameters.getLimit() != null ? queryParameters.getLimit() : PAGE_SIZE ;
+		Integer queryLimit = queryParameters.getLimit() ;
+		if(queryLimit == null) return PAGE_SIZE ;
+
+		return queryLimit <= 0 ? Integer.MAX_VALUE : queryLimit ;
+//		return queryParameters.getLimit() != null ? queryParameters.getLimit() : PAGE_SIZE ;
+	}
+	
+	
+	protected Integer getStartIndex(Integer rowIndex, Integer pageSize) {
+		return queryParameters.getIsApi() ? rowIndex : Math.max(rowIndex - (pageSize / 2), 0);
 	}
 	
 	public List<Pair<?,?>> getInfoForSelectedIIds(TheClientDto theClientDto, List<Object> selectedIIds) {

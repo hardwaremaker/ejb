@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -58,6 +58,8 @@ public class PKConst {
 	public final static String PK_ANSPRECHPARTNER = "ansprechpartner";
 	public final static String PK_ARTIKEL = "artikel";
 	public final static String PK_ARTIKELGRUPPE = "artikelgruppe";
+	public final static String PK_MEILENSTEIN = "meilenstein";
+	public final static String PK_ZAHLUNGSPLANMEILENSTEIN = "zahlungsplanmeilenstein";
 	public final static String PK_ARTIKELKLASSE = "artikelklasse";
 	public final static String PK_ARTIKELLAGERPLAETZE = "artikellagerplaetze";
 	public final static String PK_ARTIKELLIEFERANT = "artikelieferant";
@@ -69,6 +71,8 @@ public class PKConst {
 	public final static String PK_AUFTRAGSERIENNR = "auftragseriennr";
 	public final static String PK_AUFTRAGTEILNEHMER = "auftragteilnehmer";
 	public final static String PK_AUFTRAGTEXT = "auftragtext";
+	public final static String PK_ZEITPLAN = "zeitplan";
+	public final static String PK_ZAHLUNGSPLAN = "zahlungsplan";
 	public final static String PK_AUFTRAGAUFTRAGDOKUMENT = "auftragauftragdokument";
 	public final static String PK_AUFTRAGDOKUMENT = "auftragdokument";
 	public final static String PK_BANKVERBINDUNG = "bankverbindung";
@@ -366,4 +370,25 @@ public class PKConst {
 	public final static String PK_FAHRZEUG = "fahrzeug";
 	public final static String PK_FAHRZEUGKOSTEN = "fahrzeugkosten";
 	public final static String PK_SIGNATUR = "signatur";
+	public final static String PK_REACH = "reach";
+	public final static String PK_ROHS = "rohs";
+	public final static String PK_AUTOMOTIVE = "automotive";
+	public final static String PK_MEDICAL = "medical";
+	public final static String PK_ZEITABSCHLUSS = "zeitabschluss";
+	public final static String PK_REPORTVARIANTE = "reportvariante";
+	public final static String PK_MASCHINEMASCHIENEZM = "maschinemaschinezm";
+	public final static String PK_MASCHINENZM = "maschinenzm";
+	public final static String PK_MASCHINENZMTAGESART = "maschinenzmtagesart";
+	public final static String PK_AGSTKLARBEITSPLAN = "agstklarbeitsplan";
+	public final static String PK_AGSTKLMENGENSTAFFEL = "agstklmengenstaffel";
+	public final static String PK_VORZUG = "vorzug";
+	public final static String PK_STKLAGERENTNAHME = "stklagerentnahme";
+	public final static String PK_ALERGEN = "alergen";
+	public final static String PK_ARTIKELALERGEN = "artikelalergen";
+	public final static String PK_VERKETTET = "verkettet";
+	public final static String PK_ANFRAGEERLEDIGUNGSGRUND = "anfrageerledigungsgrund";
+	public final static String PK_PARTNERKOMMENTARART = "partnerkommentarart";
+	public final static String PK_PARTNERKOMMENTAR = "partnerkommentar";
+	public final static String PK_PARTNERKOMMENTARDRUCK = "partnerkommentardruck";
+	
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -43,10 +43,15 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppespr;
+import com.lp.server.artikel.service.ArtgruDto;
+import com.lp.server.system.jcr.service.PrintInfoDto;
+import com.lp.server.system.jcr.service.docnode.DocNodeArtikelgruppe;
+import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -374,26 +379,74 @@ public class ArtikelgruHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-			setTableInfo(new TableInfo(new Class[] { Object.class,
-					String.class, String.class, String.class,String.class, String.class },
+			setTableInfo(new TableInfo(
+					new Class[] {
+							Integer.class,
+							String.class,
+							String.class,
+							String.class,
+							String.class,
+							String.class
+					},
+							
 					new String[] {
 							"PK",
-							getTextRespectUISpr("lp.kennung", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.bezeichnung", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.vatergruppe", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-									getTextRespectUISpr("lp.bezeichnung", theClientDto
-											.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.konto", theClientDto
-									.getMandant(), theClientDto.getLocUi()) },
-					new String[] { "artikelgruppe.i_id", "artikelgruppe.c_nr",
+							getTextRespectUISpr("lp.kennung",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.bezeichnung",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.vatergruppe",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.bezeichnung",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.konto",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi())
+					},
+
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST
+					},
+
+					new String[] {
+							"artikelgruppe.i_id",
+							"artikelgruppe.c_nr",
 							"artikelgruppesprset.c_bez",
 							"artikelgruppe.flrartikelgruppe.c_nr",
 							"vatergruppesprset.c_bez",
-							"konto.c_nr" }));
+							"konto.c_nr"
+					})
+			);
 		}
 		return super.getTableInfo();
+	}
+	
+	@Override
+	public PrintInfoDto getSDocPathAndPartner(Object key) {
+		ArtgruDto gruppe = null;
+		try {
+			gruppe = getArtikelFac().artgruFindByPrimaryKey((Integer)key, theClientDto);
+		} catch (Exception e) {
+			// nicht gefunden
+		}
+		if(gruppe != null) {
+			DocPath path = new DocPath(new DocNodeArtikelgruppe(gruppe));
+			return new PrintInfoDto(path, null, getSTable());
+		}
+		return null;
+	}
+	
+	@Override
+	public String getSTable() {
+		return "ARTIKELGRUPPE";
 	}
 }

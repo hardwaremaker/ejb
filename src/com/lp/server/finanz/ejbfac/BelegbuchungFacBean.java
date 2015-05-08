@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -99,6 +99,7 @@ import com.lp.server.system.ejb.Mwstsatzbez;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.MwstsatzbezDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
@@ -221,16 +222,12 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 
 	public BelegbuchungDto belegbuchungFindByBuchungIIdOhneExc(
 			Integer buchungIId) {
-		try {
-			Query query = em
-					.createNamedQuery(Belegbuchung.QUERY_BelegbuchungfindByBuchungIId);
+			HvTypedQuery<Belegbuchung> query = new HvTypedQuery<Belegbuchung>(
+					em.createNamedQuery(Belegbuchung.QUERY_BelegbuchungfindByBuchungIId));
 			query.setParameter(1, buchungIId);
-			Belegbuchung belegbuchung = (Belegbuchung) query.getSingleResult();
-			return assembleBelegbuchungDto(belegbuchung);
-		} catch (NoResultException ex) {
-			myLogger.warn("buchungIId=" + buchungIId, ex);
-			return null;
-		}
+			List<Belegbuchung> list = query.getResultList();
+			if(list == null || list.size() == 0) return null;
+			return assembleBelegbuchungDto(list.get(0));
 	}
 
 	private void setBelegbuchungFromBelegbuchungDto(Belegbuchung belegbuchung,
@@ -428,7 +425,7 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 					buchungDto.setBuchungsartCNr(FinanzFac.BUCHUNGSART_BUCHUNG);
 
 					BelegbuchungDto belegbuchungDto = new BelegbuchungDto();
-					BuchungdetailDto[] details = null;
+					List<BuchungdetailDto> details = new ArrayList<BuchungdetailDto>();
 					Integer steuerkategorieIId = null;
 					boolean reverseCharge = Helper.short2boolean(rechnungDto
 							.getBReversecharge());
@@ -473,9 +470,9 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 													+ debKontouebersteuert.getCNr(), debKontouebersteuert
 													.getCNr() + " " + debKontouebersteuert.getCBez());
 					}
-					details = getBuchungdetailsVonExportDtos(exportDaten,
-							steuerkategorieIId, true, false, false,
-							theClientDto);
+					details.addAll(Arrays.asList(getBuchungdetailsVonExportDtos(exportDaten,
+							steuerkategorieIId, true, false, reverseCharge,
+							theClientDto)));
 					if (rechnungtyp.equals(RechnungFac.RECHNUNGTYP_RECHNUNG)) {
 						buchungDto
 								.setBelegartCNr(LocaleFac.BELEGART_FIBU_RECHNUNG);
@@ -493,30 +490,47 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 					// nur buchen, wenn die Rechnung auch verbucht werden kann
 					if (details != null) {
 						try {
-							BuchungdetailDto[] detailsAll = null;
 							if (rechnungDto.getRechnungartCNr().equals(
 									RechnungFac.RECHNUNGART_SCHLUSSZAHLUNG)) {
 								// zusaetzlich alle Anzahlungsrechnungen
 								// ausbuchen
-								BuchungdetailDto[] anzahlungdetailDtos = getDetailsSchlussrechnungAnzahlungen(
-										rechnungDto, theClientDto);
-								if (anzahlungdetailDtos.length > 0) {
-									detailsAll = new BuchungdetailDto[details.length
-											+ anzahlungdetailDtos.length];
-									System.arraycopy(details, 0, detailsAll, 0,
-											details.length);
-									System.arraycopy(anzahlungdetailDtos, 0,
-											detailsAll, details.length,
-											anzahlungdetailDtos.length);
-								}
+								details.addAll(Arrays.asList(getDetailsSchlussrechnungAnzahlungen(
+										rechnungDto, theClientDto)));
 							}
+							
+							if(reverseCharge) {
+								MwstsatzDto mwstSatz = getMandantFac().mwstsatzFindByPrimaryKey(rechnungDto.getMwstsatzIId(), theClientDto);
+								BigDecimal steuer = rechnungDto.getNWert().multiply(new BigDecimal(mwstSatz.getFMwstsatz()).divide(new BigDecimal("100")));
+								steuer = Helper.rundeKaufmaennisch(steuer, FinanzFac.NACHKOMMASTELLEN);
+								
+								KontoDto debitor = getFinanzFac().kontoFindByPrimaryKey(details.get(0).getKontoIId());
+								Integer ustKontoIId = getFinanzServiceFac().getUstKontoFuerSteuerkategorie(debitor.getSteuerkategorieIIdReverse(), mwstSatz.getIIMwstsatzbezId());
+								Integer rcStKontoIId = getFinanzServiceFac().getEUstKontoFuerSteuerkategorie(debitor.getSteuerkategorieIIdReverse(), mwstSatz.getIIMwstsatzbezId());
+								
+								if(ustKontoIId != null && rcStKontoIId != null) {
+									BuchungdetailDto ustHaben = new BuchungdetailDto();
+									ustHaben.setBuchungdetailartCNr(BuchenFac.HabenBuchung);
+									ustHaben.setNBetrag(steuer);
+									ustHaben.setNUst(BigDecimal.ZERO);
+									ustHaben.setKontoIId(ustKontoIId);
+									
+									BuchungdetailDto ustSoll = new BuchungdetailDto();
+									ustSoll.setBuchungdetailartCNr(BuchenFac.SollBuchung);
+									ustSoll.setNBetrag(steuer);
+									ustSoll.setNUst(BigDecimal.ZERO);
+									ustSoll.setKontoIId(rcStKontoIId);
+									
+									details.add(ustHaben);
+									details.add(ustSoll);
+								}
+								
+							}
+//							HelperServer.printBuchungssatz(details, getFinanzFac(), System.out);
+							
 							// Das Verbuchen einer Rechnung muss immer den
 							// Buchungsregeln entsprechen
-							if (detailsAll == null)
-								detailsAll = details;
-							
 							buchungDto = getBuchenFac().buchen(buchungDto,
-									detailsAll, true, theClientDto);
+									details.toArray(new BuchungdetailDto[0]), true, theClientDto);
 
 							// in Tabelle buchungRechnung speichern
 							belegbuchungDto.setBuchungIId(buchungDto.getIId());
@@ -584,6 +598,9 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 					.buchungdetailsFindByBuchungIId(
 							belegRech.getBuchungIId());
 
+//			System.out.println("Anzahlung: " + anzRechnungen[i].getCNr());
+//			HelperServer.printBuchungssatz(Arrays.asList(detailDtos), getFinanzFac(), System.out);
+
 			BuchungdetailDto perDebitor = detailDtos[0];
 			perDebitor.setNBetrag(perDebitor.getNBetrag().negate());
 			tempList.add(perDebitor);
@@ -593,42 +610,52 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 				tempList.add(anUst);
 			}
 			
-			RechnungzahlungDto[] zahlungDtos = getRechnungFac()
-					.zahlungFindByRechnungIId(anzRechnungen[i].getIId());
-			Integer kontoAnzBezahlt = null;
-			for (int j = 0; j < zahlungDtos.length; j++) {
-				if(RechnungFac.ZAHLUNGSART_GUTSCHRIFT.equals(zahlungDtos[j].getZahlungsartCNr()))
-					continue;
-				BelegbuchungDto bbDto = belegbuchungFindByBelegartCNrBelegiid(
-								LocaleFac.BELEGART_REZAHLUNG,
-								zahlungDtos[j].getIId());
-				detailDtos = getBuchenFac()
-						.buchungdetailsFindByBuchungIId(
-								bbDto.getBuchungIId());
-				boolean skonto = detailDtos.length > 5;
-//				System.out.println("Ursprungszahlung:");
-//				outPrintBuchungssatz(Arrays.asList(detailDtos));
-				BuchungdetailDto perAnzBezahlt = detailDtos[detailDtos.length-(skonto?3:2)];
-				//dritte von hinten ist Buchung an erhaltene Anzahlungen bezahlt
+			if(RechnungFac.STATUS_BEZAHLT.equals(anzRechnungen[i].getStatusCNr())) {
+				RechnungzahlungDto[] zahlungDtos = getRechnungFac()
+						.zahlungFindByRechnungIId(anzRechnungen[i].getIId());
+				Integer kontoAnzBezahlt = null;
+				for (int j = 0; j < zahlungDtos.length; j++) {
+					if(RechnungFac.ZAHLUNGSART_GUTSCHRIFT.equals(zahlungDtos[j].getZahlungsartCNr()))
+						continue;
+					BelegbuchungDto bbDto = belegbuchungFindByBelegartCNrBelegiid(
+									LocaleFac.BELEGART_REZAHLUNG,
+									zahlungDtos[j].getIId());
+					detailDtos = getBuchenFac()
+							.buchungdetailsFindByBuchungIId(
+									bbDto.getBuchungIId());
+					boolean skonto = detailDtos.length > 5;
+					BuchungdetailDto perAnzBezahlt = detailDtos[detailDtos.length-(skonto?3:2)];
+					//dritte von hinten ist Buchung an erhaltene Anzahlungen bezahlt
+					perAnzBezahlt.swapSollHaben();
+					perAnzBezahlt.setKontoIIdGegenkonto(null);
+					tempList.add(perAnzBezahlt);
+					
+					if(skonto) {
+						BuchungdetailDto perAnzVerrech = detailDtos[detailDtos.length-4];
+						perAnzVerrech.setNBetrag(detailDtos[2].getNBetrag().negate());
+						perAnzVerrech.setKontoIIdGegenkonto(null);
+						kontoAnzBezahlt = perAnzVerrech.getKontoIId();
+						//vierte von hinten ist Buchung per erhaltene Anzahlungen verrechnet
+						tempList.add(perAnzVerrech);
+					}
+					
+				}
+				korrigiereRundungsUngenauigkeit(tempList, kontoAnzBezahlt);
+			} else {
+//				HelperServer.printBuchungssatz(detailDtos, getFinanzFac()) ;
+				RechnungzahlungDto zwischenZahlung = new RechnungzahlungDto(); //Die Zahlung gibts noch nicht wirklich,
+				zwischenZahlung.setNBetrag(anzRechnungen[i].getNWert());// aber wir brauchen sie um die Buchungsdetails zu generieren
+				zwischenZahlung.setNBetragUst(anzRechnungen[i].getNWertust());				
+				BuchungdetailDto[] details = new BuchungdetailDto[]{new BuchungdetailDto()};
+				details[0].setKontoIIdGegenkonto(perDebitor.getKontoIId());
+				details = addAnzahlungZahlungDetails(details, rechnungDto, zwischenZahlung, theClientDto);
+//				BuchungdetailDto perAnzBezahlt = details[detailDtos.length-(2)];
+//				//dritte von hinten ist Buchung an erhaltene Anzahlungen bezahlt
+				BuchungdetailDto perAnzBezahlt = details[2];
 				perAnzBezahlt.swapSollHaben();
 				perAnzBezahlt.setKontoIIdGegenkonto(null);
 				tempList.add(perAnzBezahlt);
-				
-				if(skonto) {
-					BuchungdetailDto perAnzVerrech = detailDtos[detailDtos.length-4];
-					perAnzVerrech.setNBetrag(detailDtos[2].getNBetrag().negate());
-					perAnzVerrech.setKontoIIdGegenkonto(null);
-					kontoAnzBezahlt = perAnzVerrech.getKontoIId();
-					//vierte von hinten ist Buchung per erhaltene Anzahlungen verrechnet
-					tempList.add(perAnzVerrech);
-				}
-				
 			}
-//			System.out.println("Vor Korrektur");
-//			outPrintBuchungssatz(tempList);
-			korrigiereRundungsUngenauigkeit(tempList, kontoAnzBezahlt);
-//			System.out.println("Nach Korrektur");
-//			outPrintBuchungssatz(tempList);
 			list.addAll(tempList);
 		}
 		for(BuchungdetailDto dto : list) {
@@ -637,7 +664,9 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 			dto.setIAusziffern(null);
 			dto.setIAuszug(null);
 		}
-//		outPrintBuchungssatz(list);
+		
+//		System.out.println("Alle: ");
+//		HelperServer.printBuchungssatz(list, getFinanzFac(), System.out);
 		return list.toArray(new BuchungdetailDto[list.size()]);
 	}
 	
@@ -1319,6 +1348,12 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
 			}
+		} else if (zahlungDto.getZahlungsartCNr().equals(
+				RechnungFac.ZAHLUNGSART_GUTSCHRIFT)) {
+			sollKontoIId = kundeDto.getIidDebitorenkonto();
+			//hier das Debitorenkonto verwenden, wird von der aufrufenden Methode sowieso
+			//verworfen. Anders waere der Aufwand einfach zu grosz 
+			// TODO: Alles was Zahlungen betrifft refactoren
 		}
 		KontoDto debitorenKontoDto = null;
 		KontoDto sollKontoDto = null;
@@ -1433,6 +1468,7 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 								FinanzFac.NACHKOMMASTELLEN);
 						if(reverseCharge) {
 							skontoBetragTeil[i - 1] = skontoBetragTeil[i - 1].add(skontoUst);
+							skontoUstBetragTeil[i - 1] = BigDecimal.ZERO;
 						} else {
 							skontoUstBetragTeil[i - 1] = skontoUst;
 						}
@@ -1904,7 +1940,7 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 							.equals(EingangsrechnungFac.EINGANGSRECHNUNGART_SCHLUSSZAHLUNG))
 						skontoBetrag = skontoBetrag
 								.subtract(getEingangsrechnungFac()
-										.getAnzahlungenZuSchlussrechnung(
+										.getAnzahlungenGestelltZuSchlussrechnung(
 												rechnungDto.getIId()));
 					skontoProzent = skontoBetrag.divide(betrag, 4,
 							BigDecimal.ROUND_HALF_EVEN);
@@ -2405,7 +2441,7 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 	 * 
 	 * @param zahlungIId
 	 * @param belegart LocaleFac.BELEGART_REZAHLUNG oder LocaleFac.BELEGART_ERZAHLUNG
-	 * @return
+	 * @return true wenn es mindestens eine Skontobuchung f&uuml;r die Zahlung gibt
 	 */
 	private boolean hatZahlungSkonto(Integer zahlungIId, String belegart) {
 		Validator.notNull(zahlungIId, "zahlungIId");
@@ -2481,11 +2517,13 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 	 *         erkannt, Betr&auml;ge muessen negiert werden Anmerkung: bei
 	 *         Anzahlungsrechnungen werden zus&auml;tzlich die Buchungen auf
 	 *         Verrechnungskonto Anzahlung und Erhaltene Anzahlung hinzugefuegt
+	 * @throws RemoteException 
+	 * @throws EJBExceptionLP 
 	 * 
 	 */
 	protected BuchungDto verbucheZahlungSkonto(boolean bBucheMitSkonto,
 			RechnungzahlungDto zahlungDto, RechnungDto rechnungDto,
-			TheClientDto theClientDto) {
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		PartnerDto partnerDto = getPartnerDtoMitDebKonto(
 				rechnungDto.getKundeIId(), theClientDto);
 		BuchungDto buchungDto = null;
@@ -2616,6 +2654,43 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 					throwEJBExceptionLPRespectOld(ex);
 				}
 			}
+		} else if(zahlungDto.getZahlungsartCNr().equals(
+				RechnungFac.ZAHLUNGSART_GUTSCHRIFT)) {
+			if(!bBucheMitSkonto) return null;
+			if(!rechnungDto.getRechnungartCNr().equals(
+							RechnungFac.RECHNUNGART_GUTSCHRIFT)) return null;
+
+			buchungDto = new BuchungDto();
+			buchungDto.setBelegartCNr(LocaleFac.BELEGART_FIBU_GUTSCHRIFT);
+//			buchungDto.setBuchungsartCNr(FinanzFac.BUCHUNGSART_BUCHUNG);
+			buchungDto.setBuchungsartCNr(FinanzFac.BUCHUNGSART_BANKBUCHUNG); 
+			buchungDto.setCBelegnummer(rechnungDto.getCNr());
+			buchungDto.setCText(partnerDto.getCName1nachnamefirmazeile1());
+			buchungDto.setDBuchungsdatum(new Date(zahlungDto.getDZahldatum()
+					.getTime()));
+			buchungDto.setKostenstelleIId(rechnungDto.getKostenstelleIId());
+			
+			BuchungdetailDto[] details = getBuchungdetailsVonZahlung(
+					zahlungDto, rechnungDto, true, theClientDto);
+			List<BuchungdetailDto> list = new ArrayList<BuchungdetailDto>(Arrays.asList(details));
+			
+			if(list.size() > 2) {
+				//die ersten zwei sind egal, nur die skontobuchungen sind wichtig
+				list.remove(0);
+				list.remove(0);
+				for(BuchungdetailDto detail : list) {
+					detail.setNBetrag(detail.getNBetrag().negate());
+				}
+			}
+			
+			buchungDto = getBuchenFac().buchen(buchungDto, list.toArray(new BuchungdetailDto[0]),
+					true, theClientDto);
+			BelegbuchungDto belegbuchungDto = new BelegbuchungDto();
+			belegbuchungDto
+					.setBelegartCNr(LocaleFac.BELEGART_REZAHLUNG);
+			belegbuchungDto.setBuchungIId(buchungDto.getIId());
+			belegbuchungDto.setIBelegiid(zahlungDto.getIId());
+			createBelegbuchung(belegbuchungDto, theClientDto);
 		}
 		return buchungDto;
 	}
@@ -2931,7 +3006,6 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 		List<BelegbuchungDto> belegbuchungen = new ArrayList<BelegbuchungDto>();
 		for (RechnungzahlungDto rez : getRechnungFac()
 				.zahlungFindByRechnungIId(arIId)) {
-			BelegbuchungDto buchung = null;
 			// if(rez.getZahlungsartCNr().equals(RechnungFac.ZAHLUNGSART_GEGENVERRECHNUNG))
 			// {
 			// buchung = belegbuchungFindByBelegartCNrBelegiidOhneExc(
@@ -2939,13 +3013,14 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 			// } else
 			if (rez.getZahlungsartCNr().equals(
 					RechnungFac.ZAHLUNGSART_GUTSCHRIFT)) {
-				buchung = belegbuchungFindByBelegartCNrBelegiidOhneExc(
-						LocaleFac.BELEGART_EINGANGSRECHNUNG,
-						rez.getRechnungzahlungIIdGutschrift());
-			} else {
-				buchung = belegbuchungFindByBelegartCNrBelegiidOhneExc(
-						LocaleFac.BELEGART_REZAHLUNG, rez.getIId());
+				BelegbuchungDto buchung = belegbuchungFindByBelegartCNrBelegiidOhneExc(
+						LocaleFac.BELEGART_RECHNUNG,
+						rez.getRechnungIIdGutschrift());
+				if(buchung != null)
+					belegbuchungen.add(buchung);
 			}
+			BelegbuchungDto buchung = belegbuchungFindByBelegartCNrBelegiidOhneExc(
+						LocaleFac.BELEGART_REZAHLUNG, rez.getIId());
 			if (buchung != null)
 				belegbuchungen.add(buchung);
 		}
@@ -2982,11 +3057,13 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 			buchungdetails.addAll(getBuchenFac()
 					.buchungdetailsFindByKontoIIdBuchungIId(kontoIId,
 							buchung.getIId()));
-			if (belegnummer == null)
-				belegnummer = buchung.getCBelegnummer();
-			else if (!belegnummer.equals(buchung.getCBelegnummer()))
-				ausziffernNoetig = true;
-
+			if (belegnummer == null) {
+				belegnummer = buchung.getCBelegnummer().trim() ;
+			} else {
+				if (!belegnummer.equals(buchung.getCBelegnummer().trim())) {
+					ausziffernNoetig = true;
+				}
+			}
 		}
 
 		List<Integer> iidsOhneAZK = new ArrayList<Integer>();
@@ -3047,55 +3124,71 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 					perVst.setNBetrag(perVst.getNBetrag().negate());
 					list.add(perVst);
 				}
-				EingangsrechnungzahlungDto[] zahlungDtos = getEingangsrechnungFac()
-						.eingangsrechnungzahlungFindByEingangsrechnungIId(
-								anzRechnungen[i].getIId());
-				for (int j = 0; j < zahlungDtos.length; j++) {
-					BelegbuchungDto bbDto = getBelegbuchungFac(
-							theClientDto.getMandant())
-							.belegbuchungFindByBelegartCNrBelegiid(
-									LocaleFac.BELEGART_ERZAHLUNG,
-									zahlungDtos[j].getIId());
-					detailDtos = getBuchenFac()
-							.buchungdetailsFindByBuchungIId(
-									bbDto.getBuchungIId());
-					boolean skonto = detailDtos.length > 5;
-					BuchungdetailDto anAnzBez = detailDtos[detailDtos.length-(skonto?4:3)];
+				
+				if(EingangsrechnungFac.STATUS_ERLEDIGT.equals(anzRechnungen[i].getStatusCNr())) {
+					EingangsrechnungzahlungDto[] zahlungDtos = getEingangsrechnungFac()
+							.eingangsrechnungzahlungFindByEingangsrechnungIId(
+									anzRechnungen[i].getIId());
+					for (int j = 0; j < zahlungDtos.length; j++) {
+						BelegbuchungDto bbDto = getBelegbuchungFac(
+								theClientDto.getMandant())
+								.belegbuchungFindByBelegartCNrBelegiid(
+										LocaleFac.BELEGART_ERZAHLUNG,
+										zahlungDtos[j].getIId());
+						detailDtos = getBuchenFac()
+								.buchungdetailsFindByBuchungIId(
+										bbDto.getBuchungIId());
+						boolean skonto = detailDtos.length > 5;
+						BuchungdetailDto anAnzBez = detailDtos[detailDtos.length-(skonto?4:3)];
+						anAnzBez.swapSollHaben();
+						anAnzBez.setKontoIIdGegenkonto(null);
+						list.add(anAnzBez);
+						
+						if(skonto) {
+							BuchungdetailDto anAnzVerr = detailDtos[detailDtos.length-3];
+							anAnzVerr.setNBetrag(detailDtos[2].getNBetrag().negate());
+							anAnzVerr.setKontoIIdGegenkonto(null);
+							list.add(anAnzVerr);
+						}
+	//					BuchungdetailDto[] temp;
+	//					if (bMitUst)
+	//						temp = new BuchungdetailDto[3];
+	//					else
+	//						temp = new BuchungdetailDto[2];
+	//					temp[0] = (BuchungdetailDto) detailDtos[1].clone();
+	//					temp[0].swapSollHaben();
+	//					temp[0].setNBetrag(temp[0].getNBetrag().negate());
+	//					temp[0].setNUst(temp[0].getNUst().negate());
+	//					temp[1] = (BuchungdetailDto) detailDtos[detailDtos.length - 3]
+	//							.clone();
+	//					temp[0].setKontoIIdGegenkonto(temp[1].getKontoIId());
+	//					temp[1].swapSollHaben();
+	//					temp[1].setKontoIIdGegenkonto(temp[0].getKontoIId());
+	//					if (bMitUst) {
+	//						temp[2] = getSteuerBuchungAnzahlungsrechnung(
+	//								anzRechnungen[i], theClientDto);
+	//						temp[2].swapSollHaben();
+	//						temp[2].setKontoIIdGegenkonto(temp[0].getKontoIId());
+	//					}
+	//					for (int k = 0; k < temp.length; k++) {
+	//						temp[k].setIId(null);
+	//						temp[k].setBuchungIId(null);
+	//						list.add(temp[k]);
+	//					}
+					}
+				} else {
+					EingangsrechnungzahlungDto fakeZahlung = new EingangsrechnungzahlungDto();
+					fakeZahlung.setNBetrag(anzRechnungen[i].getNBetrag()); //Die Zahlung gibts noch nicht wirklich,
+					fakeZahlung.setNBetragust(anzRechnungen[i].getNUstBetrag()); // aber wir brauchen sie, um die Buchungsdetails zu generieren
+					BuchungdetailDto[] details = new BuchungdetailDto[]{new BuchungdetailDto()};
+					details[0].setKontoIId(anKreditor.getKontoIIdGegenkonto());
+					details = addAnzahlungZahlungDetails(details, anzRechnungen[i], fakeZahlung, theClientDto);
+					
+//					BuchungdetailDto anAnzBez = detailDtos[detailDtos.length-(3)];
+					BuchungdetailDto anAnzBez = details[2] ;
 					anAnzBez.swapSollHaben();
 					anAnzBez.setKontoIIdGegenkonto(null);
-					list.add(anAnzBez);
-					
-					if(skonto) {
-						BuchungdetailDto anAnzVerr = detailDtos[detailDtos.length-3];
-						anAnzVerr.setNBetrag(detailDtos[2].getNBetrag().negate());
-						anAnzVerr.setKontoIIdGegenkonto(null);
-						list.add(anAnzVerr);
-					}
-//					BuchungdetailDto[] temp;
-//					if (bMitUst)
-//						temp = new BuchungdetailDto[3];
-//					else
-//						temp = new BuchungdetailDto[2];
-//					temp[0] = (BuchungdetailDto) detailDtos[1].clone();
-//					temp[0].swapSollHaben();
-//					temp[0].setNBetrag(temp[0].getNBetrag().negate());
-//					temp[0].setNUst(temp[0].getNUst().negate());
-//					temp[1] = (BuchungdetailDto) detailDtos[detailDtos.length - 3]
-//							.clone();
-//					temp[0].setKontoIIdGegenkonto(temp[1].getKontoIId());
-//					temp[1].swapSollHaben();
-//					temp[1].setKontoIIdGegenkonto(temp[0].getKontoIId());
-//					if (bMitUst) {
-//						temp[2] = getSteuerBuchungAnzahlungsrechnung(
-//								anzRechnungen[i], theClientDto);
-//						temp[2].swapSollHaben();
-//						temp[2].setKontoIIdGegenkonto(temp[0].getKontoIId());
-//					}
-//					for (int k = 0; k < temp.length; k++) {
-//						temp[k].setIId(null);
-//						temp[k].setBuchungIId(null);
-//						list.add(temp[k]);
-//					}
+					list.add(anAnzBez);					
 				}
 			}
 		}
@@ -3105,6 +3198,7 @@ public class BelegbuchungFacBean extends Facade implements BelegbuchungFac {
 			dto.setIAusziffern(null);
 			dto.setIAuszug(null);
 		}
+//		HelperServer.printBuchungssatz(list, getFinanzFac(), System.out);
 		return list.toArray(new BuchungdetailDto[list.size()]);
 	}
 

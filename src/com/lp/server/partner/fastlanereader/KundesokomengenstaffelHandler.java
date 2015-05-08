@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -36,6 +36,7 @@ import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -360,6 +361,8 @@ public class KundesokomengenstaffelHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
+			String mandantCNr = theClientDto.getMandant();
+			Locale locUI = theClientDto.getLocUi();
 			try {
 				ParametermandantDto param = getParameterFac()
 						.getMandantparameter(theClientDto.getMandant(),
@@ -372,54 +375,41 @@ public class KundesokomengenstaffelHandler extends UseCaseHandler {
 				throwEJBExceptionLPRespectOld(e);
 			}
 			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, String.class,
-							BigDecimal.class, BigDecimal.class, Double.class,
-							BigDecimal.class, java.sql.Date.class,
-							java.sql.Date.class },
+					new Class[] {
+							Integer.class,
+							 String.class,
+							String.class, BigDecimal.class, BigDecimal.class,
+							Double.class, BigDecimal.class,
+							java.sql.Date.class, java.sql.Date.class },
 					new String[] {
 							"i_id",
-							"",
-							getTextRespectUISpr("lp.artikel",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.menge",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.fixpreis",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.rabatt",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
+							 "",
+							getTextRespectUISpr("lp.artikel", mandantCNr, locUI),
+							getTextRespectUISpr("lp.menge", mandantCNr, locUI),
+							getTextRespectUISpr("lp.fixpreis", mandantCNr,
+									locUI),
+							getTextRespectUISpr("lp.rabatt", mandantCNr, locUI),
 							getTextRespectUISpr(
 									"bes.nettogesamtpreisminusrabatte",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.gueltig_ab",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.gueltig_bis",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()) },
+									mandantCNr, locUI),
+							getTextRespectUISpr("lp.gueltig_ab", mandantCNr,
+									locUI),
+							getTextRespectUISpr("lp.gueltig_bis", mandantCNr,
+									locUI) },
 					new int[] {
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // diese
-							// Spalte
-							// wird
-							// ausgeblendet
-
+							-1,
 							QueryParameters.FLR_BREITE_XXS,
-							QueryParameters.FLR_BREITE_XM,
-							QueryParameters.FLR_BREITE_M, // Format 1234.123
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // Breite
-							// variabel
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
 					new String[] {
 							"i_id",
-							Facade.NICHT_SORTIERBAR,
-							"flrartikel.c_nr",
+							 Facade.NICHT_SORTIERBAR,
+							"flrkundesoko.flrartikel.c_nr",
 							KundesokoFac.FLR_KUNDESOKOMENGESTAFFEL_N_MENGE,
 							KundesokoFac.FLR_KUNDESOKOMENGESTAFFEL_N_FIXPREIS,
 							KundesokoFac.FLR_KUNDESOKOMENGESTAFFEL_F_RABATTSATZ,
@@ -447,7 +437,7 @@ public class KundesokomengenstaffelHandler extends UseCaseHandler {
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-				boolean idFound = false;
+//				boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {

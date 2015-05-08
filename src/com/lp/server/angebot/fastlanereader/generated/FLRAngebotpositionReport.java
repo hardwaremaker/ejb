@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,8 +35,10 @@ package com.lp.server.angebot.fastlanereader.generated;
 import com.lp.server.angebotstkl.fastlanereader.generated.FLRAgstkl;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
 import com.lp.server.artikel.fastlanereader.generated.FLRVerleih;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
+
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 
@@ -110,6 +112,12 @@ public class FLRAngebotpositionReport implements Serializable {
     private String x_textinhalt;
 
     /** nullable persistent field */
+    private Integer lieferant_i_id;
+
+    /** nullable persistent field */
+    private BigDecimal n_einkaufpreis;
+
+    /** nullable persistent field */
     private Integer position_i_id;
 
     /** nullable persistent field */
@@ -139,8 +147,10 @@ public class FLRAngebotpositionReport implements Serializable {
     /** nullable persistent field */
     private FLRAgstkl flragstkl;
 
+    private Short b_zwspositionspreiszeigen ;
+    
     /** full constructor */
-    public FLRAngebotpositionReport(Integer i_sort, String angebotpositionart_c_nr, BigDecimal n_menge, String einheit_c_nr, String c_bez, String c_zbez, BigDecimal n_nettoeinzelpreisplusversteckteraufschlag, BigDecimal n_nettogesamtpreisplusversteckteraufschlag, BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatte, BigDecimal n_materialzuschlag, Integer artikel_i_id, Integer agstkl_i_id, BigDecimal n_gestehungspreis, Short b_alternative, Integer angebot_i_id, Integer mediastandard_i_id, Double f_rabattsatz, Double f_zusatzrabattsatz, Integer mwstsatz_i_id, BigDecimal n_mwstbetrag, String x_textinhalt, Integer position_i_id, Integer position_i_id_artikelset, String typ_c_nr, Integer zwsvonposition_i_id, Integer zwsbisposition_i_id, BigDecimal zwsnettosumme, FLRVerleih flrverleih, com.lp.server.angebot.fastlanereader.generated.FLRAngebot flrangebot, FLRArtikel flrartikel, FLRAgstkl flragstkl) {
+    public FLRAngebotpositionReport(Integer i_sort, String angebotpositionart_c_nr, BigDecimal n_menge, String einheit_c_nr, String c_bez, String c_zbez, BigDecimal n_nettoeinzelpreisplusversteckteraufschlag, BigDecimal n_nettogesamtpreisplusversteckteraufschlag, BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatte, BigDecimal n_materialzuschlag, Integer artikel_i_id, Integer agstkl_i_id, BigDecimal n_gestehungspreis, Short b_alternative, Integer angebot_i_id, Integer mediastandard_i_id, Double f_rabattsatz, Double f_zusatzrabattsatz, Integer mwstsatz_i_id, BigDecimal n_mwstbetrag, String x_textinhalt, Integer lieferant_i_id, BigDecimal n_einkaufpreis, Integer position_i_id, Integer position_i_id_artikelset, String typ_c_nr, Integer zwsvonposition_i_id, Integer zwsbisposition_i_id, BigDecimal zwsnettosumme, FLRVerleih flrverleih, com.lp.server.angebot.fastlanereader.generated.FLRAngebot flrangebot, FLRArtikel flrartikel, FLRAgstkl flragstkl) {
         this.i_sort = i_sort;
         this.angebotpositionart_c_nr = angebotpositionart_c_nr;
         this.n_menge = n_menge;
@@ -162,6 +172,8 @@ public class FLRAngebotpositionReport implements Serializable {
         this.mwstsatz_i_id = mwstsatz_i_id;
         this.n_mwstbetrag = n_mwstbetrag;
         this.x_textinhalt = x_textinhalt;
+        this.lieferant_i_id = lieferant_i_id;
+        this.n_einkaufpreis = n_einkaufpreis;
         this.position_i_id = position_i_id;
         this.position_i_id_artikelset = position_i_id_artikelset;
         this.typ_c_nr = typ_c_nr;
@@ -354,6 +366,22 @@ public class FLRAngebotpositionReport implements Serializable {
         this.x_textinhalt = x_textinhalt;
     }
 
+    public Integer getLieferant_i_id() {
+        return this.lieferant_i_id;
+    }
+
+    public void setLieferant_i_id(Integer lieferant_i_id) {
+        this.lieferant_i_id = lieferant_i_id;
+    }
+
+    public BigDecimal getN_einkaufpreis() {
+        return this.n_einkaufpreis;
+    }
+
+    public void setN_einkaufpreis(BigDecimal n_einkaufpreis) {
+        this.n_einkaufpreis = n_einkaufpreis;
+    }
+
     public Integer getPosition_i_id() {
         return this.position_i_id;
     }
@@ -434,10 +462,19 @@ public class FLRAngebotpositionReport implements Serializable {
         this.flragstkl = flragstkl;
     }
 
+
+    public Short getB_zwspositionspreiszeigen() {
+		return b_zwspositionspreiszeigen;
+	}
+
+	public void setB_zwspositionspreiszeigen(Short b_zwspositionspreiszeigen) {
+		this.b_zwspositionspreiszeigen = b_zwspositionspreiszeigen;
+	}
+      
     public String toString() {
         return new ToStringBuilder(this)
             .append("i_id", getI_id())
             .toString();
     }
-
 }
+

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -57,7 +57,7 @@ import com.lp.util.EJBExceptionLP;
  * 
  * @version not attributable Date $Date: 2009/01/12 17:38:33 $
  */
-public abstract class FibuExportManagerFactory {
+public class FibuExportManagerFactory {
 	public static FibuExportManager getFibuExportManager(String iVariante,
 			String sFormat, FibuExportKriterienDto exportKriterienDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
@@ -80,5 +80,26 @@ public abstract class FibuExportManagerFactory {
 		exportManager.setKontoExportFormatter(FibuKontoExportFormatterFactory
 				.getFibuKontoExportFormatter(sFormat));
 		return exportManager;
+	}
+	
+	/**
+	 * Einen FibuExportManager holen, der sich um die Erl&ouml;skonten k&uuml;mmert</br>
+	 * <p></p> 
+	 * 
+	 * @param iVariante
+	 * @param theClientDto
+	 * 
+	 * @return den ExportManager speziell f&uuml;r die Erl&ouml;skonten konfiguriert
+	 */
+	public static FibuExportManager getFibuErloeskontoManager(String iVariante, TheClientDto theClientDto) {
+		if(FibuExportFac.VARIANTE_KOSTENSTELLEN.equals(iVariante)) {
+			return new FibuExportManagerNachKostenstellenErloeskonto(theClientDto) ;
+		} else if(FibuExportFac.VARIANTE_ARTIKELGRUPPEN.equals(iVariante)) {
+			return new FibuExportManagerNachArtikelgruppenErloeskonto(theClientDto) ;
+		}
+		
+		throw new EJBExceptionLP(
+				EJBExceptionLP.FEHLER_NOT_IMPLEMENTED_YET,
+				new Exception("Kein ExportMananger definiert f\u00FCr Variante: " + iVariante));
 	}
 }

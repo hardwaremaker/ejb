@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -51,6 +51,7 @@ import javax.persistence.NonUniqueResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
+import com.lp.server.auftrag.ejb.Auftragposition;
 import com.lp.server.rechnung.ejb.Gutschriftpositionsart;
 import com.lp.server.rechnung.ejb.Gutschriftsgrund;
 import com.lp.server.rechnung.ejb.Gutschriftsgrundspr;
@@ -60,6 +61,7 @@ import com.lp.server.rechnung.ejb.Proformarechnungpositionsart;
 import com.lp.server.rechnung.ejb.Rechnungart;
 import com.lp.server.rechnung.ejb.Rechnungartspr;
 import com.lp.server.rechnung.ejb.RechnungartsprPK;
+import com.lp.server.rechnung.ejb.Rechnungposition;
 import com.lp.server.rechnung.ejb.Rechnungpositionsart;
 import com.lp.server.rechnung.ejb.Rechnungstatus;
 import com.lp.server.rechnung.ejb.Rechnungtext;
@@ -78,6 +80,7 @@ import com.lp.server.rechnung.service.ProformarechnungpositionsartDto;
 import com.lp.server.rechnung.service.ProformarechnungpositionsartDtoAssembler;
 import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.rechnung.service.RechnungServiceFac;
+import com.lp.server.rechnung.service.RechnungSichtAuftragDto;
 import com.lp.server.rechnung.service.RechnungartDto;
 import com.lp.server.rechnung.service.RechnungartDtoAssembler;
 import com.lp.server.rechnung.service.RechnungartsprDto;
@@ -619,6 +622,26 @@ public class RechnungServiceFacBean extends Facade implements
 		}
 	}
 
+	
+	public RechnungartsprDto rechnungartsprFindByPrimaryKeyOhneExc(
+			String rechnungartCNr, Locale locale) {
+		
+		try {
+			RechnungartsprPK rechnungartsprPK = new RechnungartsprPK();
+			rechnungartsprPK.setRechnungartCNr(rechnungartCNr);
+			rechnungartsprPK.setLocaleCNr(Helper.locale2String(locale));
+			Rechnungartspr rechnungartspr = em.find(Rechnungartspr.class,
+					rechnungartsprPK);
+			if (rechnungartspr == null) {
+				return null;
+			}
+			return assembleRechnungartsprDto(rechnungartspr);
+		} catch (Exception e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
+		}
+	}
+
+	
 	private void setRechnungartsprFromRechnungartsprDto(
 			Rechnungartspr rechnungartspr, RechnungartsprDto rechnungartsprDto) {
 		rechnungartspr.setCBez(rechnungartsprDto.getCBez());
@@ -761,7 +784,7 @@ public class RechnungServiceFacBean extends Facade implements
 					new Exception(
 							"pArray == null || locale1 == null || locale2 == null"));
 		}
-		TreeMap<String, String> tmZahlungsarten = new TreeMap<String, String>();
+		LinkedHashMap<String, String> tmZahlungsarten = new LinkedHashMap<String, String>();
 		for (int i = 0; i < pArray.length; i++) {
 			String key = pArray[i].getCNr();
 			String value = uebersetzeZahlungsartOptimal(key, locale1, locale2);
@@ -1896,5 +1919,37 @@ public class RechnungServiceFacBean extends Facade implements
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		}
+	}
+	
+	public RechnungSichtAuftragDto rechnungFindByPrimaryKey(Integer iId) throws EJBExceptionLP {
+		RechnungSichtAuftragDto sichtAuftragDto = new RechnungSichtAuftragDto() ;
+		
+		try {
+			sichtAuftragDto.setRechnungDto(getRechnungFac().rechnungFindByPrimaryKey(iId)) ;
+			if(sichtAuftragDto.getRechnungDto().getAuftragIId() != null) {
+				Integer hauptAuftragId = sichtAuftragDto.getRechnungDto().getAuftragIId() ;
+				sichtAuftragDto.setAuftragDto(
+						getAuftragFac().auftragFindByPrimaryKey(hauptAuftragId)) ;
+
+				Query query = em.createNamedQuery("RechnungPositionfindByRechnungIId");
+				query.setParameter(1, iId);
+				Collection<Rechnungposition> cl = query.getResultList();
+				for (Rechnungposition rechnungposition : cl) {
+					if(rechnungposition.getAuftragpositionIId() != null) {						
+						Auftragposition position = em.find(Auftragposition.class, rechnungposition.getAuftragpositionIId()) ;
+						if(position != null) {
+							if(!position.getAuftragIId().equals(hauptAuftragId)) {
+								sichtAuftragDto.setMehrAlsHauptAuftrag(true);
+								break ;
+							}
+						}
+					}
+				}
+			}	
+		} catch(RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+		
+		return sichtAuftragDto ;
 	}
 }

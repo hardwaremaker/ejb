@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -33,7 +33,9 @@
 package com.lp.server.system.service;
 
 import java.rmi.RemoteException;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -84,4 +86,28 @@ public interface SystemMultilanguageFac {
 
 	public void removeText(TextDto textDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
+	
+	/**
+	 * Holt alle Direkthilfe-Texte. Ist ein Text in der ClientLocale nicht definiert,
+	 * in der Mandantenlocale aber schon, wird der Text der Mandantenlocale geholt
+	 * @param theClientDto
+	 * @param anwender liefert nur Anwendertexte wenn true, sonst die offiziellen Texte von uns
+	 * @return eine Map mit dem Token als Key und dem Text als Value oder null, wenn theClientDto null ist
+	 */
+	public Map<String, String> getAllDirekthilfeTexte(TheClientDto theClientDto, boolean anwender);
+	
+	/**
+	 * Speichert einen Direkthilfetext unter einem Token in die Datenbank.
+	 * Als Sprache wird die ClientLocale gesetzt.
+	 * @param token
+	 * @param text
+	 * @param anwender true wenn es sich um einen Anwendertext handelt, false
+	 * wenn es sich um einen offiziellen Text von uns handelt
+	 * @param theClientDto 
+	 */
+	public void putDirekthilfeText(String token, String text, boolean anwender, TheClientDto theClientDto);
+	
+	public void putHvDirekthilfeText(String token, String locale, String text, Date tAendern, TheClientDto theClientDto);
+	
+	public List<LpHvDirekthilfeDto> getAllHvDirekthilfeDtos();
 }

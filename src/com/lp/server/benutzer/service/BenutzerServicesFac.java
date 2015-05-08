@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,25 +32,29 @@
  ******************************************************************************/
 package com.lp.server.benutzer.service;
 
-import java.util.HashMap;
 import java.util.Locale;
 
 import javax.ejb.Remote;
 
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
-import com.lp.server.util.fastlanereader.UseCaseHandler;
 
 @Remote
 public interface BenutzerServicesFac {
 
 	public boolean hatRecht(String rechtCNr, TheClientDto theClientDto);
+
 	public void reloadRolleRechte();
+
 	public String getTextRespectUISpr(String sTokenI, String mandantCNr,
 			Locale loI);
+
 	public void reloadUebersteuertenText();
+
 	public ParametermandantDto getMandantparameter(String mandant_c_nr,
 			String cKategorieI, String mandantparameter_c_nr);
 
-	
+	public ParametermandantDto getMandantparameter(String mandant_c_nr,
+			String cKategorieI, String mandantparameter_c_nr,
+			java.sql.Timestamp tZeitpunkt);
 }

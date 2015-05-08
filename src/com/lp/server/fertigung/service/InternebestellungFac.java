@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -37,6 +37,7 @@ import java.rmi.RemoteException;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Set;
 
 import javax.ejb.Remote;
@@ -70,7 +71,7 @@ public interface InternebestellungFac {
 	public void erzeugeInterneBestellung(Boolean bVorhandeneLoeschen,
 			Integer iVorlaufzeit, Integer iToleranz,
 			java.sql.Date dLieferterminFuerArtikelOhneReservierung,
-			Boolean bVerdichten, Integer iVerdichtungsTage,boolean bInterneBestellung, TheClientDto theClientDto)
+			Boolean bVerdichten, Integer iVerdichtungsTage,boolean bInterneBestellung, Integer losIId, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public ArrayList<Integer> erzeugeInterneBestellung(Integer iVorlaufzeit,
@@ -95,7 +96,7 @@ public interface InternebestellungFac {
 			Date defaultDatumFuerEintraegeOhneLiefertermin,boolean bInterneBestellung, TheClientDto theClientDto, ArrayList<Integer> arLosIId)
 			throws EJBExceptionLP, RemoteException;
 
-	public void removeInternebestellungEinesMandanten(TheClientDto theClientDto)
+	public void removeInternebestellungEinesMandanten(boolean bNurHilfsstuecklisten, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public ArrayList<BewegungsvorschauDto> getBewegungsvorschauSortiert(
@@ -121,4 +122,6 @@ public interface InternebestellungFac {
 	
 	public BigDecimal getFiktivenLagerstandZuZeitpunkt
 			(ArtikelDto artikelDto, TheClientDto theClientDto, Timestamp tLagerstandsdatum);
+	
+	public void verdichteInterneBestellung(HashSet<Integer> stuecklisteIIds,TheClientDto theClientDto);
 }

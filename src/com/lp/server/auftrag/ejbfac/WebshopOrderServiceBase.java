@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -346,7 +346,7 @@ public abstract class WebshopOrderServiceBase extends Facade implements WebshopO
 		auftragDto.setTBelegdatum(new Timestamp(System.currentTimeMillis())) ;
 		auftragDto.setDBestelldatum(new Timestamp(getDateFromDateStringWithDefault(orderDate).getTime())) ;
 	    auftragDto.setAuftragartCNr(AuftragServiceFac.AUFTRAGART_FREI);
-	    auftragDto.setAuftragstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT);
+	    auftragDto.setStatusCNr(AuftragServiceFac.AUFTRAGSTATUS_ANGELEGT);
 	    auftragDto.setBelegartCNr(LocaleFac.BELEGART_AUFTRAG);
 	    
 	    auftragDto.setCBestellnummer(getOrderAdapter().getBestellnummer()) ;			    
@@ -562,14 +562,18 @@ public abstract class WebshopOrderServiceBase extends Facade implements WebshopO
 			myLogger.error("JAXBException:", e) ;
 			return new CreateOrderResult(CreateOrderResult.ERROR_JAXB_EXCEPTION, e.getMessage()) ;
 		} catch (SAXException e) {
+			myLogger.error("SAXException:", e) ;			
 			return new CreateOrderResult(CreateOrderResult.ERROR_SAX_EXCEPTION, e.getMessage()) ;
 //		} catch(RemoteException e) {
 //			return new CreateOrderResult(CreateOrderResult.ERROR_RMI_EXCEPTION) ;
 		} catch(EJBException e) {
+			myLogger.error("EJBException:", e) ;
 			return new CreateOrderResult(CreateOrderResult.ERROR_RMI_EXCEPTION, e.getMessage()) ;
 		} catch(EJBExceptionLP e) {
+			myLogger.error("EJBExceptionLP:", e) ;
 			return new CreateOrderResult(CreateOrderResult.ERROR_EJB_EXCEPTION + e.getCode(), e.getCause().getMessage()) ;			
 		} catch(Exception e) {
+			myLogger.error("Exception:", e) ;
 			return new CreateOrderResult(CreateOrderResult.ERROR_RMI_EXCEPTION, e.getCause().getMessage()) ;						
 		}
 	}

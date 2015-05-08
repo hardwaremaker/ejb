@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,7 +35,6 @@ package com.lp.server.finanz.service;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Map;
 
 import javax.ejb.Remote;
@@ -70,6 +69,8 @@ public interface FinanzReportFac {
 	public final static String REPORT_STEUERKATEGORIEN = "finanz_steuerkategorien.jasper";
 	public final static String REPORT_BUCHUNGSBELEG = "finanz_buchungsbeleg.jasper";
 	public final static String REPORT_BILANZ = "finanz_bilanz.jasper";
+	public final static String REPORT_USTVERPROBUNG = "finanz_ustverprobung.jasper";
+	public final static String REPORT_AENDERUNGEN_KONTO = "finanz_aenderungen_konto.jasper";
 	
 	public final static String INTRASTAT_VERFAHREN_WARENEINGANG = "40000";
 	public final static String INTRASTAT_VERFAHREN_VERSAND = "10000";
@@ -88,7 +89,10 @@ public interface FinanzReportFac {
 			Integer buchungsjournalIId) throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printBuchungsjournal(TheClientDto theClientDto,
-			Integer buchungsjournalIId, Date dVon, Date dBis, boolean storniert, boolean bDatumsfilterIstBuchungsdatum, String text, String belegnummer, BigDecimal betrag) throws EJBExceptionLP, RemoteException;
+			BuchungsjournalReportParameter params) throws EJBExceptionLP, RemoteException;
+
+//	public JasperPrintLP printBuchungsjournal(TheClientDto theClientDto,
+//			Integer buchungsjournalIId, Date dVon, Date dBis, boolean storniert, boolean bDatumsfilterIstBuchungsdatum, String text, String belegnummer, BigDecimal betrag, String kontonummer) throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printRASchreiben(TheClientDto theClientDto, Integer mahnungIId)
 			throws EJBExceptionLP, RemoteException;
@@ -111,10 +115,6 @@ public interface FinanzReportFac {
 
 	public JasperPrintLP printSaldenliste(String mandantCNr, ReportSaldenlisteKriterienDto krit, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
-
-	public JasperPrintLP printKontoblaetter(String kontotypCNr,
-			Integer kontoIId, String ktoVon, String ktoBis,
-			boolean bSortiertNachDatum, java.sql.Timestamp tVon, java.sql.Timestamp tBis, TheClientDto theClientDto, boolean bSortiertNachBeleg, String geschaeftsjahr) throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printKontoblaetter(PrintKontoblaetterModel kbModel, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException ;
 	
@@ -147,5 +147,10 @@ public interface FinanzReportFac {
 	public JasperPrintLP printErfolgsrechnung(String mandant,
 			ReportErfolgsrechnungKriterienDto kriterien,boolean bBilanz, boolean bDetail, TheClientDto theClient)
 			throws EJBExceptionLP, RemoteException;
+	
+	public JasperPrintLP printUstVerprobung(ReportUvaKriterienDto krit, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
+	public JasperPrintLP printAenderungenKonto(Integer kontoIId,
+			TheClientDto theClientDto);
+	
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -42,7 +42,8 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "MediastandardfindByCNrDatenformatCNrMandantCNrLocaleCNr", query = "SELECT OBJECT (o) FROM Mediastandard o WHERE o.cNr=?1 AND o.datenformatCNr=?2 AND o.mandantCNr = ?3 AND o.localeCNr = ?4") })
+@NamedQueries( { @NamedQuery(name = "MediastandardfindByCNrDatenformatCNrMandantCNrLocaleCNr", query = "SELECT OBJECT (o) FROM Mediastandard o WHERE o.cNr=?1 AND o.datenformatCNr=?2 AND o.mandantCNr = ?3 AND o.localeCNr = ?4"),
+	@NamedQuery(name = "MediastandardfindByDatenformatCNrMandantCNr", query = "SELECT OBJECT (o) FROM Mediastandard o WHERE o.datenformatCNr=?1 AND o.mandantCNr = ?2")})
 @Entity
 @Table(name = "LP_MEDIASTANDARD")
 public class Mediastandard implements Serializable {

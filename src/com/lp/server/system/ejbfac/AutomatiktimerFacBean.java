@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -170,7 +170,7 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 			try {
 				theClientDto = logonFac.logon(sUser, 
 						Helper.getMD5Hash((sUsername + new String(cPasswd)).toCharArray()), 
-						Helper.string2Locale("deAT      "), null, null,
+						Helper.string2Locale("deAT      "), null,
 						getTimestamp());
 			}
 			catch (Throwable t) {
@@ -198,6 +198,11 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 			}
 			catch (Throwable t) {
 				myLogger.error("Der Standardmandant konnte nicht gefunden werden");
+			}
+			try {
+				logonFac.logout(theClientDto);
+			} catch (Throwable t) {
+				myLogger.error("Fehler beim abmelden des Benutzers");
 			}
 			
 			while (automatikjobDto != null) {
@@ -290,12 +295,12 @@ public class AutomatiktimerFacBean extends Facade implements AutomatiktimerFac{
 				}
 				catch (Exception oNFEx) {
 					automatikjobDto = null;
-					try {
-						logonFac.logout(theClientDto);
-					}
-					catch (Throwable t) {
-						myLogger.error("Fehler beim abmelden des Benutzers");
-					}
+				}
+				try {
+					logonFac.logout(theClientDto);
+				}
+				catch (Throwable t) {
+					myLogger.error("Fehler beim abmelden des Benutzers");
 				}
 
 			}

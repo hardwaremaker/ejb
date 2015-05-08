@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -42,6 +42,7 @@ import com.lp.server.finanz.service.FibuExportKriterienDto;
 import com.lp.server.finanz.service.FibuexportDto;
 import com.lp.server.finanz.service.FinanzFac;
 import com.lp.server.finanz.service.KontoDto;
+import com.lp.server.finanz.service.ReportErloeskontoDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.rechnung.service.RechnungDto;
@@ -50,6 +51,7 @@ import com.lp.server.system.service.KostenstelleDto;
 import com.lp.server.system.service.MwstsatzDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.system.service.ZahlungszielDto;
+import com.lp.service.BelegpositionVerkaufDto;
 import com.lp.util.EJBExceptionLP;
 
 /**
@@ -678,6 +680,12 @@ class FibuExportManagerNachKostenstellen extends FibuExportManager {
 		}
 		return exportGS;
 	}
+	
+	@Override
+	public ReportErloeskontoDto getErloeskonto(Integer rechnungId,
+			BelegpositionVerkaufDto positionDto) throws EJBExceptionLP {
+		throw new IllegalArgumentException("should not be called!") ;
+	}
 }
 /*
  * 2.3. Musterbeispiele 2.3.1. Allgemeines Neben der genauen Einhaltung des
@@ -822,4 +830,4 @@ class FibuExportManagerNachKostenstellen extends FibuExportManager {
  * 30100;5110;101;17012002;;EUR;0,00;10000,00;0,00;;0,00;0,00;0;ER;100;1;
  * 20;1;15;1;;;;Eingangsrechnung;;
  */
-
+	

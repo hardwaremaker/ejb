@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -102,6 +102,7 @@ public class ProjektHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 	boolean bProjektMitUmsatz = false;
+	boolean bKurzzeichenStattName = false;
 	boolean bSuchenInklusiveKbez = true;
 	boolean bKbezStattOrt = false;
 	public static final String FLR_PROJEKT = "projekt.";
@@ -119,7 +120,7 @@ public class ProjektHandler extends UseCaseHandler {
 		try {
 			int colCount = getTableInfo().getColumnClasses().length;
 			int pageSize = getLimit();
-			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
+			int startIndex = getStartIndex(rowIndex, pageSize);
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
@@ -131,7 +132,7 @@ public class ProjektHandler extends UseCaseHandler {
 			query.setMaxResults(pageSize);
 			List<?> resultList = query.list();
 			Iterator<?> resultListIterator = resultList.iterator();
-			Object[][] rows = new Object[resultList.size()][colCount];
+			Object[][] rows = new Object[resultList.size()][colCount + 1];
 			String[] tooltipData = new String[resultList.size()];
 			String sProjekt = getTextRespectUISpr("proj.projekt",
 					theClientDto.getMandant(), theClientDto.getLocUi());
@@ -167,11 +168,25 @@ public class ProjektHandler extends UseCaseHandler {
 
 				rows[row][col++] = projekt.getKategorie_c_nr().trim();
 				rows[row][col++] = projekt.getC_titel();
-				rows[row][col++] = projekt.getFlrpersonalErzeuger()
-						.getFlrpartner().getC_name1nachnamefirmazeile1();
-				if (projekt.getFlrpersonalZugewiesener() != null) {
-					rows[row][col++] = projekt.getFlrpersonalZugewiesener()
+
+				if (bKurzzeichenStattName) {
+					rows[row][col++] = projekt.getFlrpersonalErzeuger()
+							.getC_kurzzeichen();
+				} else {
+					rows[row][col++] = projekt.getFlrpersonalErzeuger()
 							.getFlrpartner().getC_name1nachnamefirmazeile1();
+				}
+
+				if (projekt.getFlrpersonalZugewiesener() != null) {
+					if (bKurzzeichenStattName) {
+						rows[row][col++] = projekt.getFlrpersonalZugewiesener()
+								.getC_kurzzeichen();
+					} else {
+						rows[row][col++] = projekt.getFlrpersonalZugewiesener()
+								.getFlrpartner()
+								.getC_name1nachnamefirmazeile1();
+					}
+
 				} else {
 					rows[row][col++] = "";
 				}
@@ -204,7 +219,6 @@ public class ProjektHandler extends UseCaseHandler {
 					} else {
 						rows[row][col++] = new Boolean(true);
 					}
-
 				}
 
 				if (projekt.getX_freetext() != null) {
@@ -216,10 +230,13 @@ public class ProjektHandler extends UseCaseHandler {
 				}
 
 				if (projekt.getI_sort() != null) {
-					rows[row++][col++] = new Color(176, 0, 255);
+					rows[row][col++] = new Color(176, 0, 255);
 				} else {
-					rows[row++][col++] = null;
+					rows[row][col++] = null;
 				}
+				
+				rows[row][col++] = projekt.getBereich_i_id() ;
+				row++ ;
 				col = 0;
 			}
 			result = new QueryResult(rows, getRowCount(), startIndex, endIndex,
@@ -535,6 +552,14 @@ public class ProjektHandler extends UseCaseHandler {
 				bKbezStattOrt = (java.lang.Boolean) parameter
 						.getCWertAsObject();
 
+				parameter = getParameterFac()
+						.getMandantparameter(
+								theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_PROJEKT,
+								ParameterFac.PARAMETER_KURZZEICHEN_STATT_NAME_IN_AUSWAHLLISTE);
+				bKurzzeichenStattName = (java.lang.Boolean) parameter
+						.getCWertAsObject();
+
 			} catch (RemoteException ex) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 			}
@@ -667,10 +692,10 @@ public class ProjektHandler extends UseCaseHandler {
 										locUI),
 								getTextRespectUISpr("lp.firma_nachname",
 										mandantCNr, locUI),
-										bKbezStattOrt ? getTextRespectUISpr(
-												"lp.kurzbezeichnung", mandantCNr, locUI)
-												: getTextRespectUISpr("lp.ort",
-														mandantCNr, locUI),
+								bKbezStattOrt ? getTextRespectUISpr(
+										"lp.kurzbezeichnung", mandantCNr, locUI)
+										: getTextRespectUISpr("lp.ort",
+												mandantCNr, locUI),
 								getTextRespectUISpr("proj.kategorie",
 										mandantCNr, locUI),
 								getTextRespectUISpr("proj.titel", mandantCNr,
@@ -715,17 +740,22 @@ public class ProjektHandler extends UseCaseHandler {
 								sortierungNachPartner,
 								// Sortierung fuers erste mal nach LKZ
 								bKbezStattOrt ? KundeFac.FLR_PARTNER + "."
-								+ PartnerFac.FLR_PARTNER_C_KBEZ
-								:KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-										+ "." + SystemFac.FLR_LP_FLRLAND + "."
-										+ SystemFac.FLR_LP_LANDLKZ
-										+ ", "
-										+
-										// und dann nach plz
-										KundeFac.FLR_PARTNER + "."
-										+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
-										+ "." + SystemFac.FLR_LP_LANDPLZORTPLZ,
+										+ PartnerFac.FLR_PARTNER_C_KBEZ
+										: KundeFac.FLR_PARTNER
+												+ "."
+												+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
+												+ "."
+												+ SystemFac.FLR_LP_FLRLAND
+												+ "."
+												+ SystemFac.FLR_LP_LANDLKZ
+												+ ", "
+												+
+												// und dann nach plz
+												KundeFac.FLR_PARTNER
+												+ "."
+												+ PartnerFac.FLR_PARTNER_FLRLANDPLZORT
+												+ "."
+												+ SystemFac.FLR_LP_LANDPLZORTPLZ,
 								ProjektFac.FLR_PROJEKT_KATEGORIE_C_NR,
 								ProjektFac.FLR_PROJEKT_C_TITEL,
 								sortierungNachPersonalErzeuger,

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -79,20 +79,27 @@ public class Internebestellung implements Serializable {
 	@Column(name = "STUECKLISTE_I_ID")
 	private Integer stuecklisteIId;
 
+	@Column(name = "T_PRODUKTIONSBEGINN")
+	private Date tProduktionsbeginn;
+
+	public Date getTProduktionsbeginn() {
+		return tProduktionsbeginn;
+	}
+
+	public void setTProduktionsbeginn(Date tProduktionsbeginn) {
+		this.tProduktionsbeginn = tProduktionsbeginn;
+	}
+
 	private static final long serialVersionUID = 1L;
 
 	public Internebestellung() {
 		super();
 	}
 
-	public Internebestellung(Integer id,
-			String mandantCNr,
-			String belegartCNr,
-			Integer belegiid,
-			Integer stuecklisteIId,
-			BigDecimal menge,
-			Timestamp liefertermin,
-			Integer personalIIdAendern) {
+	public Internebestellung(Integer id, String mandantCNr, String belegartCNr,
+			Integer belegiid, Integer stuecklisteIId, BigDecimal menge,
+			Timestamp liefertermin, Integer personalIIdAendern,
+			Date produktionsbeginn) {
 		setIId(id);
 		setMandantCNr(mandantCNr);
 		setBelegartCNr(belegartCNr);
@@ -102,8 +109,9 @@ public class Internebestellung implements Serializable {
 		setTLiefertermin(new Date(liefertermin.getTime()));
 		setPersonalIIdAendern(personalIIdAendern);
 		// Setzen der NOT NULL felder
-	    Timestamp now = new Timestamp(System.currentTimeMillis());
-	    setTAendern(now);
+		Timestamp now = new Timestamp(System.currentTimeMillis());
+		setTAendern(now);
+		setTProduktionsbeginn(produktionsbeginn);
 	}
 
 	public Integer getIId() {

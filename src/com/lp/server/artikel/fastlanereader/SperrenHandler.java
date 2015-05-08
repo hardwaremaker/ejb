@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.artikel.fastlanereader;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -353,33 +354,47 @@ public class SperrenHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, Boolean.class, Boolean.class, Boolean.class,
-					Boolean.class, Boolean.class, Boolean.class },
+			String mandantCNr = theClientDto.getMandant();
+			Locale locUI = theClientDto.getLocUi();
+			setTableInfo(new TableInfo(
+					new Class[] {
+							Integer.class,
+							String.class,
+							Boolean.class,
+							Boolean.class,
+							Boolean.class,
+							Boolean.class,
+							Boolean.class,
+							Boolean.class
+					},
+					
 					new String[] {
 							"i_id",
 							getTextRespectUISpr("lp.bezeichnung",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
+									mandantCNr,
+									locUI),
 							getTextRespectUISpr("lp.gesperrt",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
+									mandantCNr,
+									locUI),
 							getTextRespectUISpr("lp.einkauf",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
+									mandantCNr,
+									locUI),
 							getTextRespectUISpr("lp.verkauf",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
+									mandantCNr,
+									locUI),
 							getTextRespectUISpr("lp.los",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
+									mandantCNr,
+									locUI),
 							getTextRespectUISpr("lp.stueckliste",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
+									mandantCNr,
+									locUI),
 							getTextRespectUISpr(
 									"artikel.sperre.durchfertigung",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()) }, new int[] {
+									mandantCNr,
+									locUI)
+					},
+					
+					new int[] {
 							-1, // diese Spalte wird ausgeblendet
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_M,
@@ -387,13 +402,18 @@ public class SperrenHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_M }, new String[] {
+							QueryParameters.FLR_BREITE_M
+							
+					},
+					
+					new String[] {
 							"i_id", "c_bez", ArtikelFac.FLR_SPERREN_B_GESPERRT,
 							ArtikelFac.FLR_SPERREN_B_GESPERRTEINKAUF,
 							ArtikelFac.FLR_SPERREN_B_GESPERRTVERKAUF,
 							ArtikelFac.FLR_SPERREN_B_GESPERRTLOS,
 							ArtikelFac.FLR_SPERREN_B_GESPERRTSTUECKLISTE,
-							ArtikelFac.FLR_SPERREN_B_DURCHFERTIGUNG }));
+							ArtikelFac.FLR_SPERREN_B_DURCHFERTIGUNG })
+			);
 
 		}
 		return super.getTableInfo();

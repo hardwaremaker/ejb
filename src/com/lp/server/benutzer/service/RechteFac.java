@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -41,14 +41,14 @@ import com.lp.util.EJBExceptionLP;
 
 @Remote
 public interface RechteFac {
-	public Integer createRollerecht(RollerechtDto rollerechtDto, TheClientDto theClientDto)
-			throws RemoteException, EJBExceptionLP;
+	public Integer createRollerecht(RollerechtDto rollerechtDto,
+			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP;
 
 	public void removeRollerecht(RollerechtDto rollerechtDto)
 			throws RemoteException, EJBExceptionLP;
 
-	public void updateRollerecht(RollerechtDto rollerechtDto, TheClientDto theClientDto)
-			throws RemoteException, EJBExceptionLP;
+	public void updateRollerecht(RollerechtDto rollerechtDto,
+			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP;
 
 	public RollerechtDto rollerechtFindByPrimaryKey(Integer iId)
 			throws RemoteException, EJBExceptionLP;
@@ -65,8 +65,8 @@ public interface RechteFac {
 			throws RemoteException, EJBExceptionLP;
 
 	public void kopiereRechteEinerRolle(Integer systemrolleIIdQuelle,
-			Integer systemrolleIIdZiel, TheClientDto theClientDto) throws EJBExceptionLP,
-			RemoteException;
+			Integer systemrolleIIdZiel, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public void removeRecht(RechtDto rechtDto) throws RemoteException,
 			EJBExceptionLP;
@@ -124,7 +124,6 @@ public interface RechteFac {
 	public static final String RECHT_STK_STUECKLISTE_CUD = "STK_STUECKLISTE_CUD";
 	public static final String RECHT_LP_ALLE_VERSANDAUFTRAEGE_R = "LP_ALLE_VERSANDAUFTRAEGE_R";
 	public static final String RECHT_LP_ALLE_VERSANDAUFTRAEGE_UD = "LP_ALLE_VERSANDAUFTRAEGE_UD";
-	public static final String RECHT_LP_MANDANT_ANLEGEN = "LP_MANDANT_ANLEGEN";
 	public static final String RECHT_LP_DARF_VERSTECKTE_SEHEN = "LP_DARF_VERSTECKTE_SEHEN";
 	public static final String RECHT_AS_ANGEBOTSTKL_R = "AS_ANGEBOTSTKL_R";
 	public static final String RECHT_AS_ANGEBOTSTKL_CUD = "AS_ANGEBOTSTKL_CUD";
@@ -146,7 +145,7 @@ public interface RechteFac {
 	public static final String RECHT_PERS_ZEITERFASSUNG_MONATSABRECHNUNG_DRUCKEN = "PERS_ZEITERFASSUNG_MONATSABRECHNUNG_DRUCKEN";
 	public static final String RECHT_FERT_ABLIEFERUNG_UNTER_SOLLSATZGROESSE_ERLAUBT = "FERT_ABLIEFERUNG_UNTER_SOLLSATZGROESSE_ERLAUBT";
 	public static final String RECHT_FERT_TECHNIKER_BEARBEITEN = "FERT_TECHNIKER_BEARBEITEN_ERLAUBT";
-	
+
 	public static final String RECHT_PART_PARTNER_ZUSAMMENFUEHREN_ERLAUBT = "PART_PARTNER_ZUSAMMENFUEHREN_ERLAUBT";
 	public static final String RECHT_PART_KUNDE_ZUSAMMENFUEHREN_ERLAUBT = "PART_KUNDE_ZUSAMMENFUEHREN_ERLAUBT";
 	public static final String RECHT_PART_LIEFERANT_ZUSAMMENFUEHREN_ERLAUBT = "PART_LIEFERANT_ZUSAMMENFUEHREN_ERLAUBT";
@@ -172,41 +171,50 @@ public interface RechteFac {
 
 	public static final String RECHT_WW_HANDLAGERBEWEGUNG_CUD = "WW_HANDLAGERBEWEGUNG_CUD";
 	public static final String RECHT_FERT_DARF_FEHLMENGEN_PER_DIALOG_AUFLOESEN = "FERT_DARF_FEHLMENGEN_PER_DIALOG_AUFLOESEN";
-	
+
 	public static final String RECHT_FERT_DARF_SOLLMATERIAL_CUD = "FERT_DARF_SOLLMATERIAL_CUD";
-	
+
 	public static final String RECHT_DOKUMENTE_SICHERHEITSSTUFE_0_CU = "DOKUMENTE_SICHERHEITSSTUFE_0_CU";
 	public static final String RECHT_DOKUMENTE_SICHERHEITSSTUFE_1_CU = "DOKUMENTE_SICHERHEITSSTUFE_1_CU";
 	public static final String RECHT_DOKUMENTE_SICHERHEITSSTUFE_2_CU = "DOKUMENTE_SICHERHEITSSTUFE_2_CU";
 	public static final String RECHT_DOKUMENTE_SICHERHEITSSTUFE_3_CU = "DOKUMENTE_SICHERHEITSSTUFE_3_CU";
 	public static final String RECHT_DOKUMENTE_SICHERHEITSSTUFE_99_CU = "DOKUMENTE_SICHERHEITSSTUFE_99_CU";
-	
+
 	public static final String RECHT_REKLA_QUALITAETSSICHERUNG_CUD = "REKLA_QUALITAETSSICHERUNG_CUD";
-	
+
 	public static final String RECHT_DOKUMENTE_DARF_DOKUMENTE_GROESSER_ALS_MAX_ZULAESSIG_SPEICHERN = "DOKUMENTE_DARF_DOKUMENTE_GROESSER_ALS_MAX_ZULAESSIG_SPEICHERN";
-	
-	
+
 	public static final String RECHT_KUE_KUECHE_R = "KUE_KUECHE_R";
 	public static final String RECHT_KUE_KUECHE_CUD = "KUE_KUECHE_CUD";
 	public static final String RECHT_IS_INSTANDHALTUNG_R = "IS_INSTANDHALTUNG_R";
 	public static final String RECHT_IS_INSTANDHALTUNG_CUD = "IS_INSTANDHALTUNG_CUD";
-	
+
 	public static final String RECHT_FERT_TERMINE_VERSCHIEBEN = "FERT_TERMINE_VERSCHIEBEN";
-	
+
 	public static final String RECHT_AUFT_AKTIVIEREN = "AUFT_AKTIVIEREN";
 	public static final String RECHT_ANGB_AKTIVIEREN = "ANGB_AKTIVIEREN";
 	public static final String RECHT_PERS_DARF_KOMMT_GEHT_AENDERN = "PERS_DARF_KOMMT_GEHT_AENDERN";
 	public static final String RECHT_PERS_DARF_PERSONALDETAILDATEN_SEHEN = "PERS_DARF_PERSONALDETAILDATEN_SEHEN";
 	public static final String RECHT_PERS_ZEITERFASSUNG_TECHNIKERAUSWAHL = "PERS_ZEITERFASSUNG_TECHNIKERAUSWAHL";
 	public static final String RECHT_PART_KURZBRIEF_CUD = "PART_KURZBRIEF_CUD";
-	
+
 	public static final String RECHT_FERT_LOS_DARF_ABLIEFERN = "FERT_LOS_DARF_ABLIEFERN";
 	public static final String RECHT_FERT_LOS_DARF_ISTMATERIAL_MANUELL_NACHBUCHEN = "FERT_LOS_DARF_ISTMATERIAL_MANUELL_NACHBUCHEN";
 	public static final String RECHT_LP_FINANCIAL_INFO_TYP_1 = "LP_FINANCIAL_INFO_TYP_1";
 	public static final String RECHT_FERT_LOS_SCHNELLANLAGE = "FERT_LOS_SCHNELLANLAGE";
-	
+
 	public static final String RECHT_IV_INSERAT_R = "IV_INSERAT_R";
 	public static final String RECHT_IV_INSERAT_CUD = "IV_INSERAT_CUD";
 
-	public static final String RECHT_WW_LAGERCOCKPIT = "WW_LAGERCOCKPIT";	
+	public static final String RECHT_WW_LAGERCOCKPIT = "WW_LAGERCOCKPIT";
+	public static final String RECHT_PERS_SONDERZEITEN_CUD = "PERS_SONDERZEITEN_CUD";
+	public static final String RECHT_PERS_ZEITEN_ABSCHLIESSEN_CUD = "PERS_ZEITEN_ABSCHLIESSEN_CUD";
+	public static final String RECHT_LP_DARF_DIREKTHILFETEXTE_BEARBEITEN = "LP_DARF_DIREKTHILFETEXTE_BEARBEITEN";
+
+	public static final String RECHT_MEDIA_EMAIL_R = "MEDIA_EMAIL_R";
+	public static final String RECHT_MEDIA_EMAIL_CUD = "MEDIA_EMAIL_CUD";
+
+	public static final String RECHT_STK_FREIGABE_CUD = "STK_FREIGABE_CUD";
+	public static final String RECHT_WW_ARTIKEL_LAGERPLATZ_CUD = "WW_ARTIKEL_LAGERPLATZ_CUD";
+
 }

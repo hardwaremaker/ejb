@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -41,9 +41,11 @@ import java.util.GregorianCalendar;
 import javax.ejb.Remote;
 import javax.naming.NamingException;
 
+import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.system.service.IAktivierbarControlled;
+import com.lp.server.system.service.PaneldatenDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.util.EJBExceptionLP;
 
@@ -78,7 +80,7 @@ public interface AuftragFac extends IAktivierbarControlled {
 	public static final String FLR_AUFTRAG_N_GESAMTAUFTRAGSWERT_IN_AUFTRAGSWAEHRUNG = "n_gesamtauftragswertinauftragswaehrung";
 	public static final String FLR_AUFTRAG_FLRKUNDE = "flrkunde";
 	public static final String FLR_AUFTRAG_FLRKUNDERECHNUNGSADRESSE = "flrkunderechnungsadresse";
-	public static final String FLR_AUFTRAG_FLRKUNDELIEFERADRESSE = "flrkundelieferadresse" ;
+	public static final String FLR_AUFTRAG_FLRKUNDELIEFERADRESSE = "flrkundelieferadresse";
 	public static final String FLR_AUFTRAG_FLRARTIKEL = "flrartikel";
 	public static final String FLR_AUFTRAG_FLRKOSTENSTELLE = "flrkostenstelle";
 	public static final String FLR_AUFTRAG_KUNDE_I_ID_AUFTRAGSADRESSE = "kunde_i_id_auftragsadresse";
@@ -186,7 +188,7 @@ public interface AuftragFac extends IAktivierbarControlled {
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void toggleVerrechenbar(Integer auftragIId, TheClientDto theClientDto);
-	
+
 	public boolean updateAuftrag(AuftragDto auftragDtoI,
 			String waehrungOriCNrI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -196,6 +198,8 @@ public interface AuftragFac extends IAktivierbarControlled {
 
 	public void storniereAuftrag(Integer iiAuftragI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
+
+	public void korrekturbetragZuruecknehmen(Integer auftragIId);
 
 	public void manuellErledigen(Integer iIdAuftragI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -298,10 +302,6 @@ public interface AuftragFac extends IAktivierbarControlled {
 
 	public boolean aendereAuftragstatus(Integer pkAuftrag, String status,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-
-	public SichtLieferstatusDto[] getSichtLieferstatus(Integer iIdAuftragI,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-
 	public void setzeAuftragstatusAufgrundAuftragpositionstati(
 			Integer iIdAuftragI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
@@ -316,7 +316,7 @@ public interface AuftragFac extends IAktivierbarControlled {
 
 	public int berechneAnzahlBelegeZuAuftrag(Integer iIdAuftragI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-	
+
 	public void aktiviereAuftrag(Integer iIdAuftragI, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
@@ -367,16 +367,27 @@ public interface AuftragFac extends IAktivierbarControlled {
 	public void updateAuftragBegruendung(Integer auftragIId,
 			Integer begruendungIId, TheClientDto theClientDto);
 
-	IOrderResponse createOrderResponse(AuftragDto auftragDto, TheClientDto theClientDto) 
-			throws NamingException, RemoteException ;	
+	IOrderResponse createOrderResponse(AuftragDto auftragDto,
+			TheClientDto theClientDto) throws NamingException, RemoteException;
 
-	String createOrderResponseToString(AuftragDto auftragDto, TheClientDto theClientDto) 
-			throws NamingException, RemoteException ;	
+	String createOrderResponseToString(AuftragDto auftragDto,
+			TheClientDto theClientDto) throws NamingException, RemoteException;
 
-	String createOrderResponsePost(
-			AuftragDto auftragDto, TheClientDto theClientDto) throws RemoteException, NamingException, EJBExceptionLP ;
+	String createOrderResponsePost(AuftragDto auftragDto,
+			TheClientDto theClientDto) throws RemoteException, NamingException,
+			EJBExceptionLP;
 
-	boolean hatAuftragVersandweg(AuftragDto auftragDto, TheClientDto theClientDto) throws RemoteException ;
+	boolean hatAuftragVersandweg(AuftragDto auftragDto,
+			TheClientDto theClientDto) throws RemoteException;
 
-	boolean hatAuftragVersandweg(Integer auftragIId, TheClientDto theClientDto) throws RemoteException ;
+	boolean hatAuftragVersandweg(Integer auftragIId, TheClientDto theClientDto)
+			throws RemoteException;
+
+	public Integer vorhandenenLieferscheinEinesAuftagsHolenBzwNeuAnlegen(
+			Integer auftragIId, TheClientDto theClientDto);
+
+	public Integer erzeugeAuftragUeberSchnellanlage(AuftragDto auftragDto,
+			ArtikelDto artikelDto, PaneldatenDto[] paneldatenDtos,
+			TheClientDto theClientDto);
+
 }

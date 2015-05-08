@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -75,6 +75,7 @@ import com.lp.server.personal.service.MaschinengruppeDto;
 import com.lp.server.personal.service.PersonalDto;
 import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.personal.service.ZeiterfassungFac;
+import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.reklamation.fastlanereader.generated.FLRReklamation;
 import com.lp.server.reklamation.service.ReklamationDto;
 import com.lp.server.reklamation.service.ReklamationFac;
@@ -360,9 +361,9 @@ public class ReklamationReportFacBean extends LPReport implements
 		int iAnzahlWareneingaengeProLieferant = 0;
 		int iAnzahlPunkteProLieferant = 0;
 		int row = 0;
-		
-		HashMap hmWareneingaengeAbgehandelt=new HashMap();
-		
+
+		HashMap hmWareneingaengeAbgehandelt = new HashMap();
+
 		while (resultListIterator.hasNext()) {
 			FLRWareneingangspositionen wareneingangspositionen = (FLRWareneingangspositionen) resultListIterator
 					.next();
@@ -464,10 +465,11 @@ public class ReklamationReportFacBean extends LPReport implements
 			Integer iVerspaetungstage = getVerspaetungstage(weDatum, sollTermin);
 
 			data[row][REPORT_LIEFERANTENBEURTEILUNG_VERSPAETUNG] = iVerspaetungstage;
-			if(!hmWareneingaengeAbgehandelt.containsKey(wareneingangspositionen
-					.getFlrwareneingang().getI_id())){
+			if (!hmWareneingaengeAbgehandelt
+					.containsKey(wareneingangspositionen.getFlrwareneingang()
+							.getI_id())) {
 				hmWareneingaengeAbgehandelt.put(wareneingangspositionen
-						.getFlrwareneingang().getI_id(),"");
+						.getFlrwareneingang().getI_id(), "");
 				// Punkte berechnen
 				// Reklamation holen, wenn vorhanden
 
@@ -510,8 +512,6 @@ public class ReklamationReportFacBean extends LPReport implements
 				data[row][REPORT_LIEFERANTENBEURTEILUNG_PUNKTE_TERMIN] = iPunkteTermin;
 				data[row][REPORT_LIEFERANTENBEURTEILUNG_PUNKTE_SCHWERE] = iPunkteSchwere;
 
-				
-				
 				int iPunkteGesamt = iPunkteTermin
 						* (iPunkteSchwere + iPunkteBehandlung);
 
@@ -520,8 +520,6 @@ public class ReklamationReportFacBean extends LPReport implements
 				iAnzahlWareneingaengeProLieferant++;
 				iAnzahlPunkteProLieferant += iPunkteGesamt;
 			}
-			
-
 
 			if ((iLetzterLieferant != -1 && (iLetzterLieferant != wareneingangspositionen
 					.getFlrbestellposition().getFlrbestellung()
@@ -1118,6 +1116,19 @@ public class ReklamationReportFacBean extends LPReport implements
 										auftragDto.getKundeIIdAuftragsadresse(),
 										theClientDto);
 						partnerDto = kundeDto.getPartnerDto();
+
+						// PJ18870
+
+						parameter
+								.put("P_SUBREPORT_PARTNERKOMMENTAR_LIEFERANT",
+										getPartnerServicesFac()
+												.getSubreportAllerMitzudruckendenPartnerkommentare(
+														kundeDto.getPartnerDto()
+																.getIId(),
+														true,
+														LocaleFac.BELEGART_REKLAMATION,
+														theClientDto));
+
 					}
 				}
 				if (reklamationDto.getMaschineIId() != null) {
@@ -1209,6 +1220,19 @@ public class ReklamationReportFacBean extends LPReport implements
 														theClientDto
 																.getMandant(),
 														theClientDto), loc));
+
+						// PJ18870
+						parameter
+								.put("P_SUBREPORT_PARTNERKOMMENTAR_LIEFERANT",
+										getPartnerServicesFac()
+												.getSubreportAllerMitzudruckendenPartnerkommentare(
+														lieferantDto
+																.getPartnerDto()
+																.getIId(),
+														false,
+														LocaleFac.BELEGART_REKLAMATION,
+														theClientDto));
+
 					}
 				}
 
@@ -1230,6 +1254,18 @@ public class ReklamationReportFacBean extends LPReport implements
 						locDruck = Helper.string2Locale(kundeDto
 								.getPartnerDto().getLocaleCNrKommunikation());
 					}
+
+					// PJ18870
+					parameter
+							.put("P_SUBREPORT_PARTNERKOMMENTAR_KUNDE",
+									getPartnerServicesFac()
+											.getSubreportAllerMitzudruckendenPartnerkommentare(
+													kundeDto.getPartnerDto()
+															.getIId(),
+													true,
+													LocaleFac.BELEGART_REKLAMATION,
+													theClientDto));
+
 				}
 				if (reklamationDto.getLieferscheinIId() != null) {
 					BelegInfos beleg = getLagerFac().getBelegInfos(
@@ -1259,6 +1295,18 @@ public class ReklamationReportFacBean extends LPReport implements
 					partnerDto = lieferantDto.getPartnerDto();
 					parameter.put("P_KUNDELIEFERANT", lieferantDto
 							.getPartnerDto().formatFixTitelName1Name2());
+					// PJ18870
+					parameter
+							.put("P_SUBREPORT_PARTNERKOMMENTAR_LIEFERANT",
+									getPartnerServicesFac()
+											.getSubreportAllerMitzudruckendenPartnerkommentare(
+													lieferantDto
+															.getPartnerDto()
+															.getIId(),
+													false,
+													LocaleFac.BELEGART_REKLAMATION,
+													theClientDto));
+
 				}
 				if (reklamationDto.getBestellungIId() != null) {
 					BelegInfos beleg = getLagerFac().getBelegInfos(
@@ -1490,8 +1538,8 @@ public class ReklamationReportFacBean extends LPReport implements
 
 		crit.add(Restrictions.in(
 				ReklamationFac.FLR_REKLAMATION_REKLAMATIONART_C_NR, alArten));
-		
-		if(alArten.size()==0){
+
+		if (alArten.size() == 0) {
 			return null;
 		}
 
@@ -2808,4 +2856,3 @@ public class ReklamationReportFacBean extends LPReport implements
 	}
 
 }
-

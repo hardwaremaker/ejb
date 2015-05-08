@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -51,6 +51,40 @@ import com.lp.util.EJBExceptionLP;
 @Remote
 public interface RechnungFac extends IAktivierbarControlled{
 
+	/**
+	 * Die m&oumlglichen Gutschriftarten
+	 */
+	public enum Gutschriftart {
+		/**
+		 * Eine Mengengutschrift
+		 */
+		GUTSCHRIFT {
+			@Override
+			public String asCnr() {
+				return RechnungFac.RECHNUNGART_GUTSCHRIFT ;
+			}
+		},
+		/**
+		 *  Eine Wertgutschrift 
+		 */
+		WERTGUTSCHRIFT {
+			@Override
+			public String asCnr() {
+				return RechnungFac.RECHNUNGART_WERTGUTSCHRIFT;
+			}
+		} ;
+		
+		public abstract String asCnr() ;
+
+		public static Gutschriftart fromCnr(String cnr) {
+			if(cnr == null) throw new NullPointerException("cnr") ;
+			for (Gutschriftart art : values()) {
+				if(art.asCnr().equalsIgnoreCase(cnr)) return art ;
+			}
+			throw new IllegalArgumentException("Unknown value '" + cnr + "'") ;
+		}
+	}
+	
 	public static final String LOCKME_RECHNUNG = "lockme_rechnung";
 
 	public static final int ANZAHL_KRITERIEN = 2;
@@ -185,6 +219,7 @@ public interface RechnungFac extends IAktivierbarControlled{
 	public static final String FLR_RECHNUNG_MANDANT_C_NR = "mandant_c_nr";
 	public static final String FLR_RECHNUNG_I_GESCHAEFTSJAHR = "i_geschaeftsjahr";
 	public static final String FLR_RECHNUNG_C_NR = "c_nr";
+	public static final String FLR_RECHNUNG_C_BEZ = "c_bez";
 	public static final String FLR_RECHNUNG_D_BELEGDATUM = "d_belegdatum";
 	public static final String FLR_RECHNUNG_WAEHRUNG_C_NR = "waehrung_c_nr";
 	public static final String FLR_RECHNUNG_STATUS_C_NR = "status_c_nr";
@@ -471,6 +506,10 @@ public interface RechnungFac extends IAktivierbarControlled{
 			java.sql.Date dBelegdatum, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
+	public Integer createGutschriftAusRechnung(Integer rechnungIId,
+			java.sql.Date dBelegdatum, String gutschriftartCnr, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+	
 	public void mahneRechnung(Integer rechnungIId, Integer mahnstufeIId,
 			Date dMahndatum, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
@@ -655,9 +694,9 @@ public interface RechnungFac extends IAktivierbarControlled{
 			Integer iIdRechnungI, Integer iIdAuftragpositionI)
 			throws EJBExceptionLP, RemoteException;
 
-	public void uebernimmAlleOffenenAuftragpositionenOhneBenutzerinteraktion(
-			Integer iIdRechnungI, Integer auftragIIdI, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+//	public void uebernimmAlleOffenenAuftragpositionenOhneBenutzerinteraktion(
+//			Integer iIdRechnungI, Integer auftragIIdI, TheClientDto theClientDto)
+//			throws EJBExceptionLP, RemoteException;
 
 	public RechnungPositionDto uebernimmAlleOffenenAuftragpositionenOhneBenutzerinteraktionNew(
 			Integer iIdRechnungI, Integer auftragIIdI,
@@ -855,5 +894,42 @@ public interface RechnungFac extends IAktivierbarControlled{
 
 	public List<SeriennrChargennrMitMengeDto> getSeriennrchargennrForArtikelsetPosition(
 			Integer rechnungposIId) throws EJBExceptionLP;
+	
+	public int getAnzahlMengenbehafteteRechnungpositionen(Integer rechnungIId,
+			TheClientDto theClientDto);
 
+
+	/**
+	 * Eine Liste aller RechnungIids des Mandanten, in denen IZwischensummen vorkommen
+	 *
+	 * @param theClientDto
+	 * @return eine (leere) Liste aller RechnungsIIds des Mandanten mit IZwischensummenpositionen
+	 */
+	List<Integer> repairRechnungZws2276GetList(TheClientDto theClientDto) ;
+	
+	/**
+	 * F&uuml;r die angegebene RechnungId f&uuml;r die Zwischensummenposition den
+	 * EinzelpreisMitAufschlagMitRabatten korrieren. Zus&auml;tzlich die Lagerbuchung um den
+	 * entsprechenden Preis korrigieren.
+	 *  
+	 * @param rechnungId
+	 * @param theClientDto
+	 */
+	void repairRechnungZws2276(Integer rechnungId, TheClientDto theClientDto) ;	
+
+	/**
+	 * Eine Rechnungzahlung durchf&uuml;hren</br>
+	 * <p>Eine optionale Gutschriftzahlung wird ber&uuml;cksichtigt</p>
+	 * @param rechnungZahlungDto ist die Id gesetzt, wird ein update dieser Zahlung durchgef&uuml;hrt
+	 * @param rechnungErledigt true wenn die Rechnung als bezahlt angesehen werden kann
+	 * @param gutschriftZahlungDto kann null sein, wenn es keine Gutschriftszahlung gibt. Ist die id gesetzt,
+	 * wird ein update der Zahlung ausgef&uuml;hrt, ansonsten eine neue Gutschriftzahlung erzeugt
+	 * @param gutschriftErledigt true wenn die Gutschrift als bezahlt angesehen werden kann
+	 * @return die erzeugte Rechnungzahlung
+	 */
+	RechnungzahlungDto createUpdateZahlung(
+			RechnungzahlungDto rechnungZahlungDto, boolean rechnungErledigt, 
+			RechnungzahlungDto gutschriftZahlungDto, boolean gutschriftErledigt, TheClientDto theClientDto) ;
+	public RechnungPositionDto[] rechnungPositionByAuftragposition(
+			Integer iIdAuftragpositionI);
 }

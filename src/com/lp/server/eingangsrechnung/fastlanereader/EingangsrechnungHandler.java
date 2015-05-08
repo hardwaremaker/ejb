@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -72,6 +72,7 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -188,13 +189,22 @@ public class EingangsrechnungHandler extends UseCaseHandler {
 				}
 				rows[row][col++] = lrnText;
 				if (bBruttoStattNetto == false) {
-					if (eingangsrechnung.getN_betragfw() != null
-							&& eingangsrechnung.getN_ustbetragfw() != null) {
-						rows[row][col++] = eingangsrechnung.getN_betragfw()
-								.subtract(eingangsrechnung.getN_ustbetragfw());
+
+					if (Helper.short2boolean(eingangsrechnung.getB_igerwerb())
+							|| Helper.short2boolean(eingangsrechnung
+									.getB_reversecharge())) {
+						rows[row][col++] = eingangsrechnung.getN_betragfw();
 					} else {
-						rows[row][col++] = null;
+						if (eingangsrechnung.getN_betragfw() != null
+								&& eingangsrechnung.getN_ustbetragfw() != null) {
+							rows[row][col++] = eingangsrechnung.getN_betragfw()
+									.subtract(eingangsrechnung.getN_ustbetragfw());
+						} else {
+							rows[row][col++] = null;
+						}
 					}
+
+				
 
 				} else {
 					rows[row][col++] = eingangsrechnung.getN_betragfw();
@@ -620,7 +630,9 @@ public class EingangsrechnungHandler extends UseCaseHandler {
 							EingangsrechnungFac.FLR_ER_STATUS_C_NR,
 							EingangsrechnungFac.FLR_ER_C_LIEFERANTENRECHNUNGSNUMMER,
 							bBruttoStattNetto ? EingangsrechnungFac.FLR_ER_N_BETRAGFW
-									: EingangsrechnungFac.FLR_ER_N_BETRAGFW+"-eingangsrechnung."+EingangsrechnungFac.FLR_ER_N_USTBETRAGFW,
+									: EingangsrechnungFac.FLR_ER_N_BETRAGFW
+											+ "-eingangsrechnung."
+											+ EingangsrechnungFac.FLR_ER_N_USTBETRAGFW,
 							EingangsrechnungFac.FLR_ER_WAEHRUNG_C_NR,
 							EingangsrechnungFac.FLR_ER_T_FIBUUEBERNAHME }));
 		}

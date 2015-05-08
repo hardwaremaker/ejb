@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -44,6 +44,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -81,7 +82,6 @@ import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.LagerDto;
 import com.lp.server.artikel.service.MaterialDto;
-import com.lp.server.artikel.service.MaterialzuschlagDto;
 import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
 import com.lp.server.artikel.service.VerkaufspreisDto;
 import com.lp.server.artikel.service.VerleihDto;
@@ -89,6 +89,8 @@ import com.lp.server.artikel.service.VkpreisfindungDto;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragReportFac;
 import com.lp.server.auftrag.service.AuftragpositionDto;
+import com.lp.server.finanz.bl.FibuExportManager;
+import com.lp.server.finanz.bl.FibuExportManagerFactory;
 import com.lp.server.finanz.ejb.Exportlauf;
 import com.lp.server.finanz.ejb.MahnstufePK;
 import com.lp.server.finanz.ejbfac.BuchungDetailQueryBuilder;
@@ -127,9 +129,11 @@ import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungReport;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungZahlung;
 import com.lp.server.rechnung.service.GutschrifttextDto;
 import com.lp.server.rechnung.service.RechnungDto;
+import com.lp.server.rechnung.service.RechnungDtoAssembler;
 import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.rechnung.service.RechnungPositionDto;
 import com.lp.server.rechnung.service.RechnungReportFac;
+import com.lp.server.rechnung.service.RechnungartsprDto;
 import com.lp.server.rechnung.service.RechnungkontierungDto;
 import com.lp.server.rechnung.service.RechnungtextDto;
 import com.lp.server.rechnung.service.RechnungzahlungDto;
@@ -161,6 +165,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.report.JasperPrintLP;
 import com.lp.server.util.report.MwstsatzReportDto;
+import com.lp.service.BelegpositionVerkaufDto;
 import com.lp.service.StuecklisteInfoDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
@@ -266,7 +271,11 @@ public class RechnungReportFacBean extends LPReport implements
 	public final static int RECHNUNG_FELD_ARTIKEL_MATERIALGEWICHT = 80;
 	public final static int RECHNUNG_FELD_ARTIKEL_KURS_MATERIALZUSCHLAG = 81;
 	public final static int RECHNUNG_FELD_ARTIKEL_DATUM_MATERIALZUSCHLAG = 82;
-	private final static int RECHNUNG_ANZAHL_SPALTEN = 83;
+	private final static int RECHNUNG_FELD_VERSION = 83;
+	public final static int RECHNUNG_FELD_ZWSPOSPREISDRUCKEN = 84;
+	public final static int RECHNUNG_FELD_LAGER_UEBERSTEUERT_AUS_LIEFERSCHEIN = 85;
+	public final static int RECHNUNG_FELD_ERLOESKONTO_DTO = 86;
+	private final static int RECHNUNG_ANZAHL_SPALTEN = 87;
 
 	private final static int OFFENE_FELD_RECHNUNGART = 0;
 	private final static int OFFENE_FELD_KOSTENSTELLE = 1;
@@ -299,7 +308,8 @@ public class RechnungReportFacBean extends LPReport implements
 	private final static int OFFENE_FELD_WAEHRUNG = 28;
 	private final static int OFFENE_FELD_DEBITORENNR = 29;
 	private final static int OFFENE_SUBREPORT_OFFENE_BUCHUNGEN = 30;
-	private final static int OFFENE_ANZAHL_SPALTEN = 31;
+	private final static int OFFENE_FELD_KREDITLIMIT = 31;
+	private final static int OFFENE_ANZAHL_SPALTEN = 32;
 
 	private final static int ZAHLUNGEN_FELD_ER_C_NR = 0;
 	private final static int ZAHLUNGEN_FELD_FIRMA = 1;
@@ -367,7 +377,8 @@ public class RechnungReportFacBean extends LPReport implements
 	private final static int FELD_ALLE_WERT_ANZAHLUNGEN_FW = 35;
 	private final static int FELD_ALLE_WERT_ANZAHLUNGENUST_FW = 36;
 	private final static int FELD_ALLE_ZOLLBELEGNUMMER = 37;
-	private final static int REPORT_ALLE_ANZAHL_SPALTEN = 38;
+	private final static int FELD_ALLE_KREDITLIMIT = 38;
+	private final static int REPORT_ALLE_ANZAHL_SPALTEN = 39;
 
 	private final static int FELD_ZM_RECHNUNGSNUMMER = 0;
 	private final static int FELD_ZM_BELEGDATUM = 1;
@@ -484,6 +495,8 @@ public class RechnungReportFacBean extends LPReport implements
 	private int useCase;
 	private Object[][] data = null;
 	private Integer iArtikelpositionsnummer;
+
+	private FibuExportManager fibuExportManager;
 
 	public boolean next() throws JRException {
 		index++;
@@ -669,9 +682,19 @@ public class RechnungReportFacBean extends LPReport implements
 				value = data[index][RECHNUNG_FELD_ZWSNETTOSUMME];
 			} else if ("F_ZWSTEXT".equals(fieldName)) {
 				value = data[index][RECHNUNG_FELD_ZWSTEXT];
+			} else if ("F_VERSION".equals(fieldName)) {
+				value = data[index][RECHNUNG_FELD_VERSION];
+			} else if ("F_ZWSPOSPREISDRUCKEN".equals(fieldName)) {
+				value = data[index][RECHNUNG_FELD_ZWSPOSPREISDRUCKEN];
+			} else if ("F_LAGER_UEBERSTEUERT_AUS_LIEFERSCHEIN"
+					.equals(fieldName)) {
+				value = data[index][RECHNUNG_FELD_LAGER_UEBERSTEUERT_AUS_LIEFERSCHEIN];
+			} else if ("F_ERLOESKONTO_DTO".equals(fieldName)) {
+				value = data[index][RECHNUNG_FELD_ERLOESKONTO_DTO];
 			}
 		}
 			break;
+
 		case UC_REPORT_RECHNUNGEN_OFFENE: {
 			if ("F_KUNDE".equals(fieldName)) {
 				value = data[index][OFFENE_FELD_FIRMA];
@@ -739,6 +762,8 @@ public class RechnungReportFacBean extends LPReport implements
 				value = data[index][OFFENE_FELD_MAHNSPERRE];
 			} else if ("F_SUBREPORT_OFFENE_BUCHUNGEN".equals(fieldName)) {
 				value = data[index][OFFENE_SUBREPORT_OFFENE_BUCHUNGEN];
+			} else if ("F_KREDITLIMIT".equals(fieldName)) {
+				value = data[index][OFFENE_FELD_KREDITLIMIT];
 			}
 		}
 			break;
@@ -880,6 +905,8 @@ public class RechnungReportFacBean extends LPReport implements
 				value = data[index][FELD_ALLE_RECHNUNGSNUMMERZUGUTSCHRIFT];
 			} else if ("F_LAENDERART".equals(fieldName)) {
 				value = data[index][FELD_ALLE_LAENDERART];
+			} else if ("F_KREDITLIMIT".equals(fieldName)) {
+				value = data[index][FELD_ALLE_KREDITLIMIT];
 			}
 
 		}
@@ -1109,6 +1136,35 @@ public class RechnungReportFacBean extends LPReport implements
 
 		}
 		return value;
+	}
+
+	protected FibuExportManager getFibuExportManger(TheClientDto theClientDto)
+			throws EJBExceptionLP {
+		if (fibuExportManager == null) {
+			try {
+				ParametermandantDto parameter = getParameterFac()
+						.getMandantparameter(theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_FINANZ,
+								ParameterFac.PARAMETER_FINANZ_EXPORT_VARIANTE);
+				String variante = parameter.getCWert();
+
+				fibuExportManager = FibuExportManagerFactory
+						.getFibuErloeskontoManager(variante, theClientDto);
+			} catch (RemoteException ex) {
+				throwEJBExceptionLPRespectOld(ex);
+				return null;
+			}
+		}
+
+		return fibuExportManager;
+	}
+
+	/**
+	 * Den gecacheten Exportmanager auf null setzen, damit er dann beim
+	 * naechsten Zugriff erneut geladen wird
+	 */
+	protected void resetFibuExportManager() {
+		fibuExportManager = null;
 	}
 
 	/**
@@ -1500,6 +1556,8 @@ public class RechnungReportFacBean extends LPReport implements
 			throws EJBExceptionLP {
 
 		useCase = UC_RE_GS_PR;
+		resetFibuExportManager();
+
 		try {
 			// Rechnung holen
 			final RechnungDto rechnungDto = getRechnungFac()
@@ -1563,7 +1621,15 @@ public class RechnungReportFacBean extends LPReport implements
 					.getCWertAsObject()).booleanValue();
 			final Double dAbweichung = (Double) parameterAbweichung
 					.getCWertAsObject();
-
+			
+			ParametermandantDto parameterGsNenntsichRechnungskorrektur = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_GUTSCHRIFT,
+							ParameterFac.PARAMETER_GUTSCHRIFT_NENNT_SICH_RECHNUNGSKORREKTUR);
+			boolean bGutschriftNenntSichRechnungskorrektur = ((Boolean) parameterGsNenntsichRechnungskorrektur
+					.getCWertAsObject()).booleanValue();
+			
 			// jetzt wird die anzahl der zeilen berechnet, gleichzeitig werden
 			// alle erforderlichen Daten geholt
 			final int rows = getZeilenAnzahlDesRechnungsDrucksUndCacheDaten(
@@ -1813,6 +1879,25 @@ public class RechnungReportFacBean extends LPReport implements
 							oAnsprechpartner, mandantDto, locale,
 							LocaleFac.BELEGART_RECHNUNG));
 
+			
+			// PJ18870
+			if (rechnungDto.getRechnungartCNr().equals(
+					RechnungFac.RECHNUNGART_GUTSCHRIFT)) {
+				mapParameter.put(
+						"P_SUBREPORT_PARTNERKOMMENTAR",
+						getPartnerServicesFac()
+								.getSubreportAllerMitzudruckendenPartnerkommentare(
+										kundeDto.getPartnerDto().getIId(), true,
+										LocaleFac.BELEGART_GUTSCHRIFT, theClientDto));
+			} else {
+				mapParameter.put(
+						"P_SUBREPORT_PARTNERKOMMENTAR",
+						getPartnerServicesFac()
+								.getSubreportAllerMitzudruckendenPartnerkommentare(
+										kundeDto.getPartnerDto().getIId(), true,
+										LocaleFac.BELEGART_RECHNUNG, theClientDto));
+			}
+			
 			if (oAnsprechpartner != null) {
 				mapParameter.put(
 						"P_ANSPRECHPARTNER_KUNDE_ADRESSBLOCK",
@@ -1830,6 +1915,9 @@ public class RechnungReportFacBean extends LPReport implements
 				mapParameter.put("P_KUNDE_DEBITORENKONTO", kontoDto.getCNr());
 			}
 
+			mapParameter.put("P_GUTSCHRIFT_NENNT_SICH_RECHNUNGSKORREKTUR",new Boolean(bGutschriftNenntSichRechnungskorrektur));
+			
+			
 			// PJ17820
 			mapParameter.put("P_AUFTRAGANZAHL",
 					getGesamtAnzahlAnAuftraegen(rechnungDto));
@@ -1855,6 +1943,12 @@ public class RechnungReportFacBean extends LPReport implements
 			}
 
 			mapParameter.put("P_KUNDE_UID", kundeDto.getPartnerDto().getCUid());
+
+			mapParameter.put(
+					"P_KUNDE_LAENDERART",
+					getFinanzServiceFac().getLaenderartZuPartner(
+							kundeDto.getPartnerDto().getIId(), theClientDto));
+
 			mapParameter.put("P_KUNDE_EORI", kundeDto.getPartnerDto()
 					.getCEori());
 			mapParameter.put("P_KUNDE_FREMDSYSTEMNR",
@@ -1863,6 +1957,9 @@ public class RechnungReportFacBean extends LPReport implements
 			mapParameter.put("P_KUNDE_KUNDENNUMMER",
 					kundeDto.getIKundennummer());
 			mapParameter.put("P_ILN", kundeDto.getPartnerDto().getCIln());
+
+			mapParameter.put("P_LIEFERANTENNR", kundeDto.getCLieferantennr());
+
 			mapParameter.put("P_MAXIMALE_ABWEICHUNG", dAbweichung);
 
 			ParametermandantDto parameterWerbeabgabe = getParameterFac()
@@ -1884,6 +1981,17 @@ public class RechnungReportFacBean extends LPReport implements
 			}
 			mapParameter.put("P_BELEGKENNUNG", rechnungDto.getCNr());
 			mapParameter.put("P_RECHNUNGSART", rechnungDto.getRechnungartCNr());
+
+			RechnungartsprDto srpDto = getRechnungServiceFac()
+					.rechnungartsprFindByPrimaryKeyOhneExc(
+							rechnungDto.getRechnungartCNr(), locale);
+			if (srpDto != null) {
+				mapParameter.put("P_RECHNUNGSARTSPR", srpDto.getCBez());
+			} else {
+				mapParameter.put("P_RECHNUNGSARTSPR",
+						rechnungDto.getRechnungartCNr());
+			}
+
 			// Kopftext
 			String sKopftext = rechnungDto.getCKopftextuebersteuert();
 			if (sKopftext == null || sKopftext.length() == 0) {
@@ -1987,33 +2095,50 @@ public class RechnungReportFacBean extends LPReport implements
 					sTelefon != null ? sTelefon : "");
 			// IG Lieferung / Drittland
 
-			Integer partnerIIdLieferadresse = null;
-			if (rechnungDto.getAuftragIId() != null) {
-				AuftragDto auftragDto = getAuftragFac()
-						.auftragFindByPrimaryKey(rechnungDto.getAuftragIId());
-				if (auftragDto.getKundeIIdLieferadresse() != null) {
+			// SP3184
+			// lt. WH kommt die Liefer-Laenderart aus der Lieferadresse der
+			// ersten Lieferscheines und nicht aus der Auftrags-Lieferadresse
+
+			Integer partnerIIdLieferadresse = kundeDto.getPartnerIId();
+			if (rechnungDto.getLieferscheinIId() != null) {
+				LieferscheinDto lsDto = getLieferscheinFac()
+						.lieferscheinFindByPrimaryKey(
+								rechnungDto.getLieferscheinIId());
+
+				if (lsDto.getKundeIIdLieferadresse() != null) {
 					partnerIIdLieferadresse = getKundeFac()
 							.kundeFindByPrimaryKeySmall(
-									auftragDto.getKundeIIdLieferadresse())
+									lsDto.getKundeIIdLieferadresse())
 							.getPartnerIId();
 				}
+			} else {
+				if (hmLSDto.size() > 0) {
+					Integer lieferscheinIId = hmLSDto.keySet().iterator()
+							.next();
+					LieferscheinDto lsDto = hmLSDto.get(lieferscheinIId);
+					if (lsDto.getKundeIIdLieferadresse() != null) {
+						partnerIIdLieferadresse = getKundeFac()
+								.kundeFindByPrimaryKeySmall(
+										lsDto.getKundeIIdLieferadresse())
+								.getPartnerIId();
+					}
+				}
 			}
-			if (partnerIIdLieferadresse == null) {
-				partnerIIdLieferadresse = kundeDto.getPartnerIId();
-			}
-			String laenderartCNr = getFinanzServiceFac()
+
+			String laenderartCNr_Lieferadresse = getFinanzServiceFac()
 					.getLaenderartZuPartner(partnerIIdLieferadresse,
 							theClientDto);
 
 			boolean bIGLieferung = false;
 			boolean bWarenerklaerung = false;
-			if (laenderartCNr != null) {
-				if (laenderartCNr
+			if (laenderartCNr_Lieferadresse != null) {
+				if (laenderartCNr_Lieferadresse
 						.equals(FinanzFac.LAENDERART_EU_AUSLAND_MIT_UID)) {
 					// nur mit UID
 					bIGLieferung = true;
 				}
-				if (laenderartCNr.equals(FinanzFac.LAENDERART_DRITTLAND)) {
+				if (laenderartCNr_Lieferadresse
+						.equals(FinanzFac.LAENDERART_DRITTLAND)) {
 					bWarenerklaerung = true;
 				}
 			}
@@ -2024,8 +2149,9 @@ public class RechnungReportFacBean extends LPReport implements
 			Boolean bReverseChargeInland = Boolean.FALSE;
 			Boolean bReverseChargeAusland = Boolean.FALSE;
 			if (bReverseCharge) {
-				if (laenderartCNr != null) {
-					if (laenderartCNr.equals(FinanzFac.LAENDERART_INLAND)) {
+				if (laenderartCNr_Lieferadresse != null) {
+					if (laenderartCNr_Lieferadresse
+							.equals(FinanzFac.LAENDERART_INLAND)) {
 						bReverseChargeInland = Boolean.TRUE;
 					} else {
 						bReverseChargeAusland = Boolean.TRUE;
@@ -2201,6 +2327,20 @@ public class RechnungReportFacBean extends LPReport implements
 				ProjektDto pjDto = getProjektFac().projektFindByPrimaryKey(
 						rechnungDto.getProjektIId());
 				mapParameter.put("P_PROJEKTNUMMER", pjDto.getCNr());
+
+				if (pjDto.getAnsprechpartnerIId() != null) {
+					AnsprechpartnerDto oAnsprechpartnerProjekt = getAnsprechpartnerFac()
+							.ansprechpartnerFindByPrimaryKey(
+									pjDto.getAnsprechpartnerIId(), theClientDto);
+					mapParameter
+							.put("P_ANSPRECHPARTNER_PROJEKT_ADRESSBLOCK",
+									getPartnerFac()
+											.formatFixAnredeTitelName2Name1FuerAdresskopf(
+													oAnsprechpartnerProjekt
+															.getPartnerDto(),
+													locale, null));
+				}
+
 			}
 
 			// fuer Gutschrift
@@ -2535,60 +2675,34 @@ public class RechnungReportFacBean extends LPReport implements
 						if (anzRechnungen[i].getNWertfw() != null
 								&& anzRechnungen[i].getNWertustfw() != null) {
 
-							Object[] oSubZeile = new Object[fieldnames.length];
+							bdEndbetrag2 = befuelleAnzahlungsdetail(
+									rechnungDto, bdEndbetrag2,
+									mandantDto.getCNr(), sAnz, false,
+									sAnzDetails, anzRechnungen[i], locale,
+									fieldnames, alSuData);
 
-							BigDecimal bdBrutto = anzRechnungen[i].getNWertfw()
-									.add(anzRechnungen[i].getNWertustfw());
+							// PJ18843 wenn eine Anzahlung gutgeschrieben worden
+							// ist, dann dies wieder gegenrechnen
 
-							oSubZeile[0] = anzRechnungen[i].getCNr();
-							oSubZeile[1] = bdBrutto;
-							oSubZeile[2] = anzRechnungen[i].getNWertustfw();
+							RechnungDto[] aGutschriftenDtos = null;
+							javax.persistence.Query query = em
+									.createNamedQuery("RechnungfindByRechnungIIdZuRechnung");
+							query.setParameter(1, anzRechnungen[i].getIId());
 
-							BigDecimal bezahltUst = getRechnungFac()
-									.getBereitsBezahltWertVonRechnungUstFw(
-											anzRechnungen[i].getIId(), null,
-											rechnungDto.getTBelegdatum());
+							Collection<?> cl = query.getResultList();
+							aGutschriftenDtos = RechnungDtoAssembler
+									.createDtos(cl);
 
-							oSubZeile[3] = getRechnungFac()
-									.getBereitsBezahltWertVonRechnungFw(
-											anzRechnungen[i].getIId(), null,
-											rechnungDto.getTBelegdatum()).add(
-											bezahltUst);
-							oSubZeile[4] = bezahltUst;
+							for (int k = 0; k < aGutschriftenDtos.length; k++) {
 
-							bdEndbetrag2 = bdEndbetrag2.subtract(bdBrutto);
-							// umbrechen, wenn schon was drinsteht
-							if (sAnz.length() > 0) {
-								sAnz.append("\n");
-								sAnzDetails.append("\n");
+								bdEndbetrag2 = befuelleAnzahlungsdetail(
+										rechnungDto, bdEndbetrag2,
+										mandantDto.getCNr(), sAnz, true,
+										sAnzDetails, aGutschriftenDtos[k],
+										locale, fieldnames, alSuData);
+
 							}
-							sAnz.append(Helper.formatZahl(bdBrutto,
-									FinanzFac.NACHKOMMASTELLEN, locale));
 
-							sAnzDetails.append(getTextRespectUISpr(
-									"lp.kuerzel.rechnung", mandantDto.getCNr(),
-									locale));
-							sAnzDetails.append(" " + anzRechnungen[i].getCNr()
-									+ ", ");
-							sAnzDetails
-									.append(anzRechnungen[i].getWaehrungCNr()
-											+ " "
-											+ Helper.formatZahl(bdBrutto,
-													FinanzFac.NACHKOMMASTELLEN,
-													locale));
-							sAnzDetails.append(", "
-									+ getTextRespectUISpr("lp.enthaltenemwst",
-											mandantDto.getCNr(), locale));
-							sAnzDetails
-									.append(" "
-											+ Helper.formatZahl(
-													anzRechnungen[i]
-															.getNWertustfw(),
-													FinanzFac.NACHKOMMASTELLEN,
-													locale));
-							sAnzDetails.append("   "
-									+ anzRechnungen[i].getWaehrungCNr());
-							alSuData.add(oSubZeile);
 						}
 					}
 				}
@@ -2653,6 +2767,77 @@ public class RechnungReportFacBean extends LPReport implements
 		}
 	}
 
+	private BigDecimal befuelleAnzahlungsdetail(RechnungDto rechnungDto,
+			BigDecimal bdEndbetrag, String mandantCNr, StringBuffer sAnz,
+			boolean bGutschrift, StringBuffer sAnzDetails,
+			RechnungDto reDtoAnzahlung, Locale locale, String[] fieldnames,
+			ArrayList<Object[]> alSuData) {
+
+		if (reDtoAnzahlung.getNWertfw() != null
+				&& reDtoAnzahlung.getNWertustfw() != null) {
+
+			Object[] oSubZeile = new Object[fieldnames.length];
+
+			BigDecimal bdBrutto = reDtoAnzahlung.getNWertfw().add(
+					reDtoAnzahlung.getNWertustfw());
+
+			if (bGutschrift == true) {
+				bdBrutto = bdBrutto.negate();
+			}
+
+			oSubZeile[0] = reDtoAnzahlung.getCNr();
+			oSubZeile[1] = bdBrutto;
+			oSubZeile[2] = reDtoAnzahlung.getNWertustfw();
+
+			BigDecimal bezahltUst = getRechnungFac()
+					.getBereitsBezahltWertVonRechnungUstFw(
+							reDtoAnzahlung.getIId(), null,
+							rechnungDto.getTBelegdatum());
+
+			oSubZeile[3] = getRechnungFac()
+					.getBereitsBezahltWertVonRechnungFw(
+							reDtoAnzahlung.getIId(), null,
+							rechnungDto.getTBelegdatum()).add(bezahltUst);
+			oSubZeile[4] = bezahltUst;
+
+			bdEndbetrag = bdEndbetrag.subtract(bdBrutto);
+			// umbrechen, wenn schon was drinsteht
+			if (sAnz.length() > 0) {
+				sAnz.append("\n");
+				sAnzDetails.append("\n");
+			}
+			sAnz.append(Helper.formatZahl(bdBrutto, FinanzFac.NACHKOMMASTELLEN,
+					locale));
+
+			if (bGutschrift == true) {
+				sAnzDetails.append(getTextRespectUISpr("lp.kuerzel.gutschrift",
+						mandantCNr, locale));
+			} else {
+				sAnzDetails.append(getTextRespectUISpr("lp.kuerzel.rechnung",
+						mandantCNr, locale));
+			}
+
+			sAnzDetails.append(" " + reDtoAnzahlung.getCNr() + ", ");
+			sAnzDetails.append(reDtoAnzahlung.getWaehrungCNr()
+					+ " "
+					+ Helper.formatZahl(bdBrutto, FinanzFac.NACHKOMMASTELLEN,
+							locale));
+			sAnzDetails.append(", "
+					+ getTextRespectUISpr("lp.enthaltenemwst", mandantCNr,
+							locale));
+			sAnzDetails.append(" "
+					+ Helper.formatZahl(reDtoAnzahlung.getNWertustfw(),
+							FinanzFac.NACHKOMMASTELLEN, locale));
+			sAnzDetails.append("   " + reDtoAnzahlung.getWaehrungCNr());
+
+			alSuData.add(oSubZeile);
+
+		}
+
+		return bdEndbetrag;
+
+	}
+
 	/**
 	 * Befuelle Mit Kundendaten folgende Lieferparameter P_LIEFERADRESSE,
 	 * P_FREMDSYSTEMNR,P_LIEFERANTENNR,P_DEBITORENKONTO,P_TOUR,P_KUNDE_ILN,
@@ -2691,7 +2876,7 @@ public class RechnungReportFacBean extends LPReport implements
 		mapParameter.put("P_FREMDSYSTEMNR", lieferKunde.getCFremdsystemnr());
 		// Achtung falsch benannt eigentlich P_LIEFER_ILN
 		mapParameter.put("P_KUNDE_ILN", lieferKunde.getPartnerDto().getCIln());
-		mapParameter.put("P_LIEFERANTENNR", lieferKunde.getCLieferantennr());
+
 		if (lieferKunde.getIidDebitorenkonto() != null) {
 			KontoDto kontoDto = getFinanzFac().kontoFindByPrimaryKey(
 					lieferKunde.getIidDebitorenkonto());
@@ -2814,9 +2999,7 @@ public class RechnungReportFacBean extends LPReport implements
 
 			MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(
 					theClientDto.getMandant(), theClientDto);
-			
-			
-			
+
 			this.useCase = UC_REPORT_RECHNUNGEN_OFFENE;
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			session = factory.openSession();
@@ -2830,27 +3013,30 @@ public class RechnungReportFacBean extends LPReport implements
 				critKundeIId = RechnungFac.FLR_RECHNUNG_KUNDE_I_ID;
 				critFLRKunde = RechnungFac.FLR_RECHNUNG_FLRKUNDE;
 			}
-			
+
 			List<Integer> kundenIIds = new ArrayList<Integer>();
-			
-			if(krit.kundeIId != null) {
+
+			if (krit.kundeIId != null) {
 				kundenIIds.add(krit.kundeIId);
-			} else if(krit.iSortierung == ReportJournalKriterienDto.KRIT_SORT_NACH_PARTNER) {
-				Iterator<?> iter = session.createCriteria(FLRKunde.class)
-					.createAlias("flrpartner", "p")
-					.addOrder(Order.asc("p.c_name1nachnamefirmazeile1"))
-					.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()))
-					.list().iterator();
-				while(iter.hasNext())
-					kundenIIds.add(((FLRKunde)iter.next()).getI_id());
+			} else if (krit.iSortierung == ReportJournalKriterienDto.KRIT_SORT_NACH_PARTNER) {
+				Iterator<?> iter = session
+						.createCriteria(FLRKunde.class)
+						.createAlias("flrpartner", "p")
+						.addOrder(Order.asc("p.c_name1nachnamefirmazeile1"))
+						.add(Restrictions.eq("mandant_c_nr",
+								theClientDto.getMandant())).list().iterator();
+				while (iter.hasNext())
+					kundenIIds.add(((FLRKunde) iter.next()).getI_id());
 			} else {
 				kundenIIds.add(null);
 			}
 
 			List<Object[]> dataList = new ArrayList<Object[]>();
-			
-			for(Integer kndIId : kundenIIds) {
-				
+
+			Set<Integer> gedruckteKonten = new HashSet<Integer>();
+
+			for (Integer kndIId : kundenIIds) {
+
 				Criteria c = session.createCriteria(FLRRechnungReport.class);
 				// Filter nach Mandant
 				c.add(Restrictions.eq(RechnungFac.FLR_RECHNUNG_MANDANT_C_NR,
@@ -2886,14 +3072,16 @@ public class RechnungReportFacBean extends LPReport implements
 				String sVon = null;
 				String sBis = null;
 				if (krit.dVon != null) {
-					c.add(Restrictions.ge(RechnungFac.FLR_RECHNUNG_D_BELEGDATUM,
-							krit.dVon));
-					sVon = Helper.formatDatum(krit.dVon, theClientDto.getLocUi());
+					c.add(Restrictions.ge(
+							RechnungFac.FLR_RECHNUNG_D_BELEGDATUM, krit.dVon));
+					sVon = Helper.formatDatum(krit.dVon,
+							theClientDto.getLocUi());
 				}
 				if (krit.dBis != null) {
-					c.add(Restrictions.le(RechnungFac.FLR_RECHNUNG_D_BELEGDATUM,
-							krit.dBis));
-					sBis = Helper.formatDatum(krit.dBis, theClientDto.getLocUi());
+					c.add(Restrictions.le(
+							RechnungFac.FLR_RECHNUNG_D_BELEGDATUM, krit.dBis));
+					sBis = Helper.formatDatum(krit.dBis,
+							theClientDto.getLocUi());
 				}
 				LpBelegnummerFormat f = getBelegnummerGeneratorObj()
 						.getBelegnummernFormat(theClientDto.getMandant());
@@ -2905,29 +3093,31 @@ public class RechnungReportFacBean extends LPReport implements
 						ParameterFac.PARAMETER_BELEGNUMMER_MANDANTKENNUNG)
 						.getCWert();
 				if (krit.sBelegnummerVon != null) {
-					sVon = HelperServer.getBelegnummernFilterForHibernateCriterias(
-							f, iGeschaeftsjahr, sMandantKuerzel,
-							krit.sBelegnummerVon);
+					sVon = HelperServer
+							.getBelegnummernFilterForHibernateCriterias(f,
+									iGeschaeftsjahr, sMandantKuerzel,
+									krit.sBelegnummerVon);
 					c.add(Restrictions.ge(RechnungFac.FLR_RECHNUNG_C_NR, sVon));
 				}
 				if (krit.sBelegnummerBis != null) {
-					sBis = HelperServer.getBelegnummernFilterForHibernateCriterias(
-							f, iGeschaeftsjahr, sMandantKuerzel,
-							krit.sBelegnummerBis);
+					sBis = HelperServer
+							.getBelegnummernFilterForHibernateCriterias(f,
+									iGeschaeftsjahr, sMandantKuerzel,
+									krit.sBelegnummerBis);
 					c.add(Restrictions.le(RechnungFac.FLR_RECHNUNG_C_NR, sBis));
 				}
 				// Alle Stati ausser Angelegt, Bezahlt, Storniert
 				Collection<String> cStati = new LinkedList<String>();
 				cStati.add(RechnungFac.STATUS_ANGELEGT);
 				cStati.add(RechnungFac.STATUS_STORNIERT);
-	
+
 				c.add(Restrictions.not(Restrictions.in(
 						RechnungFac.FLR_RECHNUNG_STATUS_C_NR, cStati)));
-	
+
 				c.add(Restrictions.or(
 						Restrictions.gt("t_bezahltdatum", krit.getTStichtag()),
 						Restrictions.isNull("t_bezahltdatum")));
-	
+
 				boolean mitNichtZugeordnetenBelegen = false;
 				// Sortierung nach Kostenstelle
 				if (krit.bSortiereNachKostenstelle) {
@@ -2952,41 +3142,52 @@ public class RechnungReportFacBean extends LPReport implements
 							.addOrder(
 									Order.asc(PersonalFac.FLR_PERSONAL_C_KURZZEICHEN));
 				} else if (krit.iSortierung == ReportJournalKriterienDto.KRIT_SORT_NACH_FAELLIGKEIT) {
-					c.addOrder(Order.asc(RechnungFac.FLR_RECHNUNG_T_FAELLIGKEIT))
+					c.addOrder(
+							Order.asc(RechnungFac.FLR_RECHNUNG_T_FAELLIGKEIT))
 							.addOrder(Order.asc(RechnungFac.FLR_RECHNUNG_C_NR));
 				}
 				// stichtag ab belegdatum
 				c.add(Restrictions.le(RechnungFac.FLR_RECHNUNG_D_BELEGDATUM,
 						krit.getTStichtag()));
 				List<?> firstResultList = c.list();
-				Iterator<?> firstResultListIterator = firstResultList.iterator();
+				Iterator<?> firstResultListIterator = firstResultList
+						.iterator();
 				List<FLRRechnungReport> resultList = new LinkedList<FLRRechnungReport>();
 				while (firstResultListIterator.hasNext()) {
 					FLRRechnungReport re = (FLRRechnungReport) firstResultListIterator
 							.next();
 					// stichtag bereits bezahlt?
 					if (re.getT_bezahltdatum() == null
-							|| !krit.getTStichtag().after(re.getT_bezahltdatum())) {
+							|| !krit.getTStichtag().after(
+									re.getT_bezahltdatum())) {
 						resultList.add(re);
 					}
 				}
 				Iterator<?> resultListIterator = resultList.iterator();
 				int row = 0;
 				Object[][] tempData = new Object[resultList.size()][OFFENE_ANZAHL_SPALTEN];
-				
+
 				KundeDto kundeDto = null;
-				if(kndIId != null)
-					kundeDto = getKundeFac().kundeFindByPrimaryKey(
-						kndIId, theClientDto);
-				
-				if (mitNichtZugeordnetenBelegen && kundeDto.getIidDebitorenkonto() != null) {
-					
+				if (kndIId != null)
+					kundeDto = getKundeFac().kundeFindByPrimaryKey(kndIId,
+							theClientDto);
+
+				if (mitNichtZugeordnetenBelegen
+						&& kundeDto.getIidDebitorenkonto() != null
+						&& !gedruckteKonten.contains(kundeDto
+								.getIidDebitorenkonto())) {
+
+					gedruckteKonten.add(kundeDto.getIidDebitorenkonto());
 					// TODO: nur FLRFinanzBuchungDetail holen
 					Query query = session
 							.createQuery("SELECT buchungdetail from FLRFinanzBuchungDetail buchungdetail LEFT OUTER JOIN buchungdetail.flrbuchung AS buchung"
 									+ " WHERE"
 									+ BuchungDetailQueryBuilder
-											.buildNurOffeneBuchungDetails("buchungdetail")
+											.buildNurOffeneBuchungDetails(
+													"buchungdetail",
+													new Timestamp(krit
+															.getTStichtag()
+															.getTime()))
 									+ "AND"
 									+ BuchungDetailQueryBuilder
 											.buildNichtZuordenbareVonKonto(
@@ -2996,96 +3197,108 @@ public class RechnungReportFacBean extends LPReport implements
 									+ (krit.getTStichtag() == null ? ""
 											: (" AND buchung.d_buchungsdatum<='"
 													+ Helper.formatDateWithSlashes(krit
-															.getTStichtag()) + "'")));
-					
+															.getTStichtag()) + "' "))
+									+ "AND buchung.geschaeftsjahr_i_geschaeftsjahr="
+									+ getBuchenFac()
+											.findGeschaeftsjahrFuerDatum(
+													krit.getTStichtag(),
+													theClientDto.getMandant()));
+
 					@SuppressWarnings("unchecked")
 					List<FLRFinanzBuchungDetail> bdList = query.list();
-					if(bdList.size() > 0) {
-						if(tempData.length < 1) {
+					if (bdList.size() > 0) {
+						if (tempData.length < 1) {
 							tempData = new Object[1][OFFENE_ANZAHL_SPALTEN];
 							String sFirma = kundeDto.getPartnerDto()
 									.getCName1nachnamefirmazeile1();
 							tempData[row][OFFENE_FELD_FIRMA] = sFirma;
 							tempData[row][OFFENE_FELD_DEBITORENNR] = kundeDto
 									.getIidDebitorenkonto() != null ? getFinanzFac()
-									.kontoFindByPrimaryKey(kundeDto.getIidDebitorenkonto())
+									.kontoFindByPrimaryKey(
+											kundeDto.getIidDebitorenkonto())
 									.getCNr() : null;
 						}
 						tempData[0][OFFENE_SUBREPORT_OFFENE_BUCHUNGEN] = FinanzSubreportGenerator
 								.createBuchungsdetailSubreport(bdList, true);
 					}
 				}
-	
+
 				while (resultListIterator.hasNext()) {
 					FLRRechnungReport re = (FLRRechnungReport) resultListIterator
 							.next();
-					RechnungDto reDto = getRechnungFac().rechnungFindByPrimaryKey(
-							re.getI_id());
+					RechnungDto reDto = getRechnungFac()
+							.rechnungFindByPrimaryKey(re.getI_id());
 					// Kunde oder Statistikadresse?
 					final Integer kundeIId, kundeIIdStatistik;
 					if (krit.getBVerwendeStatistikAdresse()) {
 						kundeIId = reDto.getKundeIIdStatistikadresse();
-					} else { 
+					} else {
 						kundeIId = reDto.getKundeIId();
 						// Statistikdaten wenn nicht Kriterium Statistikadresse
 						kundeIIdStatistik = reDto.getKundeIIdStatistikadresse();
-	
+
 						KundeDto kundeDtoStatistik = getKundeFac()
 								.kundeFindByPrimaryKey(kundeIIdStatistik,
 										theClientDto);
-						String sFirmaStatistik = kundeDtoStatistik.getPartnerDto()
-								.getCName1nachnamefirmazeile1();
-	
+						String sFirmaStatistik = kundeDtoStatistik
+								.getPartnerDto().getCName1nachnamefirmazeile1();
+
 						String sKundeLKZStatistik = null;
-						if (kundeDtoStatistik.getPartnerDto().getLandplzortDto() != null) {
-							sKundeLKZStatistik = kundeDtoStatistik.getPartnerDto()
-									.getLandplzortDto().getLandDto().getCLkz();
+						if (kundeDtoStatistik.getPartnerDto()
+								.getLandplzortDto() != null) {
+							sKundeLKZStatistik = kundeDtoStatistik
+									.getPartnerDto().getLandplzortDto()
+									.getLandDto().getCLkz();
 						}
 						tempData[row][OFFENE_FELD_FIRMA_STATISTIK] = sFirmaStatistik;
 						tempData[row][OFFENE_FELD_FIRMA_LKZ_STATISTIK] = sKundeLKZStatistik;
-	
-					} 
-					
-					if(kundeDto == null || kundeDto.getIId() != kundeIId) {
+
+					}
+
+					if (kundeDto == null || kundeDto.getIId() != kundeIId) {
 						kundeDto = getKundeFac().kundeFindByPrimaryKey(
 								kundeIId, theClientDto);
 					}
-	
+
 					String sFirma = kundeDto.getPartnerDto()
 							.getCName1nachnamefirmazeile1();
-	
+
 					String sKundeLKZ = null;
 					if (kundeDto.getPartnerDto().getLandplzortDto() != null) {
 						sKundeLKZ = kundeDto.getPartnerDto().getLandplzortDto()
 								.getLandDto().getCLkz();
 					}
-					tempData[row][OFFENE_FELD_RECHNUNGART] = re.getFlrrechnungart()
-							.getRechnungtyp_c_nr();
+					tempData[row][OFFENE_FELD_RECHNUNGART] = re
+							.getFlrrechnungart().getRechnungtyp_c_nr();
 					tempData[row][OFFENE_FELD_RECHNUNGSNUMMER] = reDto.getCNr();
 					tempData[row][OFFENE_FELD_FIRMA] = sFirma;
+					tempData[row][OFFENE_FELD_KREDITLIMIT] = kundeDto
+							.getNKreditlimit();
 					tempData[row][OFFENE_FELD_FIRMA_LKZ] = sKundeLKZ;
-					tempData[row][OFFENE_FELD_RECHNUNGSDATUM] = re.getD_belegdatum();
-	
+					tempData[row][OFFENE_FELD_RECHNUNGSDATUM] = re
+							.getD_belegdatum();
+
 					tempData[row][OFFENE_FELD_KURS] = re.getN_kurs();
 					tempData[row][OFFENE_FELD_WAEHRUNG] = re.getWaehrung_c_nr();
 					tempData[row][OFFENE_FELD_DEBITORENNR] = kundeDto
 							.getIidDebitorenkonto() != null ? getFinanzFac()
-							.kontoFindByPrimaryKey(kundeDto.getIidDebitorenkonto())
-							.getCNr() : null;
-	
+							.kontoFindByPrimaryKey(
+									kundeDto.getIidDebitorenkonto()).getCNr()
+							: null;
+
 					// Vertreter
 					if (re.getFlrvertreter() != null) {
 						if (re.getFlrvertreter().getFlrpartner()
 								.getC_name2vornamefirmazeile2() != null) {
-							tempData[row][OFFENE_FELD_VERTRETER] = re.getFlrvertreter()
-									.getFlrpartner()
+							tempData[row][OFFENE_FELD_VERTRETER] = re
+									.getFlrvertreter().getFlrpartner()
 									.getC_name1nachnamefirmazeile1()
 									+ " "
 									+ re.getFlrvertreter().getFlrpartner()
 											.getC_name2vornamefirmazeile2();
 						} else {
-							tempData[row][OFFENE_FELD_VERTRETER] = re.getFlrvertreter()
-									.getFlrpartner()
+							tempData[row][OFFENE_FELD_VERTRETER] = re
+									.getFlrvertreter().getFlrpartner()
 									.getC_name1nachnamefirmazeile1();
 						}
 					}
@@ -3105,21 +3318,24 @@ public class RechnungReportFacBean extends LPReport implements
 					// Zahlungsbetrag bis zum Stichtag ermitteln
 					BigDecimal bdBezahlt = new BigDecimal(0);
 					for (int i = 0; i < zahlungen.length; i++) {
-						if (!zahlungen[i].getDZahldatum()
-								.after(krit.getTStichtag())) {
-							bdBezahlt = bdBezahlt.add(zahlungen[i].getNBetrag());
+						if (!zahlungen[i].getDZahldatum().after(
+								krit.getTStichtag())) {
+							bdBezahlt = bdBezahlt
+									.add(zahlungen[i].getNBetrag());
 						}
 					}
 					if (reDto.getKostenstelleIId() != null) {
 						KostenstelleDto kstDto = getSystemFac()
 								.kostenstelleFindByPrimaryKey(
 										reDto.getKostenstelleIId());
-						tempData[row][OFFENE_FELD_KOSTENSTELLE] = kstDto.getCNr();
+						tempData[row][OFFENE_FELD_KOSTENSTELLE] = kstDto
+								.getCNr();
 					}
-	
+
 					if (reDto.getNWert() == null) {
 						EJBExceptionLP ex = new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_RECHNUNG_HAT_KEINEN_WERT, "");
+								EJBExceptionLP.FEHLER_RECHNUNG_HAT_KEINEN_WERT,
+								"");
 						ArrayList<Object> alInfo = new ArrayList<Object>();
 						alInfo.add("ID: " + reDto.getIId());
 						alInfo.add("Nr: " + reDto.getCNr());
@@ -3129,31 +3345,31 @@ public class RechnungReportFacBean extends LPReport implements
 					BigDecimal bdWertBrutto = reDto.getNWert().add(
 							reDto.getNWertust());
 					BigDecimal bdWertNetto = reDto.getNWert();
-	
+
 					BigDecimal bdWertBruttoFW = reDto.getNWertfw().add(
 							reDto.getNWertustfw());
 					BigDecimal bdWertNettoFW = reDto.getNWertfw();
-	
+
 					BigDecimal bdBezahltUst = getRechnungFac()
-							.getBereitsBezahltWertVonRechnungUst(reDto.getIId(),
-									null, krit.getTStichtag());
+							.getBereitsBezahltWertVonRechnungUst(
+									reDto.getIId(), null, krit.getTStichtag());
 					BigDecimal bdBezahltNetto = getRechnungFac()
-							.getBereitsBezahltWertVonRechnung(reDto.getIId(), null,
-									krit.getTStichtag());
-	
-					BigDecimal bdBezahltUstFw = getRechnungFac()
-							.getBereitsBezahltWertVonRechnungUstFw(reDto.getIId(),
+							.getBereitsBezahltWertVonRechnung(reDto.getIId(),
 									null, krit.getTStichtag());
+
+					BigDecimal bdBezahltUstFw = getRechnungFac()
+							.getBereitsBezahltWertVonRechnungUstFw(
+									reDto.getIId(), null, krit.getTStichtag());
 					BigDecimal bdBezahltNettoFw = getRechnungFac()
 							.getBereitsBezahltWertVonRechnungFw(reDto.getIId(),
 									null, krit.getTStichtag());
-	
+
 					BigDecimal bdNettoOffenFw = reDto.getNWertfw().subtract(
 							bdBezahltNettoFw);
-	
+
 					BigDecimal bdUstOffenFw = reDto.getNWertustfw().subtract(
 							bdBezahltUstFw);
-	
+
 					BigDecimal bdNettoOffenMandWhg = getLocaleFac()
 							.rechneUmInAndereWaehrungZuDatum(bdNettoOffenFw,
 									reDto.getWaehrungCNr(),
@@ -3164,7 +3380,7 @@ public class RechnungReportFacBean extends LPReport implements
 									reDto.getWaehrungCNr(),
 									theClientDto.getSMandantenwaehrung(),
 									krit.getTStichtag(), theClientDto);
-	
+
 					BigDecimal bdUstAnzahlungMandWhg = new BigDecimal(0);
 					BigDecimal bdNettoAnzahlungMandWhg = new BigDecimal(0);
 					BigDecimal bdUstAnzahlungFW = new BigDecimal(0);
@@ -3188,22 +3404,22 @@ public class RechnungReportFacBean extends LPReport implements
 										reDto.getWaehrungCNr(),
 										theClientDto.getSMandantenwaehrung(),
 										krit.getTStichtag(), theClientDto);
-	
+
 					}
-	
+
 					tempData[row][OFFENE_FELD_WERT_BRUTTO_ANZAHLUNGEN] = bdNettoAnzahlungMandWhg
 							.add(bdUstAnzahlungMandWhg);
 					tempData[row][OFFENE_FELD_WERT_NETTO_ANZAHLUNGEN] = bdNettoAnzahlungMandWhg;
 					tempData[row][OFFENE_FELD_WERT_BRUTTO_ANZAHLUNGEN_FW] = bdNettoAnzahlungFW
 							.add(bdUstAnzahlungFW);
 					tempData[row][OFFENE_FELD_WERT_NETTO_ANZAHLUNGEN_FW] = bdNettoAnzahlungFW;
-	
+
 					// SP554
 					bdNettoOffenMandWhg = bdNettoOffenMandWhg
 							.subtract(bdNettoAnzahlungMandWhg);
 					bdUstOffenMandWhg = bdUstOffenMandWhg
 							.subtract(bdUstAnzahlungMandWhg);
-	
+
 					if (re.getFlrrechnungart().getRechnungtyp_c_nr()
 							.equals(RechnungFac.RECHNUNGTYP_RECHNUNG)) {
 						tempData[row][OFFENE_FELD_WERT_BRUTTO] = bdWertBrutto;
@@ -3211,23 +3427,25 @@ public class RechnungReportFacBean extends LPReport implements
 						tempData[row][OFFENE_FELD_WERT_BRUTTO_OFFEN] = bdNettoOffenMandWhg
 								.add(bdUstOffenMandWhg);
 						tempData[row][OFFENE_FELD_WERT_NETTO_OFFEN] = bdNettoOffenMandWhg;
-	
+
 						// FW
 						tempData[row][OFFENE_FELD_WERT_BRUTTO_FW] = bdWertBruttoFW;
 						tempData[row][OFFENE_FELD_WERT_NETTO_FW] = bdWertNettoFW;
 						tempData[row][OFFENE_FELD_WERT_BRUTTO_OFFEN_FW] = bdNettoOffenFw
 								.add(bdUstOffenFw);
 						tempData[row][OFFENE_FELD_WERT_NETTO_OFFEN_FW] = bdNettoOffenFw;
-	
+
 					} else if (re.getFlrrechnungart().getRechnungtyp_c_nr()
 							.equals(RechnungFac.RECHNUNGTYP_GUTSCHRIFT)) {
-						tempData[row][OFFENE_FELD_WERT_BRUTTO] = bdWertBrutto.negate();
-						tempData[row][OFFENE_FELD_WERT_NETTO] = bdWertNetto.negate();
+						tempData[row][OFFENE_FELD_WERT_BRUTTO] = bdWertBrutto
+								.negate();
+						tempData[row][OFFENE_FELD_WERT_NETTO] = bdWertNetto
+								.negate();
 						tempData[row][OFFENE_FELD_WERT_BRUTTO_OFFEN] = bdNettoOffenMandWhg
 								.add(bdUstOffenMandWhg).negate();
 						tempData[row][OFFENE_FELD_WERT_NETTO_OFFEN] = bdNettoOffenMandWhg
 								.negate();
-	
+
 						// FW
 						tempData[row][OFFENE_FELD_WERT_BRUTTO_FW] = bdWertBruttoFW
 								.negate();
@@ -3237,16 +3455,17 @@ public class RechnungReportFacBean extends LPReport implements
 								.add(bdUstOffenFw).negate();
 						tempData[row][OFFENE_FELD_WERT_NETTO_OFFEN_FW] = bdNettoOffenFw
 								.negate();
-	
+
 					}
-	
+
 					tempData[row][OFFENE_FELD_MAHNDATUM] = getMahnwesenFac()
 							.getAktuellesMahndatumEinerRechnung(reDto.getIId(),
 									theClientDto);
 					tempData[row][OFFENE_FELD_MAHNSTUFE] = getMahnwesenFac()
 							.getAktuelleMahnstufeEinerRechnung(reDto.getIId(),
 									theClientDto);
-					tempData[row][OFFENE_FELD_MAHNSPERRE] = reDto.getTMahnsperrebis();
+					tempData[row][OFFENE_FELD_MAHNSPERRE] = reDto
+							.getTMahnsperrebis();
 					// Faelligkeitsdatum
 					// java.sql.Date dFaellig;
 					// if (reDto.getZahlungszielIId() != null) {
@@ -3277,7 +3496,7 @@ public class RechnungReportFacBean extends LPReport implements
 			}
 
 			data = dataList.toArray(new Object[0][]);
-			
+
 			// Waehrung
 			mapParameter.put(LPReport.P_WAEHRUNG, mandantDto.getWaehrungCNr());
 			mapParameter.put(
@@ -3740,7 +3959,7 @@ public class RechnungReportFacBean extends LPReport implements
 					+ "R.RECHNUNGART_C_NR AS R_RECHNUNGART_C_NR,"
 					+ "R.RECHNUNG_I_ID_ZURECHNUNG AS R_RECHNUNG_I_ID_ZURECHNUNG,"
 					+ "AR.F_VERTRETERPROVISIONMAX AS AR_F_VERTRETERPROVISIONMAX,"
-					+ "COALESCE (R.C_BESTELLNUMMER,L.C_BESTELLNUMMER) AS R_BESTELLNUMMER,"
+					+ "COALESCE (L.C_BESTELLNUMMER,R.C_BESTELLNUMMER) AS R_BESTELLNUMMER,"
 					+ "KNRECHNUNGSADRESSELS.I_KUNDENNUMMER AS KN_RECHNUNGSADRESSELS_I_KUNDENNUMMER,"
 					+ "PARTNERRECHNUNGSADRESSELS.C_NAME1NACHNAMEFIRMAZEILE1 AS PARTNERRECHNUNGSADRESSELSBEZEICHNUNG,"
 					+ "PARTNERRECHNUNGSADRESSELS.C_KBEZ AS PARTNERRECHNUNGSADRESSELSKBEZ,"
@@ -3752,7 +3971,7 @@ public class RechnungReportFacBean extends LPReport implements
 					+ "LSLAGER.C_NR AS LSLAGERCNR,"
 					+ "LSZIELLAGER.C_NR AS LSZIELLAGERCNR,"
 					+ "KNLIEFERADRESSELS.I_KUNDENNUMMER AS KN_KNLIEFERADRESSELS_I_KUNDENNUMMER,"
-					+ "cast(COALESCE (P.X_TEXTINHALT,LP.X_TEXTINHALT) AS VARCHAR) AS R_TEXTINHALT, "
+					+ "cast(COALESCE (P.X_TEXTINHALT,LP.X_TEXTINHALT) AS VARCHAR (3000)) AS R_TEXTINHALT, "
 					+ "PLIEFERADRESSELS.C_ILN AS C_ILNLIEFERADRESSELS, "
 					+ "PN.C_ILN AS C_ILNPARTNER, "
 					+ "PLIEFERADRESSELS.I_ID AS PART_STATISTIK_I_ID,"
@@ -3882,8 +4101,12 @@ public class RechnungReportFacBean extends LPReport implements
 			}
 			if (!krit.getBMitTexteingaben()) {
 				// das OR muss wegen Gutschriften rein
+				// queryWhere = queryWhere
+				// +
+				// "AND (LP.LIEFERSCHEINPOSITIONART_C_NR != 'Texteingabe' OR LP.LIEFERSCHEINPOSITIONART_C_NR IS NULL) ";
 				queryWhere = queryWhere
-						+ "AND (LP.LIEFERSCHEINPOSITIONART_C_NR != 'Texteingabe' OR LP.LIEFERSCHEINPOSITIONART_C_NR IS NULL) ";
+						+ "AND ((LP.LIEFERSCHEINPOSITIONART_C_NR != 'Texteingabe' AND LP.LIEFERSCHEINPOSITIONART_C_NR != 'IZwischensumme') "
+						+ " OR LP.LIEFERSCHEINPOSITIONART_C_NR IS NULL) ";
 			}
 			if (krit.kostenstelleIId != null) {
 				queryWhere = queryWhere + "AND R.KOSTENSTELLE_I_ID = "
@@ -5040,6 +5263,7 @@ public class RechnungReportFacBean extends LPReport implements
 				}
 				data[i][FELD_ALLE_KUNDE] = flrKunde.getFlrpartner()
 						.getC_name1nachnamefirmazeile1();
+				data[i][FELD_ALLE_KREDITLIMIT] = flrKunde.getN_kreditlimit();
 				data[i][FELD_ALLE_REVERSE_CHARGE] = Helper.short2Boolean(r
 						.getB_reversecharge());
 				data[i][FELD_ALLE_STATUS] = r.getStatus_c_nr();
@@ -5142,6 +5366,12 @@ public class RechnungReportFacBean extends LPReport implements
 					// Zahltage
 					int iZahltage = Helper.getDifferenzInTagen(
 							r.getD_belegdatum(), r.getT_bezahltdatum());
+					data[i][FELD_ALLE_ZAHLTAGE] = new Integer(iZahltage);
+				} else {
+					// SP2297
+					int iZahltage = Helper.getDifferenzInTagen(r
+							.getD_belegdatum(), Helper.cutDate(new Date(System
+							.currentTimeMillis())));
 					data[i][FELD_ALLE_ZAHLTAGE] = new Integer(iZahltage);
 				}
 				// Debitorenkontonummer
@@ -5612,8 +5842,8 @@ public class RechnungReportFacBean extends LPReport implements
 
 			if (oArtikelDto.getMaterialIId() != null) {
 				MaterialDto materialDto = getMaterialFac()
-						.materialFindByPrimaryKey(
-								oArtikelDto.getMaterialIId(), theClientDto);
+						.materialFindByPrimaryKey(oArtikelDto.getMaterialIId(),
+								locale, theClientDto);
 				if (materialDto.getMaterialsprDto() != null) {
 					/**
 					 * @todo MR->MR richtige Mehrsprachigkeit: Material in
@@ -5625,23 +5855,16 @@ public class RechnungReportFacBean extends LPReport implements
 					data[index][RECHNUNG_FELD_ARTIKEL_MATERIAL] = materialDto
 							.getCNr();
 				}
-				
-				MaterialzuschlagDto mzDto = getMaterialFac()
-						.getKursMaterialzuschlagDtoInZielwaehrung(
-								oArtikelDto.getMaterialIId(),
-								rechnungDto.getTBelegdatum(),
-								rechnungDto.getWaehrungCNr(),
-								theClientDto);
-				
-				data[index][RECHNUNG_FELD_ARTIKEL_KURS_MATERIALZUSCHLAG]= mzDto.getNZuschlag();
-				data[index][RECHNUNG_FELD_ARTIKEL_DATUM_MATERIALZUSCHLAG]= mzDto.getTGueltigab();
-				
+				data[index][RECHNUNG_FELD_ARTIKEL_KURS_MATERIALZUSCHLAG] = rePos
+						.getNMaterialzuschlagKurs();
+				data[index][RECHNUNG_FELD_ARTIKEL_DATUM_MATERIALZUSCHLAG] = rePos
+						.getTMaterialzuschlagDatum();
+
 			}
 
 			data[index][RECHNUNG_FELD_ARTIKEL_MATERIALGEWICHT] = oArtikelDto
 					.getFMaterialgewicht();
-			
-			
+
 			// KundeArtikelnr gueltig zu Belegdatum
 			KundesokoDto kundeSokoDto_gueltig = this.getKundesokoFac()
 					.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
@@ -5664,6 +5887,7 @@ public class RechnungReportFacBean extends LPReport implements
 					.getSZusatzBezeichnung();
 			data[index][RECHNUNG_FELD_ARTIKELKOMMENTAR] = druckDto
 					.getSArtikelkommentar();
+			data[index][RECHNUNG_FELD_FREIERTEXT] = rePos.getXTextinhalt();
 			// weitere Daten
 			data[index][RECHNUNG_FELD_MENGE] = Helper.rundeKaufmaennisch(
 					rePos.getNMenge(),
@@ -5898,6 +6122,9 @@ public class RechnungReportFacBean extends LPReport implements
 					data[index][RECHNUNG_FELD_SERIENCHARGENR] = SeriennrChargennrMitMengeDto
 							.erstelleStringAusMehrerenSeriennummern(rePos
 									.getSeriennrChargennrMitMenge());
+					data[index][RECHNUNG_FELD_VERSION] = SeriennrChargennrMitMengeDto
+							.erstelleStringAusMehrerenVersionen(rePos
+									.getSeriennrChargennrMitMenge());
 					data[index][RECHNUNG_FELD_POSITIONSART] = RechnungFac.POSITIONSART_RECHNUNG_SERIENNR;
 					data[index][RECHNUNG_FELD_B_SEITENUMBRUCH] = bSeitenumbruch;
 				} else if (Helper.short2Boolean(oArtikelDto
@@ -5930,7 +6157,7 @@ public class RechnungReportFacBean extends LPReport implements
 						if (aChargeNummer.length > 1) {
 							// alle Chargennummern der Position
 							List<SeriennrChargennrMitMengeDto> aChargenMitMengeDto = getLagerFac()
-									.getAllSeriennrchargennrEinerBelegartposition(
+									.getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
 											LocaleFac.BELEGART_RECHNUNG,
 											rePos.getIId());
 
@@ -6019,6 +6246,9 @@ public class RechnungReportFacBean extends LPReport implements
 					}
 				}
 			}
+
+			data[index][RECHNUNG_FELD_ERLOESKONTO_DTO] = getFibuExportManger(
+					theClientDto).getErloeskonto(rechnungDto.getIId(), rePos);
 			index++;
 			// Optional: Leerzeile nach mengenbehafteter Position
 			if (bLeerzeileNachMengenbehafteterPosition
@@ -6133,8 +6363,7 @@ public class RechnungReportFacBean extends LPReport implements
 					.getCBezProjektbezeichnung();
 			// Waehrungen pruefen
 			String sRechnungswaehrung = rechnungDto.getWaehrungCNr();
-			String sLieferscheinwaehrung = lieferscheinDto
-					.getWaehrungCNr();
+			String sLieferscheinwaehrung = lieferscheinDto.getWaehrungCNr();
 			boolean bUmrechnen = false;
 			if (!sRechnungswaehrung.equals(sLieferscheinwaehrung)) {
 				bUmrechnen = true;
@@ -6148,6 +6377,7 @@ public class RechnungReportFacBean extends LPReport implements
 				data[index][RECHNUNG_FELD_POSITIONSOBJEKT] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSOBJEKT];
 				data[index][RECHNUNG_FELD_FREIERTEXT] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_FREIERTEXT];
 				data[index][RECHNUNG_FELD_IDENT] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_IDENT];
+
 				data[index][RECHNUNG_FELD_IDENT_TEXTEINGABE] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_IDENT_TEXTEINGABE];
 				data[index][RECHNUNG_FELD_ARTIKEL_ARTIKELGRUPPE] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKEL_ARTIKELGRUPPE];
 				data[index][RECHNUNG_FELD_IDENTNUMMER] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_IDENTNUMMER];
@@ -6157,6 +6387,7 @@ public class RechnungReportFacBean extends LPReport implements
 				data[index][RECHNUNG_FELD_KURZBEZEICHNUNG] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_KURZBEZEICHNUNG];
 				data[index][RECHNUNG_FELD_IMAGE] = Helper
 						.byteArrayToImage((byte[]) lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_IMAGE]);
+				data[index][RECHNUNG_FELD_LAGER_UEBERSTEUERT_AUS_LIEFERSCHEIN] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_LAGER_UEBERSTEUERT];
 				data[index][RECHNUNG_FELD_ARTIKELKOMMENTAR] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKELKOMMENTAR];
 				data[index][RECHNUNG_FELD_POSITIONSART] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSART];
 				data[index][RECHNUNG_FELD_FIBU_MWST_CODE] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_FIBU_MWST_CODE];
@@ -6189,6 +6420,7 @@ public class RechnungReportFacBean extends LPReport implements
 				data[index][RECHNUNG_FELD_ARTIKEL_MATERIAL] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKEL_MATERIAL];
 				data[index][RECHNUNG_FELD_ARTIKEL_MATERIALGEWICHT] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKEL_MATERIALGEWICHT];
 				data[index][RECHNUNG_FELD_ARTIKEL_KURS_MATERIALZUSCHLAG] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKEL_KURS_MATERIALZUSCHLAG];
+				data[index][RECHNUNG_FELD_ARTIKEL_DATUM_MATERIALZUSCHLAG] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKEL_DATUM_MATERIALZUSCHLAG];
 				data[index][RECHNUNG_FELD_ARTIKEL_BREITE] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKEL_BREITE];
 				data[index][RECHNUNG_FELD_ARTIKEL_HOEHE] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKEL_HOEHE];
 				data[index][RECHNUNG_FELD_ARTIKEL_TIEFE] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKEL_TIEFE];
@@ -6202,6 +6434,7 @@ public class RechnungReportFacBean extends LPReport implements
 				data[index][RECHNUNG_FELD_GEWICHT] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKEL_GEWICHT];
 				data[index][RECHNUNG_FELD_VERLEIHFAKTOR] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_VERLEIHFAKTOR];
 				data[index][RECHNUNG_FELD_VERLEIHTAGE] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_VERLEIHTAGE];
+				data[index][RECHNUNG_FELD_VERSION] = lsData[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_VERSION];
 
 				KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
 						lieferscheinDto.getKundeIIdLieferadresse(),
@@ -6574,14 +6807,21 @@ public class RechnungReportFacBean extends LPReport implements
 										lsPos[lsIndex].getZwsBisPosition());
 						data[index][RECHNUNG_FELD_ZWSNETTOSUMME] = lsPos[lsIndex]
 								.getZwsNettoSumme();
+						data[index][RECHNUNG_FELD_ZWSPOSPREISDRUCKEN] = lsPos[lsIndex]
+								.getBZwsPositionspreisZeigen();
 						if (data[index][RECHNUNG_FELD_VONPOSITION] != null) {
-							updateZwischensummenData(index,
-									lsPos[lsIndex].getZwsVonPosition(),
-									lsPos[lsIndex].getCBez());
+							// updateZwischensummenData(index,
+							// lsPos[lsIndex].getZwsVonPosition(),
+							// lsPos[lsIndex].getCBez());
+							updateZwischensummenData(index, lsPos[lsIndex]);
 						}
 						data[index][RECHNUNG_FELD_POSITION] = getLieferscheinpositionFac()
 								.getLSPositionNummer(lsPos[lsIndex].getIId());
 					}
+
+					data[index][RECHNUNG_FELD_ERLOESKONTO_DTO] = getFibuExportManger(
+							theClientDto).getErloeskonto(rechnungDto.getIId(),
+							lsPos[lsIndex]);
 
 					// fuer alle nicht-stuecklistenpositionen auch bei den
 					// LS-Pos. eins weiter
@@ -6702,9 +6942,12 @@ public class RechnungReportFacBean extends LPReport implements
 					.getPositionNummer(rePos.getZwsBisPosition());
 			data[index][RECHNUNG_FELD_ZWSNETTOSUMME] = rechnungPositionDto
 					.getZwsNettoSumme();
+			data[index][RECHNUNG_FELD_ZWSPOSPREISDRUCKEN] = rechnungPositionDto
+					.getBZwsPositionspreisZeigen();
 			if (data[index][RECHNUNG_FELD_VONPOSITION] != null) {
-				updateZwischensummenData(index, rePos.getZwsVonPosition(),
-						rePos.getCBez());
+				// updateZwischensummenData(index, rePos.getZwsVonPosition(),
+				// rePos.getCBez());
+				updateZwischensummenData(index, rechnungPositionDto);
 			}
 
 			MwstsatzReportDto m = mwstMap.get(rechnungPositionDto
@@ -6779,6 +7022,48 @@ public class RechnungReportFacBean extends LPReport implements
 				}
 				return;
 			}
+		}
+	}
+
+	private void updateZwischensummenData(int lastIndex,
+			BelegpositionVerkaufDto zwsPos) {
+		Integer zwsVonPosition = zwsPos.getZwsVonPosition();
+		if (zwsVonPosition == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_POSITION_ZWISCHENSUMME_UNVOLLSTAENDIG,
+					"Position '" + zwsPos.getCBez() + "' unvollst\u00E4ndig",
+					new Object[] { zwsPos.getCBez(), zwsPos.getIId() });
+		}
+
+		int foundIndex = -1;
+		for (int i = 0; i < lastIndex; i++) {
+			Object[] o = (Object[]) data[i];
+			if (zwsVonPosition.equals(o[RECHNUNG_FELD_INTERNAL_IID])) {
+				if (null == o[RECHNUNG_FELD_ZWSTEXT]) {
+					o[RECHNUNG_FELD_ZWSTEXT] = zwsPos.getCBez();
+				} else {
+					String s = (String) o[RECHNUNG_FELD_ZWSTEXT] + "\n"
+							+ zwsPos.getCBez();
+					o[RECHNUNG_FELD_ZWSTEXT] = s;
+				}
+
+				o[RECHNUNG_FELD_ZWSNETTOSUMME] = zwsPos.getZwsNettoSumme();
+				foundIndex = i;
+				break;
+			}
+		}
+
+		if (foundIndex == -1) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_POSITION_ZWISCHENSUMME_UNVOLLSTAENDIG,
+					"Position '" + zwsPos.getCBez() + "' unvollst\u00E4ndig",
+					new Object[] { zwsPos.getCBez(), zwsPos.getIId() });
+		}
+
+		for (int i = foundIndex; i < lastIndex; i++) {
+			Object[] o = (Object[]) data[i];
+			o[RECHNUNG_FELD_ZWSPOSPREISDRUCKEN] = zwsPos
+					.getBZwsPositionspreisZeigen();
 		}
 	}
 

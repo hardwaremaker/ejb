@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -38,17 +38,12 @@ public abstract class DocNodeVisualizer {
 	
 	protected DocNodeBase node;
 	
-	DocNodeVisualizer() {
-		node = null;
-	}
-	
-	public final DocNodeVisualizer setDocNode(DocNodeBase node) {
+	DocNodeVisualizer(DocNodeBase node) {
+		if(node == null) throw new IllegalArgumentException("node must not be NULL!");
 		this.node = node;
-		return this;
 	}
 	
 	public String getHTMLPath() {
-		if(node == null) throw new IllegalStateException("node ist null!\nDie Methode 'setDocNode(DocNodeBase node)' MUSS aufgerufen werden!");
 		return "<span style=\"color:" + getPathColor() + "\">" + node.asVisualPath() + "</span>";
 	}
 	

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -33,6 +33,9 @@
 package com.lp.service;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+
+import com.lp.server.system.service.LocaleFac;
 
 /**
  * @todo abstract machen
@@ -80,6 +83,27 @@ public class BelegpositionVerkaufDto extends BelegpositionDto implements
 	private Integer zwsVonPosition;
 	private Integer zwsBisPosition;
 	private BigDecimal zwsNettoSumme;
+	private Short bZwsPositionspreisZeigen;
+
+	private Timestamp tMaterialzuschlagDatum;
+
+	public Timestamp getTMaterialzuschlagDatum() {
+		return tMaterialzuschlagDatum;
+	}
+
+	public void setTMaterialzuschlagDatum(Timestamp tMaterialzuschlagDatum) {
+		this.tMaterialzuschlagDatum = tMaterialzuschlagDatum;
+	}
+
+	private BigDecimal nMaterialzuschlagKurs;
+
+	public BigDecimal getNMaterialzuschlagKurs() {
+		return nMaterialzuschlagKurs;
+	}
+
+	public void setNMaterialzuschlagKurs(BigDecimal nMaterialzuschlagKurs) {
+		this.nMaterialzuschlagKurs = nMaterialzuschlagKurs;
+	}
 
 	protected BigDecimal nMwstbetrag;
 
@@ -92,6 +116,7 @@ public class BelegpositionVerkaufDto extends BelegpositionDto implements
 	}
 
 	protected BigDecimal nRabattbetrag;
+
 	public BigDecimal getNRabattbetrag() {
 		return nRabattbetrag;
 	}
@@ -99,7 +124,17 @@ public class BelegpositionVerkaufDto extends BelegpositionDto implements
 	public void setNRabattbetrag(BigDecimal nRabattbetrag) {
 		this.nRabattbetrag = nRabattbetrag;
 	}
-	
+
+	private Integer lieferantIId;
+
+	public Integer getLieferantIId() {
+		return lieferantIId;
+	}
+
+	public void setLieferantIId(Integer lieferantIId) {
+		this.lieferantIId = lieferantIId;
+	}
+
 	public Integer getKostentraegerIId() {
 		return kostentraegerIId;
 	}
@@ -289,7 +324,7 @@ public class BelegpositionVerkaufDto extends BelegpositionDto implements
 		belegpositionVerkaufDtoI.nBruttoeinzelpreis = this.nBruttoeinzelpreis;
 		belegpositionVerkaufDtoI.zwsVonPosition = this.zwsVonPosition;
 		belegpositionVerkaufDtoI.zwsBisPosition = this.zwsBisPosition;
-
+		belegpositionVerkaufDtoI.bZwsPositionspreisZeigen = this.bZwsPositionspreisZeigen;
 		return belegpositionVerkaufDtoI;
 	}
 
@@ -382,5 +417,51 @@ public class BelegpositionVerkaufDto extends BelegpositionDto implements
 
 	public void setZwsNettoSumme(BigDecimal zwsNettoSumme) {
 		this.zwsNettoSumme = zwsNettoSumme;
+	}
+
+	public Short getBZwsPositionspreisZeigen() {
+		return bZwsPositionspreisZeigen;
+	}
+
+	public void setBZwsPositionspreisDrucken(Short bZwsPositionspreisZeigen) {
+		this.bZwsPositionspreisZeigen = bZwsPositionspreisZeigen;
+	}
+	
+	/**
+	 * Handelt es sich um eine Intelligente Zwischensummenposition?
+	 * 
+	 * @return true wenn es eine Positionsart "Intelligente Zwischensumme" ist
+	 */
+	public boolean isIntelligenteZwischensumme() {
+		return LocaleFac.POSITIONSART_INTELLIGENTE_ZWISCHENSUMME.equalsIgnoreCase(getPositionsartCNr()) ;
+	}
+	
+	/**
+	 * Handelt es sich um eine Handeingabe?
+	 * @return true wenn es eine Positionsart "HANDEINGABE" ist
+	 */
+	public boolean isHandeingabe() {
+		return LocaleFac.POSITIONSART_HANDEINGABE.equalsIgnoreCase(getPositionsartCNr()) ;		
+	}
+
+	/**
+	 * Handelt es sich um eine Artikelposition
+	 * @return true wenn es eine Positionsart "IDENT" ist
+	 */
+	public boolean isIdent() {
+		return LocaleFac.POSITIONSART_IDENT.equalsIgnoreCase(getPositionsartCNr()) ;		
+	}
+
+	/**
+	 * Handelt es sich um eine mengenbehaftete Position?</br>
+	 * <p>Mengenbehaftete Positionen sind solche, die entweder Ident- oder Handeingabe sind</p>
+	 * @return true wenn es eine mengenbehaftete Position ist
+	 */
+	public boolean isMengenbehaftet() {
+		return isIdent() || isHandeingabe() ;
+	}
+	
+	public boolean isLieferschein() {
+		return LocaleFac.POSITIONSART_LIEFERSCHEIN.equalsIgnoreCase(getPositionsartCNr()) ;
 	}
 }

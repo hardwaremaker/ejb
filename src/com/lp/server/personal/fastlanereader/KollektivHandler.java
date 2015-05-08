@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,6 +35,7 @@ package com.lp.server.personal.fastlanereader;
 import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -48,6 +49,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -313,15 +315,22 @@ public class KollektivHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
+			String mandantCNr = theClientDto.getMandant();
+			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
 					String.class, BigDecimal.class }, new String[] {
 					"Id",
-					getTextRespectUISpr("lp.bezeichnung", theClientDto
-							.getMandant(), theClientDto.getLocUi()),
-					getTextRespectUISpr("pers.kollektiv.arbeitszeit", theClientDto
-							.getMandant(), theClientDto.getLocUi()) },
-					new String[] { "id", PersonalFac.FLR_KOLLEKTIV_C_BEZ,
-							PersonalFac.FLR_KOLLEKTIV_N_NORMALSTUNDEN }));
+					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+					getTextRespectUISpr("pers.kollektiv.arbeitszeit",
+							mandantCNr, locUI) },
+
+			new int[] {
+					-1, // diese Spalte wird ausgeblendet
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
+			new String[] { "id", PersonalFac.FLR_KOLLEKTIV_C_BEZ,
+					PersonalFac.FLR_KOLLEKTIV_N_NORMALSTUNDEN }));
 		}
 
 		return super.getTableInfo();

@@ -1,33 +1,33 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.auftrag.fastlanereader;
@@ -103,7 +103,7 @@ import com.lp.util.Helper;
  * </p>
  * <p>
  * </p>
- * 
+ *
  * @author martin werner, uli walch
  * @version 1.0
  */
@@ -111,7 +111,7 @@ import com.lp.util.Helper;
 public class AuftragHandler extends UseCaseHandler {
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 	public static final String FLR_AUFTRAG = "flrauftrag.";
@@ -121,7 +121,7 @@ public class AuftragHandler extends UseCaseHandler {
 	boolean verrechenbarStattRohsAnzeigen = false;
 
 	private Feature cachedFeature = null ;
-	
+
 	private class Feature {
 		private boolean featureAdresse = false ;
 		private boolean featureAdresseAnschrift = false ;
@@ -130,7 +130,7 @@ public class AuftragHandler extends UseCaseHandler {
 		private boolean featureUseLieferadresse = false ;
 		private int flrRowCount = 0 ;
 		private IAuftragFLRData[] flrData = null ;
-		
+
 		public Feature() {
 			if(getQuery() instanceof QueryParametersFeatures) {
 				QueryParametersFeatures qpf = (QueryParametersFeatures) getQuery() ;
@@ -140,16 +140,16 @@ public class AuftragHandler extends UseCaseHandler {
 				featureUseLieferadresse = qpf.hasFeature(AuftragHandlerFeature.ADRESSE_IST_LIEFERADRESSE) ;
 			}
 		}
-		
+
 		public void setFlrRowCount(int rows) {
 			flrRowCount = rows ;
 			flrData = new AuftragFLRDataDto[flrRowCount] ;
 		}
-		
+
 		public IAuftragFLRData[] getFlrData() {
 			return flrData ;
 		}
-		
+
 		public boolean hasAdresse() {
 			return featureAdresse ;
 		}
@@ -157,23 +157,21 @@ public class AuftragHandler extends UseCaseHandler {
 		public boolean hasAdresseAnschrift() {
 			return featureAdresseAnschrift ;
 		}
-		
+
 		public boolean hasAdresseKurzanschrift() {
 			return featureAdresseKurzanschrift ;
 		}
-		
+
 		public boolean useLieferadresse() {
 			return featureUseLieferadresse ;
 		}
-		
+
 		public void buildAddress(int row, FLRAuftrag auftrag) throws RemoteException {
 			if(! hasAdresse()) return ;
-			
-			FLRPartner flrpartner = useLieferadresse() 
-					? auftrag.getFlrlieferkunde().getFlrpartner() 
+
+			FLRPartner flrpartner = useLieferadresse()
+					? auftrag.getFlrlieferkunde().getFlrpartner()
 					: auftrag.getFlrkunde().getFlrpartner() ;
-			FLRLandplzort flranschrift = flrpartner.getFlrlandplzort();
-			if (flranschrift == null) return ;
 
 			Integer contactId = useLieferadresse() ?
 					auftrag.getAnsprechpartner_i_id_lieferadresse() : auftrag.getAnsprechpartner_i_id_kunde();
@@ -181,10 +179,17 @@ public class AuftragHandler extends UseCaseHandler {
 			IAdresse address = new AdresseDto();
 			address.setPartnerId(flrpartner.getI_id());
 
-			address.setCountryCode(flranschrift.getFlrland().getC_lkz()) ;
-			address.setZipcode(flranschrift.getC_plz());
-			address.setCity(flranschrift.getFlrort().getC_name());
-			
+			FLRLandplzort flranschrift = flrpartner.getFlrlandplzort();
+			if (flranschrift != null) {
+				if(flranschrift.getFlrland() != null) {
+					address.setCountryCode(flranschrift.getFlrland().getC_lkz()) ;
+				}
+				address.setZipcode(flranschrift.getC_plz());
+				if(flranschrift.getFlrort() != null) {
+					address.setCity(flranschrift.getFlrort().getC_name());
+				}
+			}
+
 			address.setName1Lastname(flrpartner.getC_name1nachnamefirmazeile1());
 			address.setName2Firstname(flrpartner.getC_name2vornamefirmazeile2());
 			address.setName3Department(flrpartner.getC_name3vorname2abteilung());
@@ -193,34 +198,34 @@ public class AuftragHandler extends UseCaseHandler {
 			address.setSalutation(flrpartner.getAnrede_c_nr());
 			address.setStreet(flrpartner.getC_strasse());
 			address.setEmail(flrpartner.getC_email());
-			address.setPhone(flrpartner.getC_telefon()); 
-			
-		
+			address.setPhone(flrpartner.getC_telefon());
+
+
 			IAdresse contactAdresse = null ;
 			AnsprechpartnerDto anspDto = contactId == null ? null : getAnsprechpartnerFac()
 					.ansprechpartnerFindByPrimaryKey(contactId, theClientDto) ;
 			if(anspDto != null) {
 				contactAdresse = buildAdresse(anspDto, address) ;
 			}
-			
+
 			if(hasAdresseAnschrift()) {
 				PartnerDto partnerDto = getPartnerFac()
 						.partnerFindByPrimaryKey(flrpartner.getI_id(), theClientDto) ;
-				
+
 				MandantDto mandantDto = getMandantFac().mandantFindByPrimaryKey(theClientDto.getMandant(), theClientDto) ;
-				Locale locale = theClientDto.getLocUi() ;		
+				Locale locale = theClientDto.getLocUi() ;
 				String s = formatAdresseFuerAusdruck(partnerDto, anspDto, mandantDto, locale, LocaleFac.BELEGART_AUFTRAG) ;
 				address.setLines(s.split("\n"));
 			}
-			
-			if(hasAdresseKurzanschrift()) {			
+
+			if(hasAdresseKurzanschrift()) {
 			}
-			
+
 			IAddressContact addressContact = new AddressContactDto(address, contactAdresse) ;
 			setAddressContact(row, addressContact);
 //			addresses.add(addressContact) ;
 		}
-		
+
 		private IAdresse buildAdresse(AnsprechpartnerDto anspDto, IAdresse companyAddress) {
 			IAdresse address = new AdresseDto();
 			PartnerDto partnerDto = anspDto.getPartnerDto() ;
@@ -230,7 +235,7 @@ public class AuftragHandler extends UseCaseHandler {
 			address.setZipcode(companyAddress.getZipcode());
 			address.setCity(companyAddress.getCity()) ;
 			address.setStreet(companyAddress.getStreet()) ;
-			
+
 			address.setName1Lastname(partnerDto.getCName1nachnamefirmazeile1());
 			address.setName2Firstname(partnerDto.getCName2vornamefirmazeile2());
 			address.setName3Department(partnerDto.getCName3vorname2abteilung());
@@ -238,22 +243,22 @@ public class AuftragHandler extends UseCaseHandler {
 			address.setTitelSuffix(partnerDto.getCNtitel());
 			address.setSalutation(partnerDto.getAnredeCNr());
 			address.setEmail(anspDto.getCEmail());
-			address.setPhone(anspDto.getCTelefon()); 
+			address.setPhone(anspDto.getCTelefon());
 
 			return address ;
 		}
-		
+
 		public List<IAddressContact> getAddresses() {
 			return addresses ;
 		}
-		
+
 		private IAuftragFLRData getFlrDataObject(int row) {
 			if(flrData[row] == null) {
 				flrData[row] = new AuftragFLRDataDto() ;
 			}
 			return flrData[row] ;
 		}
-		
+
 		public void setInternerKommentar(int row, Boolean value) {
 			getFlrDataObject(row).setInternerKommentar(value);
 		}
@@ -266,27 +271,27 @@ public class AuftragHandler extends UseCaseHandler {
 		public Boolean getExternerKommentar(int row) {
 			return getFlrDataObject(row).hasExternerKommentar() ;
 		}
-		
+
 		public void setAddressContact(int row, IAddressContact addressContact) {
 			getFlrDataObject(row).setAddressContact(addressContact);
 		}
-		
+
 		public IAddressContact getAddressContact(int row) {
 			return getFlrDataObject(row).getAddressContact() ;
 		}
 	}
-	
+
 	private Feature getFeature() {
 		if(cachedFeature == null) {
 			cachedFeature = new Feature() ;
 		}
 		return cachedFeature ;
 	}
-	
+
 	/**
 	 * gets the data page for the specified row using the current query. The row
 	 * at rowIndex will be located in the middle of the page.
-	 * 
+	 *
 	 * @param rowIndex
 	 *            diese Zeile soll selektiert sein
 	 * @return QueryResult das Ergebnis der Abfrage
@@ -300,13 +305,14 @@ public class AuftragHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			int colCount = getTableInfo().getColumnClasses().length;
-			int pageSize = getLimit();
-			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
+			int pageSize = getLimit() ;
+			int startIndex = getStartIndex(rowIndex, pageSize) ;
 			int endIndex = startIndex + pageSize - 1;
-			
+
 			session = factory.openSession();
 			String queryString = getFromClause() + buildWhereClause()
 					+ buildOrderByClause();
+//			logQuery(queryString);
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -321,7 +327,7 @@ public class AuftragHandler extends UseCaseHandler {
 					RechteFac.RECHT_LP_DARF_PREISE_SEHEN_VERKAUF, theClientDto);
 
 			getFeature().setFlrRowCount(rows.length);
-			
+
 			while (resultListIterator.hasNext()) {
 
 				Object[] o = (Object[]) resultListIterator.next();
@@ -368,7 +374,7 @@ public class AuftragHandler extends UseCaseHandler {
 								+ flranschrift.getC_plz() + " "
 								+ flranschrift.getFlrort().getC_name();
 					}
-					
+
 					getFeature().buildAddress(row, auftrag) ;
 				}
 
@@ -441,7 +447,7 @@ public class AuftragHandler extends UseCaseHandler {
 					rows[row][col++] = Helper
 							.short2Boolean(auftrag.getB_rohs());
 				}
-				
+
 				rows[row][col++] = Helper.short2Boolean(auftrag
 						.getB_lieferterminunverbindlich());
 
@@ -454,18 +460,18 @@ public class AuftragHandler extends UseCaseHandler {
 				}
 
 				getFeature().setInternerKommentar(row, auftrag.getX_internerkommentar() != null);
-				getFeature().setExternerKommentar(row, auftrag.getX_externerkommentar() != null) ;			
+				getFeature().setExternerKommentar(row, auftrag.getX_externerkommentar() != null) ;
 
 				++row ;
 				col = 0;
 			}
-			
+
 			if(getFeature().hasAdresse()) {
 				AuftragQueryResult auftragResult = new AuftragQueryResult(rows, this.getRowCount(), startIndex,
 						endIndex, 0);
 //				auftragResult.setAddresses(getFeature().getAddresses()) ;
 				auftragResult.setFlrData(getFeature().getFlrData());
-				result = auftragResult ;				
+				result = auftragResult ;
 			} else {
 				result = new QueryResult(rows, this.getRowCount(), startIndex,
 					endIndex, 0) ;
@@ -484,7 +490,7 @@ public class AuftragHandler extends UseCaseHandler {
 
 	/**
 	 * gets the total number of rows represented by the current query.
-	 * 
+	 *
 	 * @return int die Anzehl der Zeilen im Ergebnis
 	 * @see UseCaseHandler#getRowCountFromDataBase()
 	 */
@@ -497,6 +503,7 @@ public class AuftragHandler extends UseCaseHandler {
 			String queryString = "select count(*) from FLRAuftrag  as flrauftrag "
 					+ this.buildWhereClause();
 
+//			logQuery(queryString);
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -523,7 +530,7 @@ public class AuftragHandler extends UseCaseHandler {
 				+ "."
 				+ LieferantFac.FLR_PARTNER
 				+ "."
-				+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1) ;	
+				+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1) ;
 	}
 
 	private boolean isAdresseLieferadresse(FilterKriterium filterKriterium) {
@@ -532,12 +539,12 @@ public class AuftragHandler extends UseCaseHandler {
 				+ "."
 				+ LieferantFac.FLR_PARTNER
 				+ "."
-				+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1) ;	
+				+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1) ;
 	}
-	
+
 	private String buildAdresseFilterImpl(String adresseTyp, FilterKriterium filterKriterium) {
 		StringBuffer where = new StringBuffer() ;
-		
+
 		ParametermandantDto parameter = null;
 		try {
 			parameter = getParameterFac()
@@ -548,7 +555,7 @@ public class AuftragHandler extends UseCaseHandler {
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 		}
-		
+
 		if (parameter.asBoolean()) {
 			if (filterKriterium.isBIgnoreCase()) {
 				where.append(" ( upper(" + FLR_AUFTRAG
@@ -594,19 +601,19 @@ public class AuftragHandler extends UseCaseHandler {
 		}
 		return where.toString() ;
 	}
-	
+
 	private String buildAdresseFilterKunde(FilterKriterium filterKriterium) {
 		return buildAdresseFilterImpl(AuftragFac.FLR_AUFTRAG_FLRKUNDE, filterKriterium) ;
 	}
-	
+
 	private String buildAdresseFilterLieferadresse(FilterKriterium filterKriterium) {
-		return buildAdresseFilterImpl(AuftragFac.FLR_AUFTRAG_FLRKUNDELIEFERADRESSE, filterKriterium) ;		
+		return buildAdresseFilterImpl(AuftragFac.FLR_AUFTRAG_FLRKUNDELIEFERADRESSE, filterKriterium) ;
 	}
-	
+
 	/**
 	 * builds the where clause of the HQL (Hibernate Query Language) statement
 	 * using the current query.
-	 * 
+	 *
 	 * @return the HQL where clause.
 	 */
 	private String buildWhereClause() {
@@ -650,7 +657,7 @@ public class AuftragHandler extends UseCaseHandler {
 					} else if(isAdresseKunde(filterKriterien[i])) {
 						where.append(buildAdresseFilterKunde(filterKriterien[i])) ;
 					} else if(isAdresseLieferadresse(filterKriterien[i])) {
-						where.append(buildAdresseFilterLieferadresse(filterKriterien[i])) ;						
+						where.append(buildAdresseFilterLieferadresse(filterKriterien[i])) ;
 					} else if (filterKriterien[i].kritName
 							.equals(AuftragFac.FLR_AUFTRAG_FLRKUNDE
 									+ "."
@@ -790,7 +797,7 @@ public class AuftragHandler extends UseCaseHandler {
 	/**
 	 * builds the HQL (Hibernate Query Language) order by clause using the sort
 	 * criterias contained in the current query.
-	 * 
+	 *
 	 * @return the HQL order by clause.
 	 */
 	private String buildOrderByClause() {
@@ -844,7 +851,7 @@ public class AuftragHandler extends UseCaseHandler {
 
 	/**
 	 * get the basic from clause for the HQL statement.
-	 * 
+	 *
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
@@ -879,6 +886,7 @@ public class AuftragHandler extends UseCaseHandler {
 							+ AuftragFac.FLR_AUFTRAG_I_ID
 							+ FLR_AUFTRAG_FROM_CLAUSE + this.buildWhereClause()
 							+ this.buildOrderByClause();
+//					logQuery(queryString);
 					Query query = session.createQuery(queryString);
 					ScrollableResults scrollableResult = query.scroll();
 					if (scrollableResult != null) {

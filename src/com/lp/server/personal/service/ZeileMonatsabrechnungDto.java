@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -50,6 +50,18 @@ public class ZeileMonatsabrechnungDto implements Serializable {
 	private Integer iTag;
 	private String sTag;
 	private Time tVon;
+	
+	private BigDecimal bdQualifikationsfaktor;
+	
+	public BigDecimal getBdQualifikationsfaktor() {
+		return bdQualifikationsfaktor;
+	}
+
+	public void setBdQualifikationsfaktor(BigDecimal bdQualifikationsfaktor) {
+		this.bdQualifikationsfaktor = bdQualifikationsfaktor;
+	}
+
+
 	private BigDecimal bdUestd50;
 	public BigDecimal getBdUestd200() {
 		return bdUestd200;
@@ -121,7 +133,16 @@ public class ZeileMonatsabrechnungDto implements Serializable {
 	private String sZusatzbezeichnung;
 	private Timestamp tDatum;
 	private Integer iJahr;
+	private Integer iMonat;
 	
+	public Integer getIMonat() {
+		return iMonat;
+	}
+
+	public void setIMonat(Integer iMonat) {
+		this.iMonat = iMonat;
+	}
+
 	public Integer getIJahr() {
 		return iJahr;
 	}

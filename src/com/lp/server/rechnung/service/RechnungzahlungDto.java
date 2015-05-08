@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -360,5 +360,13 @@ public class RechnungzahlungDto implements Serializable {
 				rechnungzahlungIIdGutschrift);
 		returnStringBuffer.append("]");
 		return returnStringBuffer.toString();
+	}
+	
+	public boolean isGutschrift() {
+		return RechnungFac.RECHNUNGART_GUTSCHRIFT.equals(getZahlungsartCNr()) ;
+	}
+	
+	public boolean isRechnung() {
+		return RechnungFac.RECHNUNGART_RECHNUNG.equals(getZahlungsartCNr()) ;		
 	}
 }

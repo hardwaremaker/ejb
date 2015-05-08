@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -45,6 +45,7 @@ import com.lp.server.util.ICNr;
 
 @NamedQueries( {
 		@NamedQuery(name = "LagerfindByMandantCNr", query = "SELECT OBJECT(C) FROM Lager c WHERE c.mandantCNr = ?1"),
+		@NamedQuery(name = "LagerfindAll", query = "SELECT OBJECT(C) FROM Lager c"),
 		@NamedQuery(name = "LagerfindByCNrByMandantCNr", query = "SELECT OBJECT(C) FROM Lager c WHERE c.cNr = ?1 AND  c.mandantCNr = ?2"),
 		@NamedQuery(name = "LagerfindByMandantCNrOrderByILoslagersort", query = "SELECT OBJECT(C) FROM Lager c WHERE c.mandantCNr = ?1 AND c.iLoslagersort IS NOT NULL ORDER BY c.iLoslagersort ASC"),
 		@NamedQuery(name = "LagerfindByMandantCNrLagerartCNr", query = "SELECT OBJECT (o) FROM Lager o WHERE o.mandantCNr=?1 AND o.lagerartCNr=?2") })

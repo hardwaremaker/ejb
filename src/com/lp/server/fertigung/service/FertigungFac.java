@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -38,7 +38,9 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import javax.ejb.Remote;
 
@@ -84,6 +86,7 @@ public interface FertigungFac {
 	public static final String FLR_LOS_N_LOSGROESSE = "n_losgroesse";
 	public static final String FLR_LOS_FLRSTUECKLISTE = "flrstueckliste";
 	public static final String FLR_LOS_TECHNIKERSET = "technikerset";
+	public static final String FLR_LOS_F_BEWERTUNG = "f_bewertung";
 
 	public static final String FLR_LOSREPORT_KOSTENSTELLE_I_ID = "kostenstelle_i_id";
 	public static final String FLR_LOSREPORT_FLRKOSTENSTELLE = "flrkostenstelle";
@@ -302,7 +305,6 @@ public interface FertigungFac {
 			TheClientDto theClientDto,
 			ArrayList<BucheSerienChnrAufLosDto> bucheSerienChnrAufLosDtos)
 			throws EJBExceptionLP, RemoteException;
-	
 	public String gebeMehrereLoseAus(Integer fertigungsgruppeIId,
 			boolean throwExceptionWhenCreate,
 			boolean bAufAktualisierungPruefen, TheClientDto theClientDto);
@@ -329,7 +331,7 @@ public interface FertigungFac {
 	public BigDecimal[] getGutSchlechtInarbeit(Integer lossollarbeitsplanIId,TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void gebeLosAusRueckgaengig(Integer losIId, TheClientDto theClientDto)
+	public void gebeLosAusRueckgaengig(Integer losIId,boolean bSollmengenBeiNachtraeglichenMaterialentnahmenAktualisieren, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public AuftragNachkalkulationDto getWerteAusUnterlosen(LosDto losDto,
@@ -585,6 +587,9 @@ public interface FertigungFac {
 	public LoszusatzstatusDto loszusatzstatusFindByLosIIdZusatzstatusIId(
 			Integer losIId, Integer zusatzstatusIId) throws RemoteException;
 
+	public LoszusatzstatusDto loszusatzstatusFindByLosIIdZusatzstatusIIdOhneExc(
+			Integer losIId, Integer zusatzstatusIId) throws RemoteException;
+
 	public ArrayList<LosAusAuftragDto> vorschlagMitUnterlosenAusAuftrag(
 			Integer auftragIId, TheClientDto theClientDto);
 
@@ -655,5 +660,18 @@ public interface FertigungFac {
 	public ArrayList<Integer> erledigteLoseImZeitraumNachkalkulieren(
 			java.sql.Date tVon, java.sql.Date tBis,
 			TheClientDto theClientDto);
-	
+	public Map<Integer, String> getAllZusatzstatus(TheClientDto theClientDto);
+	public Integer getJuengstenZusatzstatuseinesLoses(Integer losIId);
+	public void toggleMaterialVollstaendig(Integer losIId,
+			TheClientDto theClientDto);
+	public BigDecimal getAnzahlInFertigung(Integer artikelIId,
+			java.sql.Date tAbDatum, TheClientDto theClientDto);
+	public LosDto[] losFindByAuftragpositionIId(Integer auftragpositionIId);
+	public void offenAgsUmreihen(Integer lossollarbeitsplanIId, boolean bNachUntenReihen);
+	public TreeSet<Integer> getLoseEinesStuecklistenbaums(Integer losIId,
+			TheClientDto theClientDto);
+	public java.sql.Date getFruehesterEintrefftermin(Integer artikelIId,
+			TheClientDto theClientDto);
+	public void sollpreiseAllerSollmaterialpositionenNeuKalkulieren(
+			Integer losIId, TheClientDto theClientDto);
 }

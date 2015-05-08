@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -37,6 +37,7 @@ import java.sql.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import javax.ejb.Local;
 
@@ -138,4 +139,27 @@ public interface BelegVerkaufFac {
 	public boolean pruefeAufGleichenMwstSatz(
 			BelegpositionVerkaufDto[] belegPositionDtos, Integer vonPositionNumber, Integer bisPositionNumber) throws EJBExceptionLP ;
 		 
+	/**
+	 * Tr&auml;gt in die Zwischensummenpositionen den Rabattbetrag aus der Zwischensummenposition ein.</br>
+	 * <p>Achtung: Irgendwo vorher wird ein R&uuml;cksetzen der Betr&auml;ge notwendig!</p>
+	 * 
+	 * @param positionDtos
+	 */
+	Set<Integer> adaptIntZwsPositions(BelegpositionVerkaufDto[] positionDtos) ;
+	
+
+	/**
+	 * Die Zwischensummenpositionen f&uuml;r eine erneute Berechnung vorbereiten.
+	 * 
+	 * @param positionDtos
+	 */
+	Set<Integer> prepareIntZwsPositions(BelegpositionVerkaufDto[] positionDtos) ;	
+	
+	BelegpositionVerkaufDto berechneBelegpositionVerkauf(
+			BigDecimal zwsRabatt, 
+			BelegpositionVerkaufDto belegpositionVerkaufDto, BelegVerkaufDto belegVerkaufDto) ;
+
+	BelegpositionVerkaufDto berechneBelegpositionVerkauf(
+			BelegpositionVerkaufDto belegpositionVerkaufDto,
+			BelegVerkaufDto belegVerkaufDto, BelegpositionVerkaufDto[] allePositionenDto, Set<Integer> modifiedPositions) ; 
 }

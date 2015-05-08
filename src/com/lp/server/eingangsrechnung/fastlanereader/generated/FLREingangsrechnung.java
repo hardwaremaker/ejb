@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,6 +32,7 @@
  ******************************************************************************/
 package com.lp.server.eingangsrechnung.fastlanereader.generated;
 
+import com.lp.server.bestellung.fastlanereader.generated.FLRBestellung;
 import com.lp.server.partner.fastlanereader.generated.FLRLieferant;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -109,6 +110,15 @@ public class FLREingangsrechnung implements Serializable {
     private Integer personal_i_id_wiederholenderledigt;
 
     /** nullable persistent field */
+    private Short b_igerwerb;
+
+    /** nullable persistent field */
+    private Short b_reversecharge;
+
+    /** nullable persistent field */
+    private FLRBestellung flrbestellung;
+
+    /** nullable persistent field */
     private FLRLieferant flrlieferant;
 
     /** nullable persistent field */
@@ -118,7 +128,7 @@ public class FLREingangsrechnung implements Serializable {
     private com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungtextsuche flreingangsrechnungtextsuche;
 
     /** full constructor */
-    public FLREingangsrechnung(String eingangsrechnungart_c_nr, String c_nr, String mandant_c_nr, Integer i_geschaeftsjahr, Integer eingangsrechnung_i_id_nachfolger, Date t_belegdatum, Date t_freigabedatum, BigDecimal n_betragfw, BigDecimal n_betrag, BigDecimal n_ustbetragfw, BigDecimal n_ustbetrag, String status_c_nr, String waehrung_c_nr, String auftragwiederholungsintervall_c_nr, String c_text, String c_lieferantenrechnungsnummer, Date t_fibuuebernahme, Date t_gedruckt, Date t_wiederholenderledigt, Date t_zollimportpapier, Integer personal_i_id_wiederholenderledigt, FLRLieferant flrlieferant, com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnung flreingangsrechnung_nachfolger, com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungtextsuche flreingangsrechnungtextsuche) {
+    public FLREingangsrechnung(String eingangsrechnungart_c_nr, String c_nr, String mandant_c_nr, Integer i_geschaeftsjahr, Integer eingangsrechnung_i_id_nachfolger, Date t_belegdatum, Date t_freigabedatum, BigDecimal n_betragfw, BigDecimal n_betrag, BigDecimal n_ustbetragfw, BigDecimal n_ustbetrag, String status_c_nr, String waehrung_c_nr, String auftragwiederholungsintervall_c_nr, String c_text, String c_lieferantenrechnungsnummer, Date t_fibuuebernahme, Date t_gedruckt, Date t_wiederholenderledigt, Date t_zollimportpapier, Integer personal_i_id_wiederholenderledigt, Short b_igerwerb, Short b_reversecharge, FLRBestellung flrbestellung, FLRLieferant flrlieferant, com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnung flreingangsrechnung_nachfolger, com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungtextsuche flreingangsrechnungtextsuche) {
         this.eingangsrechnungart_c_nr = eingangsrechnungart_c_nr;
         this.c_nr = c_nr;
         this.mandant_c_nr = mandant_c_nr;
@@ -140,6 +150,9 @@ public class FLREingangsrechnung implements Serializable {
         this.t_wiederholenderledigt = t_wiederholenderledigt;
         this.t_zollimportpapier = t_zollimportpapier;
         this.personal_i_id_wiederholenderledigt = personal_i_id_wiederholenderledigt;
+        this.b_igerwerb = b_igerwerb;
+        this.b_reversecharge = b_reversecharge;
+        this.flrbestellung = flrbestellung;
         this.flrlieferant = flrlieferant;
         this.flreingangsrechnung_nachfolger = flreingangsrechnung_nachfolger;
         this.flreingangsrechnungtextsuche = flreingangsrechnungtextsuche;
@@ -323,6 +336,30 @@ public class FLREingangsrechnung implements Serializable {
 
     public void setPersonal_i_id_wiederholenderledigt(Integer personal_i_id_wiederholenderledigt) {
         this.personal_i_id_wiederholenderledigt = personal_i_id_wiederholenderledigt;
+    }
+
+    public Short getB_igerwerb() {
+        return this.b_igerwerb;
+    }
+
+    public void setB_igerwerb(Short b_igerwerb) {
+        this.b_igerwerb = b_igerwerb;
+    }
+
+    public Short getB_reversecharge() {
+        return this.b_reversecharge;
+    }
+
+    public void setB_reversecharge(Short b_reversecharge) {
+        this.b_reversecharge = b_reversecharge;
+    }
+
+    public FLRBestellung getFlrbestellung() {
+        return this.flrbestellung;
+    }
+
+    public void setFlrbestellung(FLRBestellung flrbestellung) {
+        this.flrbestellung = flrbestellung;
     }
 
     public FLRLieferant getFlrlieferant() {

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -45,6 +45,7 @@ import com.lp.server.anfrage.service.ReportAnfragestatistikKriterienDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.report.JasperPrintLP;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.LPDatenSubreport;
 
 @Remote
 public interface ArtikelReportFac {
@@ -74,6 +75,7 @@ public interface ArtikelReportFac {
 	public final static String REPORT_AENDERUNGEN = "ww_aenderungen.jasper";
 	public final static String REPORT_NAECHSTE_WARTUNGEN = "ww_naechste_wartungen.jasper";
 	public final static String REPORT_KUNDENSOKOS = "ww_kundensokos.jasper";
+	public final static String REPORT_ALLERGENE = "ww_allergene.jasper";
 
 	public final static String REPORT_LAGERCOCKPIT_WELAGER_VERTEILUNGSVORSCHLAG = "ww_lagercockpit_welager_verteilungsvorschlag.jasper";
 	public final static String REPORT_LAGERCOCKPIT_MATERIAL_VERTEILUNGSVORSCHLAG = "ww_lagercockpit_material_verteilungsvorschlag.jasper";
@@ -162,4 +164,10 @@ public interface ArtikelReportFac {
 			TheClientDto theClientDto);
 
 	public JasperPrintLP printNaechsteWartungen(TheClientDto theClientDto);
+	
+	public LPDatenSubreport getSubreportAllergene(Integer artikelIId,
+			TheClientDto theClientDto);
+	public JasperPrintLP printAllergene(String artikelNrVon,
+			String artikelNrBis, TheClientDto theClientDto);
+	
 }

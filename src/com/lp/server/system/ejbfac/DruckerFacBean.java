@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -48,9 +48,12 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
+import com.lp.server.personal.ejb.Zeitabschluss;
+import com.lp.server.personal.service.ZeitabschlussDto;
 import com.lp.server.system.ejb.Reportkonf;
 import com.lp.server.system.ejb.Reportvariante;
 import com.lp.server.system.ejb.Standarddrucker;
+import com.lp.server.system.ejb.Text;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.service.DruckerFac;
 import com.lp.server.system.service.KostenstelleDto;
@@ -89,12 +92,13 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 						standarddruckerDto, theClientDto));
 				// create
 				Standarddrucker standarddrucker = new Standarddrucker(
-						standarddruckerDto.getIId(), standarddruckerDto
-								.getCPc(), standarddruckerDto.getCReportname(),
-						standarddruckerDto.getCDrucker(), theClientDto
-								.getMandant(), standarddruckerDto
-								.getBStandard(), standarddruckerDto
-								.getReportvarianteIId());
+						standarddruckerDto.getIId(),
+						standarddruckerDto.getCPc(),
+						standarddruckerDto.getCReportname(),
+						standarddruckerDto.getCDrucker(),
+						theClientDto.getMandant(),
+						standarddruckerDto.getBStandard(),
+						standarddruckerDto.getReportvarianteIId());
 				em.persist(standarddrucker);
 				em.flush();
 				setStandarddruckerFromStandarddruckerDto(standarddrucker,
@@ -108,6 +112,116 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
+	}
+
+	private String ressourceFuerReportvarianteAnlegen(
+			Integer reportvarianteIId, String bezeichnung,
+			TheClientDto theClientDto) {
+
+		String token = "hv.reportvariante" + reportvarianteIId;
+
+		Query query = em
+				.createNamedQuery("TextfindByMandantCNrLocaleCNrCToken");
+		query.setParameter(1, theClientDto.getMandant());
+		query.setParameter(2, theClientDto.getLocUiAsString());
+		query.setParameter(3, token);
+
+		Text text;
+		try {
+			text = (Text) query.getSingleResult();
+			text.setCText(bezeichnung);
+		} catch (NoResultException e) {
+			text = new Text(token, theClientDto.getMandant(),
+					theClientDto.getLocUiAsString(), bezeichnung);
+		}
+
+		em.merge(text);
+		em.flush();
+
+		getBenutzerServicesFac().reloadUebersteuertenText();
+		
+		return token;
+
+	}
+
+	public Integer createReportvariante(ReportvarianteDto reportvarianteDto,
+			TheClientDto theClientDto) {
+
+		try {
+			Query query = em
+					.createNamedQuery("ReportvarianteFindByCReportnameCReportnamevariante");
+			query.setParameter(1, reportvarianteDto.getCReportname());
+			query.setParameter(2, reportvarianteDto.getCReportnamevariante());
+
+			Reportvariante reportvariante = (Reportvariante) query
+					.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("LP_REPORTVARIANTE.UK"));
+
+		} catch (NoResultException ex) {
+
+		}
+
+
+		Integer iId = getPKGeneratorObj().getNextPrimaryKey(
+				PKConst.PK_REPORTVARIANTE);
+		reportvarianteDto.setIId(iId);
+		
+		
+		reportvarianteDto.setCRessource(ressourceFuerReportvarianteAnlegen(
+				reportvarianteDto.getIId(), reportvarianteDto.getCRessource(),
+				theClientDto));
+
+		
+		try {
+
+			// create
+			Reportvariante reportvariante = new Reportvariante(
+					reportvarianteDto.getIId(),
+					reportvarianteDto.getCRessource(),
+					reportvarianteDto.getCReportname(),
+					reportvarianteDto.getCReportnamevariante());
+			em.persist(reportvariante);
+			em.flush();
+			setReportvarianteFromReportvarianteDto(reportvariante,
+					reportvarianteDto);
+
+			return reportvarianteDto.getIId();
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
+		}
+	}
+
+	public void updateReportvariante(ReportvarianteDto reportvarianteDto,
+			TheClientDto theClientDto) {
+
+		Integer iId = reportvarianteDto.getIId();
+
+		Reportvariante zeitabschluss = em.find(Reportvariante.class, iId);
+
+		try {
+			Query query = em
+					.createNamedQuery("ReportvarianteFindByCReportnameCReportnamevariante");
+			query.setParameter(1, reportvarianteDto.getCReportname());
+			query.setParameter(2, reportvarianteDto.getCReportnamevariante());
+			Integer iIdVorhanden = ((Reportvariante) query.getSingleResult())
+					.getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"LP_REPORTVARIANTE.UK"));
+			}
+
+		} catch (NoResultException ex) {
+			//
+		}
+
+		reportvarianteDto.setCRessource(ressourceFuerReportvarianteAnlegen(
+				reportvarianteDto.getIId(), reportvarianteDto.getCRessource(),
+				theClientDto));
+
+		setReportvarianteFromReportvarianteDto(zeitabschluss, reportvarianteDto);
+
 	}
 
 	private void aufStandardSetzten(StandarddruckerDto standarddruckerDto) {
@@ -146,9 +260,10 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 					PKConst.PK_REPORTKONF);
 			dtos[i].setIId(iId);
 
-			Reportkonf reportkonf = new Reportkonf(dtos[i].getIId(), dtos[i]
-					.getCKomponentenname(), dtos[i].getCKomponententyp(),
-					dtos[i].getCKey(), dtos[i].getCTyp(), standarddruckerIId);
+			Reportkonf reportkonf = new Reportkonf(dtos[i].getIId(),
+					dtos[i].getCKomponentenname(),
+					dtos[i].getCKomponententyp(), dtos[i].getCKey(),
+					dtos[i].getCTyp(), standarddruckerIId);
 			em.persist(reportkonf);
 			em.flush();
 		}
@@ -208,6 +323,18 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 		// ex);
 		// }
 		catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
+		}
+	}
+
+	public void removeReportvariante(ReportvarianteDto dto,
+			TheClientDto theClientDto) {
+		try {
+			Integer iId = dto.getIId();
+			Reportvariante reportvariante = em.find(Reportvariante.class, iId);
+			em.remove(reportvariante);
+			em.flush();
+		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, ex);
 		}
 	}
@@ -415,13 +542,16 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 		Collection c = query.getResultList();
 		ReportvarianteDto[] dtos = assembleReportvarianteDtos(c);
 
-		tmArten.put(new Integer(-999), getTextRespectUISpr("lp.standard",
-				theClientDto.getMandant(), theClientDto.getLocUi()));
+		tmArten.put(
+				new Integer(-999),
+				getTextRespectUISpr("lp.standard", theClientDto.getMandant(),
+						theClientDto.getLocUi()));
 
 		for (int i = 0; i < dtos.length; i++) {
-			tmArten.put(dtos[i].getIId(), getTextRespectUISpr(dtos[i]
-					.getCRessource(), theClientDto.getMandant(), theClientDto
-					.getLocUi()));
+			tmArten.put(
+					dtos[i].getIId(),
+					getTextRespectUISpr(dtos[i].getCRessource(),
+							theClientDto.getMandant(), theClientDto.getLocUi()));
 		}
 		return tmArten;
 
@@ -453,11 +583,12 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 							standarddruckerDto.getKostenstelleIId_notInDB());
 			cSubDirectory = kstDto.getCSubdirectory();
 		}
-		cReportname = SystemServicesFacBean.getPathFromLPDir(standarddruckerDto
-				.getSModul_notInDB(),
-				standarddruckerDto.getSFilename_notInDB(), standarddruckerDto
-						.getMandantCNr(), standarddruckerDto
-						.getLocale_notInDB(), cSubDirectory, theClientDto);
+		cReportname = SystemServicesFacBean.getPathFromLPDir(
+				standarddruckerDto.getSModul_notInDB(),
+				standarddruckerDto.getSFilename_notInDB(),
+				standarddruckerDto.getMandantCNr(),
+				standarddruckerDto.getLocale_notInDB(), cSubDirectory,
+				theClientDto);
 		// in relativen Reportpfad zu Report Root Verzeichnis umwandeln
 		if (cReportname != null) {
 			cReportnameRelative = SystemServicesFacBean.getRelativePathtoLPDir(
@@ -478,6 +609,17 @@ public class DruckerFacBean extends Facade implements DruckerFac {
 				.getReportvarianteIId());
 		standarddrucker.setBStandard(standarddruckerDto.getBStandard());
 		em.merge(standarddrucker);
+		em.flush();
+	}
+
+	private void setReportvarianteFromReportvarianteDto(
+			Reportvariante reportvariante, ReportvarianteDto reportvarianteDto) {
+		reportvariante.setCReportname(reportvarianteDto.getCReportname());
+		reportvariante.setCReportnamevariante(reportvarianteDto
+				.getCReportnamevariante());
+		reportvariante.setCRessource(reportvarianteDto.getCRessource());
+
+		em.merge(reportvariante);
 		em.flush();
 	}
 

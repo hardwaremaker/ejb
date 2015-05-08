@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -33,9 +33,15 @@
 package com.lp.server.fertigung.service;
 
 import java.awt.Image;
+import java.io.Serializable;
 import java.math.BigDecimal;
 
-public class ReportLosAusgabelisteDto {
+public class ReportLosAusgabelisteDto implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public String getSSnrChnr() {
 		return sSnrChnr;
 	}
@@ -101,6 +107,14 @@ public class ReportLosAusgabelisteDto {
 	private Double dRasterstehend;
 	private BigDecimal bdAnzahlBestellt;
 	private String sKommentarStueckliste = null;
+	private String sPositionStueckliste = null;
+	public String getSPositionStueckliste() {
+		return sPositionStueckliste;
+	}
+
+	public void setSPositionStueckliste(String sPositionStueckliste) {
+		this.sPositionStueckliste = sPositionStueckliste;
+	}
 	private String sSnrChnr = null;
 	private String sKommentar = null;
 	private Image artikelbild=null;

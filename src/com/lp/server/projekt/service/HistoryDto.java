@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -47,6 +47,8 @@ public class HistoryDto implements Serializable {
 	private Integer projektIId;
 	private Integer historyartIId;
 	private String cTitel;
+	private Short  bHtml ;
+	
 	public Integer getPersonalIId() {
 		return personalIId;
 	}
@@ -102,6 +104,14 @@ public class HistoryDto implements Serializable {
 		this.projektIId = projektIId;
 	}
 
+	public Short getBHtml() {
+		return bHtml;
+	}
+	public void setBHtml(Short bHtml) {
+		this.bHtml = bHtml;
+	}
+
+	
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -122,6 +132,9 @@ public class HistoryDto implements Serializable {
 		if (!(that.projektIId == null ? this.projektIId == null
 				: that.projektIId.equals(this.projektIId)))
 			return false;
+		if (!(that.bHtml == null ? this.bHtml == null
+				: that.bHtml.equals(this.bHtml)))
+			return false;
 		return true;
 	}
 
@@ -132,6 +145,7 @@ public class HistoryDto implements Serializable {
 		result = 37 * result + this.xText.hashCode();
 		result = 37 * result + this.iId.hashCode();
 		result = 37 * result + this.projektIId.hashCode();
+		result = 37 * result + this.bHtml.hashCode() ;
 		return result;
 	}
 

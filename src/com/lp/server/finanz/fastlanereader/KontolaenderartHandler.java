@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -80,7 +80,7 @@ public class KontolaenderartHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 	private static final String FLR_KONTOLAENDERART = "flrkontolaenderart.";
-	private static final String FLR_KONTOLAENDERART_FROM_CLAUSE = " from FLRKontolaenderart flrkontolaenderart ";
+	private static final String FLR_KONTOLAENDERART_FROM_CLAUSE = " from FLRKontolaenderart as flrkontolaenderart ";
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -214,8 +214,9 @@ public class KontolaenderartHandler extends UseCaseHandler {
 							orderBy.append(", ");
 						}
 						sortAdded = true;
-						orderBy.append(FLR_KONTOLAENDERART
-								+ kriterien[i].kritName);
+//						orderBy.append(FLR_KONTOLAENDERART
+//								+ kriterien[i].kritName);
+						orderBy.append(kriterien[i].kritName);
 						orderBy.append(" ");
 						orderBy.append(kriterien[i].value);
 					}
@@ -326,16 +327,17 @@ public class KontolaenderartHandler extends UseCaseHandler {
 							getTextRespectUISpr("fb.laenderart", mandantCNr, locUI),
 							getTextRespectUISpr("lp.konto", mandantCNr, locUI),
 							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI) },
-					new int[] {QueryParameters.FLR_BREITE_S,
+					new int[] {-1,
 							QueryParameters.FLR_BREITE_L,
 							QueryParameters.FLR_BREITE_L,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST},
-					new String[] {"",
+					new String[] {
+							FinanzFac.FLR_KONTOLAENDERART_ID_COMP,
+							FinanzFac.FLR_KONTOLAENDERART_ID_COMP + "." + FinanzFac.FLR_KONTOLAENDERART_FINANZAMT_I_ID,
 							FinanzFac.FLR_KONTOLAENDERART_ID_COMP + "." + FinanzFac.FLR_KONTOLAENDERART_LAENDERART_C_NR,
-							FinanzFac.FLR_KONTOLAENDERART_FINANZAMT_I_ID,
-							FinanzFac.FLR_KONTOLAENDERART_FLRKONTOUEBERSETZT + "." + FinanzFac.FLR_KONTO_C_NR,
-							FinanzFac.FLR_KONTOLAENDERART_FLRKONTOUEBERSETZT + "." + FinanzFac.FLR_KONTO_C_BEZ }));
+							FinanzFac.FLR_KONTO_C_NR,
+							FinanzFac.FLR_KONTO_C_BEZ }));
 		}
 		return super.getTableInfo();
 	}

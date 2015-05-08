@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -50,7 +50,6 @@ import javax.persistence.Table;
 @Table(name = "PROJ_HISTORY")
 public class History implements Serializable {
 	public History() {
-		// TODO Auto-generated constructor stub
 	}
 
 	@Id
@@ -101,30 +100,35 @@ public class History implements Serializable {
 	private Projekt PROJEKT;
 
 
+	@Column(name = "B_HTML")
+	private Short bHtml ;
+
 	private static final long serialVersionUID = 1L;
 
 	public History(Integer iId,
 			Integer personalIId, 
 			Integer projektIId,
 			Timestamp tBelegdatum,
-			String xText) {
+			String xText, Short bHtml) {
 		setPersonalIId(personalIId);
 		setTBelegdatum(tBelegdatum);
 		setXText(xText);
 //		setProjektIId(projektIId);
 		setIId(iId);
+		setBHtml(bHtml) ;
 	}
 	
 	public History(Integer iId,
 			Integer personalIId, 
 			Timestamp tBelegdatum,
 			String xText,
-			Projekt projekt) {
+			Projekt projekt, Short bHtml) {
 		setPersonalIId(personalIId);
 		setTBelegdatum(tBelegdatum);
 		setXText(xText);
 		setProjekt(projekt);
 		setIId(iId);
+		setBHtml(bHtml) ;
 	}
 
 	public Integer getIId() {
@@ -191,5 +195,12 @@ public class History implements Serializable {
 		this.PROJEKT = projekt;
 	}
 
+	
+	public Short getBHtml() {
+		return bHtml;
+	}
 
+	public void setBHtml(Short bHtml) {
+		this.bHtml = bHtml;
+	}	
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -48,6 +48,7 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
+import com.lp.server.artikel.ejb.Rohs;
 import com.lp.server.artikel.ejb.Sperren;
 import com.lp.server.lieferschein.ejb.Begruendung;
 import com.lp.server.lieferschein.ejb.Lieferscheinart;
@@ -56,8 +57,10 @@ import com.lp.server.lieferschein.ejb.LieferscheinartsprPK;
 import com.lp.server.lieferschein.ejb.Lieferscheinpositionart;
 import com.lp.server.lieferschein.ejb.Lieferscheinstatus;
 import com.lp.server.lieferschein.ejb.Lieferscheintext;
+import com.lp.server.lieferschein.ejb.Verkettet;
 import com.lp.server.lieferschein.service.BegruendungDto;
 import com.lp.server.lieferschein.service.BegruendungDtoAssembler;
+import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.lieferschein.service.LieferscheinServiceFac;
 import com.lp.server.lieferschein.service.LieferscheinartDto;
 import com.lp.server.lieferschein.service.LieferscheinartDtoAssembler;
@@ -69,7 +72,10 @@ import com.lp.server.lieferschein.service.LieferscheinstatusDto;
 import com.lp.server.lieferschein.service.LieferscheinstatusDtoAssembler;
 import com.lp.server.lieferschein.service.LieferscheintextDto;
 import com.lp.server.lieferschein.service.LieferscheintextDtoAssembler;
+import com.lp.server.lieferschein.service.VerkettetDto;
+import com.lp.server.lieferschein.service.VerkettetDtoAssembler;
 import com.lp.server.system.pkgenerator.PKConst;
+import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.MediaFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
@@ -534,6 +540,64 @@ public class LieferscheinServiceFacBean extends Facade implements
 
 	}
 
+	public Integer createVerkettet(VerkettetDto dto) {
+
+		try {
+
+			try {
+				Query query = em
+						.createNamedQuery("VerkettetfindByLieferscheinIIdLieferscheinIIdVerkettet");
+				query.setParameter(1, dto.getLieferscheinIId());
+				query.setParameter(2, dto.getLieferscheinIIdVerkettet());
+				// @todo getSingleResult oder getResultList ?
+				Verkettet doppelt = (Verkettet) query.getSingleResult();
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"LS_VERKETTET.UK"));
+			} catch (NoResultException ex1) {
+				// nothing here
+			}
+
+			// Bin ich schon verkettet
+			try {
+				Query query = em
+						.createNamedQuery("VerkettetfindByLieferscheinIIdVerkettet");
+				query.setParameter(1, dto.getLieferscheinIIdVerkettet());
+				// @todo getSingleResult oder getResultList ?
+				Verkettet doppelt = (Verkettet) query.getSingleResult();
+
+				LieferscheinDto lsDto = getLieferscheinFac()
+						.lieferscheinFindByPrimaryKey(
+								doppelt.getLieferscheinIId());
+
+				ArrayList alDaten = new ArrayList();
+				alDaten.add(lsDto.getCNr());
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_LIEFERSCHEIN_IST_BEREITS_VERKETTET,
+						alDaten, new Exception(
+								"Lieferschein ist verkettet in Lieferschein "
+										+ lsDto.getCNr()));
+
+			} catch (NoResultException ex1) {
+				// nothing here
+			}
+
+			// generieren von primary key
+			PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+			Integer pk = pkGen.getNextPrimaryKey(PKConst.PK_VERKETTET);
+			dto.setIId(pk);
+
+			Verkettet verkettet = new Verkettet(dto.getIId(),
+					dto.getLieferscheinIId(), dto.getLieferscheinIIdVerkettet());
+			em.persist(verkettet);
+			em.flush();
+			setVerkettetFromVerkettetDto(verkettet, dto);
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
+		}
+		return dto.getIId();
+	}
+
 	public Integer createBegruendung(BegruendungDto begruendungDto) {
 		Integer iId = getPKGeneratorObj().getNextPrimaryKey(
 				PKConst.PK_BEGRUENDUNG);
@@ -589,7 +653,7 @@ public class LieferscheinServiceFacBean extends Facade implements
 		} catch (EntityExistsException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
 		}
-	
+
 	}
 
 	public void removeLieferscheinstatus(String statusCNr)
@@ -622,6 +686,17 @@ public class LieferscheinServiceFacBean extends Facade implements
 		}
 	}
 
+	public void removeVerkettet(Integer iId) {
+		Verkettet toRemove = em.find(Verkettet.class, iId);
+
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+	}
+
 	public void removeLieferscheinstatus(
 			LieferscheinstatusDto lieferscheinstatusDto) throws EJBExceptionLP {
 		if (lieferscheinstatusDto != null) {
@@ -643,6 +718,28 @@ public class LieferscheinServiceFacBean extends Facade implements
 			setLieferscheinstatusFromLieferscheinstatusDto(lieferscheinstatus,
 					lieferscheinstatusDto);
 		}
+	}
+
+	public void updateVerkettet(VerkettetDto dto) {
+		Verkettet verkettet = em.find(Verkettet.class, dto.getIId());
+
+		try {
+			Query query = em
+					.createNamedQuery("VerkettetfindByLieferscheinIIdLieferscheinIIdVerkettet");
+			query.setParameter(1, dto.getLieferscheinIId());
+			query.setParameter(2, dto.getLieferscheinIIdVerkettet());
+			Integer iIdVorhanden = ((Verkettet) query.getSingleResult())
+					.getIId();
+			if (verkettet.getIId().equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"LS_VERKETTET.UK"));
+			}
+		} catch (NoResultException ex) {
+
+		}
+
+		setVerkettetFromVerkettetDto(verkettet, dto);
 	}
 
 	public void updateLieferscheinstatuss(
@@ -675,11 +772,52 @@ public class LieferscheinServiceFacBean extends Facade implements
 		return assembleBegruendungDto(begruendung);
 	}
 
+	public VerkettetDto verkettetFindByPrimaryKey(Integer iId) {
+		Verkettet verkettet = em.find(Verkettet.class, iId);
+		return VerkettetDtoAssembler.createDto(verkettet);
+	}
+
+	public VerkettetDto[] verkettetFindByLieferscheinIId(Integer lieferscheinIId) {
+		Query query = em.createNamedQuery("VerkettetfindByLieferscheinIId");
+		query.setParameter(1, lieferscheinIId);
+		return VerkettetDtoAssembler.createDtos(query.getResultList());
+	}
+
+	public VerkettetDto verkettetfindByLieferscheinIIdVerkettet(
+			Integer lieferscheinIIdVerkettet) {
+		Query query = em
+				.createNamedQuery("VerkettetfindByLieferscheinIIdVerkettet");
+		query.setParameter(1, lieferscheinIIdVerkettet);
+		return VerkettetDtoAssembler.createDto((Verkettet) query
+				.getSingleResult());
+	}
+	public VerkettetDto verkettetfindByLieferscheinIIdVerkettetOhneExc(
+			Integer lieferscheinIIdVerkettet) {
+		Query query = em
+				.createNamedQuery("VerkettetfindByLieferscheinIIdVerkettet");
+		query.setParameter(1, lieferscheinIIdVerkettet);
+		try {
+			return VerkettetDtoAssembler.createDto((Verkettet) query
+					.getSingleResult());
+		} catch (NoResultException e) {
+			return null;
+		}
+	}
+
 	private void setLieferscheinstatusFromLieferscheinstatusDto(
 			Lieferscheinstatus lieferscheinstatus,
 			LieferscheinstatusDto lieferscheinstatusDto) {
 		lieferscheinstatus.setISort(lieferscheinstatusDto.getISort());
 		em.merge(lieferscheinstatus);
+		em.flush();
+	}
+
+	private void setVerkettetFromVerkettetDto(Verkettet verkettet,
+			VerkettetDto verkettetDto) {
+		verkettet.setLieferscheinIId(verkettetDto.getLieferscheinIId());
+		verkettet.setLieferscheinIIdVerkettet(verkettetDto
+				.getLieferscheinIIdVerkettet());
+		em.merge(verkettet);
 		em.flush();
 	}
 

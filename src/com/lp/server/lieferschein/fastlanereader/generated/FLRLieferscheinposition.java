@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -137,8 +137,10 @@ public class FLRLieferscheinposition implements Serializable {
     /** persistent field */
     private Set setartikel_set;
 
-    /** full constructor */
-    public FLRLieferscheinposition(Integer i_sort, String positionsart_c_nr, Integer auftragposition_i_id, BigDecimal n_menge, String einheit_c_nr, String c_bez, String c_zbez, BigDecimal n_nettogesamtpreis, BigDecimal n_materialzuschlag, BigDecimal n_bruttogesamtpreis, BigDecimal n_nettogesamtpreisplusversteckteraufschlag, BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatt, String c_textinhalt, Integer position_i_id, Integer position_i_id_artikelset, String typ_c_nr, Short b_artikelbezeichnunguebersteuert, String c_snrchnr_mig, Integer zwsvonposition_i_id, Integer zwsbisposition_i_id, BigDecimal zwsnettosumme, FLRPositionenSichtAuftrag flrpositionensichtauftrag, FLRArtikel flrartikel, com.lp.server.lieferschein.fastlanereader.generated.FLRLieferschein flrlieferschein, FLRMediastandard flrmediastandard, FLRMwstsatz flrmwstsatz, FLRVerleih flrverleih, FLRKostentraeger flrkostentraeger, Set setartikel_set) {
+    private Integer lieferschein_i_id ;
+    
+	/** full constructor */
+    public FLRLieferscheinposition(Integer i_sort, String positionsart_c_nr, Integer auftragposition_i_id, BigDecimal n_menge, String einheit_c_nr, String c_bez, String c_zbez, BigDecimal n_nettogesamtpreis, BigDecimal n_materialzuschlag, BigDecimal n_bruttogesamtpreis, BigDecimal n_nettogesamtpreisplusversteckteraufschlag, BigDecimal n_nettogesamtpreisplusversteckteraufschlagminusrabatt, String c_textinhalt, Integer position_i_id, Integer position_i_id_artikelset, String typ_c_nr, Short b_artikelbezeichnunguebersteuert, String c_snrchnr_mig, Integer zwsvonposition_i_id, Integer zwsbisposition_i_id, BigDecimal zwsnettosumme, FLRPositionenSichtAuftrag flrpositionensichtauftrag, FLRArtikel flrartikel, com.lp.server.lieferschein.fastlanereader.generated.FLRLieferschein flrlieferschein, FLRMediastandard flrmediastandard, FLRMwstsatz flrmwstsatz, FLRVerleih flrverleih, FLRKostentraeger flrkostentraeger, Set setartikel_set, Integer lieferschein_i_id) {
         this.i_sort = i_sort;
         this.positionsart_c_nr = positionsart_c_nr;
         this.auftragposition_i_id = auftragposition_i_id;
@@ -168,6 +170,7 @@ public class FLRLieferscheinposition implements Serializable {
         this.flrverleih = flrverleih;
         this.flrkostentraeger = flrkostentraeger;
         this.setartikel_set = setartikel_set;
+        this.lieferschein_i_id = lieferschein_i_id ;
     }
 
     /** default constructor */
@@ -419,10 +422,18 @@ public class FLRLieferscheinposition implements Serializable {
         this.setartikel_set = setartikel_set;
     }
 
+    public Integer getLieferschein_i_id() {
+		return lieferschein_i_id;
+	}
+
+	public void setLieferschein_i_id(Integer lieferschein_i_id) {
+		this.lieferschein_i_id = lieferschein_i_id;
+	}
+
+    
     public String toString() {
         return new ToStringBuilder(this)
             .append("i_id", getI_id())
             .toString();
     }
-
 }

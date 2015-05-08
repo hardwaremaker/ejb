@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -63,7 +63,6 @@ import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
-import com.lp.util.Helper;
 
 /**
  * <p>
@@ -239,23 +238,8 @@ public class FinanzBuchungenDetailliertHandler extends UseCaseHandler {
 					filterAdded = true;
 
 					if (filterKriterien[i].kritName.equals("c_belegnummer")) {
-
-						// MANDANTENKENNUNG WIRD DERZEIT NICHT UNTERSTUETZT
-						try {
-							String sValue = filterKriterien[i].value;
-							sValue = sValue.replaceAll("%", "");
-
-							sValue = Helper.fitString2LengthAlignRight(sValue,
-									stellenBelegnummer, '0');
-
-							sValue = "'%" + trennzeichen + sValue + "'";
-							where.append(" buchungdetail.flrbuchung.c_belegnummer");
-							where.append(" " + filterKriterien[i].operator);
-							where.append(" " + sValue);
-						} catch (Exception ex) {
-							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
-									ex);
-						}
+						
+						where.append(buildWhereClauseRTrim("buchungdetail.flrbuchung.", filterKriterien[i]));
 					} else if (filterKriterien[i].kritName.equals("n_betrag")) {
 
 						if (filterKriterien[i].bdValue != null) {
@@ -274,14 +258,20 @@ public class FinanzBuchungenDetailliertHandler extends UseCaseHandler {
 									+ bdValue1 + " AND " + bdValue2 + " ");
 						}
 					} else {
-
-						if (filterKriterien[i].isBIgnoreCase()) {
-							where.append(" upper(buchungdetail."
-									+ filterKriterien[i].kritName + ")");
-						} else {
-							where.append(" buchungdetail."
-									+ filterKriterien[i].kritName);
+						String s = createFilterName(filterKriterien[i]);
+						if(filterKriterien[i].isBIgnoreCase()) {
+							s = " upper(" + s + ")" ;
 						}
+
+						where.append(s) ;
+						
+//						if (filterKriterien[i].isBIgnoreCase()) {
+//							where.append(" upper(buchungdetail."
+//									+ filterKriterien[i].kritName + ")");
+//						} else {
+//							where.append(" buchungdetail."
+//									+ filterKriterien[i].kritName);
+//						}
 
 						where.append(" " + filterKriterien[i].operator);
 						if (filterKriterien[i].isBIgnoreCase()) {
@@ -301,6 +291,16 @@ public class FinanzBuchungenDetailliertHandler extends UseCaseHandler {
 		return where.toString();
 	}
 
+	private String createFilterName(FilterKriterium filterKriterium) {
+		if(FinanzFac.FLR_BUCHUNGDETAIL_BELEGART.equals(filterKriterium.kritName)) {
+			return " buchungdetail.flrbuchung.flrfbbelegart.c_kbez" ;
+		}
+		if(FinanzFac.FLR_BUCHUNGDETAIL_BUCHUNGART.equals(filterKriterium.kritName)) {
+			return " buchungdetail.flrbuchung.flrbuchungsart.c_kbez" ;
+		}
+		return " buchungdetail." + filterKriterium.kritName ; 
+	}
+	
 	/**
 	 * builds the HQL (Hibernate Query Language) order by clause using the sort
 	 * criterias contained in the current query.
@@ -319,7 +319,12 @@ public class FinanzBuchungenDetailliertHandler extends UseCaseHandler {
 							orderBy.append(", ");
 						}
 						sortAdded = true;
-						orderBy.append("buchungdetail." + kriterien[i].kritName);
+						orderBy.append("buchungdetail.");
+
+						if (kriterien[i].kritName.equals("c_belegnummer")) {
+							orderBy.append("flrbuchung.");
+						}
+						orderBy.append(kriterien[i].kritName);
 						orderBy.append(" ");
 						orderBy.append(kriterien[i].value);
 					}
@@ -359,7 +364,10 @@ public class FinanzBuchungenDetailliertHandler extends UseCaseHandler {
 	private String getFromClause() {
 		// return "from FLRFinanzBuchungDetail buchungdetail ";
 		return "from FLRFinanzBuchungDetail buchungdetail "
-				+ "LEFT OUTER JOIN buchungdetail.flrgegenkonto AS gk ";
+				+ "LEFT OUTER JOIN buchungdetail.flrgegenkonto AS gk "
+				+ "LEFT OUTER JOIN buchungdetail.flrbuchung AS bu "
+				+ "LEFT OUTER JOIN bu.flrbuchungsart AS buchart " 
+				+ "LEFT OUTER JOIN bu.flrfbbelegart AS belegart" ;
 	}
 
 	/**

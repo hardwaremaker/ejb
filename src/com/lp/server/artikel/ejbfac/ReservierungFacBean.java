@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -116,8 +116,16 @@ public class ReservierungFacBean extends LPReport implements ReservierungFac,
 	 * @return BigDecimal
 	 * @throws EJBExceptionLP
 	 */
+
 	public BigDecimal getAnzahlReservierungen(Integer artikelIId,
 			TheClientDto theClientDto) throws EJBExceptionLP {
+		return getAnzahlReservierungen(artikelIId, null,
+				theClientDto.getMandant());
+	}
+
+	public BigDecimal getAnzahlReservierungen(Integer artikelIId,
+			java.sql.Timestamp tStichtag, String mandantCNr)
+			throws EJBExceptionLP {
 		if (artikelIId == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
 					new Exception("artikelIId == null"));
@@ -136,6 +144,13 @@ public class ReservierungFacBean extends LPReport implements ReservierungFac,
 			while (iter.hasNext()) {
 				Artikelreservierung artikelreservierungenTemp = (Artikelreservierung) iter
 						.next();
+				
+				
+				if(tStichtag!=null){
+					if( tStichtag.getTime()<=artikelreservierungenTemp.getTLiefertermin().getTime()){
+						continue;
+					}
+				}
 				// pruefen, ob sich die Reservierung auf "meinen" Mandanten
 				// bezieht.
 				if (artikelreservierungenTemp.getCBelegartnr().equals(
@@ -149,8 +164,7 @@ public class ReservierungFacBean extends LPReport implements ReservierungFac,
 					if (abPosDto != null) {
 						Integer auftragIId = abPosDto.getBelegIId();
 						if (getAuftragFac().auftragFindByPrimaryKey(auftragIId)
-								.getMandantCNr()
-								.equals(theClientDto.getMandant())) {
+								.getMandantCNr().equals(mandantCNr)) {
 							// Menge addieren
 							if (artikelreservierungenTemp.getNMenge() != null) {
 								bdReserviert = bdReserviert
@@ -170,8 +184,7 @@ public class ReservierungFacBean extends LPReport implements ReservierungFac,
 					if (losPosDto != null) {
 						Integer losIId = losPosDto.getLosIId();
 						if (getFertigungFac().losFindByPrimaryKey(losIId)
-								.getMandantCNr()
-								.equals(theClientDto.getMandant())) {
+								.getMandantCNr().equals(mandantCNr)) {
 							// Menge addieren
 							if (artikelreservierungenTemp.getNMenge() != null) {
 								bdReserviert = bdReserviert
@@ -600,12 +613,13 @@ public class ReservierungFacBean extends LPReport implements ReservierungFac,
 				resDto.setCBelegartnr(LocaleFac.BELEGART_LOS);
 				resDto.setIBelegartpositionid(lossollmat.getI_id());
 				resDto.setNMenge(lossollmat.getN_menge());
-				
+
 				// PJ17994
-				resDto.setTLiefertermin(Helper.addiereTageZuTimestamp(new java.sql.Timestamp(lossollmat
-						.getFlrlos().getT_produktionsbeginn().getTime()),
-								lossollmat.getI_beginnterminoffset()));
-				
+				resDto.setTLiefertermin(Helper.addiereTageZuTimestamp(
+						new java.sql.Timestamp(lossollmat.getFlrlos()
+								.getT_produktionsbeginn().getTime()),
+						lossollmat.getI_beginnterminoffset()));
+
 				// anlegen
 				createArtikelreservierung(resDto);
 				myLogger.warn(theClientDto.getIDUser(),
@@ -732,7 +746,8 @@ public class ReservierungFacBean extends LPReport implements ReservierungFac,
 	 *            Date
 	 * @param dBis
 	 *            Date
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param theClientDto
+	 *            der aktuelle Benutzer
 	 * @return JasperPrintLP
 	 * @throws EJBExceptionLP
 	 */

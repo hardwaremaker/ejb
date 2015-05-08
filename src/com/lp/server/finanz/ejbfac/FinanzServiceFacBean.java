@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -37,13 +37,15 @@ import java.rmi.RemoteException;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import javax.ejb.FinderException;
@@ -61,11 +63,13 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.jboss.annotation.ejb.TransactionTimeout;
 
+import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.eingangsrechnung.ejb.Eingangsrechnung;
 import com.lp.server.eingangsrechnung.ejb.Eingangsrechnungzahlung;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungzahlungDto;
+import com.lp.server.finanz.ejb.Bankverbindung;
 import com.lp.server.finanz.ejb.Buchung;
 import com.lp.server.finanz.ejb.Buchungdetail;
 import com.lp.server.finanz.ejb.Buchungsart;
@@ -153,12 +157,15 @@ import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.LandDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.MwstsatzbezDto;
 import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.system.service.WechselkursDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.HelperServer;
+import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.service.DatenspracheIf;
 import com.lp.util.EJBExceptionLP;
@@ -194,7 +201,7 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 			query.setParameter(1, dto.getIMahnstufe());
 			query.setParameter(2, dto.getMandantCNr());
 			query.setParameter(3, dto.getWaehrungCNr());
-			Mahnspesen doppelt = (Mahnspesen) query.getSingleResult();
+			query.getSingleResult();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 					new Exception("FB_MAHNSPESEN.UK"));
 		} catch (NoResultException ex1) {
@@ -259,43 +266,17 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 		setMahnspesenFromMahnspesenDto(ialle, dto);
 	}
 
-	private void setKontotypsprFromKontotypsprDto(Kontotypspr kontotypspr,
-			KontotypsprDto kontotypsprDto) {
-		kontotypspr.setCBez(kontotypsprDto.getCBez());
-		em.merge(kontotypspr);
-		em.flush();
-	}
-
 	private KontotypsprDto assembleKontotypsprDto(Kontotypspr kontotypspr) {
 		return KontotypsprDtoAssembler.createDto(kontotypspr);
 	}
 
-	private KontotypsprDto[] assembleKontotypsprDtos(Collection<?> kontotypsprs) {
-		List<KontotypsprDto> list = new ArrayList<KontotypsprDto>();
-		if (kontotypsprs != null) {
-			Iterator<?> iterator = kontotypsprs.iterator();
-			while (iterator.hasNext()) {
-				Kontotypspr kontotypspr = (Kontotypspr) iterator.next();
-				list.add(assembleKontotypsprDto(kontotypspr));
-			}
-		}
-		KontotypsprDto[] returnArray = new KontotypsprDto[list.size()];
-		return (KontotypsprDto[]) list.toArray(returnArray);
-	}
-
 	public KontotypDto kontotypFindByPrimaryKey(String cNr)
 			throws EJBExceptionLP {
-		// try {
 		Kontotyp kontotyp = em.find(Kontotyp.class, cNr);
 		if (kontotyp == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, "");
 		}
 		return assembleKontotypDto(kontotyp);
-
-		// }
-		// catch (FinderException e) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
-		// }
 	}
 
 	private void setKontotypFromKontotypDto(Kontotyp kontotyp,
@@ -308,38 +289,54 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 		return KontotypDtoAssembler.createDto(kontotyp);
 	}
 
-	private KontotypDto[] assembleKontotypDtos(Collection<?> kontotyps) {
-		List<KontotypDto> list = new ArrayList<KontotypDto>();
-		if (kontotyps != null) {
-			Iterator<?> iterator = kontotyps.iterator();
-			while (iterator.hasNext()) {
-				Kontotyp kontotyp = (Kontotyp) iterator.next();
-				list.add(assembleKontotypDto(kontotyp));
-			}
-		}
-		KontotypDto[] returnArray = new KontotypDto[list.size()];
-		return (KontotypDto[]) list.toArray(returnArray);
-	}
+	// public UvaartDto uvaartFindByPrimaryKey(Integer iId,
+	// TheClientDto theClientDto) throws EJBExceptionLP {
+	// Uvaart uvaart = em.find(Uvaart.class, iId);
+	// if (uvaart == null) {
+	// throw new EJBExceptionLP(
+	// EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+	// }
+	// UvaartDto uvaartDto = assembleUvaartDto(uvaart);
+	//
+	// uvaartDto.setUvaartsprDto(new UvaartsprDto());
+	// uvaartDto.getUvaartsprDto().setUvaartIId(iId);
+	// uvaartDto.getUvaartsprDto().setLocaleCNr(
+	// theClientDto.getLocUiAsString());
+	// uvaartDto.getUvaartsprDto().setCBez(
+	// uebersetzeUvaart(iId, theClientDto.getLocUi()));
+	// // uvaartDto.getUvaartsprDto().setCBez(getUvaartSprachBezeichnung(iId,
+	// theClientDto.getLocUi()));
+	// if (uvaartDto.getUvaartsprDto().getCBez() == null){
+	// uvaartDto.getUvaartsprDto().setCBez(uvaart.getCNr());
+	// }
+	// return uvaartDto;
+	// }
+
+	// *** wp ***
+	// ***
 
 	public UvaartDto uvaartFindByPrimaryKey(Integer iId,
 			TheClientDto theClientDto) throws EJBExceptionLP {
+
 		Uvaart uvaart = em.find(Uvaart.class, iId);
+
 		if (uvaart == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
+
 		UvaartDto uvaartDto = assembleUvaartDto(uvaart);
 
-		uvaartDto.setUvaartsprDto(new UvaartsprDto());
-		uvaartDto.getUvaartsprDto().setUvaartIId(iId);
-		uvaartDto.getUvaartsprDto().setLocaleCNr(
-				theClientDto.getLocUiAsString());
-		uvaartDto.getUvaartsprDto().setCBez(
-				uebersetzeUvaart(iId, theClientDto.getLocUi()));
-		if (uvaartDto.getUvaartsprDto().getCBez() == null)
-			uvaartDto.getUvaartsprDto().setCBez(uvaart.getCNr());
+		UvaartsprDto sprDto = getUvaartsprDto(iId, theClientDto.getLocUi(),
+				theClientDto.getLocMandant());
+
+		uvaartDto.setUvaartsprDto(sprDto);
+
 		return uvaartDto;
 	}
+
+	// ***
+	// *** wp ***
 
 	private void setUvaartFromUvaartDto(Uvaart uvaart, UvaartDto uvaartDto) {
 		uvaart.setCNr(uvaartDto.getCNr());
@@ -391,19 +388,6 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 
 	private UvaartsprDto assembleUvaartsprDto(Uvaartspr uvaartspr) {
 		return UvaartsprDtoAssembler.createDto(uvaartspr);
-	}
-
-	private UvaartsprDto[] assembleUvaartsprDtos(Collection<?> uvaartsprs) {
-		List<UvaartsprDto> list = new ArrayList<UvaartsprDto>();
-		if (uvaartsprs != null) {
-			Iterator<?> iterator = uvaartsprs.iterator();
-			while (iterator.hasNext()) {
-				Uvaartspr uvaartspr = (Uvaartspr) iterator.next();
-				list.add(assembleUvaartsprDto(uvaartspr));
-			}
-		}
-		UvaartsprDto[] returnArray = new UvaartsprDto[list.size()];
-		return (UvaartsprDto[]) list.toArray(returnArray);
 	}
 
 	public KontoartsprDto kontoartsprFindByPrimaryKey() throws EJBExceptionLP {
@@ -471,42 +455,58 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 		return KontoartsprDtoAssembler.createDto(kontoartspr);
 	}
 
-	private KontoartsprDto[] assembleKontoartsprDtos(Collection<?> kontoartsprs) {
-		List<KontoartsprDto> list = new ArrayList<KontoartsprDto>();
-		if (kontoartsprs != null) {
-			Iterator<?> iterator = kontoartsprs.iterator();
-			while (iterator.hasNext()) {
-				Kontoartspr kontoartspr = (Kontoartspr) iterator.next();
-				list.add(assembleKontoartsprDto(kontoartspr));
-			}
-		}
-		KontoartsprDto[] returnArray = new KontoartsprDto[list.size()];
-		return (KontoartsprDto[]) list.toArray(returnArray);
-	}
+	// public KontoartDto kontoartFindByPrimaryKey(String cNr,
+	// TheClientDto theClientDto) throws EJBExceptionLP {
+	// // try {
+	// Kontoart kontoart = em.find(Kontoart.class, cNr);
+	// if (kontoart == null) {
+	// throw new EJBExceptionLP(
+	// EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+	// }
+	// KontoartDto kontoartDto = assembleKontoartDto(kontoart);
+	//
+	// kontoartDto.setKontoartsprDto(new KontoartsprDto());
+	// kontoartDto.getKontoartsprDto().setKontoartCNr(cNr);
+	// kontoartDto.getKontoartsprDto().setLocaleCNr(
+	// theClientDto.getLocUiAsString());
+	// kontoartDto.getKontoartsprDto().setCBez(
+	// uebersetzeKontoart(cNr, theClientDto.getLocUi()));
+	// //
+	// kontoartDto.getKontoartsprDto().setCBez(getKontoartSprachBezeichnung(cNr,
+	// theClientDto.getLocUi()));
+	// return kontoartDto;
+	// // }
+	// // catch (FinderException e) {
+	// // throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+	// // e);
+	// // }
+	// }
+
+	// *** wp ***
+	// ***
 
 	public KontoartDto kontoartFindByPrimaryKey(String cNr,
 			TheClientDto theClientDto) throws EJBExceptionLP {
-		// try {
+
 		Kontoart kontoart = em.find(Kontoart.class, cNr);
+
 		if (kontoart == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
+
 		KontoartDto kontoartDto = assembleKontoartDto(kontoart);
 
-		kontoartDto.setKontoartsprDto(new KontoartsprDto());
-		kontoartDto.getKontoartsprDto().setKontoartCNr(cNr);
-		kontoartDto.getKontoartsprDto().setLocaleCNr(
-				theClientDto.getLocUiAsString());
-		kontoartDto.getKontoartsprDto().setCBez(
-				uebersetzeKontoart(cNr, theClientDto.getLocUi()));
+		KontoartsprDto sprDto = getKontoartSprDto(cNr, theClientDto.getLocUi(),
+				theClientDto.getLocMandant());
+
+		kontoartDto.setKontoartsprDto(sprDto);
+
 		return kontoartDto;
-		// }
-		// catch (FinderException e) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// e);
-		// }
 	}
+
+	// ***
+	// *** wp ***
 
 	public KontoartDto[] kontoartFindAll() throws EJBExceptionLP {
 		// try {
@@ -546,94 +546,186 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 		return (KontoartDto[]) list.toArray(returnArray);
 	}
 
-	/**
-	 * Uebersetzt eine UVA Art optimal. 1.Versuch: mit locale1 2.Versuch: mit
-	 * locale2 3.Versuch: cNr
-	 * 
-	 * @param iId der UVA Art
-	 * @param locale1
-	 *            erste zu versuchende Locale
-	 * @param locale2
-	 *            zweite zu versuchende Locale
-	 * @return String
-	 */
-	public String uebersetzeUvaartOptimal(Integer iId, Locale locale1,
-			Locale locale2) {
-		String tempCnr = uebersetzeUvaart(iId, locale1);
-		if (tempCnr == null) {
-			tempCnr = uebersetzeUvaart(iId, locale2);
-		}
-		return tempCnr;
+	// *** wp ***
+	// ***
+
+	// /**
+	// * Uebersetzt eine UVA Art optimal. 1.Versuch: mit locale1 2.Versuch: mit
+	// * locale2 3.Versuch: cNr
+	// *
+	// * @param iId der UVA Art
+	// * @param locale1
+	// * erste zu versuchende Locale
+	// * @param locale2
+	// * zweite zu versuchende Locale
+	// * @return String
+	// */
+	// public String uebersetzeUvaartOptimal(Integer iId, Locale locale1,
+	// Locale locale2) {
+	// String tempCnr = uebersetzeUvaart(iId, locale1);
+	// if (tempCnr == null) {
+	// tempCnr = uebersetzeUvaart(iId, locale2);
+	// }
+	// return tempCnr;
+	// }
+	//
+	// /**
+	// * Uebersetzt eine UVA Art in die Sprache des uebergebenen Locales.
+	// *
+	// * @param iId der UVA Art
+	// * @param locale
+	// * zu versuchende Locale
+	// * @throws FinderException
+	// * @return String
+	// */
+	// private String uebersetzeUvaart(Integer iId, Locale locale) {
+	// String cLocale = Helper.locale2String(locale);
+	// // try {
+	// Uvaartspr uvaartspr = em.find(Uvaartspr.class, new UvaartsprPK(iId,
+	// cLocale));
+	// if (uvaartspr == null) {
+	// Uvaart uvaart = em.find(Uvaart.class, iId);
+	// return uvaart.getCNr();
+	// }
+	// return uvaartspr.getCBez();
+	// }
+
+	public String uebersetzeUvaartOptimal(Integer iId, Locale localeUi,
+			Locale localeMandant) {
+		Validator.notNull(localeUi, "localeUi");
+		Validator.notNull(localeMandant, "localeMandant");
+
+		UvaartsprDto uvaartsprDto = getUvaartsprDto(iId, localeUi,
+				localeMandant);
+		return uvaartsprDto.getCBez();
 	}
 
-	/**
-	 * Uebersetzt eine UVA Art in die Sprache des uebergebenen Locales.
-	 * 
-	 * @param iId der UVA Art
-	 * @param locale
-	 *            zu versuchende Locale 
-	 * @throws FinderException
-	 * @return String
-	 */
-	private String uebersetzeUvaart(Integer iId, Locale locale) {
-		String cLocale = Helper.locale2String(locale);
-		// try {
-		Uvaartspr uvaartspr = em.find(Uvaartspr.class, new UvaartsprPK(iId,
-				cLocale));
+	private UvaartsprDto getUvaartsprDto(Integer iId, Locale localeUi,
+			Locale localeMandant) {
+
+		// Uvaartspr uvaartspr = em.find(Uvaartspr.class, new UvaartsprPK(iId,
+		// Helper.locale2String(localeUi)));
+
+		Uvaartspr uvaartspr = getUvaartspr(iId, localeUi);
+
 		if (uvaartspr == null) {
+			uvaartspr = getUvaartspr(iId, localeMandant);
+		}
+		if (uvaartspr == null) {
+			uvaartspr = new Uvaartspr(iId, Helper.locale2String(localeUi));
 			Uvaart uvaart = em.find(Uvaart.class, iId);
-			return uvaart.getCNr();
+			uvaartspr.setCBez(uvaart.getCNr());
 		}
-		return uvaartspr.getCBez();
+
+		return assembleUvaartsprDto(uvaartspr);
+
 	}
 
-	/**
-	 * Uebersetzt eine Kontoart optimal. 1.Versuch: mit locale1 2.Versuch: mit
-	 * locale2 3.Versuch: cNr
-	 * 
-	 * @param cNr
-	 *            String
-	 * @param locale1
-	 *            Locale
-	 * @param locale2
-	 *            Locale
-	 * @return String
-	 */
-	public String uebersetzeKontoartOptimal(String cNr, Locale locale1,
-			Locale locale2) {
-
-		String tempCnr = uebersetzeKontoart(cNr, locale1);
-		if (tempCnr == null || tempCnr.equals(cNr)) {
-			tempCnr = uebersetzeKontoart(cNr, locale2);
-		}
-		return tempCnr == null ? cNr : tempCnr;
+	private Uvaartspr getUvaartspr(Integer iId, Locale locale) {
+		Uvaartspr uvaartspr = em.find(Uvaartspr.class, new UvaartsprPK(iId,
+				Helper.locale2String(locale)));
+		return uvaartspr;
 	}
 
-	/**
-	 * Uebersetzt eine Kontoart in die Sprache des uebergebenen Locales.
-	 * 
-	 * @param cNr
-	 *            String
-	 * @param locale
-	 *            Locale
-	 * @throws FinderException
-	 * @return String
-	 */
-	private String uebersetzeKontoart(String cNr, Locale locale) {
-		String cLocale = Helper.locale2String(locale);
-		// try {
-		Kontoartspr kontoartspr = em.find(Kontoartspr.class, new KontoartsprPK(
-				cNr, cLocale));
-		if (kontoartspr == null) {
-			return cNr;
-		}
-		return kontoartspr.getCBez();
-
+	{
+		// /**
+		// * Uebersetzt eine Kontoart optimal. 1.Versuch: mit locale1 2.Versuch:
+		// mit
+		// * locale2 3.Versuch: cNr
+		// *
+		// * @param cNr
+		// * String
+		// * @param locale1
+		// * Locale
+		// * @param locale2
+		// * Locale
+		// * @return String
+		// */
+		// public String uebersetzeKontoartOptimal(String cNr, Locale locale1,
+		// Locale locale2) {
+		//
+		// String tempCnr = uebersetzeKontoart(cNr, locale1);
+		// if (tempCnr == null || tempCnr.equals(cNr)) {
+		// tempCnr = uebersetzeKontoart(cNr, locale2);
 		// }
-		// catch (FinderException ex1) {
+		// return tempCnr == null ? cNr : tempCnr;
+		// }
+
+		// /**
+		// * Uebersetzt eine Kontoart in die Sprache des uebergebenen Locales.
+		// *
+		// * @param cNr
+		// * String
+		// * @param locale
+		// * Locale
+		// * @throws FinderException
+		// * @return String
+		// */
+		// private String uebersetzeKontoart(String cNr, Locale locale) {
+		// String cLocale = Helper.locale2String(locale);
+		// // try {
+		// Kontoartspr kontoartspr = em.find(Kontoartspr.class, new
+		// KontoartsprPK(
+		// cNr, cLocale));
+		// if (kontoartspr == null) {
 		// return cNr;
 		// }
+		// return kontoartspr.getCBez();
+		//
+		// // }
+		// // catch (FinderException ex1) {
+		// // return cNr;
+		// // }
+		// }
+
+		// private String uebersetzeKontoart(String cNr, Locale locale) {
+		//
+		// Kontoartspr kontoartspr = em.find(Kontoartspr.class, new
+		// KontoartsprPK(cNr, Helper.locale2String(locale)));
+		// return kontoartspr == null ? cNr : kontoartspr.getCBez();
+		//
+		// }
 	}
+
+	public String uebersetzeKontoartOptimal(String cNr, Locale localeUi,
+			Locale localeMandant) {
+		Validator.notNull(localeUi, "localeUi");
+		Validator.notNull(localeMandant, "localeMandant");
+
+		KontoartsprDto kontoartsprDto = getKontoartSprDto(cNr, localeUi,
+				localeMandant);
+		return kontoartsprDto.getCBez();
+	}
+
+	private KontoartsprDto getKontoartSprDto(String cNr, Locale localeUi,
+			Locale localeMandant) {
+
+		// Kontoartspr kontoartspr = em.find(Kontoartspr.class, new
+		// KontoartsprPK(cNr, Helper.locale2String(localeUi)));
+		Kontoartspr kontoartspr = getKontoartspr(cNr, localeUi);
+
+		if (kontoartspr == null) {
+			// kontoartspr = em.find(Kontoartspr.class, new KontoartsprPK(cNr,
+			// Helper.locale2String(localeMandant)));
+			kontoartspr = getKontoartspr(cNr, localeMandant);
+		}
+		if (kontoartspr == null) {
+			kontoartspr = new Kontoartspr(cNr, Helper.locale2String(localeUi));
+			kontoartspr.setCBez(cNr);
+		}
+
+		return assembleKontoartsprDto(kontoartspr);
+
+	}
+
+	private Kontoartspr getKontoartspr(String cNr, Locale locale) {
+		Kontoartspr kontoartspr = em.find(Kontoartspr.class, new KontoartsprPK(
+				cNr, Helper.locale2String(locale)));
+		return kontoartspr;
+	}
+
+	// ***
+	// *** wp ***
 
 	/**
 	 * Uebersetzt einen Kontotyp optimal. 1.Versuch: mit locale1 2.Versuch: mit
@@ -723,7 +815,7 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 			query.setParameter(1, steuerkategorieDto.getCNr());
 			query.setParameter(2, steuerkategorieDto.getFinanzamtIId());
 			query.setParameter(3, theClientDto.getMandant());
-			Steuerkategorie doppelt = (Steuerkategorie) query.getSingleResult();
+			query.getSingleResult();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 					new Exception("FB_STEUERKATEGORIE.UK"));
 		} catch (NoResultException ex) {
@@ -870,8 +962,7 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 			query.setParameter(1,
 					steuerkategoriekontoDto.getSteuerkategorieIId());
 			query.setParameter(2, steuerkategoriekontoDto.getMwstsatzbezIId());
-			Steuerkategoriekonto doppelt = (Steuerkategoriekonto) query
-					.getSingleResult();
+			query.getSingleResult();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
 					new Exception("FB_STEUERKATEGORIEKONTO.UK"));
 		} catch (NoResultException ex) {
@@ -941,7 +1032,6 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 		return steuerkategoriekontoDto;
 	}
 
-	@SuppressWarnings("unchecked")
 	public SteuerkategoriekontoDto[] steuerkategoriekontoFindAll(
 			Integer steuerkategorieIId) throws EJBExceptionLP {
 
@@ -951,13 +1041,13 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 				.createNamedQuery("SteuerkategoriekontoBySteuerkategorieIId");
 		query.setParameter(1, steuerkategorieIId);
 		// Object test = query.getSingleResult();
-		Collection<List> cl = query.getResultList();
+		Collection<?> cl = query.getResultList();
 		steuerkategoriekontoDtoO = assembleSteuerkategoriekontoDtos(cl);
 		return steuerkategoriekontoDtoO;
 	}
 
 	private SteuerkategoriekontoDto[] assembleSteuerkategoriekontoDtos(
-			Collection<List> steuerkategoriekontos) {
+			Collection<?> steuerkategoriekontos) {
 		return SteuerkategoriekontoDtoAssembler
 				.createDtos(steuerkategoriekontos);
 	}
@@ -996,7 +1086,8 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 					.mwstsatzbezFindAllByMandant(theClientDto.getMandant(),
 							theClientDto);
 			for (Integer mwstIid : mwstAll.keySet()) {
-				if (mwstIid.intValue() == steuerkategoriekontoDto.getMwstsatzbezIId())
+				if (mwstIid.intValue() == steuerkategoriekontoDto
+						.getMwstsatzbezIId())
 					continue;
 				HvTypedQuery<Steuerkategoriekonto> query;
 				if (steuerkategoriekontoDto.getKontoIIdEk() != null) {
@@ -1009,7 +1100,8 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 					if (result.size() > 0) {
 						throwExceptionFinanzKontoInAndererMwstVerwendet(
 								steuerkategoriekontoDto,
-								SteuerkategoriekontoDtoAssembler.createDto(result.get(0)),
+								SteuerkategoriekontoDtoAssembler
+										.createDto(result.get(0)),
 								steuerkategoriekontoDto.getKontoIIdEk(),
 								theClientDto);
 					}
@@ -1024,7 +1116,8 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 					if (result.size() > 0) {
 						throwExceptionFinanzKontoInAndererMwstVerwendet(
 								steuerkategoriekontoDto,
-								SteuerkategoriekontoDtoAssembler.createDto(result.get(0)),
+								SteuerkategoriekontoDtoAssembler
+										.createDto(result.get(0)),
 								steuerkategoriekontoDto.getKontoIIdVk(),
 								theClientDto);
 					}
@@ -1038,21 +1131,26 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 				steuerkategoriekonto, steuerkategoriekontoDto);
 	}
 
-	private void throwExceptionFinanzKontoInAndererMwstVerwendet(SteuerkategoriekontoDto kat1,
-					SteuerkategoriekontoDto kat2, Integer kontoIId,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		SteuerkategorieDto stk1 = steuerkategorieFindByPrimaryKey(kat1.getSteuerkategorieIId(), theClientDto);
-		SteuerkategorieDto stk2 = steuerkategorieFindByPrimaryKey(kat2.getSteuerkategorieIId(), theClientDto);
-		MwstsatzbezDto mwst1 = getMandantFac().mwstsatzbezFindByPrimaryKey(kat1.getMwstsatzbezIId(), theClientDto);
-		MwstsatzbezDto mwst2 = getMandantFac().mwstsatzbezFindByPrimaryKey(kat2.getMwstsatzbezIId(), theClientDto);
+	private void throwExceptionFinanzKontoInAndererMwstVerwendet(
+			SteuerkategoriekontoDto kat1, SteuerkategoriekontoDto kat2,
+			Integer kontoIId, TheClientDto theClientDto) throws EJBExceptionLP,
+			RemoteException {
+		SteuerkategorieDto stk1 = steuerkategorieFindByPrimaryKey(
+				kat1.getSteuerkategorieIId(), theClientDto);
+		SteuerkategorieDto stk2 = steuerkategorieFindByPrimaryKey(
+				kat2.getSteuerkategorieIId(), theClientDto);
+		MwstsatzbezDto mwst1 = getMandantFac().mwstsatzbezFindByPrimaryKey(
+				kat1.getMwstsatzbezIId(), theClientDto);
+		MwstsatzbezDto mwst2 = getMandantFac().mwstsatzbezFindByPrimaryKey(
+				kat2.getMwstsatzbezIId(), theClientDto);
 		KontoDto konto = getFinanzFac().kontoFindByPrimaryKey(kontoIId);
 
 		throw new EJBExceptionLP(
 				EJBExceptionLP.FEHLER_FINANZ_KONTO_IN_ANDERER_MWST_VERWENDET,
-				"FEHLER_FINANZ_KONTO_IN_ANDERER_MWST_VERWENDET",
-				konto.getCNr() + ", " + konto.getCBez(),
-				stk1.getCBez(), mwst1.getCBezeichnung(),
-				stk2.getCBez(), mwst2.getCBezeichnung());
+				"FEHLER_FINANZ_KONTO_IN_ANDERER_MWST_VERWENDET", konto.getCNr()
+						+ ", " + konto.getCBez(), stk1.getCBez(),
+				mwst1.getCBezeichnung(), stk2.getCBez(),
+				mwst2.getCBezeichnung());
 	}
 
 	public void createKontotyp(KontotypDto kontotypDto,
@@ -1217,19 +1315,6 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 		return MahntextDtoAssembler.createDto(mahntext);
 	}
 
-	private MahntextDto[] assembleMahntextDtos(Collection<?> mahntexts) {
-		List<MahntextDto> list = new ArrayList<MahntextDto>();
-		if (mahntexts != null) {
-			Iterator<?> iterator = mahntexts.iterator();
-			while (iterator.hasNext()) {
-				Mahntext mahntext = (Mahntext) iterator.next();
-				list.add(assembleMahntextDto(mahntext));
-			}
-		}
-		MahntextDto[] returnArray = new MahntextDto[list.size()];
-		return (MahntextDto[]) list.toArray(returnArray);
-	}
-
 	public MahntextDto createDefaultMahntext(Integer mahnstufeIId,
 			String sTextinhaltI, TheClientDto theClientDto)
 			throws EJBExceptionLP {
@@ -1324,7 +1409,8 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 		// code begin
 		if (kontoartsprDto != null) {
 			String cNr = kontoartsprDto.getKontoartCNr();
-			String localeCNr = kontoartsprDto.getLocaleCNr();
+			// String localeCNr = kontoartsprDto.getLocaleCNr();
+			String localeCNr = Helper.locale2String(theClientDto.getLocUi());
 			// try {
 			KontoartsprPK pk = new KontoartsprPK(cNr, localeCNr);
 			Kontoartspr kontoartspr = em.find(Kontoartspr.class, pk);
@@ -1450,19 +1536,6 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 		return LaenderartDtoAssembler.createDto(laenderart);
 	}
 
-	private LaenderartDto[] assembleLaenderartDtos(Collection<?> laenderarts) {
-		List<LaenderartDto> list = new ArrayList<LaenderartDto>();
-		if (laenderarts != null) {
-			Iterator<?> iterator = laenderarts.iterator();
-			while (iterator.hasNext()) {
-				Laenderart laenderart = (Laenderart) iterator.next();
-				list.add(assembleLaenderartDto(laenderart));
-			}
-		}
-		LaenderartDto[] returnArray = new LaenderartDto[list.size()];
-		return (LaenderartDto[]) list.toArray(returnArray);
-	}
-
 	public void createLaenderartspr(LaenderartsprDto laenderartsprDto,
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		// log
@@ -1565,20 +1638,6 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 	private LaenderartsprDto assembleLaenderartsprDto(
 			Laenderartspr laenderartspr) {
 		return LaenderartsprDtoAssembler.createDto(laenderartspr);
-	}
-
-	private LaenderartsprDto[] assembleLaenderartsprDtos(
-			Collection<?> laenderartsprs) {
-		List<LaenderartsprDto> list = new ArrayList<LaenderartsprDto>();
-		if (laenderartsprs != null) {
-			Iterator<?> iterator = laenderartsprs.iterator();
-			while (iterator.hasNext()) {
-				Laenderartspr laenderartspr = (Laenderartspr) iterator.next();
-				list.add(assembleLaenderartsprDto(laenderartspr));
-			}
-		}
-		LaenderartsprDto[] returnArray = new LaenderartsprDto[list.size()];
-		return (LaenderartsprDto[]) list.toArray(returnArray);
 	}
 
 	/**
@@ -1712,16 +1771,20 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 				}
 				String mandantLKZ = partnerDtoBasis.getLandplzortDto()
 						.getLandDto().getCLkz();
-				
+
 				String gemeinsamesLKZ = null;
-				if (partnerDtoBasis.getLandplzortDto().getLandDto().getLandIIdGemeinsamespostland() != null) {
+				if (partnerDtoBasis.getLandplzortDto().getLandDto()
+						.getLandIIdGemeinsamespostland() != null) {
 					// fuer Liechtenstein ist die Schweiz wie INLAND
-					Land land = em.find(Land.class, partnerDtoBasis.getLandplzortDto().getLandDto().getLandIIdGemeinsamespostland());
+					Land land = em.find(Land.class, partnerDtoBasis
+							.getLandplzortDto().getLandDto()
+							.getLandIIdGemeinsamespostland());
 					gemeinsamesLKZ = land.getCLkz();
 				}
 				// Land gleich -> Inland
-				if (mandantLKZ.equals(partnerLKZ) 
-						|| (gemeinsamesLKZ != null && gemeinsamesLKZ.equals(partnerLKZ))) {
+				if (mandantLKZ.equals(partnerLKZ)
+						|| (gemeinsamesLKZ != null && gemeinsamesLKZ
+								.equals(partnerLKZ))) {
 					return FinanzFac.LAENDERART_INLAND;
 				} else {
 					LandDto mandantLandDto = partnerDtoBasis.getLandplzortDto()
@@ -1889,23 +1952,9 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 		return BuchungsartsprDtoAssembler.createDto(buchungsartspr);
 	}
 
-	private BuchungsartsprDto[] assembleBuchungsartsprDtos(
-			Collection<?> buchungsartsprs) {
-		List<BuchungsartsprDto> list = new ArrayList<BuchungsartsprDto>();
-		if (buchungsartsprs != null) {
-			Iterator<?> iterator = buchungsartsprs.iterator();
-			while (iterator.hasNext()) {
-				Buchungsartspr buchungsartspr = (Buchungsartspr) iterator
-						.next();
-				list.add(assembleBuchungsartsprDto(buchungsartspr));
-			}
-		}
-		BuchungsartsprDto[] returnArray = new BuchungsartsprDto[list.size()];
-		return (BuchungsartsprDto[]) list.toArray(returnArray);
-	}
-
 	/**
-	 * Hole die bestmoeglichen Uebersetzungen f&uuml;r ein Array von Buchungsarten.
+	 * Hole die bestmoeglichen Uebersetzungen f&uuml;r ein Array von
+	 * Buchungsarten.
 	 * 
 	 * @param pArray
 	 *            Positionsarten
@@ -2003,11 +2052,21 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 	 *            Locale
 	 * @param locale2
 	 *            Locale
+	 * @throws RemoteException
 	 */
-	public TreeMap getAllBuchungsarten(Locale locale1, Locale locale2)
-			throws EJBExceptionLP {
+	public TreeMap getAllBuchungsarten(Locale locale1, Locale locale2,
+			String mandantCNr) throws EJBExceptionLP, RemoteException {
 		BuchungsartDto[] arten = buchungsartFindAll();
-		return uebersetzeBuchungsartOptimal(arten, locale1, locale2);
+		TreeMap<String, String> maparten = uebersetzeBuchungsartOptimal(arten,
+				locale1, locale2);
+		ParametermandantDto p = getParameterFac()
+				.parametermandantFindByPrimaryKey(
+						ParameterFac.PARAMETER_FINANZ_SAMMELBUCHUNG_MANUELL,
+						ParameterFac.KATEGORIE_FINANZ, mandantCNr);
+		if (!p.asBoolean())
+			maparten.remove(FinanzFac.BUCHUNGSART_MWST_ABSCHLUSS);
+
+		return maparten;
 	}
 
 	public UvaartDto[] uvaartFindAll(String mandantCNr) throws EJBExceptionLP {
@@ -2213,117 +2272,190 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 		return WarenverkehrsnummerDtoAssembler.createDto(warenverkehrsnummer);
 	}
 
-	private WarenverkehrsnummerDto[] assembleWarenverkehrsnummerDtos(
-			Collection<?> warenverkehrsnummers) {
-		List<WarenverkehrsnummerDto> list = new ArrayList<WarenverkehrsnummerDto>();
-		if (warenverkehrsnummers != null) {
-			Iterator<?> iterator = warenverkehrsnummers.iterator();
-			while (iterator.hasNext()) {
-				Warenverkehrsnummer warenverkehrsnummer = (Warenverkehrsnummer) iterator
-						.next();
-				list.add(assembleWarenverkehrsnummerDto(warenverkehrsnummer));
-			}
-		}
-		WarenverkehrsnummerDto[] returnArray = new WarenverkehrsnummerDto[list
-				.size()];
-		return (WarenverkehrsnummerDto[]) list.toArray(returnArray);
-	}
-
 	/**
 	 * Finanzamtsbuchungen f&uuml;r Periode durchf&uuml;hren
 	 * 
 	 * wird vor UVA Verprobung ausgef&uuml;hrt
 	 * 
-	 * @throws RemoteException 
-	 * @throws EJBExceptionLP 
+	 * @throws RemoteException
+	 * @throws EJBExceptionLP
 	 * 
-	 *  
+	 * 
 	 */
-	
-	public void createFinanzamtsbuchungen(int geschaeftsjahr, int periode, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		FinanzamtDto[] finanzamtDtos = getFinanzFac().finanzamtFindAllByMandantCNr(theClientDto);
-		for(FinanzamtDto finanzamt : finanzamtDtos) {
-			createFinanzamtsbuchungen(geschaeftsjahr,periode, finanzamt.getPartnerIId(), theClientDto);
+
+	public void createFinanzamtsbuchungen(int geschaeftsjahr, int periode,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+		FinanzamtDto[] finanzamtDtos = getFinanzFac()
+				.finanzamtFindAllByMandantCNr(theClientDto);
+		for (FinanzamtDto finanzamt : finanzamtDtos) {
+			createFinanzamtsbuchungen(geschaeftsjahr, periode,
+					finanzamt.getPartnerIId(), theClientDto);
 		}
 	}
+
 	/**
-	 * Finanzamtsbuchungen f&uuml;r Periode
-	 * auf ein Finanzamt durchf&uuml;hren
+	 * Finanzamtsbuchungen f&uuml;r Periode auf ein Finanzamt durchf&uuml;hren
 	 * wird vor UVA Verprobung ausgef&uuml;hrt
 	 * 
-	 * @throws RemoteException 
-	 * @throws EJBExceptionLP 
+	 * @throws RemoteException
+	 * @throws EJBExceptionLP
 	 * 
-	 *  
+	 * 
 	 */
-	public void createFinanzamtsbuchungen(int geschaeftsjahr, int periode, int finanzamtIId, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		// der Ablauf ist derzeit hart kodiert, die Konten werden ueber Kontoarten definiert
-		
-		Timestamp tVonBis[] = getBuchenFac().getDatumbereichPeriodeGJ(geschaeftsjahr, periode, theClientDto);
-		Date buchungsDatum = Helper.addiereTageZuDatum(new Date(tVonBis[1].getTime()), -1);	//letzter Tag der Periode
+	public void createFinanzamtsbuchungen(int geschaeftsjahr, int periode,
+			int finanzamtIId, TheClientDto theClientDto) throws EJBExceptionLP,
+			RemoteException {
+		// der Ablauf ist derzeit hart kodiert, die Konten werden ueber
+		// Kontoarten definiert
+
+		// PJ18633 mit Parameter PARAMETER_FINANZ_SAMMELBUCHUNG_MANUELL werden
+		// hier KEINE Buchungen durchgefuehrt!
+		ParametermandantDto p = getParameterFac()
+				.parametermandantFindByPrimaryKey(
+						ParameterFac.PARAMETER_FINANZ_SAMMELBUCHUNG_MANUELL,
+						ParameterFac.KATEGORIE_FINANZ,
+						theClientDto.getMandant());
+		if (p.asBoolean())
+			return;
+
+		Timestamp tVonBis[] = getBuchenFac().getDatumbereichPeriodeGJ(
+				geschaeftsjahr, periode, theClientDto);
+		Date buchungsDatum = Helper.addiereTageZuDatum(
+				new Date(tVonBis[1].getTime()), -1); // letzter Tag der Periode
+
+		HashMap<String, Integer> hmAZ = null;
 
 		// alte Buchungen stornieren
-		getBuchenFac().storniereFinanzamtsbuchungen(geschaeftsjahr, buchungsDatum, finanzamtIId, theClientDto);
-		
+		// SP2015/03280 alle AKZ merken
+		hmAZ = getBuchenFac().storniereFinanzamtsbuchungen(geschaeftsjahr,
+				buchungsDatum, finanzamtIId, theClientDto);
+
 		ArrayList<KontoDto> sammellist = new ArrayList<KontoDto>();
 		// Alle Ust Konten auf UST Sammelkonto
-		sammellist.add(saldiereKontoartAufSammelkonto(KONTOART_UST, KONTOART_UST_SAMMEL, buchungsDatum, geschaeftsjahr, periode, finanzamtIId, theClientDto));
+		KontoDto konto = saldiereKontoartAufSammelkonto(KONTOART_UST,
+				KONTOART_UST_SAMMEL, buchungsDatum, geschaeftsjahr, periode,
+				finanzamtIId, theClientDto);
+		if (konto != null)
+			sammellist.add(konto);
 		// Alle Vst Konten auf VST Sammelkonto
-		sammellist.add(saldiereKontoartAufSammelkonto(KONTOART_VST, KONTOART_VST_SAMMEL, buchungsDatum, geschaeftsjahr, periode, finanzamtIId, theClientDto));
+		konto = saldiereKontoartAufSammelkonto(KONTOART_VST,
+				KONTOART_VST_SAMMEL, buchungsDatum, geschaeftsjahr, periode,
+				finanzamtIId, theClientDto);
+		if (konto != null)
+			sammellist.add(konto);
+		if (sammellist.size() == 0)
+			return; // 18533
 		// UST Sammel + VST Sammel auf FA Steuer Verrechnung
-		KontoDto kontoZielDto = getSammelkonto(KONTOART_UST_ODER_ERWERBSSTEUERKONTO, finanzamtIId, theClientDto);
-		saldoBuchungAufKonto(sammellist, kontoZielDto.getIId(), geschaeftsjahr, periode, buchungsDatum, theClientDto);
+		KontoDto kontoZielDto = getSammelkonto(
+				KONTOART_UST_ODER_ERWERBSSTEUERKONTO, finanzamtIId,
+				theClientDto);
+		if (kontoZielDto == null)
+			return; // rk: SP 2424
+		saldoBuchungAufKonto(sammellist, kontoZielDto.getIId(), geschaeftsjahr,
+				periode, buchungsDatum, theClientDto);
 		// FA Steuer Verrechnung auf Zahllast Konto
-		KontoDto zahllastKontoDto = getSammelkonto(KONTOART_FA_ZAHLLAST, finanzamtIId, theClientDto);
-		saldoBuchungAufKonto(new KontoDto[] {kontoZielDto}, zahllastKontoDto.getIId(), geschaeftsjahr, periode, buchungsDatum, theClientDto);
+		KontoDto zahllastKontoDto = getSammelkonto(KONTOART_FA_ZAHLLAST,
+				finanzamtIId, theClientDto);
+		if (zahllastKontoDto == null)
+			return; // rk: SP 2424
+		saldoBuchungAufKonto(new KontoDto[] { kontoZielDto },
+				zahllastKontoDto.getIId(), geschaeftsjahr, periode,
+				buchungsDatum, theClientDto);
 		// Alle Abgaben auf Zahllastkonto
-		saldiereKontoartAufSammelkonto(KONTOART_ABGABEN, KONTOART_FA_ZAHLLAST, buchungsDatum, geschaeftsjahr, periode, finanzamtIId, theClientDto);
+		saldiereKontoartAufSammelkonto(KONTOART_ABGABEN, KONTOART_FA_ZAHLLAST,
+				buchungsDatum, geschaeftsjahr, periode, finanzamtIId,
+				theClientDto);
+		if (!hmAZ.isEmpty())
+			// SP2015/03280 alle gemerkten AKZ wieder setzen wenn Buchungsdetail
+			// wieder vorhanden
+			getBuchenFac().setAuszifferungenFinanzamtsbuchungen(geschaeftsjahr,
+					buchungsDatum, finanzamtIId, hmAZ, theClientDto);
 	}
 
-
-	public KontoDto getSammelkonto(String kontoartCNr, Integer finanzamtIId, TheClientDto theClientDto) {
+	public KontoDto getSammelkonto(String kontoartCNr, Integer finanzamtIId,
+			TheClientDto theClientDto) {
 		KontoDto[] kontoDtos;
-		if(finanzamtIId != null) kontoDtos = getFinanzFac().kontoFindAllByKontoartMandantFinanzamt(kontoartCNr, theClientDto.getMandant(), finanzamtIId);
-		else kontoDtos = getFinanzFac().kontoFindAllByKontoartMandant(kontoartCNr, theClientDto.getMandant());
-		
+		if (finanzamtIId != null)
+			kontoDtos = getFinanzFac().kontoFindAllByKontoartMandantFinanzamt(
+					kontoartCNr, theClientDto.getMandant(), finanzamtIId);
+		else
+			kontoDtos = getFinanzFac().kontoFindAllByKontoartMandant(
+					kontoartCNr, theClientDto.getMandant());
+
 		KontoDto sammelkonto = null;
 		if (kontoDtos.length == 0)
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_BUCHUNG_NICHT_ERLAUBT_BUCHUNGSREGEL, "Kein Sammelkonto f\u00FCr Kontoart " + kontoartCNr);
-		else if (kontoDtos.length > 1) {
+			return null;
+		// throw new
+		// EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_BUCHUNG_NICHT_ERLAUBT_BUCHUNGSREGEL,
+		// "Kein Sammelkonto f\u00FCr Kontoart " + kontoartCNr);
+		// else
+		if (kontoDtos.length > 1) {
 			String s = "";
-			for (int i=0; i < kontoDtos.length; i++)
+			for (int i = 0; i < kontoDtos.length; i++)
 				s = s + kontoDtos[i].getCNr() + " ";
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_BUCHUNG_NICHT_ERLAUBT_BUCHUNGSREGEL, "Mehrfache Sammelkonten definiert f\u00FCr Kontoart " + kontoartCNr + ": " + s);
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_FINANZ_BUCHUNG_NICHT_ERLAUBT_BUCHUNGSREGEL,
+					"Mehrfache Sammelkonten definiert f\u00FCr Kontoart "
+							+ kontoartCNr + ": " + s);
 		} else
 			sammelkonto = kontoDtos[0];
 		return sammelkonto;
 	}
-	
-	private KontoDto saldiereKontoartAufSammelkonto(String kontoartCNr, String kontoartCNrSammelkonto, Date buchungsDatum, int geschaeftsjahr, int periode, int finanzamtIId, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+
+	private KontoDto saldiereKontoartAufSammelkonto(String kontoartCNr,
+			String kontoartCNrSammelkonto, Date buchungsDatum,
+			int geschaeftsjahr, int periode, int finanzamtIId,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		// es darf nur ein Sammelkonto geben
-		KontoDto sammelkonto = getSammelkonto(kontoartCNrSammelkonto, finanzamtIId, theClientDto);
-		KontoDto[] kontoDtos = getFinanzFac().kontoFindAllByKontoartMandantFinanzamt(kontoartCNr, theClientDto.getMandant(), finanzamtIId);
-		saldoBuchungAufKonto(kontoDtos, sammelkonto.getIId(), geschaeftsjahr, periode, buchungsDatum, theClientDto);
+		KontoDto sammelkonto = getSammelkonto(kontoartCNrSammelkonto,
+				finanzamtIId, theClientDto);
+		if (sammelkonto == null) {
+			// throw new
+			// EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_BUCHUNG_NICHT_ERLAUBT_BUCHUNGSREGEL,
+			// "Kein Sammelkonto f\u00FCr Kontoart " + kontoartCNrSammelkonto);
+			// //PJ 18533
+			return null;
+		}
+		KontoDto[] kontoDtos = getFinanzFac()
+				.kontoFindAllByKontoartMandantFinanzamt(kontoartCNr,
+						theClientDto.getMandant(), finanzamtIId);
+		saldoBuchungAufKonto(kontoDtos, sammelkonto.getIId(), geschaeftsjahr,
+				periode, buchungsDatum, theClientDto);
 		return sammelkonto;
 	}
 
-	private void saldoBuchungAufKonto(ArrayList<KontoDto> sammellist, Integer kontoIIdZiel, int geschaeftsjahr, int periode,
-			Date buchungsDatum, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		saldoBuchungAufKonto(sammellist.toArray(new KontoDto[sammellist.size()]), kontoIIdZiel, geschaeftsjahr, periode, buchungsDatum, theClientDto);
+	private void saldoBuchungAufKonto(ArrayList<KontoDto> sammellist,
+			Integer kontoIIdZiel, int geschaeftsjahr, int periode,
+			Date buchungsDatum, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
+		saldoBuchungAufKonto(
+				sammellist.toArray(new KontoDto[sammellist.size()]),
+				kontoIIdZiel, geschaeftsjahr, periode, buchungsDatum,
+				theClientDto);
 	}
 
-	private void saldoBuchungAufKonto(KontoDto[] kontoDtos, Integer kontoIIdZiel, int geschaeftsjahr, int periode, 
-			Date buchungsDatum, TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		BuchungDto buchungDto = new BuchungDto(FinanzFac.BUCHUNGSART_UMBUCHUNG, buchungsDatum, "Sammelbuchung", geschaeftsjahr, null, true, false);
-		ArrayList<BuchungdetailDto> list = getSammelbuchungdetails(kontoDtos, kontoIIdZiel, geschaeftsjahr, periode, theClientDto);
+	private void saldoBuchungAufKonto(KontoDto[] kontoDtos,
+			Integer kontoIIdZiel, int geschaeftsjahr, int periode,
+			Date buchungsDatum, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException {
+		BuchungDto buchungDto = new BuchungDto(FinanzFac.BUCHUNGSART_UMBUCHUNG,
+				buchungsDatum, "Sammelbuchung", geschaeftsjahr, null, true,
+				false);
+		ArrayList<BuchungdetailDto> list = getSammelbuchungdetails(kontoDtos,
+				kontoIIdZiel, geschaeftsjahr, periode, theClientDto);
 		BigDecimal summe = new BigDecimal(0);
 		if (list.size() > 0) {
-			for (BuchungdetailDto detail: list) {
-				summe = summe.add(detail.getBuchungdetailartCNr().equals(BuchenFac.SollBuchung) ? detail.getNBetrag() : detail.getNBetrag().negate());
+			for (BuchungdetailDto detail : list) {
+				summe = summe.add(detail.getBuchungdetailartCNr().equals(
+						BuchenFac.SollBuchung) ? detail.getNBetrag() : detail
+						.getNBetrag().negate());
 			}
-			
+
 			// Gegenbuchung erzeugen fuer Summe der Buchungen
-			BuchungdetailDto detail = new BuchungdetailDto(list.get(0).getBuchungdetailartCNr(), kontoIIdZiel, list.size() == 1 ? list.get(0).getKontoIId():null, summe.abs(), new BigDecimal(0));
+			BuchungdetailDto detail = new BuchungdetailDto(list.get(0)
+					.getBuchungdetailartCNr(), kontoIIdZiel,
+					list.size() == 1 ? list.get(0).getKontoIId() : null,
+					summe.abs(), new BigDecimal(0));
 			if (detail.getBuchungdetailartCNr().equals(BuchenFac.SollBuchung)) {
 				if (summe.signum() < 0) {
 					//
@@ -2341,20 +2473,29 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 			Mandant mandant = em.find(Mandant.class, theClientDto.getMandant());
 			buchungDto.setKostenstelleIId(mandant.getKostenstelleIId());
 			buchungDto.setCBelegnummer("FB" + geschaeftsjahr + "/" + periode);
-			buchungDto = getBuchenFac().buchen(buchungDto, list.toArray(new BuchungdetailDto[list.size()]), true, theClientDto);
+			buchungDto = getBuchenFac().buchen(buchungDto,
+					list.toArray(new BuchungdetailDto[list.size()]), true,
+					theClientDto);
 		}
 	}
 
-	private ArrayList<BuchungdetailDto> getSammelbuchungdetails(KontoDto[] kontoDtos, Integer kontoIIdGegenkonto, int geschaeftsjahr, int periode, TheClientDto theClientDto) {
+	private ArrayList<BuchungdetailDto> getSammelbuchungdetails(
+			KontoDto[] kontoDtos, Integer kontoIIdGegenkonto,
+			int geschaeftsjahr, int periode, TheClientDto theClientDto) {
 		ArrayList<BuchungdetailDto> list = new ArrayList<BuchungdetailDto>();
-		for (int i=0; i < kontoDtos.length; i++) {
-			BigDecimal saldo = getBuchenFac().getSaldoOhneEBVonKonto(kontoDtos[i].getIId(), geschaeftsjahr,
-					periode, theClientDto);
+		for (int i = 0; i < kontoDtos.length; i++) {
+			BigDecimal saldo = getBuchenFac().getSaldoOhneEBVonKonto(
+					kontoDtos[i].getIId(), geschaeftsjahr, periode,
+					theClientDto);
 			if (saldo.signum() < 0) {
-				BuchungdetailDto detailDto = new BuchungdetailDto(BuchenFac.SollBuchung, kontoDtos[i].getIId(),kontoIIdGegenkonto, saldo.abs(), new BigDecimal(0));
+				BuchungdetailDto detailDto = new BuchungdetailDto(
+						BuchenFac.SollBuchung, kontoDtos[i].getIId(),
+						kontoIIdGegenkonto, saldo.abs(), new BigDecimal(0));
 				list.add(detailDto);
 			} else if (saldo.signum() > 0) {
-				BuchungdetailDto detailDto = new BuchungdetailDto(BuchenFac.HabenBuchung,kontoDtos[i].getIId(),kontoIIdGegenkonto, saldo, new BigDecimal(0));
+				BuchungdetailDto detailDto = new BuchungdetailDto(
+						BuchenFac.HabenBuchung, kontoDtos[i].getIId(),
+						kontoIIdGegenkonto, saldo, new BigDecimal(0));
 				list.add(detailDto);
 			}
 		}
@@ -2362,107 +2503,72 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 	}
 
 	/**
-	 * Tagesabschluss fuer das Geschaeftsjahr Periodenweise pr&uuml;fen und updaten
+	 * Tagesabschluss fuer das Geschaeftsjahr Periodenweise pr&uuml;fen und
+	 * updaten
 	 * 
 	 * @throws RemoteException
 	 * @throws EJBExceptionLP
 	 * 
 	 */
-	/* AD nicht verwendet
-	@SuppressWarnings("unchecked")
-	public void createTagesabschluss(int geschaeftsjahr,
-			TheClientDto theclientDto) throws EJBExceptionLP, RemoteException {
-		int periode = getAktuellePeriode();
-		// TODO: default wert aus mandant
-		Integer kostenstelleIId = new Integer(11);
-		Query query = em.createNamedQuery("SteuerkategorieByMandantCNr");
-		query.setParameter(1, theclientDto.getMandant());
-		List<Steuerkategorie> list = query.getResultList();
-		Iterator<Steuerkategorie> iter = list.iterator();
-		while (iter.hasNext()) {
-			Steuerkategorie stk = iter.next();
-			for (int i = 1; i <= periode; i++) {
-				// Forderungen verbuchen
-				verbucheForderungen(stk.getIId(), stk.getKontoIIdForderungen(),
-						geschaeftsjahr, i, kostenstelleIId, theclientDto);
-				// Verbindlichkeiten verbuchen
-			}
-		}
-		// Ust Sammelkonto
-		// Vst Sammelkonto
+	/*
+	 * AD nicht verwendet
+	 * 
+	 * @SuppressWarnings("unchecked") public void createTagesabschluss(int
+	 * geschaeftsjahr, TheClientDto theclientDto) throws EJBExceptionLP,
+	 * RemoteException { int periode = getAktuellePeriode(); // TODO: default
+	 * wert aus mandant Integer kostenstelleIId = new Integer(11); Query query =
+	 * em.createNamedQuery("SteuerkategorieByMandantCNr"); query.setParameter(1,
+	 * theclientDto.getMandant()); List<Steuerkategorie> list =
+	 * query.getResultList(); Iterator<Steuerkategorie> iter = list.iterator();
+	 * while (iter.hasNext()) { Steuerkategorie stk = iter.next(); for (int i =
+	 * 1; i <= periode; i++) { // Forderungen verbuchen
+	 * verbucheForderungen(stk.getIId(), stk.getKontoIIdForderungen(),
+	 * geschaeftsjahr, i, kostenstelleIId, theclientDto); // Verbindlichkeiten
+	 * verbuchen } } // Ust Sammelkonto // Vst Sammelkonto
+	 * 
+	 * }
+	 */
 
-	}
-*/
-	
-	// TODO: gesetzte Periode holen
-	@Deprecated
-	// auf Periode umbauen statt Monat
-	private int getAktuellePeriode() {
-		Calendar c = Calendar.getInstance();
-		return c.get(Calendar.MONTH) + 1;
-	}
+	/*
+	 * AD nicht verwendet
+	 * 
+	 * @SuppressWarnings("unchecked") private void verbucheForderungen(Integer
+	 * steuerkategorieIId, Integer sammelKontoIId, int geschaeftsjahr, int
+	 * periode, Integer kostenstelleIId, TheClientDto theClientDto) throws
+	 * EJBExceptionLP, RemoteException { Query query =
+	 * em.createNamedQuery("KontofindByKontotypSteuerkategorie");
+	 * query.setParameter(1, FinanzServiceFac.KONTOTYP_DEBITOR);
+	 * query.setParameter(2, steuerkategorieIId); List<Konto> list =
+	 * query.getResultList(); if (list.size() > 0) { Iterator<Konto> iter =
+	 * list.iterator(); BigDecimal saldo = new BigDecimal(0); HashMap hmSaldo =
+	 * new HashMap(); int cnt = 0; while (iter.hasNext()) { Konto konto =
+	 * iter.next(); BigDecimal saldoKonto =
+	 * getBuchenFac().getSaldoOhneEBVonKonto( konto.getIId(), geschaeftsjahr,
+	 * periode, theClientDto); if (saldoKonto.doubleValue() != 0) { saldo =
+	 * saldo.add(saldoKonto); KontoSaldo ks = new KontoSaldo(konto.getIId(),
+	 * konto, saldoKonto); hmSaldo.put(new Integer(cnt), ks); cnt++; } } if
+	 * (hmSaldo.size() > 0) { BuchungDto b = new BuchungDto(); //
+	 * b.setBelegartCNr(belegartCNr);
+	 * b.setBuchungsartCNr(FinanzFac.BUCHUNGSART_UMBUCHUNG);
+	 * b.setCBelegnummer("Abschluss" + periode); b.setCText("Tagesabschluss");
+	 * Calendar c = Calendar.getInstance(); c.set(Calendar.YEAR,
+	 * geschaeftsjahr); c.set(Calendar.MONTH, periode);
+	 * c.set(Calendar.DAY_OF_MONTH, 0); b.setDBuchungsdatum((Date)
+	 * Helper.cutDate(c.getTime())); b.setIGeschaeftsjahr(geschaeftsjahr);
+	 * b.setKostenstelleIId(kostenstelleIId); BuchungdetailDto[] bd = new
+	 * BuchungdetailDto[hmSaldo.size() + 1]; bd[0] = new BuchungdetailDto();
+	 * bd[0].setBuchungdetailartCNr(BuchenFac.SollBuchung);
+	 * bd[0].setKontoIId(sammelKontoIId); bd[0].setNBetrag(saldo);
+	 * bd[0].setNUst(new BigDecimal(0)); for (int i = 0; i < hmSaldo.size();
+	 * i++) { KontoSaldo ks = (KontoSaldo) hmSaldo.get(new Integer(i)); bd[i +
+	 * 1] = new BuchungdetailDto(); bd[i +
+	 * 1].setBuchungdetailartCNr(BuchenFac.HabenBuchung); bd[i +
+	 * 1].setKontoIId(ks.kontoIId); bd[i +
+	 * 1].setKontoIIdGegenkonto(sammelKontoIId); bd[i + 1].setNBetrag(ks.saldo);
+	 * bd[i + 1].setNUst(new BigDecimal(0)); } getBuchenFac().buchen(b, bd,
+	 * false, theClientDto); } } }
+	 */
 
-	/* AD nicht verwendet
-	@SuppressWarnings("unchecked")
-	private void verbucheForderungen(Integer steuerkategorieIId,
-			Integer sammelKontoIId, int geschaeftsjahr, int periode,
-			Integer kostenstelleIId, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException {
-		Query query = em.createNamedQuery("KontofindByKontotypSteuerkategorie");
-		query.setParameter(1, FinanzServiceFac.KONTOTYP_DEBITOR);
-		query.setParameter(2, steuerkategorieIId);
-		List<Konto> list = query.getResultList();
-		if (list.size() > 0) {
-			Iterator<Konto> iter = list.iterator();
-			BigDecimal saldo = new BigDecimal(0);
-			HashMap hmSaldo = new HashMap();
-			int cnt = 0;
-			while (iter.hasNext()) {
-				Konto konto = iter.next();
-				BigDecimal saldoKonto = getBuchenFac().getSaldoOhneEBVonKonto(
-						konto.getIId(), geschaeftsjahr, periode, theClientDto);
-				if (saldoKonto.doubleValue() != 0) {
-					saldo = saldo.add(saldoKonto);
-					KontoSaldo ks = new KontoSaldo(konto.getIId(), konto,
-							saldoKonto);
-					hmSaldo.put(new Integer(cnt), ks);
-					cnt++;
-				}
-			}
-			if (hmSaldo.size() > 0) {
-				BuchungDto b = new BuchungDto();
-				// b.setBelegartCNr(belegartCNr);
-				b.setBuchungsartCNr(FinanzFac.BUCHUNGSART_UMBUCHUNG);
-				b.setCBelegnummer("Abschluss" + periode);
-				b.setCText("Tagesabschluss");
-				Calendar c = Calendar.getInstance();
-				c.set(Calendar.YEAR, geschaeftsjahr);
-				c.set(Calendar.MONTH, periode);
-				c.set(Calendar.DAY_OF_MONTH, 0);
-				b.setDBuchungsdatum((Date) Helper.cutDate(c.getTime()));
-				b.setIGeschaeftsjahr(geschaeftsjahr);
-				b.setKostenstelleIId(kostenstelleIId);
-				BuchungdetailDto[] bd = new BuchungdetailDto[hmSaldo.size() + 1];
-				bd[0] = new BuchungdetailDto();
-				bd[0].setBuchungdetailartCNr(BuchenFac.SollBuchung);
-				bd[0].setKontoIId(sammelKontoIId);
-				bd[0].setNBetrag(saldo);
-				bd[0].setNUst(new BigDecimal(0));
-				for (int i = 0; i < hmSaldo.size(); i++) {
-					KontoSaldo ks = (KontoSaldo) hmSaldo.get(new Integer(i));
-					bd[i + 1] = new BuchungdetailDto();
-					bd[i + 1].setBuchungdetailartCNr(BuchenFac.HabenBuchung);
-					bd[i + 1].setKontoIId(ks.kontoIId);
-					bd[i + 1].setKontoIIdGegenkonto(sammelKontoIId);
-					bd[i + 1].setNBetrag(ks.saldo);
-					bd[i + 1].setNUst(new BigDecimal(0));
-				}
-				getBuchenFac().buchen(b, bd, false, theClientDto);
-			}
-		}
-	}
-*/
-	
 	class KontoSaldo {
 		Integer kontoIId;
 		Konto konto;
@@ -2475,26 +2581,68 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 		}
 	}
 
+	// public UvaartDto uvaartFindByCnrMandant(String cNr,
+	// TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
+	// Query query = em.createNamedQuery("UvaartfindByCNrMandant");
+	// query.setParameter(1, cNr);
+	// query.setParameter(2, theClientDto.getMandant());
+	//
+	// try {
+	// Uvaart uvaart = (Uvaart) query.getSingleResult();
+	//
+	// UvaartDto uvaartDto = assembleUvaartDto(uvaart);
+	//
+	// uvaartDto.setUvaartsprDto(new UvaartsprDto());
+	// uvaartDto.getUvaartsprDto().setUvaartIId(uvaart.getIId());
+	// uvaartDto.getUvaartsprDto().setLocaleCNr(
+	// theClientDto.getLocUiAsString());
+	// uvaartDto.getUvaartsprDto().setCBez(
+	// uebersetzeUvaart(uvaart.getIId(), theClientDto.getLocUi()));
+	// if (uvaartDto.getUvaartsprDto().getCBez() == null)
+	// uvaartDto.getUvaartsprDto().setCBez(uvaart.getCNr());
+	// return uvaartDto;
+	// } catch (NoResultException ex) {
+	// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND,
+	// "Uvaart nicht gefunden cNr:" + cNr + " Mandant:"
+	// + theClientDto.getMandant());
+	// }
+	// }
+
+	// public UvaartDto uvaartFindByCnrMandantOhneExc(String cNr,
+	// TheClientDto theClientDto) throws RemoteException {
+	// Query query = em.createNamedQuery("UvaartfindByCNrMandant");
+	// query.setParameter(1, cNr);
+	// query.setParameter(2, theClientDto.getMandant());
+	//
+	// UvaartDto uvaartDto = null;
+	//
+	// try {
+	// Uvaart uvaart = (Uvaart) query.getSingleResult();
+	//
+	// uvaartDto = assembleUvaartDto(uvaart);
+	//
+	// uvaartDto.setUvaartsprDto(new UvaartsprDto());
+	// uvaartDto.getUvaartsprDto().setUvaartIId(uvaart.getIId());
+	// uvaartDto.getUvaartsprDto().setLocaleCNr(
+	// theClientDto.getLocUiAsString());
+	// uvaartDto.getUvaartsprDto().setCBez(
+	// uebersetzeUvaart(uvaart.getIId(), theClientDto.getLocUi()));
+	// if (uvaartDto.getUvaartsprDto().getCBez() == null)
+	// uvaartDto.getUvaartsprDto().setCBez(uvaart.getCNr());
+	// return uvaartDto;
+	// } catch (NoResultException ex) {
+	// }
+	// return uvaartDto;
+	// }
+
+	// *** wp ***
+	// ***
+
 	public UvaartDto uvaartFindByCnrMandant(String cNr,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
-		Query query = em.createNamedQuery("UvaartfindByCNrMandant");
-		query.setParameter(1, cNr);
-		query.setParameter(2, theClientDto.getMandant());
 
 		try {
-			Uvaart uvaart = (Uvaart) query.getSingleResult();
-
-			UvaartDto uvaartDto = assembleUvaartDto(uvaart);
-
-			uvaartDto.setUvaartsprDto(new UvaartsprDto());
-			uvaartDto.getUvaartsprDto().setUvaartIId(uvaart.getIId());
-			uvaartDto.getUvaartsprDto().setLocaleCNr(
-					theClientDto.getLocUiAsString());
-			uvaartDto.getUvaartsprDto().setCBez(
-					uebersetzeUvaart(uvaart.getIId(), theClientDto.getLocUi()));
-			if (uvaartDto.getUvaartsprDto().getCBez() == null)
-				uvaartDto.getUvaartsprDto().setCBez(uvaart.getCNr());
-			return uvaartDto;
+			return getUvaartDto(cNr, theClientDto);
 		} catch (NoResultException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND,
 					"Uvaart nicht gefunden cNr:" + cNr + " Mandant:"
@@ -2504,33 +2652,38 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 
 	public UvaartDto uvaartFindByCnrMandantOhneExc(String cNr,
 			TheClientDto theClientDto) throws RemoteException {
+		try {
+			return getUvaartDto(cNr, theClientDto);
+		} catch (NoResultException ex) {
+		}
+		return null;
+	}
+
+	private Query uvaartDtoQuery(String cNr, TheClientDto theClientDto) {
 		Query query = em.createNamedQuery("UvaartfindByCNrMandant");
 		query.setParameter(1, cNr);
 		query.setParameter(2, theClientDto.getMandant());
+		return query;
+	}
 
-		UvaartDto uvaartDto = null;
+	private UvaartDto getUvaartDto(String cNr, TheClientDto theClientDto) {
+		Query query = uvaartDtoQuery(cNr, theClientDto);
+		Uvaart uvaart = (Uvaart) query.getSingleResult();
+		UvaartDto uvaartDto = assembleUvaartDto(uvaart);
 
-		try {
-			Uvaart uvaart = (Uvaart) query.getSingleResult();
+		UvaartsprDto sprDto = getUvaartsprDto(uvaart.getIId(),
+				theClientDto.getLocUi(), theClientDto.getLocMandant());
 
-			uvaartDto = assembleUvaartDto(uvaart);
+		uvaartDto.setUvaartsprDto(sprDto);
 
-			uvaartDto.setUvaartsprDto(new UvaartsprDto());
-			uvaartDto.getUvaartsprDto().setUvaartIId(uvaart.getIId());
-			uvaartDto.getUvaartsprDto().setLocaleCNr(
-					theClientDto.getLocUiAsString());
-			uvaartDto.getUvaartsprDto().setCBez(
-					uebersetzeUvaart(uvaart.getIId(), theClientDto.getLocUi()));
-			if (uvaartDto.getUvaartsprDto().getCBez() == null)
-				uvaartDto.getUvaartsprDto().setCBez(uvaart.getCNr());
-			return uvaartDto;
-		} catch (NoResultException ex) {
-		}
 		return uvaartDto;
 	}
 
+	// ***
+	// *** wp ***
+
 	public Integer getUstKontoFuerSteuerkategorie(Integer steuerkategorieIId,
-			Integer mwstsatzbezId) throws EJBExceptionLP, RemoteException {
+			Integer mwstsatzbezId) {
 		Steuerkategoriekonto stkk = em.find(Steuerkategoriekonto.class,
 				new SteuerkategoriekontoPK(steuerkategorieIId, mwstsatzbezId));
 		if (stkk != null)
@@ -2539,8 +2692,18 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 			return null;
 	}
 
+	public Integer getEUstKontoFuerSteuerkategorie(Integer steuerkategorieIId,
+			Integer mwstsatzbezId) {
+		Steuerkategoriekonto stkk = em.find(Steuerkategoriekonto.class,
+				new SteuerkategoriekontoPK(steuerkategorieIId, mwstsatzbezId));
+		if (stkk != null)
+			return stkk.getKontoIIdEinfuhrUst();
+		else
+			return null;
+	}
+
 	public Integer getVstKontoFuerSteuerkategorie(Integer steuerkategorieIId,
-			Integer mwstsatzbezId) throws EJBExceptionLP, RemoteException {
+			Integer mwstsatzbezId) {
 		Steuerkategoriekonto stkk = em.find(Steuerkategoriekonto.class,
 				new SteuerkategoriekontoPK(steuerkategorieIId, mwstsatzbezId));
 		if (stkk != null)
@@ -2549,11 +2712,12 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 			return null;
 	}
 
+	@TransactionTimeout(value = 600)
 	public void verbucheBelegePeriode(Integer geschaeftsjahr, int periode,
 			boolean alleNeu, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException {
-		getBelegbuchungFac(theClientDto.getMandant()).verbucheBelegePeriode(geschaeftsjahr, periode,
-				alleNeu, theClientDto);
+		getBelegbuchungFac(theClientDto.getMandant()).verbucheBelegePeriode(
+				geschaeftsjahr, periode, alleNeu, theClientDto);
 	}
 
 	@TransactionTimeout(value = 300)
@@ -2561,14 +2725,14 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 			boolean nurPruefen, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
 		ArrayList<FibuFehlerDto> fehler = new ArrayList<FibuFehlerDto>();
-		fehler = pruefeKurseRechnungen(fehler, geschaeftsjahr, nurPruefen,
-				theClientDto);
-		fehler = pruefeKurseRechnungZahlungen(fehler, geschaeftsjahr,
-				nurPruefen, theClientDto);
-		fehler = pruefeKurseEingangsrechnungen(fehler, geschaeftsjahr,
-				nurPruefen, theClientDto);
-		fehler = pruefeKurseEingangsrechnungZahlungen(fehler, geschaeftsjahr,
-				nurPruefen, theClientDto);
+		fehler.addAll(pruefeKurseRechnungen(fehler, geschaeftsjahr, nurPruefen,
+				theClientDto));
+		fehler.addAll(pruefeKurseRechnungZahlungen(fehler, geschaeftsjahr,
+				nurPruefen, theClientDto));
+		fehler.addAll(pruefeKurseEingangsrechnungen(fehler, geschaeftsjahr,
+				nurPruefen, theClientDto));
+		fehler.addAll(pruefeKurseEingangsrechnungZahlungen(fehler,
+				geschaeftsjahr, nurPruefen, theClientDto));
 		return fehler;
 	}
 
@@ -2920,13 +3084,28 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 	public ArrayList<FibuFehlerDto> pruefeBelegePeriode(Integer geschaeftsjahr,
 			int periode, boolean pruefeBelegInFibu, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException {
+
+		// SP 2014/02892
+		// bei ISTVERSTEURER keine Pruefung von AR und ER
+		// bei MISCHVERSTEURER keine Pruefung von AR
+		boolean istVersteurer = getMandantFac()
+				.darfAnwenderAufZusatzfunktionZugreifen(
+						MandantFac.ZUSATZFUNKTION_ISTVERSTEURER,
+						theClientDto.getMandant());
+		boolean mischVersteurer = getMandantFac()
+				.darfAnwenderAufZusatzfunktionZugreifen(
+						MandantFac.ZUSATZFUNKTION_MISCHVERSTEURER,
+						theClientDto.getMandant());
+
 		ArrayList<FibuFehlerDto> fehler = new ArrayList<FibuFehlerDto>();
-		fehler = pruefeRechnungenPeriode(fehler, geschaeftsjahr, periode,
-				pruefeBelegInFibu, theClientDto);
+		if (!istVersteurer && !mischVersteurer)
+			fehler = pruefeRechnungenPeriode(fehler, geschaeftsjahr, periode,
+					pruefeBelegInFibu, theClientDto);
 		fehler = pruefeRechnungZahlungenPeriode(fehler, geschaeftsjahr,
 				periode, pruefeBelegInFibu, theClientDto);
-		fehler = pruefeEingangsrechnungenPeriode(fehler, geschaeftsjahr,
-				periode, pruefeBelegInFibu, theClientDto);
+		if (!istVersteurer)
+			fehler = pruefeEingangsrechnungenPeriode(fehler, geschaeftsjahr,
+					periode, pruefeBelegInFibu, theClientDto);
 		fehler = pruefeEingangsrechnungZahlungenPeriode(fehler, geschaeftsjahr,
 				periode, pruefeBelegInFibu, theClientDto);
 		return fehler;
@@ -2991,9 +3170,13 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 		if (rechnungen != null) {
 			boolean bRechnung0Erlaubt = false;
 			try {
-				if (getParameterFac().getMandantparameter(theClientDto.getMandant(), ParameterFac.KATEGORIE_FINANZ, 
-						ParameterFac.PARAMETER_FINANZ_RECHNUNG_WERT0_ERLAUBT).getCWert().equals("1"))
-						bRechnung0Erlaubt = true;
+				if (getParameterFac()
+						.getMandantparameter(
+								theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_FINANZ,
+								ParameterFac.PARAMETER_FINANZ_RECHNUNG_WERT0_ERLAUBT)
+						.getCWert().equals("1"))
+					bRechnung0Erlaubt = true;
 			} catch (RemoteException e) {
 				//
 			}
@@ -3003,20 +3186,25 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 						RechnungFac.RECHNUNGART_PROFORMARECHNUNG)) {
 					if (rechnungen[i].getStatusCNr().equals(
 							RechnungFac.STATUS_ANGELEGT)) {
-						fehler.add(new FibuFehlerDto(
-								rechnungen[i].getRechnungartCNr(), rechnungen[i]
-										.getIId(), rechnungen[i].getCNr(),
+						fehler.add(new FibuFehlerDto(rechnungen[i]
+								.getRechnungartCNr(), rechnungen[i].getIId(),
+								rechnungen[i].getCNr(),
 								FibuFehlerDto.FEHLER_STATUS));
 					} else if (!rechnungen[i].getStatusCNr().equals(
 							RechnungFac.STATUS_STORNIERT)) {
-						if (!bRechnung0Erlaubt || (rechnungen[i].getNWert().signum() != 0)) {
-							// SP 2013/01327 nur Rechnungen mit Wert <> 0 abhaengig vom Parameter
+						if (!bRechnung0Erlaubt
+								|| (rechnungen[i].getNWert().signum() != 0)) {
+							// SP 2013/01327 nur Rechnungen mit Wert <> 0
+							// abhaengig vom Parameter
 							if (pruefeBelegInFibu
-									&& !isBelegInFibu(LocaleFac.BELEGART_RECHNUNG,
-											rechnungen[i].getIId(), theClientDto)) {
+									&& !isBelegInFibu(
+											LocaleFac.BELEGART_RECHNUNG,
+											rechnungen[i].getIId(),
+											theClientDto)) {
 								fehler.add(new FibuFehlerDto(
-										LocaleFac.BELEGART_RECHNUNG, rechnungen[i]
-												.getIId(), rechnungen[i].getCNr(),
+										LocaleFac.BELEGART_RECHNUNG,
+										rechnungen[i].getIId(), rechnungen[i]
+												.getCNr(),
 										FibuFehlerDto.FEHLER_NICHT_IN_FIBU));
 							}
 						}
@@ -3232,9 +3420,11 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 
 		try {
 
-			Query query = em.createNamedQuery("UvaverprobungfindByGeschaeftsjahrMonatFinanzamtMandant");
+			Query query = em
+					.createNamedQuery("UvaverprobungfindByGeschaeftsjahrMonatFinanzamtMandant");
 			query.setParameter(1, uvaverprobungDto.getIGeschaeftsjahr());
-			query.setParameter(2, uvaverprobungDto.getIMonat().intValue() + uvaverprobungDto.getIAbrechnungszeitraum());
+			query.setParameter(2, uvaverprobungDto.getIMonat().intValue()
+					+ uvaverprobungDto.getIAbrechnungszeitraum());
 			query.setParameter(3, uvaverprobungDto.getFinanzamtIId());
 			query.setParameter(4, uvaverprobungDto.getMandantCNr());
 			Uvaverprobung doppelt = (Uvaverprobung) query.getSingleResult();
@@ -3250,8 +3440,9 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 			uvaverprobungDto.setIId(pk);
 
 			Uvaverprobung uvap = new Uvaverprobung(uvaverprobungDto.getIId(),
-					uvaverprobungDto.getIGeschaeftsjahr(),
-					uvaverprobungDto.getIMonat().intValue() + uvaverprobungDto.getIAbrechnungszeitraum(),
+					uvaverprobungDto.getIGeschaeftsjahr(), uvaverprobungDto
+							.getIMonat().intValue()
+							+ uvaverprobungDto.getIAbrechnungszeitraum(),
 					uvaverprobungDto.getMandantCNr(),
 					uvaverprobungDto.getFinanzamtIId(),
 					theClientDto.getIDPersonal());
@@ -3314,7 +3505,8 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 					durchfuehren = false;
 				else if (uvap.getGeschaeftsjahr().intValue() == krit
 						.getIGeschaeftsjahr()) {
-					if ((uvap.getIMonat() % UvaverprobungDto.UVAABRECHNUNGSZEITRAUM_QUARTAL) >= krit.getIPeriode())
+					if ((uvap.getIMonat() % UvaverprobungDto.UVAABRECHNUNGSZEITRAUM_QUARTAL) >= krit
+							.getIPeriode())
 						durchfuehren = false;
 				}
 			} else if (krit.getSAbrechnungszeitraum().equals(
@@ -3329,14 +3521,18 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 					FinanzFac.UVA_ABRECHNUNGSZEITRAUM_MONAT)) {
 				perioden = new Integer[1];
 				perioden[0] = krit.getIPeriode();
-				uvaverprobungDto.setIAbrechnungszeitraum(UvaverprobungDto.UVAABRECHNUNGSZEITRAUM_MONAT);
+				uvaverprobungDto
+						.setIAbrechnungszeitraum(UvaverprobungDto.UVAABRECHNUNGSZEITRAUM_MONAT);
 			} else if (krit.getSAbrechnungszeitraum().equals(
 					FinanzFac.UVA_ABRECHNUNGSZEITRAUM_QUARTAL)) {
-				perioden = HelperServer.getMonateFuerQuartal(krit.getIPeriode());
-				uvaverprobungDto.setIAbrechnungszeitraum(UvaverprobungDto.UVAABRECHNUNGSZEITRAUM_QUARTAL);
+				perioden = HelperServer
+						.getMonateFuerQuartal(krit.getIPeriode());
+				uvaverprobungDto
+						.setIAbrechnungszeitraum(UvaverprobungDto.UVAABRECHNUNGSZEITRAUM_QUARTAL);
 			} else if (krit.getSAbrechnungszeitraum().equals(
 					FinanzFac.UVA_ABRECHNUNGSZEITRAUM_JAHR)) {
-				uvaverprobungDto.setIAbrechnungszeitraum(UvaverprobungDto.UVAABRECHNUNGSZEITRAUM_JAHR);
+				uvaverprobungDto
+						.setIAbrechnungszeitraum(UvaverprobungDto.UVAABRECHNUNGSZEITRAUM_JAHR);
 			}
 
 			uvaverprobungDto.setIGeschaeftsjahr(krit.getIGeschaeftsjahr());
@@ -3390,6 +3586,87 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 			return assembleUvaverprobungDto(uvap);
 		}
 		return null;
+	}
+
+	public Map<Integer, Integer> getAllIIdsUstkontoMitIIdMwstBez(
+			Integer finanzamtIId, TheClientDto theClientDto) {
+		return getAllIIdsSteuerkontoMitIIdMwstBez(finanzamtIId, theClientDto,
+				STEUERART_UST);
+	}
+
+	public Map<Integer, Integer> getAllIIdsVstkontoMitIIdMwstBez(
+			Integer finanzamtIId, TheClientDto theClientDto) {
+		return getAllIIdsSteuerkontoMitIIdMwstBez(finanzamtIId, theClientDto,
+				STEUERART_VST);
+	}
+
+	public Map<Integer, Integer> getAllIIdsEUstkontoMitIIdMwstBez(
+			Integer finanzamtIId, TheClientDto theClientDto) {
+		return getAllIIdsSteuerkontoMitIIdMwstBez(finanzamtIId, theClientDto,
+				STEUERART_EUST);
+	}
+
+	public Map<Integer, Integer> getAllIIdsSteuerkontoMitIIdMwstBez(
+			Integer finanzamtIId, TheClientDto theClientDto) {
+		return getAllIIdsSteuerkontoMitIIdMwstBez(finanzamtIId, theClientDto,
+				null);
+	}
+
+	/**
+	 * 
+	 * @param finanzamtIId
+	 * @param theClientDto
+	 * @return eine Map mit den KontoIIds als Key und den MwstsatzbezIId als
+	 *         Value
+	 */
+	private Map<Integer, Integer> getAllIIdsSteuerkontoMitIIdMwstBez(
+			Integer finanzamtIId, TheClientDto theClientDto, String steuerart) {
+		Map<Integer, Integer> mwstKonten = new HashMap<Integer, Integer>();
+		SteuerkategorieDto[] stkDtos = steuerkategorieFindByFinanzamtIId(
+				finanzamtIId, theClientDto);
+		for (SteuerkategorieDto stkat : stkDtos) {
+			SteuerkategoriekontoDto[] stkks = steuerkategoriekontoFindAll(stkat
+					.getIId());
+			for (SteuerkategoriekontoDto stkk : stkks) {
+				if (steuerart == null || STEUERART_VST.equals(steuerart)) {
+					if (mwstKonten.containsKey(stkk.getKontoIIdEk()))
+						mwstKonten.put(stkk.getKontoIIdEk(), null);
+					else
+						mwstKonten.put(stkk.getKontoIIdEk(),
+								stkk.getMwstsatzbezIId());
+				}
+				if (steuerart == null || STEUERART_UST.equals(steuerart)) {
+					if (mwstKonten.containsKey(stkk.getKontoIIdVk()))
+						mwstKonten.put(stkk.getKontoIIdVk(), null);
+					else
+						mwstKonten.put(stkk.getKontoIIdVk(),
+								stkk.getMwstsatzbezIId());
+				}
+				if (steuerart == null || STEUERART_EUST.equals(steuerart)) {
+					if (mwstKonten.containsKey(stkk.getKontoIIdEinfuhrUst()))
+						mwstKonten.put(stkk.getKontoIIdEinfuhrUst(), null);
+					else
+						mwstKonten.put(stkk.getKontoIIdEinfuhrUst(),
+								stkk.getMwstsatzbezIId());
+				}
+			}
+		}
+		return mwstKonten;
+	}
+
+	public Set<Integer> getAllMitlaufendeKonten(Integer finanzamtIId,
+			TheClientDto theClientDto) {
+		Set<Integer> mitlaufendeKonten = new HashSet<Integer>();
+		SteuerkategorieDto[] stkDtos = steuerkategorieFindByFinanzamtIId(
+				finanzamtIId, theClientDto);
+		for (SteuerkategorieDto stkat : stkDtos) {
+			if (stkat.getKontoIIdForderungen() != null)
+				mitlaufendeKonten.add(stkat.getKontoIIdForderungen());
+			if (stkat.getKontoIIdVerbindlichkeiten() != null)
+				mitlaufendeKonten.add(stkat.getKontoIIdVerbindlichkeiten());
+		}
+		return mitlaufendeKonten;
+
 	}
 
 	private UvaverprobungDto assembleUvaverprobungDto(
@@ -3535,14 +3812,13 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 				mwstsatzbez, theClientDto);
 	}
 
-	
 	public Integer createAuszifferung(Integer[] buchungdetailIds,
 			TheClientDto theClient) {
-		List<Buchungdetail> buchungdetails =  new ArrayList<Buchungdetail>();
-		
-		if(buchungdetailIds.length == 0)
+		List<Buchungdetail> buchungdetails = new ArrayList<Buchungdetail>();
+
+		if (buchungdetailIds.length == 0)
 			return null;
-		
+
 		Integer azk = null;
 		for (Integer iid : buchungdetailIds) {
 			Buchungdetail buchungdetail = em.find(Buchungdetail.class, iid);
@@ -3550,19 +3826,20 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND,
 						"Nicht gefunden: Buchungdetail ID " + iid);
 			}
-			Buchung buchung = em.find(Buchung.class, buchungdetail.getBuchungIId());
-			if(buchung.getTStorniert() != null)
+			Buchung buchung = em.find(Buchung.class,
+					buchungdetail.getBuchungIId());
+			if (buchung.getTStorniert() != null)
 				return null;
-			if(azk == null) {
+			if (azk == null) {
 				azk = buchungdetail.getIAusziffern();
-			} else if(!azk.equals(buchungdetail.getIAusziffern())) {
+			} else if (buchungdetail.getIAusziffern() != null
+					&& !azk.equals(buchungdetail.getIAusziffern())) {
 				return null; // es gibt bereits 2 verschiedene AZK
 			}
 			buchungdetails.add(buchungdetail);
 		}
-		
 
-		if(azk == null) {
+		if (azk == null) {
 			Query query = em.createNamedQuery("BuchungdetailMaxIAusziffern");
 			query.setParameter(1, buchungdetails.get(0).getKontoIId());
 			azk = (Integer) query.getSingleResult();
@@ -3598,11 +3875,13 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 		if (auszifferKennzeichen == null) {
 			// SP 2013/01093
 			// aus erster Buchung mit Kennzeichen holen
-			for (int i=0; i< buchungdetailIds.length; i++) {
-				Buchungdetail buchungdetail = em.find(Buchungdetail.class, buchungdetailIds[i]);
+			for (int i = 0; i < buchungdetailIds.length; i++) {
+				Buchungdetail buchungdetail = em.find(Buchungdetail.class,
+						buchungdetailIds[i]);
 				if (buchungdetail == null) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, "Nicht gefunden: Buchungdetail ID "
-								+ buchungdetailIds[i]);
+					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND,
+							"Nicht gefunden: Buchungdetail ID "
+									+ buchungdetailIds[i]);
 				}
 				auszifferKennzeichen = buchungdetail.getIAusziffern();
 				if (auszifferKennzeichen != null)
@@ -3648,17 +3927,53 @@ public class FinanzServiceFacBean extends Facade implements FinanzServiceFac {
 	public UvaverprobungDto uvaVerprobungFindbyFinanzamtIIdGeschaeftsjahrPeriodeAbrechnungszeitraumMandant(
 			Integer finanzamtIId, int iGeschaeftsjahr, int iPeriode,
 			int iAbrechnungszeitraum, TheClientDto theClientDto) {
-		Query query = em.createNamedQuery("UvaverprobungfindByGeschaeftsjahrMonatFinanzamtMandant");
+		HvTypedQuery<Uvaverprobung> query = new HvTypedQuery<Uvaverprobung>(
+				em.createNamedQuery("UvaverprobungfindByGeschaeftsjahrMonatFinanzamtMandant"));
 		query.setParameter(1, iGeschaeftsjahr);
 		query.setParameter(2, iPeriode + iAbrechnungszeitraum);
 		query.setParameter(3, finanzamtIId);
 		query.setParameter(4, theClientDto.getMandant());
-		try {
-			Uvaverprobung uvaverprobung = (Uvaverprobung) query.getSingleResult();
-			return assembleUvaverprobungDto(uvaverprobung);
-		} catch (Exception e) {
-			//
-		}
-		return null;
+
+		List<Uvaverprobung> list = query.getResultList();
+		if (list == null || list.size() != 1)
+			return null;
+		return assembleUvaverprobungDto(list.get(0));
 	}
+
+	@Override
+	public List<SteuerkategoriekontoDto> steuerkategorieFindByKontoIIdMwstSatzBezIId(
+			Integer kontoIId, Integer mwstSatzBezIId) {
+		HvTypedQuery<Steuerkategoriekonto> query = new HvTypedQuery<Steuerkategoriekonto>(
+				em.createNamedQuery("SteuerkategoriekontoByKontoIIdandMwStSatzBeziid"));
+		query.setParameter(1, kontoIId).setParameter(2, mwstSatzBezIId);
+		return Arrays.asList(assembleSteuerkategoriekontoDtos(query
+				.getResultList()));
+	}
+
+	@Override
+	public BigDecimal getLiquiditaetsKontostand(Integer geschaeftsjahrIId,
+			TheClientDto theClientDto) {
+
+		if (getBenutzerServicesFac().hatRecht(RechteFac.RECHT_FB_FINANZ_R,
+				theClientDto)
+				|| getBenutzerServicesFac().hatRecht(
+						RechteFac.RECHT_FB_FINANZ_CUD, theClientDto)) {
+			HvTypedQuery<Bankverbindung> query = new HvTypedQuery<Bankverbindung>(
+					em.createNamedQuery(Bankverbindung.BankverbindungFindForLiquiditaetsvorschau));
+			query.setParameter("mandant", theClientDto.getMandant());
+			List<Bankverbindung> bankverbindungen = query.getResultList();
+			BigDecimal saldo = BigDecimal.ZERO;
+			for (Bankverbindung bv : bankverbindungen) {
+				saldo = saldo.add(getBuchenFac()
+						.getAktuellenSaldoVonKontoFuerGeschaeftsjahr(
+								bv.getKontoIId(), geschaeftsjahrIId));
+			}
+			return saldo;
+		} else {
+			// SP18971
+			return null;
+		}
+
+	}
+
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -89,6 +89,18 @@ public class Kundesoko implements Serializable {
 	@Column(name = "B_DRUCKEN")
 	private Short bDrucken;
 
+	@Column(name = "B_WIRKT_NICHT_FUER_PREISFINDUNG")
+	private Short bWirktNichtFuerPreisfindung;
+	
+	
+	public Short getBWirktNichtFuerPreisfindung() {
+		return bWirktNichtFuerPreisfindung;
+	}
+
+	public void setBWirktNichtFuerPreisfindung(Short bWirktNichtFuerPreisfindung) {
+		this.bWirktNichtFuerPreisfindung = bWirktNichtFuerPreisfindung;
+	}
+
 	@Column(name = "T_AENDERN")
 	private Timestamp tAendern;
 
@@ -140,12 +152,13 @@ public class Kundesoko implements Serializable {
 		setBBemerkungdrucken(new Short((short) 0));
 		setBDrucken(new Short((short) 0));
 		setBRabattsichtbar(new Short((short) 0));
+		setBWirktNichtFuerPreisfindung(new Short((short) 0));
 		setTAendern(new Timestamp(System.currentTimeMillis()));
 	}
 
 	public Kundesoko(Integer iId, Integer kundeIId, Timestamp tPreisgueltigab,
 			Short bemerkungdrucken, Short rabattsichtbar, Short drucken,
-			Integer personalIIdAendern) {
+			Integer personalIIdAendern,Short wirktnichtfuerpreisfindung) {
 		setIId(iId);
 		setKundeIId(kundeIId);
 		setTPreisgueltigab(new Date(tPreisgueltigab.getTime()));
@@ -154,6 +167,7 @@ public class Kundesoko implements Serializable {
 		setBDrucken(drucken);
 		setBRabattsichtbar(rabattsichtbar);
 		setTAendern(new Timestamp(System.currentTimeMillis()));
+		setBWirktNichtFuerPreisfindung(wirktnichtfuerpreisfindung);
 	}
 
 	public Integer getIId() {

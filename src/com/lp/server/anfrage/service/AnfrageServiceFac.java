@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -67,6 +67,9 @@ public interface AnfrageServiceFac {
 	public static final String ANFRAGEPOSITIONART_TEXTBAUSTEIN = LocaleFac.POSITIONSART_TEXTBAUSTEIN;
 	public static final String ANFRAGEPOSITIONART_BETRIFFT = LocaleFac.POSITIONSART_BETRIFFT;
 
+	
+	public static final String ANFRAGEERLEDIGUNGSGRUND_BESTELLT = "Bestellt";
+	
 	// FLR Spaltennamen aus Hibernate Mapping
 	public static final String FLR_ANFRAGETEXT_MEDIAART_C_NR = "mediaart_c_nr";
 	public static final String FLR_ANFRAGETEXT_X_TEXTINHALT = "x_textinhalt";
@@ -165,5 +168,15 @@ public interface AnfrageServiceFac {
 	public ZertifikatartDto zertifikatartFindByPrimaryKey(Integer iId);
 
 	public void removeZertifikatart(ZertifikatartDto dto);
+	
+	public Integer createAnfrageerledigungsgrund(
+			AnfrageerledigungsgrundDto anfrageerledigungsgrundDto,
+			TheClientDto theClientDto);
+	public void updateAnfrageerledigungsgrund(
+			AnfrageerledigungsgrundDto anfrageerledigungsgrundDto);
+	public AnfrageerledigungsgrundDto anfrageerledigungsgrundFindByPrimaryKey(
+			Integer iId);
+	public void removeAnfrageerledigungsgrund(Integer iId);
+	public boolean sindErledigugnsgruendeVorhanden(TheClientDto theclientDto);
 
 }

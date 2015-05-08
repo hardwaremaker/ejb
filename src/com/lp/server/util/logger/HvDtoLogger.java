@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -43,13 +43,16 @@ import org.apache.commons.lang.StringUtils;
 import com.lp.server.system.ejb.EntityLog;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
+import com.lp.server.system.service.HvDtoLogAlways;
 import com.lp.server.system.service.HvDtoLogClass;
 import com.lp.server.system.service.HvDtoLogComplex;
 import com.lp.server.system.service.HvDtoLogIdCBez;
 import com.lp.server.system.service.HvDtoLogIdCnr;
+import com.lp.server.system.service.HvDtoLogIdEmail;
 import com.lp.server.system.service.HvDtoLogIgnore;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.ICBez;
+import com.lp.server.util.ICEmail;
 import com.lp.server.util.ICNr;
 import com.lp.server.util.IIId;
 import com.lp.server.util.IMultipleKeyfields;
@@ -128,9 +131,11 @@ public class HvDtoLogger<T> {
 	}
 
 	private void logImpl(Object object1, Object object2) {
+		if(object1 == null) return ;
 		HvDtoLogClass logClassAnnotation = getLoggable(object1) ;
 		if(logClassAnnotation == null) return ;
-
+		
+		
 		Method[] methods = object1.getClass().getMethods() ;
 		for(Method theMethod : methods) {
 			if(!theMethod.getName().startsWith("get")) continue ;
@@ -172,30 +177,61 @@ public class HvDtoLogger<T> {
 			Object v1 = theMethod.invoke(object1, (Object[]) null) ;
 			Object v2 = theMethod.invoke(object2, (Object[]) null) ;
 
-			if(isDifferent(v1, v2)) {
+			if(isDifferent(v1, v2) || theMethod.isAnnotationPresent(HvDtoLogAlways.class)) {
 				setBaseId(object1) ;
-				
-				if(theMethod.isAnnotationPresent(HvDtoLogComplex.class)) {
-					logImpl(v1, v2);
-				} else {
-					if(theMethod.isAnnotationPresent(HvDtoLogIdCnr.class)) {
-						v1 = getEntityCnr(theMethod, v1) ;
-						v2 = getEntityCnr(theMethod, v2) ;
-					} else {
-						if(theMethod.isAnnotationPresent(HvDtoLogIdCBez.class)) {
-							v1 = getEntityCBez(theMethod, v1) ;
-							v2 = getEntityCBez(theMethod, v2) ;								
-						}
-					}
 
-					logValues(logAnnotation, getKeyFromMethod(theMethod), getBaseId(object1), v1, v2) ;
-				}
+				logSpecializedAnnotationValue(logAnnotation, theMethod, object1, v1, v2);
+//				if(theMethod.isAnnotationPresent(HvDtoLogComplex.class)) {
+//					logImpl(v1, v2);
+//				} else {
+//					if(theMethod.isAnnotationPresent(HvDtoLogIdCnr.class)) {
+//						v1 = getEntityCnr(theMethod, v1) ;
+//						v2 = getEntityCnr(theMethod, v2) ;
+//					} else {
+//						if(theMethod.isAnnotationPresent(HvDtoLogIdCBez.class)) {
+//							v1 = getEntityCBez(theMethod, v1) ;
+//							v2 = getEntityCBez(theMethod, v2) ;								
+//						}
+//					}
+//
+//					logValues(logAnnotation, getKeyFromMethod(theMethod), getBaseId(object1), v1, v2) ;
+//				}
 			}
 		} catch(InvocationTargetException e ){
 			System.out.println("invocation" + e.getMessage()) ;
 		} catch(IllegalAccessException e) {				
 			System.out.println("access" + e.getMessage()) ;
 		}
+	}
+	
+	private void logSpecializedAnnotationValue(HvDtoLogClass logAnnotation, Method theMethod, Object object1, Object v1, Object v2) {
+		if(theMethod.isAnnotationPresent(HvDtoLogComplex.class)) {
+			logImpl(v1, v2);
+			return ;
+		} 		
+
+		if(theMethod.isAnnotationPresent(HvDtoLogIdCnr.class)) {
+			v1 = getEntityCnr(theMethod, v1) ;
+			v2 = getEntityCnr(theMethod, v2) ;
+			logValues(logAnnotation, getKeyFromMethod(theMethod), getBaseId(object1), v1, v2) ;
+			return ;
+		}
+		
+		if(theMethod.isAnnotationPresent(HvDtoLogIdCBez.class)) {
+			v1 = getEntityCBez(theMethod, v1) ;
+			v2 = getEntityCBez(theMethod, v2) ;								
+			logValues(logAnnotation, getKeyFromMethod(theMethod), getBaseId(object1), v1, v2) ;
+			return ;
+		}
+
+		if(theMethod.isAnnotationPresent(HvDtoLogIdEmail.class)) {
+			v1 = getEntityEmail(theMethod, v1) ;
+			v2 = getEntityEmail(theMethod, v2) ;								
+			logValues(logAnnotation, getKeyFromMethod(theMethod), getBaseId(object1), v1, v2) ;
+			return ;
+		}
+
+		logValues(logAnnotation, getKeyFromMethod(theMethod), getBaseId(object1), v1, v2) ;
 	}
 	
 	private String getKeyFromMethod(Method theMethod) {
@@ -226,6 +262,19 @@ public class HvDtoLogger<T> {
 		
 		return o ;
 	}
+	
+	private Object getEntityEmail(Method theMethod, Object primarykey) {
+		if(primarykey == null) return primarykey ;
+
+		HvDtoLogIdEmail annotationId = theMethod.getAnnotation(HvDtoLogIdEmail.class) ;
+		Object o = em.find(annotationId.entityClass(), primarykey) ;
+		if(o != null) {
+			o = ((ICEmail) o).getCEmail() ;
+		}
+		
+		return o ;
+	}
+	
 	
 	private boolean isDifferent(Object value1, Object value2) {
 		if(value1 == null && value2 == null) return false ;

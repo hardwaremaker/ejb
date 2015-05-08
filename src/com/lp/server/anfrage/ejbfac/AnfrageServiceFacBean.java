@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -51,6 +51,7 @@ import javax.persistence.Query;
 import com.lp.server.anfrage.ejb.Anfrageart;
 import com.lp.server.anfrage.ejb.Anfrageartspr;
 import com.lp.server.anfrage.ejb.AnfrageartsprPK;
+import com.lp.server.anfrage.ejb.Anfrageerledigungsgrund;
 import com.lp.server.anfrage.ejb.Anfragepositionart;
 import com.lp.server.anfrage.ejb.Anfragestatus;
 import com.lp.server.anfrage.ejb.Anfragetext;
@@ -60,6 +61,8 @@ import com.lp.server.anfrage.service.AnfrageartDto;
 import com.lp.server.anfrage.service.AnfrageartDtoAssembler;
 import com.lp.server.anfrage.service.AnfrageartsprDto;
 import com.lp.server.anfrage.service.AnfrageartsprDtoAssembler;
+import com.lp.server.anfrage.service.AnfrageerledigungsgrundDto;
+import com.lp.server.anfrage.service.AnfrageerledigungsgrundDtoAssembler;
 import com.lp.server.anfrage.service.AnfragepositionartDto;
 import com.lp.server.anfrage.service.AnfragepositionartDtoAssembler;
 import com.lp.server.anfrage.service.AnfragestatusDto;
@@ -68,7 +71,11 @@ import com.lp.server.anfrage.service.AnfragetextDto;
 import com.lp.server.anfrage.service.AnfragetextDtoAssembler;
 import com.lp.server.anfrage.service.ZertifikatartDto;
 import com.lp.server.anfrage.service.ZertifikatartDtoAssembler;
+import com.lp.server.projekt.ejb.Projekterledigungsgrund;
+import com.lp.server.projekt.service.ProjekterledigungsgrundDto;
+import com.lp.server.projekt.service.ProjekterledigungsgrundDtoAssembler;
 import com.lp.server.system.pkgenerator.PKConst;
+import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.MediaFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
@@ -1343,4 +1350,161 @@ public class AnfrageServiceFacBean extends Facade implements AnfrageServiceFac {
 
 		return spr.getCBez();
 	}
+	
+	public Integer createAnfrageerledigungsgrund(
+			AnfrageerledigungsgrundDto anfrageerledigungsgrundDto,
+			TheClientDto theClientDto) {
+
+		if (anfrageerledigungsgrundDto == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
+					new Exception("anfrageerledigungsgrundDto == null"));
+		}
+		if (anfrageerledigungsgrundDto.getCBez() == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception(
+							"anfrageerledigungsgrundDto.getCBez() == null"));
+		}
+		try {
+			Query query = em
+					.createNamedQuery("AnfrageerledigungsgrundfindByMandantCnrCBez");
+			query.setParameter(1, anfrageerledigungsgrundDto.getMandantCNr());
+			query.setParameter(2, anfrageerledigungsgrundDto.getCBez());
+			Anfrageerledigungsgrund doppelt = (Anfrageerledigungsgrund) query
+					.getSingleResult();
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE,
+					new Exception("ANF_ANFRAGEERLEDIGUNGSGRUND.C_BEZ"));
+		} catch (NoResultException ex1) {
+		}
+		// generieren von primary key
+		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
+		Integer pk = pkGen
+				.getNextPrimaryKey(PKConst.PK_ANFRAGEERLEDIGUNGSGRUND);
+		anfrageerledigungsgrundDto.setIId(pk);
+
+		try {
+			Anfrageerledigungsgrund anfrageerledigungsgrund = new Anfrageerledigungsgrund(
+					anfrageerledigungsgrundDto.getIId(),
+					anfrageerledigungsgrundDto.getMandantCNr(),
+					anfrageerledigungsgrundDto.getCBez());
+			em.persist(anfrageerledigungsgrund);
+			em.flush();
+			setAnfrageerledigungsgrundFromAnfrageerledigungsgrundDto(
+					anfrageerledigungsgrund, anfrageerledigungsgrundDto);
+		} catch (EntityExistsException e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
+					new Exception(e));
+		}
+		return anfrageerledigungsgrundDto.getIId();
+	}
+	public void updateAnfrageerledigungsgrund(
+			AnfrageerledigungsgrundDto anfrageerledigungsgrundDto) {
+		if (anfrageerledigungsgrundDto == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
+					new Exception("anfrageerledigungsgrundDto == null"));
+		}
+		if (anfrageerledigungsgrundDto.getIId() == null
+				|| anfrageerledigungsgrundDto.getCBez() == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception(
+							"anfrageerledigungsgrundDto.getIId() == null || anfrageerledigungsgrundDto.getCBez() == null"));
+		}
+
+		Integer iId = anfrageerledigungsgrundDto.getIId();
+		// try {
+		Anfrageerledigungsgrund anfrageerledigungsgrund = em.find(
+				Anfrageerledigungsgrund.class, iId);
+		if (anfrageerledigungsgrund == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			Query query = em
+					.createNamedQuery("AnfrageerledigungsgrundfindByMandantCnrCBez");
+			query.setParameter(1, anfrageerledigungsgrundDto.getMandantCNr());
+			query.setParameter(2, anfrageerledigungsgrundDto.getCBez());
+			Integer iIdVorhanden = ((Anfrageerledigungsgrund) query
+					.getSingleResult()).getIId();
+			if (iId.equals(iIdVorhanden) == false) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_DUPLICATE_UNIQUE, new Exception(
+								"ANF_ANFRAGEERLEDIGUNGSGRUND.C_BEZ"));
+			}
+
+		} catch (NoResultException ex) {
+			//
+		}
+		setAnfrageerledigungsgrundFromAnfrageerledigungsgrundDto(
+				anfrageerledigungsgrund, anfrageerledigungsgrundDto);
+		// }
+		// catch (FinderException ex) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+		// ex);
+		// }
+
+	}
+	public AnfrageerledigungsgrundDto anfrageerledigungsgrundFindByPrimaryKey(
+			Integer iId) {
+		if (iId == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
+					new Exception("iId == null"));
+		}
+
+		try {
+			Anfrageerledigungsgrund anfrageerledigungsgrund = em.find(
+					Anfrageerledigungsgrund.class, iId);
+			if (anfrageerledigungsgrund == null) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			}
+			return assembleAnfrageerledigungsgrundDto(anfrageerledigungsgrund);
+		} catch (Exception e) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, e);
+		}
+	}
+	
+	public void removeAnfrageerledigungsgrund(Integer iId) {
+		if (iId == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
+					new Exception("iId == null"));
+		}
+		try {
+			Anfrageerledigungsgrund anfrageerledigungsgrund = em.find(
+					Anfrageerledigungsgrund.class, iId);
+			if (anfrageerledigungsgrund == null) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			}
+			em.remove(anfrageerledigungsgrund);
+			em.flush();
+		} catch (Exception e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, e);
+		}
+	}
+	private AnfrageerledigungsgrundDto assembleAnfrageerledigungsgrundDto(
+			Anfrageerledigungsgrund anfrageerledigungsgrund) {
+		return AnfrageerledigungsgrundDtoAssembler
+				.createDto(anfrageerledigungsgrund);
+	}
+	private void setAnfrageerledigungsgrundFromAnfrageerledigungsgrundDto(
+			Anfrageerledigungsgrund anfrageerledigungsgrund,
+			AnfrageerledigungsgrundDto anfrageerledigungsgrundDto) {
+		anfrageerledigungsgrund.setCBez(anfrageerledigungsgrundDto.getCBez());
+		em.merge(anfrageerledigungsgrund);
+		em.flush();
+	}
+	
+	public boolean sindErledigugnsgruendeVorhanden(TheClientDto theclientDto) {
+		Query query = em
+				.createNamedQuery("AnfrageerledigungsgrundfindByMandantCnr");
+		query.setParameter(1, theclientDto.getMandant());
+		int i = query.getResultList().size();
+		if (i > 1) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -224,7 +224,8 @@ public class RechnungHandler extends UseCaseHandler {
 					rows[row][col++] = getTextRespectUISpr("lp.m",
 							theClientDto.getMandant(), theClientDto.getLocUi());
 				} else {
-					rows[row][col++] = mahnstufeIId != null ? mahnstufeIId.toString() : "";
+					rows[row][col++] = mahnstufeIId != null ? mahnstufeIId
+							.toString() : "";
 				}
 				if (bHatFibu == true) {
 					if (lVerbucht > 0) {
@@ -327,6 +328,14 @@ public class RechnungHandler extends UseCaseHandler {
 							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
 									ex);
 						}
+					} else if (filterKriterien[i].kritName
+							.equals(RechnungFac.FLR_RECHNUNG_C_BEZ)) {
+						
+						where.append(" (upper(rechnung.c_bez) LIKE "
+								+ filterKriterien[i].value.toUpperCase()
+								+ " OR upper(rechnung.c_bestellnummer) LIKE "
+								+ filterKriterien[i].value.toUpperCase() + ")");
+						
 					} else if (filterKriterien[i].kritName
 							.equals(RechnungFac.FLR_RECHNUNG_FLRKUNDE
 									+ "."
@@ -594,7 +603,9 @@ public class RechnungHandler extends UseCaseHandler {
 							RechnungFac.FLR_RECHNUNG_FLRVERTRETER + "."
 									+ PersonalFac.FLR_PERSONAL_C_KURZZEICHEN,
 							RechnungFac.FLR_RECHNUNG_STATUS_C_NR,
-							bBruttoStattNetto ? RechnungFac.FLR_RECHNUNG_N_WERTFW+"+rechnung.n_wertustfw" : RechnungFac.FLR_RECHNUNG_N_WERTFW ,
+							bBruttoStattNetto ? RechnungFac.FLR_RECHNUNG_N_WERTFW
+									+ "+rechnung.n_wertustfw"
+									: RechnungFac.FLR_RECHNUNG_N_WERTFW,
 							RechnungFac.FLR_RECHNUNG_WAEHRUNG_C_NR,
 							Facade.NICHT_SORTIERBAR,
 							RechnungFac.FLR_RECHNUNG_T_FIBUUEBERNAHME }));
@@ -618,11 +629,11 @@ public class RechnungHandler extends UseCaseHandler {
 			// Nicht gefunden
 		}
 		if (rechnungDto != null) {
-//			String sPath = JCRDocFac.HELIUMV_NODE + "/"
-//					+ theClientDto.getMandant() + "/"
-//					+ LocaleFac.BELEGART_RECHNUNG.trim() + "/"
-//					+ LocaleFac.BELEGART_RECHNUNG.trim() + "/"
-//					+ rechnungDto.getCNr().replace("/", ".");
+			// String sPath = JCRDocFac.HELIUMV_NODE + "/"
+			// + theClientDto.getMandant() + "/"
+			// + LocaleFac.BELEGART_RECHNUNG.trim() + "/"
+			// + LocaleFac.BELEGART_RECHNUNG.trim() + "/"
+			// + rechnungDto.getCNr().replace("/", ".");
 			DocPath docPath = new DocPath(new DocNodeRechnung(rechnungDto));
 			Integer iPartnerIId = null;
 			if (partnerDto != null) {

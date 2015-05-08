@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -112,7 +112,16 @@ public interface StuecklisteReportFac {
 	public static int REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_I_EBENE = 34;
 	public static int REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_GEWICHT = 35;
 	public static int REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_I_SORT = 36;
-	public static int REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ANZAHL_SPALTEN = 37;
+	public static int REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ARTIKEL_HERSTELLERNUMMER = 37;
+	public static int REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ERSATZARTIKEL_HERSTELLERNUMMER = 38;
+	public static int REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ARTIKEL_HERSTELLERBEZEICHNUNG = 39;
+	public static int REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ERSATZARTIKEL_HERSTELLERBEZEICHNUNG = 40;
+	public static int REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_FREIGABE_ZEITPUNKT = 41;
+	public static int REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_FREIGABE_PERSON = 42;
+	public static int REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_KUNDENARTIKELNUMMER = 43;
+	public static int REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_KUNDENARTIKELBEZEICHNUNG = 44;
+
+	public static int REPORT_STUECKLISTE_ALLGEMEINOHNEPREIS_ANZAHL_SPALTEN = 45;
 
 	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ARTIKEL = 0;
 	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ARTIKELBEZEICHNUNG = 1;
@@ -155,18 +164,29 @@ public interface StuecklisteReportFac {
 	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_KALK_PREIS = 38;
 	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_KOMMENTAR_POSITION = 39;
 	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_MATERIALZUSCHLAG = 40;
-	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ANZAHL_SPALTEN = 41;
+	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ARTIKEL_HERSTELLERNUMMER = 41;
+	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ERSATZARTIKEL_HERSTELLERNUMMER = 42;
+	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ARTIKEL_HERSTELLERBEZEICHNUNG = 43;
+	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ERSATZARTIKEL_HERSTELLERBEZEICHNUNG = 44;
+	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_FREIGABE_ZEITPUNKT = 45;
+	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_FREIGABE_PERSON = 46;
+	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_KUNDENARTIKELNUMMER = 47;
+	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_KUNDENARTIKELBEZEICHNUNG = 48;
+
+	public static int REPORT_STUECKLISTE_ALLGEMEINMITPREIS_ANZAHL_SPALTEN = 49;
 
 	public JasperPrintLP printAusgabestueckliste(Integer[] stuecklisteIId,
 			Integer lagerIId, Boolean bMitStuecklistenkommentar,
 			Boolean bUnterstuecklistenEinbinden,
-			Boolean bGleichePositionenZusammenfassen,
-			Integer iOptionSortierungUnterstuecklisten, BigDecimal nLosgroesse,
-			boolean bUnterstklstrukurBelassen, TheClientDto theClientDto)
+			Boolean bGleichePositionenZusammenfassen, BigDecimal nLosgroesse,
+			boolean bSortiertNachArtikelbezeichnung,
+			boolean bNurAbbuchungslaeger, TheClientDto theClientDto)
 			throws RemoteException;
 
 	public JasperPrintLP printGesamtkalkulation(Integer stuecklisteIId,
-			BigDecimal nLosgroesse, TheClientDto theClientDto)
+			BigDecimal nLosgroesse, boolean lief1PreisInKalkpreisUebernehmen,
+			boolean bMitPreisenDerLetzten2Jahre,
+			boolean unterstuecklistenVerdichten, TheClientDto theClientDto)
 			throws RemoteException;
 
 	public JasperPrintLP printArbeitsplan(Integer stuecklisteIId,

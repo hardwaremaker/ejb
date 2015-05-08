@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -84,16 +84,16 @@ public interface BestellvorschlagFac {
 	public void removeBestellvorschlag(Integer iId) throws EJBExceptionLP,
 			RemoteException;
 
-	public void erstelleBestellvorschlagAnhandStuecklistenmindestlagerstand(java.sql.Date dLiefertermin, TheClientDto theClientDto);
+	public void erstelleBestellvorschlagAnhandStuecklistenmindestlagerstand(java.sql.Date dLiefertermin, boolean vormerklisteLoeschen, TheClientDto theClientDto);
 	
 	public void removeBestellvorschlag(BestellvorschlagDto bestellvorschlagDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void updateBestellvorschlag(BestellvorschlagDto bestellvorschlagDto)
+	public void updateBestellvorschlag(BestellvorschlagDto bestellvorschlagDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public void updateBestellvorschlags(
-			BestellvorschlagDto[] bestellvorschlagDtos) throws EJBExceptionLP,
+			BestellvorschlagDto[] bestellvorschlagDtos, TheClientDto theClientDto) throws EJBExceptionLP,
 			RemoteException;
 
 	public BestellvorschlagDto bestellvorschlagFindByPrimaryKey(Integer iId)
@@ -115,7 +115,7 @@ public interface BestellvorschlagFac {
 
 	public void erstelleBestellvorschlag(Integer iVorlaufzeit,
 			Integer iToleranz, Date dateFuerEintraegeOhneLiefertermin, ArrayList<Integer> arLosIId, ArrayList<Integer> arAuftragIId,
-			boolean bMitNichtlagerbewirtschafteten, boolean bNurLospositionenBeruecksichtigen,
+			boolean bMitNichtlagerbewirtschafteten, boolean bNurLospositionenBeruecksichtigen,boolean vormerklisteLoeschen, 
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public void erstelleBestellvorschlagAnhandEinesAngebots(Integer angebotIId,
@@ -155,7 +155,7 @@ public interface BestellvorschlagFac {
 	public void loescheSpaeterWiederbeschaffbarePositionen(Date tNaechsterBV,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public void loescheBestellvorlaegeEinesMandaten(TheClientDto theClientDto)
+	public void loescheBestellvorlaegeEinesMandaten(boolean vormerklisteLoeschen, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 	
 	public void befuellenDerBestellungUndBestellposition(
@@ -177,7 +177,7 @@ public interface BestellvorschlagFac {
 	public void bestellvorschlagDtoErzeugen(String belegartCNr,
 			String mandantCNr, Integer artikelIId, Integer belegIId,
 			Integer belegpositionIId, java.sql.Timestamp tTermin,
-			BigDecimal nMenge, Integer projektIId, TheClientDto theClientDto);	
+			BigDecimal nMenge, Integer projektIId,String xTextinhalt,Integer lieferantIId, BigDecimal nEinkaufspreis, TheClientDto theClientDto);	
 	public Map getAllLieferantenDesBestellvorschlages(TheClientDto theClientDto);
 	public void artikellieferantZuruecksetzen(ArrayList<Integer> bestellvorschlagIIds, TheClientDto theClientDto);
 }

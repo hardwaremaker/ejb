@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,17 +19,17 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.fertigung.fastlanereader.generated;
 
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
@@ -103,8 +103,11 @@ public class FLRLossollarbeitsplan implements Serializable {
     /** nullable persistent field */
     private FLRPersonal flrpersonal_zugeordneter;
 
+    /** nullable persistent field */
+    private com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial flrsollmaterial;
+
     /** full constructor */
-    public FLRLossollarbeitsplan(Integer los_i_id, Integer maschine_i_id, Integer personal_i_id_zugeordneter, BigDecimal l_ruestzeit, BigDecimal l_stueckzeit, BigDecimal n_gesamtzeit, Integer i_arbeitsgangsnummer, Integer i_maschinenversatztage, Integer i_unterarbeitsgang, Short b_nachtraeglich, Short b_fertig, String agart_c_nr, String c_kommentar, Integer i_aufspannung, Short b_autoendebeigeht, FLRArtikel flrartikel, com.lp.server.fertigung.fastlanereader.generated.FLRLos flrlos, FLRMaschine flrmaschine, FLRPersonal flrpersonal_zugeordneter) {
+    public FLRLossollarbeitsplan(Integer los_i_id, Integer maschine_i_id, Integer personal_i_id_zugeordneter, BigDecimal l_ruestzeit, BigDecimal l_stueckzeit, BigDecimal n_gesamtzeit, Integer i_arbeitsgangsnummer, Integer i_maschinenversatztage, Integer i_unterarbeitsgang, Short b_nachtraeglich, Short b_fertig, String agart_c_nr, String c_kommentar, Integer i_aufspannung, Short b_autoendebeigeht, FLRArtikel flrartikel, com.lp.server.fertigung.fastlanereader.generated.FLRLos flrlos, FLRMaschine flrmaschine, FLRPersonal flrpersonal_zugeordneter, com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial flrsollmaterial) {
         this.los_i_id = los_i_id;
         this.maschine_i_id = maschine_i_id;
         this.personal_i_id_zugeordneter = personal_i_id_zugeordneter;
@@ -124,6 +127,7 @@ public class FLRLossollarbeitsplan implements Serializable {
         this.flrlos = flrlos;
         this.flrmaschine = flrmaschine;
         this.flrpersonal_zugeordneter = flrpersonal_zugeordneter;
+        this.flrsollmaterial = flrsollmaterial;
     }
 
     /** default constructor */
@@ -288,6 +292,14 @@ public class FLRLossollarbeitsplan implements Serializable {
 
     public void setFlrpersonal_zugeordneter(FLRPersonal flrpersonal_zugeordneter) {
         this.flrpersonal_zugeordneter = flrpersonal_zugeordneter;
+    }
+
+    public com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial getFlrsollmaterial() {
+        return this.flrsollmaterial;
+    }
+
+    public void setFlrsollmaterial(com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial flrsollmaterial) {
+        this.flrsollmaterial = flrsollmaterial;
     }
 
     public String toString() {

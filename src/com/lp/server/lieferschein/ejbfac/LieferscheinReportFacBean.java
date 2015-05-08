@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -86,6 +86,7 @@ import com.lp.server.finanz.service.KontoDtoSmall;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferschein;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinReportAngelegte;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferscheinposition;
+import com.lp.server.lieferschein.fastlanereader.generated.FLRVerkettet;
 import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.lieferschein.service.LieferscheinFac;
 import com.lp.server.lieferschein.service.LieferscheinReportFac;
@@ -96,11 +97,13 @@ import com.lp.server.lieferschein.service.LieferscheintextDto;
 import com.lp.server.lieferschein.service.ReportLieferscheinAngelegteDto;
 import com.lp.server.lieferschein.service.ReportLieferscheinJournalKriterienDto;
 import com.lp.server.lieferschein.service.ReportLieferscheinOffeneDto;
+import com.lp.server.lieferschein.service.VerkettetDto;
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 import com.lp.server.partner.service.AnsprechpartnerDto;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.KundeFac;
 import com.lp.server.partner.service.KundesokoDto;
+import com.lp.server.partner.service.LieferantDto;
 import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.personal.service.PersonalDto;
@@ -167,7 +170,8 @@ public class LieferscheinReportFacBean extends LPReport implements
 	private final static int FELD_ALLE_LAENDERART = 16;
 	private final static int FELD_ALLE_PROJEKT = 17;
 	private final static int FELD_ALLE_STATUS = 18;
-	private final static int REPORT_ALLE_ANZAHL_SPALTEN = 19;
+	private final static int FELD_ALLE_KOPFLIEFERSCHEIN_WENN_VERKETTET = 19;
+	private final static int REPORT_ALLE_ANZAHL_SPALTEN = 20;
 
 	public boolean next() throws JRException {
 		index++;
@@ -201,6 +205,8 @@ public class LieferscheinReportFacBean extends LPReport implements
 				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_ZBEZ2];
 			} else if ("F_SERIENCHARGENR".equals(fieldName)) {
 				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_WA_ETIKETT_SERIENCHARGENR];
+			} else if ("F_SUBREPORT_SERIENCHARGENNR".equals(fieldName)) {
+				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_SUBREPORT_SNRCHNR];
 			} else if ("F_POSITION".equals(fieldName)) {
 				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_WA_ETIKETT_POSITION];
 			} else if ("F_EINHEIT".equals(fieldName)) {
@@ -236,6 +242,8 @@ public class LieferscheinReportFacBean extends LPReport implements
 				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_ZBEZ2];
 			} else if ("F_SERIENCHARGENR".equals(fieldName)) {
 				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_VERSANDETIKETT_SERIENCHARGENR];
+			} else if ("F_SUBREPORT_SERIENCHARGENNR".equals(fieldName)) {
+				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_SUBREPORT_SNRCHNR];
 			} else if ("F_POSITION".equals(fieldName)) {
 				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_VERSANDETIKETT_POSITION];
 			} else if ("F_EINHEIT".equals(fieldName)) {
@@ -336,6 +344,8 @@ public class LieferscheinReportFacBean extends LPReport implements
 						.formatStyledTextForJasper(data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_SERIENCHARGENR]);
 			} else if ("F_SERIENCHARGENR_MENGE".equals(fieldName)) {
 				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_SERIENCHARGENR_MENGE];
+			} else if ("F_VERSION".equals(fieldName)) {
+				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_VERSION];
 			} else if ("F_CHARGE_MINDESTHALTBARKEIT".equals(fieldName)) {
 				value = Helper
 						.formatStyledTextForJasper(data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_MINDESTHALTBARKEIT]);
@@ -423,7 +433,20 @@ public class LieferscheinReportFacBean extends LPReport implements
 				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_AUFTRAG_BESTAETIGUNG_TERMIN];
 			} else if ("F_AUFTRAG_VERSANDWEG".equals(fieldName)) {
 				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_AUFTRAG_VERSANDWEG];
+			} else if ("F_ZWSPOSPREISDRUCKEN".equals(fieldName)) {
+				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ZWSPOSPREISDRUCKEN];
+			} else if ("F_LIEFERSCHEIN_NUMMER".equals(fieldName)) {
+				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_LIEFERSCHEIN_NUMMER];
+			} else if ("F_LIEFERSCHEIN_BELEGDATUM".equals(fieldName)) {
+				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_LIEFERSCHEIN_BELEGDATUM];
+			} else if ("F_LIEFERSCHEIN_PROJEKT".equals(fieldName)) {
+				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_LIEFERSCHEIN_PROJEKT];
+			} else if ("F_LIEFERSCHEIN_BESTELLNUMMER".equals(fieldName)) {
+				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_LIEFERSCHEIN_BESTELLNUMMER];
+			} else if ("F_LIEFERSCHEIN_KOMMISSION".equals(fieldName)) {
+				value = data[index][LieferscheinReportFac.REPORT_LIEFERSCHEIN_LIEFERSCHEIN_KOMMISSION];
 			}
+
 		} else if (cAktuellerReport
 				.equals(LieferscheinReportFac.REPORT_LIEFERSCHEIN_OFFENE)) {
 
@@ -535,6 +558,8 @@ public class LieferscheinReportFacBean extends LPReport implements
 				value = data[index][FELD_ALLE_PROJEKT];
 			} else if ("F_STATUS".equals(fieldName)) {
 				value = data[index][FELD_ALLE_STATUS];
+			} else if ("F_KOPFLIEFERSCHEIN_WENN_VERKETTET".equals(fieldName)) {
+				value = data[index][FELD_ALLE_KOPFLIEFERSCHEIN_WENN_VERKETTET];
 			}
 		}
 
@@ -615,10 +640,13 @@ public class LieferscheinReportFacBean extends LPReport implements
 				sVon = Helper.formatDatum(krit.dVon, theClientDto.getLocUi());
 			}
 			if (krit.dBis != null) {
-				c.add(Restrictions.le(
-						LieferscheinFac.FLR_LIEFERSCHEIN_D_BELEGDATUM,
-						krit.dBis));
 				sBis = Helper.formatDatum(krit.dBis, theClientDto.getLocUi());
+
+				c.add(Restrictions.lt(
+						LieferscheinFac.FLR_LIEFERSCHEIN_D_BELEGDATUM, Helper
+								.cutDate(new java.sql.Date(
+										krit.dBis.getTime() + 24 * 3600000))));
+
 			}
 
 			// Belegnummer von/bis
@@ -677,6 +705,23 @@ public class LieferscheinReportFacBean extends LPReport implements
 						.getLieferscheinstatus_status_c_nr();
 				data[i][FELD_ALLE_BELEGDATUM] = r.getD_belegdatum();
 				data[i][FELD_ALLE_LIEFERSCHEINNUMMER] = r.getC_nr();
+
+				// Verkettete Lieferscheine
+
+				if (r.getFlrverkettet() != null
+						&& r.getFlrverkettet().size() > 0) {
+					// bin Ich Kopf
+					data[i][FELD_ALLE_KOPFLIEFERSCHEIN_WENN_VERKETTET] = r
+							.getC_nr();
+				} else if (r.getFlrverkettet2() != null
+						&& r.getFlrverkettet2().size() > 0) {
+					// Ich bin Kind
+					FLRVerkettet verkettet = (FLRVerkettet) r
+							.getFlrverkettet2().iterator().next();
+					data[i][FELD_ALLE_KOPFLIEFERSCHEIN_WENN_VERKETTET] = verkettet
+							.getFlrlieferschein().getC_nr();
+				}
+
 				// Bezahlte Betraege
 
 				BigDecimal bdWertmw = r.getN_gesamtwertinlieferscheinwaehrung();
@@ -1078,9 +1123,50 @@ public class LieferscheinReportFacBean extends LPReport implements
 			LieferscheinDto lieferscheinDto = getLieferscheinFac()
 					.lieferscheinFindByPrimaryKey(iIdLieferscheinI,
 							theClientDto);
-			LieferscheinpositionDto[] aLieferscheinpositionDto = getLieferscheinpositionFac()
-					.getLieferscheinPositionenByLieferschein(
-							lieferscheinDto.getIId(), theClientDto);
+			LieferscheinpositionDto[] aLieferscheinpositionDto = null;
+
+			boolean bVerketteterLieferschein = false;
+
+			// Nun noch verkettete Positionen hinzufuegen
+			// PJ18739
+			TreeMap<String, Integer> tmLieferscheinInklusiveVerketteterLieferscheine = new TreeMap();
+			tmLieferscheinInklusiveVerketteterLieferscheine.put(
+					lieferscheinDto.getCNr(), lieferscheinDto.getIId());
+
+			VerkettetDto[] verkettetDtos = getLieferscheinServiceFac()
+					.verkettetFindByLieferscheinIId(lieferscheinDto.getIId());
+			for (VerkettetDto verkettetDto : verkettetDtos) {
+
+				LieferscheinDto lieferscheinDtoVerkettet = getLieferscheinFac()
+						.lieferscheinFindByPrimaryKey(
+								verkettetDto.getLieferscheinIIdVerkettet(),
+								theClientDto);
+				tmLieferscheinInklusiveVerketteterLieferscheine.put(
+						lieferscheinDtoVerkettet.getCNr(),
+						lieferscheinDtoVerkettet.getIId());
+				bVerketteterLieferschein = true;
+
+			}
+
+			ArrayList<LieferscheinpositionDto> alPositionenGesamt = new ArrayList<LieferscheinpositionDto>();
+			Iterator itLs = tmLieferscheinInklusiveVerketteterLieferscheine
+					.keySet().iterator();
+			while (itLs.hasNext()) {
+				String lsCnr = (String) itLs.next();
+				Integer lieferscheinIId = tmLieferscheinInklusiveVerketteterLieferscheine
+						.get(lsCnr);
+				LieferscheinpositionDto[] aLieferscheinpositionDtoTemp = getLieferscheinpositionFac()
+						.getLieferscheinPositionenByLieferschein(
+								lieferscheinIId, theClientDto);
+				for (LieferscheinpositionDto lsposDto : aLieferscheinpositionDtoTemp) {
+					alPositionenGesamt.add(lsposDto);
+				}
+
+			}
+
+			LieferscheinpositionDto[] lsposTemp = new LieferscheinpositionDto[alPositionenGesamt
+					.size()];
+			aLieferscheinpositionDto = alPositionenGesamt.toArray(lsposTemp);
 
 			cAktuellerReport = LieferscheinReportFac.REPORT_LIEFERSCHEIN;
 			int iArtikelpositionsnummer = 1;
@@ -1157,6 +1243,18 @@ public class LieferscheinReportFacBean extends LPReport implements
 			parameter.put("P_LIEFERSCHEINART",
 					lieferscheinDto.getLieferscheinartCNr());
 
+			if (lieferscheinDto.getLieferscheinartCNr().equals(
+					LieferscheinFac.LSART_LIEFERANT)) {
+				LieferantDto lfDto = getLieferantFac()
+						.lieferantFindByiIdPartnercNrMandantOhneExc(
+								kundeDto.getPartnerIId(),
+								theClientDto.getMandant(), theClientDto);
+				if (lfDto != null) {
+					parameter.put("P_KUNDENNR_LIEFERANT", lfDto.getCKundennr());
+				}
+
+			}
+
 			// CK: PJ 13849
 			parameter.put(
 					"P_BEARBEITER",
@@ -1167,6 +1265,8 @@ public class LieferscheinReportFacBean extends LPReport implements
 			final boolean bDruckeRabatt = Helper.short2boolean(kundeDto
 					.getBRechnungsdruckmitrabatt());
 			parameter.put("P_RABATTSPALTE_DRUCKEN", new Boolean(bDruckeRabatt));
+			parameter.put("P_VERKETTETER_LIEFERSCHEIN", new Boolean(
+					bVerketteterLieferschein));
 
 			final boolean bPreiseAndrucken = Helper.short2boolean(kundeDto
 					.getBPreiseanlsandrucken());
@@ -1208,6 +1308,19 @@ public class LieferscheinReportFacBean extends LPReport implements
 							ansprechpartnerDto, mandantDto, locDruck,
 							LocaleFac.BELEGART_LIEFERSCHEIN));
 
+			// PJ18870
+			parameter.put(
+					"P_SUBREPORT_PARTNERKOMMENTAR",
+					getPartnerServicesFac()
+							.getSubreportAllerMitzudruckendenPartnerkommentare(
+									kundeDto.getPartnerDto().getIId(), true,
+									sBelegart, theClientDto));
+
+			parameter.put(
+					"P_LAENDERART_LIEFERADRESSE",
+					getFinanzServiceFac().getLaenderartZuPartner(
+							kundeDto.getPartnerDto().getIId(), theClientDto));
+
 			if (ansprechpartnerDto != null) {
 				parameter.put(
 						"P_ANSPRECHPARTNER_KUNDE_ADRESSBLOCK",
@@ -1215,6 +1328,15 @@ public class LieferscheinReportFacBean extends LPReport implements
 								.formatFixAnredeTitelName2Name1FuerAdresskopf(
 										ansprechpartnerDto.getPartnerDto(),
 										locDruck, null));
+			}
+
+			// PJ18752
+			if (kundeDto.getPartnerDto().getCPostfach() != null) {
+				parameter.put(
+						"P_HAUSADRESSE_ADRESSBLOCK",
+						formatAdresseFuerAusdruck(kundeDto.getPartnerDto(),
+								ansprechpartnerDto, mandantDto, locDruck,
+								LocaleFac.BELEGART_LIEFERSCHEIN, true));
 			}
 
 			parameter
@@ -1235,6 +1357,12 @@ public class LieferscheinReportFacBean extends LPReport implements
 									theClientDto);
 
 				}
+
+				parameter.put(
+						"P_LAENDERART_RECHNUNGSADRESSE",
+						getFinanzServiceFac().getLaenderartZuPartner(
+								rechnungKunde.getPartnerDto().getIId(),
+								theClientDto));
 
 				if (lieferscheinDto.getKundeIIdRechnungsadresse().equals(
 						kundeDto.getIId())
@@ -1627,6 +1755,9 @@ public class LieferscheinReportFacBean extends LPReport implements
 			buildVersandwegParam(theClientDto, lieferscheinDto, locDruck,
 					parameter);
 
+			// PJ18692
+			Integer iTeillieferung = 0;
+
 			int iAnzahlZeilen = 0; // Anzahl der Zeilen in der Gruppe
 
 			for (int i = 0; i < aLieferscheinpositionDto.length; i++) {
@@ -1715,13 +1846,31 @@ public class LieferscheinReportFacBean extends LPReport implements
 			// die Datenmatrix befuellen
 			for (int i = 0; i < iAnzahlZeilen; i++) {
 
-				data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSOBJEKT] = getSystemReportFac()
-						.getPositionForReport(LocaleFac.BELEGART_LIEFERSCHEIN,
-								aLieferscheinpositionDto[iIndex].getIId(),
-								theClientDto);
+				if (sBelegart.equals(LocaleFac.BELEGART_RECHNUNG)) {
+					data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSOBJEKT] = getSystemReportFac()
+							.getPositionForReport(
+									LocaleFac.BELEGART_LIEFERSCHEIN,
+									aLieferscheinpositionDto[iIndex].getIId(),
+									true, theClientDto);
+				} else {
+					data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSOBJEKT] = getSystemReportFac()
+							.getPositionForReport(
+									LocaleFac.BELEGART_LIEFERSCHEIN,
+									aLieferscheinpositionDto[iIndex].getIId(),
+									theClientDto);
+				}
 
 				data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_INTERNAL_IID] = aLieferscheinpositionDto[iIndex]
 						.getIId();
+
+				// PJ18739
+				LieferscheinDto lieferscheinDtoFuerVerketteteLieferscheine = getLieferscheinFac()
+						.lieferscheinFindByPrimaryKey(
+								aLieferscheinpositionDto[iIndex]
+										.getLieferscheinIId());
+
+				befuelleMitVerkettetenLieferscheinDaten(i,
+						lieferscheinDtoFuerVerketteteLieferscheine);
 
 				if (aLieferscheinpositionDto[iIndex].getTypCNr() != null) {
 					if (aLieferscheinpositionDto[iIndex].getPositionsartCNr()
@@ -1771,11 +1920,20 @@ public class LieferscheinReportFacBean extends LPReport implements
 
 						}
 
-						data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSOBJEKT] = getSystemReportFac()
-								.getPositionForReport(
-										LocaleFac.BELEGART_LIEFERSCHEIN,
-										aLieferscheinpositionDto[iIndex]
-												.getIId(), theClientDto);
+						if (sBelegart.equals(LocaleFac.BELEGART_RECHNUNG)) {
+							data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSOBJEKT] = getSystemReportFac()
+									.getPositionForReport(
+											LocaleFac.BELEGART_LIEFERSCHEIN,
+											aLieferscheinpositionDto[iIndex]
+													.getIId(), true,
+											theClientDto);
+						} else {
+							data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSOBJEKT] = getSystemReportFac()
+									.getPositionForReport(
+											LocaleFac.BELEGART_LIEFERSCHEIN,
+											aLieferscheinpositionDto[iIndex]
+													.getIId(), theClientDto);
+						}
 
 						data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITION] = pNummer;
 						data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITION_NR] = new Integer(
@@ -1830,6 +1988,9 @@ public class LieferscheinReportFacBean extends LPReport implements
 							}
 							i++;
 						}
+
+						befuelleMitVerkettetenLieferscheinDaten(i,
+								lieferscheinDtoFuerVerketteteLieferscheine);
 
 						if (auftragDto != null) {
 							data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_AUFTRAG_BESTAETIGUNG_TERMIN] = auftragDto
@@ -1917,12 +2078,24 @@ public class LieferscheinReportFacBean extends LPReport implements
 								.getSZusatzBezeichnung();
 						data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKELCZBEZ2] = druckDto
 								.getSArtikelZusatzBezeichnung2();
+						data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_FREIERTEXT] = aLieferscheinpositionDto[iIndex]
+								.getXTextinhalt();
 
-						data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSOBJEKT] = getSystemReportFac()
-								.getPositionForReport(
-										LocaleFac.BELEGART_LIEFERSCHEIN,
-										aLieferscheinpositionDto[iIndex]
-												.getIId(), theClientDto);
+						if (sBelegart.equals(LocaleFac.BELEGART_RECHNUNG)) {
+							data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSOBJEKT] = getSystemReportFac()
+									.getPositionForReport(
+											LocaleFac.BELEGART_LIEFERSCHEIN,
+
+											aLieferscheinpositionDto[iIndex]
+													.getIId(), true,
+											theClientDto);
+						} else {
+							data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSOBJEKT] = getSystemReportFac()
+									.getPositionForReport(
+											LocaleFac.BELEGART_LIEFERSCHEIN,
+											aLieferscheinpositionDto[iIndex]
+													.getIId(), theClientDto);
+						}
 
 						// PJ18261
 
@@ -1950,7 +2123,7 @@ public class LieferscheinReportFacBean extends LPReport implements
 
 						data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_WE_REFERENZ] = getLagerFac()
 								.getWareneingangsreferenzSubreport(
-										sBelegart,
+										LocaleFac.BELEGART_LIEFERSCHEIN,
 										aLieferscheinpositionDto[iIndex]
 												.getIId(),
 										aLieferscheinpositionDto[iIndex]
@@ -1975,9 +2148,22 @@ public class LieferscheinReportFacBean extends LPReport implements
 							// Ident nur wenn "echter" Artikel
 							data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_IDENTNUMMER] = artikelDto
 									.getCNr();
-							data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_SERIENCHARGENR] = SeriennrChargennrMitMengeDto
-									.erstelleStringAusMehrerenSeriennummern(aLieferscheinpositionDto[iIndex]
-											.getSeriennrChargennrMitMenge());
+
+							// wg. SP2435 entfernt
+							/*
+							 * data[i][LieferscheinReportFac.
+							 * REPORT_LIEFERSCHEIN_SERIENCHARGENR] =
+							 * SeriennrChargennrMitMengeDto
+							 * .erstelleStringAusMehrerenSeriennummern
+							 * (aLieferscheinpositionDto[iIndex]
+							 * .getSeriennrChargennrMitMenge());
+							 * data[i][LieferscheinReportFac
+							 * .REPORT_LIEFERSCHEIN_VERSION] =
+							 * SeriennrChargennrMitMengeDto
+							 * .erstelleStringAusMehrerenVersionen
+							 * (aLieferscheinpositionDto[iIndex]
+							 * .getSeriennrChargennrMitMenge());
+							 */
 							// Warenverkehrsnummer fuer Artikel
 							String sWarenverkehrsnummer = artikelDto
 									.getCWarenverkehrsnummer();
@@ -2129,7 +2315,7 @@ public class LieferscheinReportFacBean extends LPReport implements
 								MaterialDto materialDto = getMaterialFac()
 										.materialFindByPrimaryKey(
 												artikelDto.getMaterialIId(),
-												theClientDto);
+												locDruck, theClientDto);
 								if (materialDto.getMaterialsprDto() != null) {
 									/**
 									 * @todo MR->MR richtige Mehrsprachigkeit:
@@ -2142,19 +2328,10 @@ public class LieferscheinReportFacBean extends LPReport implements
 											.getCNr();
 								}
 
-								MaterialzuschlagDto mzDto = getMaterialFac()
-										.getKursMaterialzuschlagDtoInZielwaehrung(
-												artikelDto.getMaterialIId(),
-												lieferscheinDto
-														.getTBelegdatum(),
-												lieferscheinDto
-														.getWaehrungCNr(),
-												theClientDto);
-
-								data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKEL_KURS_MATERIALZUSCHLAG] = mzDto
-										.getNZuschlag();
-								data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKEL_DATUM_MATERIALZUSCHLAG] = mzDto
-										.getTGueltigab();
+								data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKEL_KURS_MATERIALZUSCHLAG] = aLieferscheinpositionDto[iIndex]
+										.getNMaterialzuschlagKurs();
+								data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ARTIKEL_DATUM_MATERIALZUSCHLAG] = aLieferscheinpositionDto[iIndex]
+										.getTMaterialzuschlagDatum();
 
 							}
 
@@ -2229,6 +2406,7 @@ public class LieferscheinReportFacBean extends LPReport implements
 											aLieferscheinpositionDto[iIndex]
 													.getAuftragpositionIId(),
 											theClientDto);
+							int iAnzahlAndererLSPositionen = 0;
 
 							for (int k = 0; k < lsPosDtos.length; k++) {
 								LieferscheinpositionDto lsPosDto = lsPosDtos[k];
@@ -2240,6 +2418,12 @@ public class LieferscheinReportFacBean extends LPReport implements
 
 								if (!lsDto.getStatusCNr().equals(
 										LocaleFac.STATUS_STORNIERT)) {
+
+									if (lsDto.getCNr().compareTo(
+											lieferscheinDto.getCNr()) < 0) {
+										iAnzahlAndererLSPositionen++;
+									}
+
 									if (lsDto.getTBelegdatum().before(
 											lieferscheinDto.getTBelegdatum())) {
 										bdLieferrest = bdLieferrest
@@ -2251,6 +2435,7 @@ public class LieferscheinReportFacBean extends LPReport implements
 											bdLieferrest = bdLieferrest
 													.subtract(lsPosDto
 															.getNMenge());
+
 										}
 
 									}
@@ -2260,6 +2445,16 @@ public class LieferscheinReportFacBean extends LPReport implements
 
 							if (bdLieferrest.doubleValue() < 0) {
 								bdLieferrest = Helper.getBigDecimalNull();
+							}
+
+							// PJ18692
+							if (bdLieferrest.doubleValue() > 0) {
+								iTeillieferung = 1;
+							} else if (bdLieferrest.doubleValue() == 0
+									&& iAnzahlAndererLSPositionen > 0) {
+								if (iTeillieferung != 1) {
+									iTeillieferung = 2;
+								}
 							}
 
 						} else {
@@ -2322,6 +2517,10 @@ public class LieferscheinReportFacBean extends LPReport implements
 									// Andrucken erzeugen,
 									// als Bezugsmenge gilt immer 1 Einheit der
 									// Stueckliste
+
+									befuelleMitVerkettetenLieferscheinDaten(i,
+											lieferscheinDtoFuerVerketteteLieferscheine);
+
 									data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSART] = LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_STUECKLISTENPOSITION;
 									data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_SEITENUMBRUCH] = bbSeitenumbruch;
 									data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_STKLMENGE] = stuecklistepositionDto
@@ -2446,12 +2645,18 @@ public class LieferscheinReportFacBean extends LPReport implements
 										.erstelleStringAusMehrerenSeriennummern(aLieferscheinpositionDto[iIndex]
 												.getSeriennrChargennrMitMenge());
 
+								data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_VERSION] = SeriennrChargennrMitMengeDto
+										.erstelleStringAusMehrerenVersionen(aLieferscheinpositionDto[iIndex]
+												.getSeriennrChargennrMitMenge());
+
 								data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSART] = LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_SERIENNR;
 								if (data[i - 1][LieferscheinReportFac.REPORT_LIEFERSCHEIN_SETARTIKEL_TYP] != null) {
 									data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_SETARTIKEL_TYP] = new String(
 											(String) data[i - 1][LieferscheinReportFac.REPORT_LIEFERSCHEIN_SETARTIKEL_TYP]);
 								}
 								data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_SEITENUMBRUCH] = bbSeitenumbruch;
+								befuelleMitVerkettetenLieferscheinDaten(i,
+										lieferscheinDtoFuerVerketteteLieferscheine);
 							} else if (Helper.short2Boolean(artikelDto
 									.getBChargennrtragend())) {
 								// Chargennummer splitten in eigene Positionen
@@ -2475,6 +2680,9 @@ public class LieferscheinReportFacBean extends LPReport implements
 										data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_SERIENCHARGENR] = sChargeNummer;
 									}
 
+									befuelleMitVerkettetenLieferscheinDaten(i,
+											lieferscheinDtoFuerVerketteteLieferscheine);
+
 									data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_POSITIONSART] = LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_CHARGENR;
 									data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_SEITENUMBRUCH] = bbSeitenumbruch;
 									if (data[i - 1][LieferscheinReportFac.REPORT_LIEFERSCHEIN_SETARTIKEL_TYP] != null) {
@@ -2486,7 +2694,7 @@ public class LieferscheinReportFacBean extends LPReport implements
 									if (aChargeNummer.length > 1) {
 										// alle Chargennummern der Position
 										List<SeriennrChargennrMitMengeDto> aChargenMitMengeDto = getLagerFac()
-												.getAllSeriennrchargennrEinerBelegartposition(
+												.getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
 														LocaleFac.BELEGART_LIEFERSCHEIN,
 														aLieferscheinpositionDto[iIndex]
 																.getIId());
@@ -2578,16 +2786,20 @@ public class LieferscheinReportFacBean extends LPReport implements
 								.getFRabattsatz();
 						data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_IDENT] = aLieferscheinpositionDto[iIndex]
 								.getCBez();
+						data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_ZWSPOSPREISDRUCKEN] = aLieferscheinpositionDto[iIndex]
+								.getBZwsPositionspreisZeigen();
 						data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_LS_POSITION_NR] = getLieferscheinpositionFac()
 								.getLSPositionNummer(
 										aLieferscheinpositionDto[iIndex]
 												.getIId());
+						// updateZwischensummenData(i,
+						// aLieferscheinpositionDto[iIndex]
+						// .getZwsVonPosition(),
+						// aLieferscheinpositionDto[iIndex]
+						// .getZwsBisPosition(),
+						// aLieferscheinpositionDto[iIndex].getCBez());
 						updateZwischensummenData(i,
-								aLieferscheinpositionDto[iIndex]
-										.getZwsVonPosition(),
-								aLieferscheinpositionDto[iIndex]
-										.getZwsBisPosition(),
-								aLieferscheinpositionDto[iIndex].getCBez());
+								aLieferscheinpositionDto[iIndex]);
 					}
 					// Seitenumbruch Positionen
 					else if (aLieferscheinpositionDto[iIndex]
@@ -2617,6 +2829,31 @@ public class LieferscheinReportFacBean extends LPReport implements
 
 			if (iAnzahlKopienI != null && iAnzahlKopienI.intValue() > 0) {
 				iAnzahlExemplare += iAnzahlKopienI.intValue();
+			}
+
+			parameter.put("P_TEILLIEFERUNG", iTeillieferung);
+
+			// PJ18937
+			if (lieferscheinDto.getAuftragIId() != null) {
+				LieferscheinDto[] lsDtos = getLieferscheinFac()
+						.lieferscheinFindByAuftrag(
+								lieferscheinDto.getAuftragIId(), theClientDto);
+
+				int iTeilliferungNr = 1;
+				for (int i = 0; i < lsDtos.length; i++) {
+
+					if (!lsDtos[i].getStatusCNr().equals(
+							LocaleFac.STATUS_STORNIERT)) {
+
+						if (lieferscheinDto.getCNr().compareTo(
+								lsDtos[i].getCNr()) > 0) {
+							iTeilliferungNr++;
+						}
+					}
+				}
+				parameter.put("P_TEILLIEFERUNG_NR",
+						new Integer(iTeilliferungNr));
+
 			}
 
 			aJasperPrint = new JasperPrintLP[iAnzahlExemplare];
@@ -2657,6 +2894,20 @@ public class LieferscheinReportFacBean extends LPReport implements
 		return aJasperPrint;
 	}
 
+	public void befuelleMitVerkettetenLieferscheinDaten(int i,
+			LieferscheinDto lieferscheinDtoFuerVerketteteLieferscheine) {
+		data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_LIEFERSCHEIN_NUMMER] = lieferscheinDtoFuerVerketteteLieferscheine
+				.getCNr();
+		data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_LIEFERSCHEIN_BELEGDATUM] = lieferscheinDtoFuerVerketteteLieferscheine
+				.getTBelegdatum();
+		data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_LIEFERSCHEIN_PROJEKT] = lieferscheinDtoFuerVerketteteLieferscheine
+				.getCBezProjektbezeichnung();
+		data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_LIEFERSCHEIN_KOMMISSION] = lieferscheinDtoFuerVerketteteLieferscheine
+				.getCKommission();
+		data[i][LieferscheinReportFac.REPORT_LIEFERSCHEIN_LIEFERSCHEIN_BESTELLNUMMER] = lieferscheinDtoFuerVerketteteLieferscheine
+				.getCBestellnummer();
+	}
+
 	/**
 	 * Update des Data-Arrays um die Zwischensummenbezeichnung in allen
 	 * Positionen verf&uuml;gbar zu haben.
@@ -2687,13 +2938,57 @@ public class LieferscheinReportFacBean extends LPReport implements
 		}
 	}
 
+	private void updateZwischensummenData(int lastIndex,
+			LieferscheinpositionDto zwsPos) {
+		Integer zwsVonPosition = zwsPos.getZwsVonPosition();
+		if (zwsVonPosition == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_POSITION_ZWISCHENSUMME_UNVOLLSTAENDIG,
+					"Position '" + zwsPos.getCBez() + "' unvollst\u00E4ndig",
+					new Object[] { zwsPos.getCBez(), zwsPos.getIId() });
+		}
+
+		int foundIndex = -1;
+		for (int i = 0; i < lastIndex; i++) {
+			Object[] o = (Object[]) data[i];
+			if (zwsVonPosition.equals(o[REPORT_LIEFERSCHEIN_INTERNAL_IID])) {
+				if (null == o[REPORT_LIEFERSCHEIN_ZWSTEXT]) {
+					o[REPORT_LIEFERSCHEIN_ZWSTEXT] = zwsPos.getCBez();
+				} else {
+					String s = (String) o[REPORT_LIEFERSCHEIN_ZWSTEXT] + "\n"
+							+ zwsPos.getCBez();
+					o[REPORT_LIEFERSCHEIN_ZWSTEXT] = s;
+				}
+
+				o[REPORT_LIEFERSCHEIN_ZWSNETTOSUMME] = zwsPos
+						.getZwsNettoSumme();
+				foundIndex = i;
+				break;
+			}
+		}
+
+		if (foundIndex == -1) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_POSITION_ZWISCHENSUMME_UNVOLLSTAENDIG,
+					"Position '" + zwsPos.getCBez() + "' unvollst\u00E4ndig",
+					new Object[] { zwsPos.getCBez(), zwsPos.getIId() });
+		}
+
+		for (int i = foundIndex; i < lastIndex; i++) {
+			Object[] o = (Object[]) data[i];
+			o[REPORT_LIEFERSCHEIN_ZWSPOSPREISDRUCKEN] = zwsPos
+					.getBZwsPositionspreisZeigen();
+		}
+	}
+
 	/**
 	 * Das Datenarray des Lieferscheinausdrucks zurueckgeben. Wird vom
 	 * Rechnungsdruck verwendet.
 	 * 
 	 * @param lieferscheinIId
 	 *            Integer
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param theClientDto
+	 *            der aktuelle Benutzer
 	 * @return Object[][]
 	 * @throws EJBExceptionLP
 	 */
@@ -2754,7 +3049,7 @@ public class LieferscheinReportFacBean extends LPReport implements
 
 			String sAdressefuerausdruck = formatAdresseFuerAusdruck(
 					kundeDto.getPartnerDto(), oAnsprechpartnerDto, mandantDto,
-					locDruck);
+					locDruck, LocaleFac.BELEGART_LIEFERSCHEIN);
 
 			int iAnzahlZeilen = 1; // Anzahl der Zeilen in der Gruppe
 			int iAnzahlSpalten = 4; // Anzahl der Spalten in der Gruppe
@@ -2845,13 +3140,13 @@ public class LieferscheinReportFacBean extends LPReport implements
 	@SuppressWarnings("unchecked")
 	public JasperPrintLP printLieferscheinWAEtikett(Integer iIdLieferscheinI,
 			Integer iPaketnummer, Integer iIdLieferscheinPositionI,
-			BigDecimal bdHandmenge, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+			BigDecimal bdHandmenge, Integer iExemplare,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 		checkLieferscheinIId(iIdLieferscheinI);
 
 		// Erstellung des Report
 		JasperPrintLP oPrintO = null;
-		int iArtikelpositionsnummer = 1;
+
 		cAktuellerReport = LieferscheinReportFac.REPORT_LIEFERSCHEIN_WA_ETIKETT;
 
 		try {
@@ -2861,86 +3156,6 @@ public class LieferscheinReportFacBean extends LPReport implements
 			LieferscheinpositionDto[] aLieferscheinpositionDto = getLieferscheinpositionFac()
 					.getLieferscheinPositionenByLieferschein(
 							lieferscheinDto.getIId(), theClientDto);
-
-			int iAnzahlZeilen = 0; // Anzahl der Zeilen in der Gruppe
-
-			for (int i = 0; i < aLieferscheinpositionDto.length; i++) {
-
-				if (iIdLieferscheinPositionI != null
-						&& !iIdLieferscheinPositionI
-								.equals(aLieferscheinpositionDto[i].getIId())) {
-					continue;
-				}
-
-				if (aLieferscheinpositionDto[i]
-						.getLieferscheinpositionartCNr()
-						.equals(LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT)) {
-					// Die Zeilenanzahl muss vor dem Befuellen festgelegt
-					// werden.
-					StuecklisteInfoDto stuecklisteInfoDto = getStuecklisteFac()
-							.getStrukturdatenEinesArtikels(
-									aLieferscheinpositionDto[i].getArtikelIId(),
-									true, null, // in die Rekursion mit einer
-									// leeren Listen einsteigen
-									0, // in die Rekursion mit Ebene 0
-										// einsteigen
-									-1, // alle Stuecklisten komplett aufloesen
-									false, // Menge pro Einheit der
-									// uebergeorndeten Position
-									new BigDecimal(1), // fuer 1 Einheit der
-									// STKL
-									true, // Fremdfertigung aufloesen
-									theClientDto);
-
-					iAnzahlZeilen++; // fuer die eigentliche Ident Position
-					iAnzahlZeilen += stuecklisteInfoDto.getIiAnzahlPositionen()
-							.intValue();
-					// Auftragsdaten, wenn die Position auftragsbezogen ist
-					if (aLieferscheinpositionDto[i].getAuftragpositionIId() != null) {
-						iAnzahlZeilen++;
-					}
-					// Serien bzw Chargennummer Anzahl des Artikels
-					int iAnzahlSerienChargeNr = berechneAnzahlSerienChargeNummern(
-							aLieferscheinpositionDto[i].getArtikelIId(),
-							aLieferscheinpositionDto[i]
-									.getSeriennrChargennrMitMenge(),
-							theClientDto);
-					iAnzahlZeilen += iAnzahlSerienChargeNr;
-				} else if (aLieferscheinpositionDto[i]
-						.getLieferscheinpositionartCNr()
-						.equals(LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_HANDEINGABE)) {
-					iAnzahlZeilen++; // fuer die eigentliche Position
-					// Auftragsdaten, wenn die Position auftragsbezogen ist
-					if (aLieferscheinpositionDto[i].getAuftragpositionIId() != null) {
-						iAnzahlZeilen++;
-					}
-				} else if (aLieferscheinpositionDto[i]
-						.getLieferscheinpositionartCNr().equals(
-								LocaleFac.POSITIONSART_POSITION)) {
-					iAnzahlZeilen++; // fuer die eigentliche Position
-					if (aLieferscheinpositionDto[i].getTypCNr().equals(
-							LocaleFac.POSITIONTYP_MITPREISE)) {
-						Session session = null;
-						SessionFactory factory = FLRSessionFactory.getFactory();
-						session = factory.openSession();
-						Criteria crit = session
-								.createCriteria(FLRLieferscheinposition.class);
-						crit.add(Restrictions.eq("position_i_id",
-								aLieferscheinpositionDto[i].getIId()));
-						crit.addOrder(Order
-								.asc(RechnungFac.FLR_RECHNUNGPOSITION_I_SORT));
-						iAnzahlZeilen = iAnzahlZeilen + crit.list().size();
-					}
-					// Auftragsdaten, wenn die Position auftragsbezogen ist
-					if (aLieferscheinpositionDto[i].getAuftragpositionIId() != null) {
-						iAnzahlZeilen++;
-					}
-				}
-
-				else {
-					iAnzahlZeilen++; // fuer die Positionszeile
-				}
-			}
 
 			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(
 					lieferscheinDto.getKundeIIdLieferadresse(), theClientDto);
@@ -2963,7 +3178,7 @@ public class LieferscheinReportFacBean extends LPReport implements
 
 			String sAdressefuerausdruck = formatAdresseFuerAusdruck(
 					kundeDto.getPartnerDto(), oAnsprechpartnerDto, mandantDto,
-					locDruck);
+					locDruck, LocaleFac.BELEGART_LIEFERSCHEIN);
 
 			// data = new Object[iAnzahlZeilen][LieferscheinReportFac.
 			// REPORT_LIEFERSCHEIN_WA_ETIKETT_ANZAHL_SPALTEN];
@@ -2987,12 +3202,19 @@ public class LieferscheinReportFacBean extends LPReport implements
 									.equals(AngebotServiceFac.ANGEBOTPOSITIONART_HANDEINGABE)
 							|| positionsartCNr
 									.equals(AngebotServiceFac.ANGEBOTPOSITIONART_AGSTUECKLISTE)) {
-						dataList.add(befuelleZeileMitPreisbehafteterPosition(
-								aLieferscheinpositionDto[i], lieferscheinDto,
-								kundeDto, iArtikelpositionsnummer, null, false,
-								locDruck, theClientDto));
 
-						iArtikelpositionsnummer++;
+						int j = 1;
+						if (iExemplare != null) {
+							j = iExemplare;
+						}
+
+						for (int k = 0; k < j; k++) {
+							dataList.add(befuelleZeileMitPreisbehafteterPosition(
+									aLieferscheinpositionDto[i],
+									lieferscheinDto, kundeDto, null, false,
+									locDruck, theClientDto));
+						}
+
 					}
 				}
 			}
@@ -3231,7 +3453,7 @@ public class LieferscheinReportFacBean extends LPReport implements
 
 			String sAdressefuerausdruck = formatAdresseFuerAusdruck(
 					kundeDto.getPartnerDto(), oAnsprechpartnerDto, mandantDto,
-					locDruck);
+					locDruck, LocaleFac.BELEGART_LIEFERSCHEIN);
 
 			HashMap parameter = new HashMap<Object, Object>();
 			parameter.put("Mandantenadresse",
@@ -3324,7 +3546,7 @@ public class LieferscheinReportFacBean extends LPReport implements
 
 					Object[] oZeile = befuelleZeileMitPreisbehafteterPosition(
 							aLieferscheinpositionDto[i], lieferscheinDto,
-							kundeDto, 0, null, false, locDruck, theClientDto);
+							kundeDto, null, false, locDruck, theClientDto);
 					if (aLieferscheinpositionDto[i]
 							.getPositionsartCNr()
 							.equals(LieferscheinpositionFac.LIEFERSCHEINPOSITIONSART_IDENT)) {
@@ -3376,6 +3598,7 @@ public class LieferscheinReportFacBean extends LPReport implements
 					oZeileVersand[REPORT_LIEFERSCHEIN_VERSANDETIKETT_ANLIEFERMENGE] = oZeile[REPORT_LIEFERSCHEIN_WA_ETIKETT_MENGE];
 					oZeileVersand[REPORT_LIEFERSCHEIN_VERSANDETIKETT_SERIENCHARGENR] = oZeile[REPORT_LIEFERSCHEIN_WA_ETIKETT_SERIENCHARGENR];
 					oZeileVersand[REPORT_LIEFERSCHEIN_VERSANDETIKETT_POSITION] = oZeile[REPORT_LIEFERSCHEIN_WA_ETIKETT_POSITION];
+					oZeileVersand[REPORT_LIEFERSCHEIN_VERSANDETIKETT_ARTIKEL_SUBREPORT_SNRCHNR] = oZeile[REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_SUBREPORT_SNRCHNR];
 
 					alDaten.add(oZeileVersand);
 				}
@@ -3475,8 +3698,10 @@ public class LieferscheinReportFacBean extends LPReport implements
 
 			if (reportJournalKriterienDtoI.dBis != null) {
 				crit.add(Restrictions.le(
-						LieferscheinFac.FLR_LIEFERSCHEIN_D_BELEGDATUM,
-						reportJournalKriterienDtoI.dBis));
+						LieferscheinFac.FLR_LIEFERSCHEIN_D_BELEGDATUM, Helper
+								.cutDate(new java.sql.Date(
+										reportJournalKriterienDtoI.dBis
+												.getTime() + 24 * 3600000))));
 				sBis = Helper.formatDatum(reportJournalKriterienDtoI.dBis,
 						theClientDto.getLocUi());
 			}
@@ -3657,7 +3882,8 @@ public class LieferscheinReportFacBean extends LPReport implements
 							.next();
 					i++;// in die naechste Zeile vorruecken
 					// nur mengenbehaftete Positionen beruecksichtigen
-					if (item.getN_menge() != null) {
+					if (item.getN_menge() != null
+							&& item.getFlrartikel() != null) {
 						String artikelCNr = null;
 						// TODO boeser Workaround ... PJ 4400
 						if (item.getFlrartikel().getC_nr().startsWith("~")) {
@@ -4348,9 +4574,8 @@ public class LieferscheinReportFacBean extends LPReport implements
 
 	private Object[] befuelleZeileMitPreisbehafteterPosition(
 			LieferscheinpositionDto positionDto,
-			LieferscheinDto lieferscheinDto,
-			KundeDto kundeDto,
-			int iArtikelpositionsnummerI, // Referenz
+			LieferscheinDto lieferscheinDto, KundeDto kundeDto,
+
 			LinkedHashMap<Object, MwstsatzReportDto> mwstMapI, // Referenz
 			Boolean bbSeitenumbruchI, Locale localeCNrI,
 			TheClientDto theClientDto) throws EJBExceptionLP {
@@ -4370,6 +4595,41 @@ public class LieferscheinReportFacBean extends LPReport implements
 			dataRow[REPORT_LIEFERSCHEIN_WA_ETIKETT_SERIENCHARGENR] = SeriennrChargennrMitMengeDto
 					.erstelleStringAusMehrerenSeriennummern(positionDto
 							.getSeriennrChargennrMitMenge());
+
+			// PJ18632
+			if (positionDto.getSeriennrChargennrMitMenge() != null) {
+				Object[][] oSubData = new Object[positionDto
+						.getSeriennrChargennrMitMenge().size()][4];
+
+				for (int i = 0; i < positionDto.getSeriennrChargennrMitMenge()
+						.size(); i++) {
+
+					oSubData[i][0] = positionDto.getSeriennrChargennrMitMenge()
+							.get(i).getCSeriennrChargennr();
+					oSubData[i][1] = positionDto.getSeriennrChargennrMitMenge()
+							.get(i).getNMenge();
+					oSubData[i][2] = positionDto.getSeriennrChargennrMitMenge()
+							.get(i).getCVersion();
+					oSubData[i][3] = getLagerFac()
+							.getWareneingangsreferenzSubreport(
+									LocaleFac.BELEGART_LIEFERSCHEIN,
+									positionDto.getIId(),
+									SeriennrChargennrMitMengeDto
+											.erstelleDtoAusEinerSeriennummer(positionDto
+													.getSeriennrChargennrMitMenge()
+													.get(i)
+													.getCSeriennrChargennr()),
+									false, theClientDto);
+
+				}
+				String[] fieldnames = new String[] { "F_SERIENCHARGENNR",
+						"F_MENGE", "F_VERSION", "F_SUBREPORT_WE_REFERENZ" };
+
+				dataRow[REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_SUBREPORT_SNRCHNR] = new LPDatenSubreport(
+						oSubData, fieldnames);
+
+			}
+
 			dataRow[REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_TEXTEINGABE] = positionDto
 					.getXTextinhalt();
 
@@ -4394,10 +4654,23 @@ public class LieferscheinReportFacBean extends LPReport implements
 			}
 
 			if (artikelDto.getArtikelsprDto() != null) {
-				dataRow[REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_BEZ] = artikelDto
-						.getArtikelsprDto().getCBez();
-				dataRow[REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_ZBEZ] = artikelDto
-						.getArtikelsprDto().getCZbez();
+
+				if (positionDto.getCBez() != null) {
+					dataRow[REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_BEZ] = positionDto
+							.getCBez();
+				} else {
+					dataRow[REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_BEZ] = artikelDto
+							.getArtikelsprDto().getCBez();
+				}
+
+				if (positionDto.getCZusatzbez() != null) {
+
+					dataRow[REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_ZBEZ] = positionDto
+							.getCZusatzbez();
+				} else {
+					dataRow[REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_ZBEZ] = artikelDto
+							.getArtikelsprDto().getCZbez();
+				}
 				dataRow[REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_ZBEZ2] = artikelDto
 						.getArtikelsprDto().getCZbez2();
 				dataRow[REPORT_LIEFERSCHEIN_WA_ETIKETT_ARTIKEL_KBEZ] = artikelDto

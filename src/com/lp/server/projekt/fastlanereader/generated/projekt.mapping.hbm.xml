@@ -1,36 +1,24 @@
 <?xml version="1.0"?>
-<!--
-  HELIUM V, Open Source ERP software for sustained success
-  at small and medium-sized enterprises.
-  Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
-  
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Affero General Public License as published 
-  by the Free Software Foundation, either version 3 of theLicense, or 
-  (at your option) any later version.
-  
-  According to sec. 7 of the GNU Affero General Public License, version 3, 
-  the terms of the AGPL are supplemented with the following terms:
-  
-  "HELIUM V" and "HELIUM 5" are registered trademarks of 
-  HELIUM V IT-Solutions GmbH. The licensing of the program under the 
-  AGPL does not imply a trademark license. Therefore any rights, title and
-  interest in our trademarks remain entirely with us. If you want to propagate
-  modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
-  you may only do so if you have a written permission by HELIUM V IT-Solutions 
-  GmbH (to acquire a permission please contact HELIUM V IT-Solutions
-  at trademark@heliumv.com).
-  
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Affero General Public License for more details.
-  
-  You should have received a copy of the GNU Affero General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  
-  Contact: developers@heliumv.com
--->
+<!-- HELIUM V, Open Source ERP software for sustained success at small and 
+	medium-sized enterprises. Copyright (C) 2004 - 2014 HELIUM V IT-Solutions 
+	GmbH This program is free software: you can redistribute it and/or modify 
+	it under the terms of the GNU Affero General Public License as published 
+	by the Free Software Foundation, either version 3 of theLicense, or (at your 
+	option) any later version. According to sec. 7 of the GNU Affero General 
+	Public License, version 3, the terms of the AGPL are supplemented with the 
+	following terms: "HELIUM V" and "HELIUM 5" are registered trademarks of HELIUM 
+	V IT-Solutions GmbH. The licensing of the program under the AGPL does not 
+	imply a trademark license. Therefore any rights, title and interest in our 
+	trademarks remain entirely with us. If you want to propagate modified versions 
+	of the Program under the name "HELIUM V" or "HELIUM 5", you may only do so 
+	if you have a written permission by HELIUM V IT-Solutions GmbH (to acquire 
+	a permission please contact HELIUM V IT-Solutions at trademark@heliumv.com). 
+	This program is distributed in the hope that it will be useful, but WITHOUT 
+	ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+	FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+	details. You should have received a copy of the GNU Affero General Public 
+	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
+	Contact: developers@heliumv.com -->
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 <hibernate-mapping package="com.lp.server.projekt.fastlanereader.generated">
 	<class name="FLRProjekt" table="PROJ_PROJEKT">
@@ -63,17 +51,29 @@
 			type="java.lang.Integer" />
 		<property name="b_verrechenbar" column="B_VERRECHENBAR" type="java.lang.Short" />
 		<property name="b_freigegeben" column="B_FREIGEGEBEN" type="java.lang.Short" />
-		<property name="t_internerledigt" column="T_INTERNERLEDIGT" type="java.util.Date" />
+		<property name="t_internerledigt" column="T_INTERNERLEDIGT"
+			type="java.util.Date" />
 		<property name="t_anlegen" column="T_ANLEGEN" type="java.sql.Date" />
 		<property name="t_aendern" column="T_AENDERN" type="java.sql.Date" />
 		<property name="d_dauer" column="F_DAUER" type="java.lang.Double" />
 		<property name="t_zeit" column="T_ZEIT" type="java.sql.Time" />
 		<property name="t_erledigungsdatum" column="T_ERLEDIGT" type="java.util.Date" />
 		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="c_buildnumber" column="C_BUILDNUMBER" type="java.lang.String" />
+		<property name="c_deploynumber" column="C_DEPLOYNUMBER" type="java.lang.String" />
 		<property name="n_umsatzgeplant" column="N_UMSATZGEPLANT"
 			type="java.math.BigDecimal" not-null="false" />
 		<property name="i_wahrscheinlichkeit" column="I_WAHRSCHEINLICHKEIT"
 			type="java.lang.Integer" />
+
+		<many-to-one name="flrprojektstatus"
+			class="com.lp.server.projekt.fastlanereader.generated.FLRProjektstatus"
+			insert="false" update="false">
+			<column name="PROJEKTSTATUS_C_NR" />
+			<column name="MANDANT_C_NR" />
+		</many-to-one>
+
+
 		<many-to-one name="flrpersonalZugewiesener"
 			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
 			column="PERSONAL_I_ID_ZUGEWIESENER" insert="false" update="false" />
@@ -277,10 +277,13 @@
 			column="PROJEKT_I_ID" insert="false" update="false" />
 	</class>
 	<class name="FLRProjektstatus" table="PROJ_PROJEKTSTATUS">
-		<id name="status_c_nr" column="C_NR" type="java.lang.String">
-			<generator class="native" />
-		</id>
-		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+		<composite-id>
+			<key-property name="status_c_nr" column="C_NR" type="java.lang.String" />
+			<key-property name="mandant_c_nr" column="MANDANT_C_NR"
+				type="java.lang.String" />
+		</composite-id>
+
+		<property name="b_erledigt" column="B_ERLEDIGT" type="java.lang.Short" />
 		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
 	</class>
 	<filter-def name="filterLocale">

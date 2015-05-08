@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -52,6 +52,8 @@ import com.lp.util.Helper;
 		@NamedQuery(name = "PersonalfindByMandantCNr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.mandantCNr = ?1 ORDER BY c.cPersonalnr ASC"),
 		@NamedQuery(name = "PersonalfindByMandantCNrPersonalartCNr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.mandantCNr = ?1 AND c.personalartCNr = ?2 ORDER BY c.cPersonalnr ASC"),
 		@NamedQuery(name = "PersonalfindByMandantCNrKostenstelleIIdAbteilung", query = "SELECT OBJECT(C) FROM Personal c WHERE c.mandantCNr = ?1 AND c.kostenstelleIIdAbteilung = ?2 ORDER BY c.cPersonalnr ASC"),
+		@NamedQuery(name = "PersonalfindByMandantCNrKostenstelleIIdAbteilungPersonalfunktionCNr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.mandantCNr = ?1 AND c.kostenstelleIIdAbteilung = ?2 AND c.personalfunktionCNr=?3 AND c.bVersteckt=0 ORDER BY c.cPersonalnr ASC"),
+		@NamedQuery(name = "PersonalfindByMandantCNrPersonalfunktionCNrBVersteckt", query = "SELECT OBJECT(C) FROM Personal c WHERE c.mandantCNr = ?1 AND c.personalfunktionCNr=?2 AND c.bVersteckt=0 ORDER BY c.cPersonalnr ASC"),
 		@NamedQuery(name = "PersonalfindByCAusweisSortiertNachIPersonalnr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.cAusweis IS NOT NULL ORDER BY c.cPersonalnr ASC"),
 		@NamedQuery(name = "PersonalfindByCAusweisMandantCNrSortiertNachIPersonalnr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.cAusweis IS NOT NULL AND c.mandantCNr = ?1 ORDER BY c.cPersonalnr ASC"),
 		@NamedQuery(name = "PersonalfindByCAusweisSortiertNachCAusweis", query = "SELECT OBJECT(C) FROM Personal c WHERE c.cAusweis IS NOT NULL ORDER BY c.cAusweis ASC"),
@@ -59,7 +61,9 @@ import com.lp.util.Helper;
 		@NamedQuery(name = "PersonalfindByPersonalgruppeIIdMandantCNr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.personalgruppeIId = ?1 AND c.mandantCNr = ?2  ORDER BY c.cPersonalnr ASC"),
 		@NamedQuery(name = "PersonalfindBySozialversichererPartnerIIdMandantCNr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.partnerIIdSozialversicherer = ?1 AND c.mandantCNr = ?2"),
 		@NamedQuery(name = "PersonalfindByFirmaPartnerIIdMandantCNr", query = "SELECT OBJECT(C) FROM Personal c WHERE c.partnerIIdFirma = ?1 AND c.mandantCNr = ?2"),
-		@NamedQuery(name = Personal.QUERY_ALL_PERSONAL_AUSWEISMANDANTOHNEVERSTECKT, query = "SELECT OBJECT(C) FROM Personal c WHERE c.cAusweis IS NOT NULL AND c.mandantCNr = ?1 and bVersteckt = 0 ORDER BY c.cPersonalnr ASC")
+		@NamedQuery(name = Personal.QUERY_ALL_PERSONAL_AUSWEISMANDANTOHNEVERSTECKT, query = "SELECT OBJECT(C) FROM Personal c WHERE c.cAusweis IS NOT NULL AND c.mandantCNr = ?1 and c.bVersteckt = 0 ORDER BY c.cPersonalnr ASC"),
+		@NamedQuery(name = PersonalQuery.ByMandantCnr, query = "SELECT OBJECT(C) FROM Personal c WHERE c.mandantCNr = :mandantCnr ORDER BY c.cPersonalnr ASC"),
+		@NamedQuery(name = PersonalQuery.ByMandantCnrWithEmail, query = "SELECT OBJECT(C) FROM Personal c WHERE c.mandantCNr = :mandantCnr AND c.cEmail IS NOT NULL ORDER BY c.cPersonalnr ASC")
 })
 @Entity
 @Table(name = "PERS_PERSONAL")
@@ -228,12 +232,29 @@ public class Personal implements Serializable {
 	@Column(name = "B_ANWESENHEITALLETERMINAL")
 	private Short bAnwesenheitalleterminal;
 
+	@Column(name = "B_TELEFONZEITSTARTEN")
+	private Short bTelefonzeitstarten;
+	
+
+	@Column(name = "C_IMAPINBOXFOLDER")
+	private String cImapInboxFolder ;
+
+	
 	public Short getBAnwesenheitalleterminal() {
 		return bAnwesenheitalleterminal;
 	}
 
 	public void setBAnwesenheitalleterminal(Short bAnwesenheitalleterminal) {
 		this.bAnwesenheitalleterminal = bAnwesenheitalleterminal;
+	}
+	
+
+	public Short getBTelefonzeitstarten() {
+		return bTelefonzeitstarten;
+	}
+
+	public void setBTelefonzeitstarten(Short bTelefonzeitstarten) {
+		this.bTelefonzeitstarten = bTelefonzeitstarten;
 	}
 
 	public String getCImapbenutzer() {
@@ -293,6 +314,7 @@ public class Personal implements Serializable {
 		setKostenstelleIIdStamm(kostenstelleIIdStamm2);
 		setBAnwesenheitTerminal(new Short((short) 0));
 		setBAnwesenheitalleterminal(new Short((short) 0));
+		setBTelefonzeitstarten(new Short((short) 0));
 	}
 
 	public Personal(Integer id, Integer partnerIId, String mandantCNr,
@@ -314,6 +336,7 @@ public class Personal implements Serializable {
 		setKostenstelleIIdStamm(kostenstelleIIdStamm);
 		setBAnwesenheitTerminal(anwesenheitTerminal);
 		setBAnwesenheitalleterminal(anwesenheitAlleTerminal);
+		setBTelefonzeitstarten(new Short((short) 0));
 	}
 
 	public Integer getIId() {
@@ -590,4 +613,11 @@ public class Personal implements Serializable {
 		return bAnwesenheitTerminal;
 	}
 
+	public String getCImapInboxFolder() {
+		return cImapInboxFolder;
+	}
+
+	public void setCImapInboxFolder(String cImapInboxFolder) {
+		this.cImapInboxFolder = cImapInboxFolder;
+	}
 }

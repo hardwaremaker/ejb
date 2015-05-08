@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -49,6 +49,7 @@ import javax.persistence.Table;
 		@NamedQuery(name = "ArtikellieferantfindByArtikellIIdLieferantIIdTPreisgueltigabKleiner", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 AND o.lieferantIId = ?2 AND o.tPreisgueltigab <= ?3 ORDER BY o.tPreisgueltigab DESC"),
 		@NamedQuery(name = "ArtikellieferantfindByArtikelIId", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 ORDER BY o.iSort ASC"),
 		@NamedQuery(name = "ArtikellieferantfindByCArtikelnrlieferant", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.cArtikelnrlieferant = ?1"),
+		@NamedQuery(name = "ArtikellieferantfindByCArtikelnrlieferantLieferantIId", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.cArtikelnrlieferant = ?1 AND o.lieferantIId= ?2"),
 		@NamedQuery(name = "ArtikellieferantfindByArtikelIIdTPreisgueltigab", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.artikelIId = ?1 AND o.tPreisgueltigab <= ?2 ORDER BY o.iSort ASC"),
 		@NamedQuery(name = "ArtikellieferantejbSelectNextReihung", query = "SELECT MAX (o.iSort) FROM Artikellieferant o WHERE o.artikelIId = ?1"),
 		@NamedQuery(name = "ArtikellieferantfindByLieferantIId", query = "SELECT OBJECT(o) FROM Artikellieferant o WHERE o.lieferantIId = ?1") })
@@ -85,6 +86,18 @@ public class Artikellieferant implements Serializable {
 
 	@Column(name = "F_MINDESTBESTELLMENGE")
 	private Double fMindestbestellmenge;
+
+	@Column(name = "EINHEIT_C_NR_VPE")
+	private String einheitCNrVpe;
+
+	
+	public String getEinheitCNrVpe() {
+		return einheitCNrVpe;
+	}
+
+	public void setEinheitCNrVpe(String einheitCNrVpe) {
+		this.einheitCNrVpe = einheitCNrVpe;
+	}
 
 	@Column(name = "N_VERPACKUNGSEINHEIT")
 	private BigDecimal nVerpackungseinheit;

@@ -1,33 +1,33 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.auftrag.service;
@@ -37,6 +37,7 @@ import java.rmi.RemoteException;
 import java.sql.Date;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.Set;
 
 import javax.ejb.Remote;
 
@@ -49,7 +50,6 @@ import com.lp.util.EJBExceptionLP;
 @Remote
 public interface AuftragReportFac {
 	public final static String REPORT_MODUL = "auftrag";
-	
 
 	public final static String REPORT_AUFTRAG_ALLE = "auft_auftrag_alle.jasper";
 	public final static String REPORT_AUFTRAG_ERLEDIGT = "auft_auftrag_erledigt.jasper";
@@ -67,6 +67,7 @@ public interface AuftragReportFac {
 	public final static String REPORT_TAETIGKEITSSTATISTIK = "auft_taetigkeitsstatistik.jasper";
 	public final static String REPORT_RAHMENUEBERSICHT = "auft_rahmenuebersicht.jasper";
 	public final static String REPORT_AUFTRAGSPOSITIONSETIKETT = "auft_auftragspositionsetikett.jasper";
+	public final static String REPORT_AUFTRAGSUEBERSICHT = "auft_auftragsuebersicht.jasper";
 
 	public final static int REPORT_AUFTRAGSTATISTIK_SORTIERUNG_AUFTRAG = 1;
 	public final static int REPORT_AUFTRAGSTATISTIK_SORTIERUNG_KUNDE_AUFTRAGSADRESSE = 2;
@@ -85,6 +86,11 @@ public interface AuftragReportFac {
 	public final static String REPORT_AUFTRAG_VERFUEGBARKEIT = "auft_verfuegbarkeit.jasper";
 	public final static String REPORT_AUFTRAG_ERFUELLUNGSGRAD = "auft_erfuellungsgrad.jasper";
 	public final static String REPORT_AUFTRAG_ERFUELLUNGSJOURNAL = "auft_erfuellungsjournal.jasper";
+	public final static String REPORT_AUFTRAG_PROJEKTBLATT = "auft_projektblatt.jasper";
+
+	public final static int REPORT_AUFTRAG_OFFENE_ARTUNVERBINDLICH_ALLE = 1;
+	public final static int REPORT_AUFTRAG_OFFENE_ARTUNVERBINDLICH_NUR_UNVERBINDLICHE = 2;
+	public final static int REPORT_AUFTRAG_OFFENE_ARTUNVERBINDLICH_OHNE_UNVERBINDLICHE = 3;
 
 	public final static int REPORT_AUFTRAG_OFFENE_OD_AUFTRAGSNUMMER = 0;
 	public final static int REPORT_AUFTRAG_OFFENE_OD_KUNDE = 1;
@@ -102,7 +108,10 @@ public interface AuftragReportFac {
 	public final static int REPORT_AUFTRAG_OFFENE_OD_INTERNERKOMMENTAR = 13;
 	public final static int REPORT_AUFTRAG_OFFENE_OD_ZEIT_VERRECHENBAR = 14;
 	public final static int REPORT_AUFTRAG_OFFENE_OD_PERSON_VERRECHENBAR = 15;
-	public final static int REPORT_AUFTRAG_OFFENE_OD_ANZAHL_SPALTEN = 16;
+	public final static int REPORT_AUFTRAG_OFFENE_OD_AUFTRAGSART = 16;
+	public final static int REPORT_AUFTRAG_OFFENE_OD_RAHMENWERTOFFEN = 17;
+	public final static int REPORT_AUFTRAG_OFFENE_OD_RAHMENAUFTRAG = 18;
+	public final static int REPORT_AUFTRAG_OFFENE_OD_ANZAHL_SPALTEN = 19;
 
 	public final static int REPORT_AUFTRAG_TEILLIFERBAR_AUFTRAGSNUMMER = 0;
 	public final static int REPORT_AUFTRAG_TEILLIFERBAR_KUNDE = 1;
@@ -143,7 +152,8 @@ public interface AuftragReportFac {
 	public final static int REPORT_AUFTRAG_OFFENE_EXTERNERKOMMENTAR = 26;
 	public final static int REPORT_AUFTRAG_OFFENE_ZEIT_VERRECHENBAR = 27;
 	public final static int REPORT_AUFTRAG_OFFENE_PERSON_VERRECHENBAR = 28;
-	public final static int REPORT_AUFTRAG_OFFENE_ANZAHL_SPALTEN = 29;
+	public final static int REPORT_AUFTRAG_OFFENE_AUFTRAGSART = 29;
+	public final static int REPORT_AUFTRAG_OFFENE_ANZAHL_SPALTEN = 30;
 
 	public final static int REPORT_AUFTRAG_OFFENE_DETAILS_AUFTRAGCNR = 0;
 	public final static int REPORT_AUFTRAG_OFFENE_DETAILS_AUFTRAGKUNDE = 1;
@@ -206,7 +216,8 @@ public interface AuftragReportFac {
 	public final static int REPORT_AUFTRAG_OFFENE_DETAILS_KUNDELIEFERADRESSE_LIEFERDAUER = 58;
 	public final static int REPORT_AUFTRAG_OFFENE_DETAILS_ZEIT_VERRECHENBAR = 59;
 	public final static int REPORT_AUFTRAG_OFFENE_DETAILS_PERSON_VERRECHENBAR = 60;
-	public final static int REPORT_AUFTRAG_OFFENE_DETAILS_ANZAHL_SPALTEN = 61;
+	public final static int REPORT_AUFTRAG_OFFENE_DETAILS_POSITIONSTERMIN_OHNE_LIEFERDAUER = 61;
+	public final static int REPORT_AUFTRAG_OFFENE_DETAILS_ANZAHL_SPALTEN = 62;
 
 	public final static int REPORT_AUFTRAG_OFFENE_POSITIONEN_AUFTRAGCNR = 0;
 	public final static int REPORT_AUFTRAG_OFFENE_POSITIONEN_AUFTRAGKUNDE = 1;
@@ -340,7 +351,11 @@ public interface AuftragReportFac {
 	public final static int REPORT_AUFTRAGBESTAETIGUNG_ARTIKEL_MATERIALGEWICHT = 67;
 	public final static int REPORT_AUFTRAGBESTAETIGUNG_ARTIKEL_KURS_MATERIALZUSCHLAG = 68;
 	public final static int REPORT_AUFTRAGBESTAETIGUNG_ARTIKEL_DATUM_MATERIALZUSCHLAG = 69;
-	public final static int REPORT_AUFTRAGBESTAETIGUNG_ANZAHL_SPALTEN = 70;
+	public final static int REPORT_AUFTRAGBESTAETIGUNG_ZWSPOSPREISDRUCKEN = 70;
+	public final static int REPORT_AUFTRAGBESTAETIGUNG_RAHMENMENGE = 71;
+	public final static int REPORT_AUFTRAGBESTAETIGUNG_ABGERUFENE_MENGE = 72;
+	public final static int REPORT_AUFTRAGBESTAETIGUNG_LETZTER_ABRUF = 73;
+	public final static int REPORT_AUFTRAGBESTAETIGUNG_ANZAHL_SPALTEN = 74;
 
 	public final static int REPORT_STATISTIK_BELEGART = 0;
 	public final static int REPORT_STATISTIK_BELEGNUMMER = 1;
@@ -389,7 +404,21 @@ public interface AuftragReportFac {
 	public final static int REPORT_STATISTIK_LOS_ERLEDIGUNGSDATUM = 45;
 	public final static int REPORT_STATISTIK_LOS_BEWERTUNG = 46;
 	public final static int REPORT_STATISTIK_FUEHRENDER_ARTIKEL = 47;
-	public final static int REPORT_STATISTIK_RECHNUNGSART = 48;
+	public final static int REPORT_STATISTIK_REISE_PARTNER = 48;
+	public final static int REPORT_STATISTIK_REISE_KOMMENTAR = 49;
+	public final static int REPORT_STATISTIK_REISE_MITARBEITER = 50;
+	public final static int REPORT_STATISTIK_REISE_VON = 51;
+	public final static int REPORT_STATISTIK_REISE_BIS = 52;
+	public final static int REPORT_STATISTIK_ER_EINGANGSRECHNUNGSART = 53;
+	public final static int REPORT_STATISTIK_ER_AUFTRAGSZUORDNUNG_KEINE_AUFTRAGSWERTUNG = 54;
+	public final static int REPORT_STATISTIK_RECHNUNGSART = 55;
+	public final static int REPORT_STATISTIK_LOSNUMMER_LI_QUELLE = 56;
+	public final static int REPORT_STATISTIK_ZAHLBETRAG = 57;
+	public final static int REPORT_STATISTIK_BELEGSTATUS = 58;
+	public final static int REPORT_STATISTIK_ER_SCHLUSSRECHNUNG_NR = 59;
+//	public final static int REPORT_STATISTIK_DIAETENAUSSCRIPT = 60;
+//	public final static int REPORT_REISEZEITEN_SCRIPTNAME_INTERNAL = 61;
+	public final static int REPORT_STATISTIK_ANZAHL_SPALTEN = 60;
 
 	public final static int REPORT_PACKLISTE_IDENT = 0;
 	public final static int REPORT_PACKLISTE_BEZEICHNUNG = 1;
@@ -425,8 +454,12 @@ public interface AuftragReportFac {
 	public final static int REPORT_PACKLISTE_VERPACKUNGSMENGE = 32;
 	public final static int REPORT_PACKLISTE_VERPACKUNGSEAN = 33;
 	public final static int REPORT_PACKLISTE_ARBEITSGAENGE = 34;
-	public final static int REPORT_PACKLISTE_SUBREPORT_DATA = 35;
-	public final static int REPORT_PACKLISTE_ANZAHL_SPALTEN = 36;
+	public final static int REPORT_PACKLISTE_MENGENTEILER = 35;
+	public final static int REPORT_PACKLISTE_POSITIONSSTATUS = 36;
+	// Subreportdata muss das letzte Feld bleiben, sonst stimmt die Reihenfolge
+	// im Subreport nicht!
+	public final static int REPORT_PACKLISTE_SUBREPORT_DATA = 37;
+	public final static int REPORT_PACKLISTE_ANZAHL_SPALTEN = 38;
 
 	public final static int REPORT_AUFTRAGZEITEN_PERSON = 0;
 	public final static int REPORT_AUFTRAGZEITEN_ARTIKEL = 1;
@@ -540,7 +573,14 @@ public interface AuftragReportFac {
 	public final static int REPORT_WIEDERBESCHAFFUNG_SUMME_SOLLZEITEN = 17;
 	public final static int REPORT_WIEDERBESCHAFFUNG_LAGERSTAND_SPERRLAEGER = 18;
 	public final static int REPORT_WIEDERBESCHAFFUNG_SETARTIKEL_TYP = 19;
-	public final static int REPORT_WIEDERBESCHAFFUNG_ANZAHL_SPALTEN = 20;
+	public final static int REPORT_WIEDERBESCHAFFUNG_STKL_EBENE = 20;
+	public final static int REPORT_WIEDERBESCHAFFUNG_GESAMT_WIEDERBESCHAFFUNGSZEIT = 21;
+	public final static int REPORT_WIEDERBESCHAFFUNG_ANZAHL_SPALTEN = 22;
+	
+	public final static int SORT_REPORT_WIEDERBESCHAFFUNG_AUFTRAGSPOSITION = 0;
+	public final static int SORT_REPORT_WIEDERBESCHAFFUNG_LIEFERANT = 1;
+	public final static int SORT_REPORT_WIEDERBESCHAFFUNG_GESAMT_WBZ = 2;
+
 
 	public final static int REPORT_ROLLIERENDEPLANUNG_IDENTNUMMER = 0;
 	public final static int REPORT_ROLLIERENDEPLANUNG_BEZEICHNUNG = 1;
@@ -674,7 +714,8 @@ public interface AuftragReportFac {
 	public final static int REPORT_RAHMENUEBERSICHT_PREIS = 9;
 	public final static int REPORT_RAHMENUEBERSICHT_LIEFERSCHEIN = 10;
 	public final static int REPORT_RAHMENUEBERSICHT_RECHNUNG = 11;
-	public final static int REPORT_RAHMENUEBERSICHT_ANZAHL_SPALTEN = 12;
+	public final static int REPORT_RAHMENUEBERSICHT_STORNIERT = 12;
+	public final static int REPORT_RAHMENUEBERSICHT_ANZAHL_SPALTEN = 13;
 
 	/** WH 22.02.06 vorerst Punkt, damit man die Ebene erkennen kann */
 	public final static String REPORT_VORKALKULATION_ZEICHEN_FUER_HANDEINGABE = ".";
@@ -683,10 +724,33 @@ public interface AuftragReportFac {
 	public final static String AUFTRAG_EIGENSCHAFTEN_CLUSTER = "Cluster";
 	public final static String AUFTRAG_EIGENSCHAFTEN_EQNR = "Equipmentnr";
 
+	public final static int REPORT_AUFTRAGSUEBERSICHT_LIEFERSCHEIN = 0;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_RECHNUNG = 1;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_ARTIKELNUMMER = 2;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_BEZEICHNUNG = 3;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_ZUSATZBEZEICHNUNG = 4;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_SOLLMENGE = 5;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_ISTMENGE = 6;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_EINHEIT = 7;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_NETTOPREIS = 8;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_NICHT_ZUGEORDNET = 9;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_ARBEITSZEIT = 10;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_AZ_DAUER = 11;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_AZ_VON = 12;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_AZ_BIS = 13;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_AZ_PERSON = 14;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_POS_NR = 15;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_AZ_PERSON_KURZZEICHEN = 16;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_LIEFERTERMIN = 17;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_BELEGDATM = 18;
+	public final static int REPORT_AUFTRAGSUEBERSICHT_ANZAHL_SPALTEN = 19;
+
 	public JasperPrintLP printAuftragOffene(ReportJournalKriterienDto krit,
 			Date dStichtag, Boolean bSortierungNachLiefertermin,
 			Boolean bInternenKommentarDrucken, Integer iArt,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+			Integer iArtUnverbindlich, boolean bMitAngelegten,
+			boolean bStichtagGreiftBeiLiefertermin, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printAuftraegeErledigt(
 			ReportJournalKriterienDto kritDtoI, TheClientDto theClientDto)
@@ -702,7 +766,7 @@ public interface AuftragReportFac {
 			TheClientDto theClientDto);
 
 	public JasperPrintLP printAuftragOffenePositionen(
-			ReportJournalKriterienDto krit, Date dStichtag,
+			ReportJournalKriterienDto krit, Date dVon, Date dStichtagBzwBis,
 			Boolean bSortierungNachLiefertermin, Boolean bOhnePositionen,
 			Boolean bSortierungNachAbliefertermin,
 			Integer[] fertigungsgruppeIId, Integer iArt,
@@ -739,7 +803,8 @@ public interface AuftragReportFac {
 			Integer kundeIId_Rechnungsadresse, Integer auftragIId,
 			String cProjekt, String cBestellnummer, int iOptionSortierung,
 			boolean bArbeitszeitVerdichtet, java.sql.Timestamp tStichtag,
-			Integer projektIId, TheClientDto theClientDto) throws RemoteException;
+			Integer projektIId, TheClientDto theClientDto)
+			throws RemoteException;
 
 	public JasperPrintLP printTaetigkeitsstatistik(java.sql.Timestamp tVon,
 			java.sql.Timestamp tBis, PartnerklasseDto partnerklasse,
@@ -759,16 +824,18 @@ public interface AuftragReportFac {
 			ReportJournalKriterienDto krit, Date dStichtag,
 			Boolean bSortierungNachLiefertermin,
 			Boolean bInternenKommentarDrucken, Integer iArt,
-			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
+			Integer iArtUnverbindlich, boolean bMitAngelegten,
+			boolean bStichtagGreiftBeiLiefertermin, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printWiederbeschaffung(Integer[] aIIdArtikelI,
 			BigDecimal[] aBdMenge, String[] artikelsetType,
 			Map<String, Object> mapReportParameterI,
-			boolean bSortiertNachLieferant, TheClientDto theClientDto)
+			int iSortierung, Double dWBZWennNichtDefiniert, Integer kundenlieferdauer, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public JasperPrintLP printVerfuegbarkeitspruefung(Integer iIdAuftragI,
-			boolean bSortiertNachLieferant, TheClientDto theClientDto)
+			int iSortierung,Double dWBZWennNichtDefiniert, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
 	public Hashtable<?, ?> getAuftragEigenschaften(Integer iIdAuftragI,
@@ -776,8 +843,22 @@ public interface AuftragReportFac {
 
 	public JasperPrintLP printAuftragAlle(ReportJournalKriterienDto kritDtoI,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
-	
+
 	public JasperPrintLP printAuftragspositionsetikett(
 			Integer auftragpositionIId, TheClientDto theClientDto);
+
+	public JasperPrintLP printAuftragsuebersicht(Integer iIdAuftragI,
+			TheClientDto theClientDto);
+
+	public Object[][] getDataAuftragsuebersicht(Integer iIdAuftragI,
+			TheClientDto theClientDto);
+
+	public Set getAlleLieferscheineEinesAuftrags(Integer iIdAuftragI);
+
+	public Set getAlleRechnungenEinesAuftrags(Integer iIdAuftragI);
 	
+	public JasperPrintLP printProjektblatt(Integer auftragIId,
+			TheClientDto theClientDto);
+	
+
 }

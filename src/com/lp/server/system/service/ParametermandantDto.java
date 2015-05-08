@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,13 +35,16 @@ package com.lp.server.system.service;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.Iterator;
+import java.util.TreeMap;
 
 import javax.persistence.Transient;
 
+import com.lp.server.personal.service.ZeitdatenDto;
 import com.lp.server.util.IMultipleKeyfields;
 import com.lp.util.EJBExceptionLP;
 
-@HvDtoLogClass(name=HvDtoLogClass.PARAMETERMANDANT)
+@HvDtoLogClass(name = HvDtoLogClass.PARAMETERMANDANT)
 public class ParametermandantDto implements Serializable, IMultipleKeyfields {
 	/**
 	 * 
@@ -56,6 +59,19 @@ public class ParametermandantDto implements Serializable, IMultipleKeyfields {
 	private String cBemerkunglarge;
 	private String cKategorie;
 	private String cDatentyp;
+
+	private TreeMap<java.sql.Timestamp, String> tmWerteGueltigab = null;
+
+	@HvDtoLogIgnore
+	public TreeMap<java.sql.Timestamp, String> getTmWerteGueltigab() {
+		return tmWerteGueltigab;
+	}
+
+	@HvDtoLogIgnore
+	public void setTmWerteGueltigab(
+			TreeMap<java.sql.Timestamp, String> tmWerteGueltigab) {
+		this.tmWerteGueltigab = tmWerteGueltigab;
+	}
 
 	public String getCNr() {
 		return cNr;
@@ -75,6 +91,59 @@ public class ParametermandantDto implements Serializable, IMultipleKeyfields {
 
 	public String getCWert() {
 		return cWert;
+	}
+
+	@HvDtoLogIgnore
+	public static ParametermandantDto clone(ParametermandantDto orig) {
+		ParametermandantDto klon = new ParametermandantDto();
+		klon.setCBemerkunglarge(orig.getCBemerkunglarge());
+		klon.setCBemerkungsmall(orig.getCBemerkungsmall());
+		klon.setCDatentyp(orig.getCDatentyp());
+		klon.setCKategorie(orig.getCKategorie());
+		klon.setCNr(orig.getCNr());
+		klon.setCWert(orig.getCWert());
+		klon.setMandantCMandant(orig.getMandantCMandant());
+		klon.setPersonalIIdAendern(orig.getPersonalIIdAendern());
+		klon.setTAendern(orig.getTAendern());
+		klon.setTmWerteGueltigab(orig.getTmWerteGueltigab());
+
+		return klon;
+	}
+
+	@HvDtoLogIgnore
+	public String getCWertZumZeitpunkt(java.sql.Timestamp tZeitpunkt) {
+
+		if (tZeitpunkt == null) {
+			return cWert;
+		} else {
+			if (tmWerteGueltigab == null || tmWerteGueltigab.size() == 0) {
+				return cWert;
+
+			} else {
+				Iterator<java.sql.Timestamp> it = tmWerteGueltigab.keySet()
+						.iterator();
+
+				java.sql.Timestamp tZeitpunktTemp = null;
+
+				while (it.hasNext()) {
+
+					java.sql.Timestamp tKey = it.next();
+
+					if (tKey.getTime() <= tZeitpunkt.getTime()) {
+						tZeitpunktTemp = tKey;
+					}
+
+				}
+
+				if (tZeitpunktTemp == null) {
+					return cWert;
+				} else {
+					return tmWerteGueltigab.get(tZeitpunktTemp);
+				}
+
+			}
+		}
+
 	}
 
 	@HvDtoLogIgnore
@@ -98,19 +167,59 @@ public class ParametermandantDto implements Serializable, IMultipleKeyfields {
 		return ret;
 	}
 
+	@HvDtoLogIgnore
+	public Object getCWertAsObjectZumZeitpunkt(java.sql.Timestamp tZeitpunkt) {
+
+		Object ret = null;
+		if (this.getCDatentyp().equals("java.lang.String")) {
+			ret = getCWertZumZeitpunkt(tZeitpunkt);
+		} else if (this.getCDatentyp().equals("java.lang.Integer")) {
+			ret = new Integer(getCWertZumZeitpunkt(tZeitpunkt));
+		} else if (this.getCDatentyp().equals("java.lang.Boolean")) {
+			ret = new Boolean(
+					Integer.parseInt(getCWertZumZeitpunkt(tZeitpunkt)) != 0);
+		} else if (this.getCDatentyp().equals("java.math.BigDecimal")) {
+			ret = new BigDecimal(getCWertZumZeitpunkt(tZeitpunkt));
+		} else if (this.getCDatentyp().equals("java.lang.Double")) {
+			ret = new Double(getCWertZumZeitpunkt(tZeitpunkt));
+		} else {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_INKOMPATIBEL,
+					new Exception());
+		}
+		return ret;
+	}
+
 	/**
-	 * Den Wert als Boolean zurueckliefern sofern der Parameter vom Typ Boolean ist.
+	 * Den Wert als Boolean zurueckliefern sofern der Parameter vom Typ Boolean
+	 * ist.
+	 * 
 	 * @return boolean des Parameterwerts
 	 */
 	public Boolean asBoolean() {
-		if ("java.lang.Boolean".equals(getCDatentyp())) {
-			return new Boolean(Integer.parseInt(getCWert()) != 0) ;
+		if ("java.lang.Boolean".equals(getCDatentyp())
+				|| "java.lang.Integer".equals(getCDatentyp())) {
+			return new Boolean(Integer.parseInt(getCWert()) != 0);
 		}
-		
+
 		throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_INKOMPATIBEL,
-				new Exception());		
+				new Exception());
 	}
-	
+
+	/**
+	 * Den CWert als Integer zur&uuml;ckliefern, sofern der Parameter vom Typ
+	 * Integer ist.
+	 * 
+	 * @return den Integer-Wert sofern parseable und Datentyp java.lang.Integer
+	 */
+	public Integer asInteger() {
+		if ("java.lang.Integer".equals(getCDatentyp())) {
+			return new Integer(getCWert());
+		}
+
+		throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_INKOMPATIBEL,
+				new Exception());
+	}
+
 	public void setCWert(String cWert) {
 		this.cWert = cWert;
 	}
@@ -229,6 +338,6 @@ public class ParametermandantDto implements Serializable, IMultipleKeyfields {
 	@HvDtoLogIgnore
 	@Transient
 	public String[] getMKValue() {
-		return new String[]{getCNr(), getCKategorie(), getMandantCMandant()} ;
+		return new String[] { getCNr(), getCKategorie(), getMandantCMandant() };
 	}
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -53,8 +53,45 @@ public class WarenzugangsreferenzDto implements Serializable {
 	private Integer position1 = null;
 	private Integer position2 = null;
 	private Integer kostenstelleIId = null;
+	private Integer i_id_buchung = null;
+	private Integer belegartIId = null;
+	private Integer belegartpositionIId = null;
+	
+	public Integer getBelegartpositionIId() {
+		return belegartpositionIId;
+	}
+	public void setBelegartpositionIId(Integer belegartpositionIId) {
+		this.belegartpositionIId = belegartpositionIId;
+	}
+	public Integer getBelegartIId() {
+		return belegartIId;
+	}
+	public void setBelegartIId(Integer belegartIId) {
+		this.belegartIId = belegartIId;
+	}
+	private String person_buchender = null;
+	private String kurzzeichen_buchender = null;
 	
 	
+	
+	public String getPerson_buchender() {
+		return person_buchender;
+	}
+	public void setPerson_buchender(String person_buchender) {
+		this.person_buchender = person_buchender;
+	}
+	public String getKurzzeichen_buchender() {
+		return kurzzeichen_buchender;
+	}
+	public void setKurzzeichen_buchender(String kurzzeichen_buchender) {
+		this.kurzzeichen_buchender = kurzzeichen_buchender;
+	}
+	public Integer getI_id_buchung() {
+		return i_id_buchung;
+	}
+	public void setI_id_buchung(Integer i_id_buchung) {
+		this.i_id_buchung = i_id_buchung;
+	}
 	private BigDecimal losAZAnteil = null;
 	private BigDecimal losMaterialanteil = null;
 	

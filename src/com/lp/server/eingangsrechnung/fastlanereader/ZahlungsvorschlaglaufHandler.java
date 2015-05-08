@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -37,6 +37,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
+import javax.swing.Icon;
+
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
 import org.hibernate.ScrollableResults;
@@ -46,7 +48,9 @@ import org.hibernate.SessionFactory;
 import com.lp.server.eingangsrechnung.fastlanereader.generated.FLRZahlungsvorschlaglauf;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
 import com.lp.server.finanz.service.FinanzFac;
+import com.lp.server.system.service.LocaleFac;
 import com.lp.server.util.Facade;
+import com.lp.server.util.HelperServer;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
@@ -104,6 +108,7 @@ public class ZahlungsvorschlaglaufHandler extends UseCaseHandler {
 			List<?> resultList = query.list();
 			Iterator<?> resultListIterator = resultList.iterator();
 			Object[][] rows = new Object[resultList.size()][colCount];
+			String[] tooltipData = new String[resultList.size()];
 			int row = 0;
 			int col = 0;
 			while (resultListIterator.hasNext()) {
@@ -128,11 +133,30 @@ public class ZahlungsvorschlaglaufHandler extends UseCaseHandler {
 									.getFlrpartner()
 									.getC_name1nachnamefirmazeile1();
 				}
+				
+
+				if (zvLauf.getT_gespeichert() != null) {
+					String s = getTextRespectUISpr(
+							"er.zahlungsvorschlag.gespeichert",
+							theClientDto.getMandant(), theClientDto.getLocUi())
+							+ Helper.formatTimestamp(new Timestamp(zvLauf
+									.getT_gespeichert().getTime()),
+									theClientDto.getLocUi());
+					if (zvLauf.getFlrpersonalgespeichert() != null) {
+						s += " ("
+								+ HelperServer.formatPersonAusFLRPartner(zvLauf
+										.getFlrpersonalgespeichert()
+										.getFlrpartner()) + ")";
+					}
+					rows[row][col++] = LocaleFac.STATUS_GELIEFERT;
+					tooltipData[row] = s;
+				}
+
 				row++;
 				col = 0;
 			}
 			result = new QueryResult(rows, this.getRowCount(), startIndex,
-					endIndex, 0);
+					endIndex, 0, tooltipData);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -239,8 +263,9 @@ public class ZahlungsvorschlaglaufHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(FLR_ZVL).append(
-						EingangsrechnungFac.FLR_ZV_LAUF_I_ID).append(" DESC ");
+				orderBy.append(FLR_ZVL)
+						.append(EingangsrechnungFac.FLR_ZV_LAUF_I_ID)
+						.append(" DESC ");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf(FLR_ZVL + EingangsrechnungFac.FLR_ZV_LAUF_I_ID) < 0) {
@@ -252,8 +277,9 @@ public class ZahlungsvorschlaglaufHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" ").append(FLR_ZVL).append(
-						EingangsrechnungFac.FLR_ZV_LAUF_I_ID).append(" ");
+				orderBy.append(" ").append(FLR_ZVL)
+						.append(EingangsrechnungFac.FLR_ZV_LAUF_I_ID)
+						.append(" ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -329,7 +355,8 @@ public class ZahlungsvorschlaglaufHandler extends UseCaseHandler {
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, Timestamp.class,
 							java.sql.Date.class, java.sql.Date.class,
-							Boolean.class, Integer.class, String.class },
+							Boolean.class, Integer.class, String.class,
+							Icon.class, },
 					new String[] {
 							"i_id",
 							getTextRespectUISpr("lp.datum", mandantCNr, locUI),
@@ -343,14 +370,15 @@ public class ZahlungsvorschlaglaufHandler extends UseCaseHandler {
 									"er.zv.skontoueberziehungsfristintagen",
 									mandantCNr, locUI),
 							getTextRespectUISpr("lp.bankverbindung",
-									mandantCNr, locUI) },
+									mandantCNr, locUI), "" },
 					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_XM,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_M,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_S, },
 					new String[] {
 							EingangsrechnungFac.FLR_ZV_LAUF_I_ID,
 							EingangsrechnungFac.FLR_ZV_LAUF_T_ANLEGEN,
@@ -359,7 +387,8 @@ public class ZahlungsvorschlaglaufHandler extends UseCaseHandler {
 							EingangsrechnungFac.FLR_ZV_LAUF_B_MITSKONTO,
 							EingangsrechnungFac.FLR_ZV_LAUF_I_SKONTOUEBERZIEHUNGSFRISTINTAGEN,
 							EingangsrechnungFac.FLR_ZV_LAUF_FLRBANKVERBINDUNG
-									+ "." + FinanzFac.FLR_BANKKONTO_C_BEZ }));
+									+ "." + FinanzFac.FLR_BANKKONTO_C_BEZ,
+							Facade.NICHT_SORTIERBAR }));
 		}
 		return super.getTableInfo();
 	}

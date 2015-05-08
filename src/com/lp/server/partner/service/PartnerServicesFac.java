@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -33,6 +33,7 @@
 package com.lp.server.partner.service;
 
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
 
@@ -40,11 +41,23 @@ import javax.ejb.Remote;
 
 import com.lp.server.partner.ejb.BranchesprPK;
 import com.lp.server.partner.ejb.SerienbriefselektionPK;
+import com.lp.server.partner.ejb.SerienbriefselektionnegativPK;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.LPDatenSubreport;
 
 @Remote
 public interface PartnerServicesFac {
+
+	public static final String FLR_PARTNERKOMMENTAR_DATENFORMAT_C_NR = "datenformat_c_nr";
+	public static final String FLR_PARTNERKOMMENTAR_FLRPARTNERKOMMENTARART = "flrpartnerkommentarart";
+	public static final String FLR_PARTNERKOMMENTAR_X_KOMMENTAR = "x_kommentar";
+	public static final String FLR_PARTNERKOMMENTAR_PARTNER_I_ID = "partner_i_id";
+	public static final String FLR_PARTNERKOMMENTAR_B_KUNDE = "b_kunde";
+
+	public static final int PARTNERKOMMENTARART_MITDRUCKEN = 0;
+	public static final int PARTNERKOMMENTARART_HINWEIS = 1;
+	public static final int PARTNERKOMMENTARART_ANHANG = 2;
 
 	public String createKommunikationsart(
 			KommunikationsartDto kommunikationsartDtoI,
@@ -184,5 +197,56 @@ public interface PartnerServicesFac {
 
 	public Integer createKontaktart(KontaktartDto kontaktartDto)
 			throws RemoteException;
+
+	public SerienbriefselektionnegativDto serienbriefselektionnegativFindByPrimaryKey(
+			Integer serienbriefIIdI, Integer selektionIIdI,
+			TheClientDto theClientDto);
+
+	public void updateSerienbriefselektionnegativ(
+			SerienbriefselektionnegativDto serienbriefselektionnegativDtoI,
+			TheClientDto theClientDto);
+
+	public void removeSerienbriefselektionnegativ(Integer serienbriefIIdI,
+			Integer selektionIIdI, TheClientDto theClientDto);
+
+	public SerienbriefselektionnegativPK createSerienbriefselektionnegativ(
+			SerienbriefselektionnegativDto serienbriefselektionnegativDtoI,
+			TheClientDto theClientDto);
+
+	public SerienbriefselektionnegativDto[] serienbriefselektionnegativFindBySerienbriefIId(
+			Integer serienbriefIId);
+
+	public PartnerkommentarartDto partnerkommentarartFindByPrimaryKey(
+			Integer iId, TheClientDto theClientDto);
+
+	public Integer createPartnerkommentarart(PartnerkommentarartDto artDto,
+			TheClientDto theClientDto);
+
+	public void removePartnerkommentarart(PartnerkommentarartDto artDto);
+
+	public void updatePartnerkommentarart(PartnerkommentarartDto artDto,
+			TheClientDto theClientDto);
+
+	public Integer createPartnerkommentar(
+			PartnerkommentarDto partnerkommentarDto, TheClientDto theClientDto);
+
+	public void updatePartnerkommentar(PartnerkommentarDto partnerkommentarDto,
+			TheClientDto theClientDto);
+
+	public PartnerkommentarDto partnerkommentarFindByPrimaryKey(Integer iId,
+			TheClientDto theClientDto);
+
+	public void removePartnerkommentar(PartnerkommentarDto partnerkommentarDto);
+
+	public String[] getPartnerhinweise(Integer partnerIId, boolean bKunde,
+			String belegartCNr, TheClientDto theClientDto);
+
+	public ArrayList<byte[]> getPartnerkommentarBilderUndPDFAlsBilderUmgewandelt(
+			Integer partnerIId, boolean bKunde, String belegartCNr,
+			Integer iArt, TheClientDto theClientDto);
+
+	public LPDatenSubreport getSubreportAllerMitzudruckendenPartnerkommentare(
+			Integer partnerIId, boolean bKunde, String belegartCNr,
+			TheClientDto theClientDto);
 
 }

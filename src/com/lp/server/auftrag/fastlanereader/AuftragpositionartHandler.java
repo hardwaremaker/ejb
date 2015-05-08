@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.auftrag.fastlanereader;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -79,7 +80,7 @@ public class AuftragpositionartHandler extends UseCaseHandler {
 	 */
 	private static final long serialVersionUID = 1L;
 	public static final String FLR_AUFTRAGPOSITIONART = "flrauftragpositionart.";
-	public static final String FLR_AUFTRAGPOSITIONART_FROM_CLAUSE = " from FLRAuftragpositionart flrauftragpositionart ";
+	public static final String FLR_AUFTRAGPOSITIONART_FROM_CLAUSE = " from FLRAuftragpositionart as flrauftragpositionart ";
 
 	/**
 	 * gets the page of data for the specified row using the current
@@ -233,8 +234,12 @@ public class AuftragpositionartHandler extends UseCaseHandler {
 							orderBy.append(", ");
 						}
 						sortAdded = true;
+						// orderBy.append(
 						orderBy.append(FLR_AUFTRAGPOSITIONART
-								+ kriterien[i].kritName);
+
+						+ kriterien[i].kritName);
+						// kriterien[i].kritName);
+						// orderBy.append(kriterien[i].kritName);
 						orderBy.append(" ");
 						orderBy.append(kriterien[i].value);
 					}
@@ -244,8 +249,8 @@ public class AuftragpositionartHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(FLR_AUFTRAGPOSITIONART).append("i_sort").append(
-						" ASC ");
+				orderBy.append(FLR_AUFTRAGPOSITIONART).append("i_sort")
+						.append(" ASC ");
 				sortAdded = true;
 			}
 			if (orderBy.indexOf(FLR_AUFTRAGPOSITIONART + "i_sort") < 0) {
@@ -257,8 +262,8 @@ public class AuftragpositionartHandler extends UseCaseHandler {
 				if (sortAdded) {
 					orderBy.append(", ");
 				}
-				orderBy.append(" ").append(FLR_AUFTRAGPOSITIONART).append(
-						"i_sort").append(" ");
+				orderBy.append(" ").append(FLR_AUFTRAGPOSITIONART)
+						.append("i_sort").append(" ");
 				sortAdded = true;
 			}
 			if (sortAdded) {
@@ -284,23 +289,22 @@ public class AuftragpositionartHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
+			String mandantCNr = theClientDto.getMandant();
+			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
 					new Class[] { String.class, String.class, Integer.class
 
 					},
 					new String[] {
-							"positionsart_c_nr",
-							getTextRespectUISpr("lp.kennung", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.sort", theClientDto
-									.getMandant(), theClientDto.getLocUi()) },
-					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							AuftragServiceFac.FLR_AUFTRAGPOSITIONART_POSITIONSART_C_NR,
+							getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.sort", mandantCNr, locUI) },
+					new int[] { -1, QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_M },
 					new String[] {
 							AuftragServiceFac.FLR_AUFTRAGPOSITIONART_POSITIONSART_C_NR,
-							AuftragServiceFac.FLR_AUFTRAGPOSITIONART_AUFTRAGPOSITIONSART_POSITIONSART_SET
-									+ ".c_bez", "i_sort" }));
+							AuftragServiceFac.FLR_AUFTRAGPOSITIONART_POSITIONSART_C_NR,
+							"i_sort" }));
 		}
 		return super.getTableInfo();
 	}

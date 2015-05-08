@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -339,6 +339,12 @@ public class BestellungHandler extends UseCaseHandler {
 							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
 									new Exception(ex));
 						}
+					} else if (filterKriterien[i].kritName
+							.equals("c_bezprojektbezeichnung")) {
+						where.append(" (upper(bestellung.c_bezprojektbezeichnung) LIKE "
+								+ filterKriterien[i].value.toUpperCase()
+								+ " OR upper(bestellung.c_lieferantenangebot) LIKE "
+								+ filterKriterien[i].value.toUpperCase() + ")");
 					} else if (filterKriterien[i].kritName
 							.equals("bestpos.flrlossollmaterial.flrlos.c_nr")) {
 

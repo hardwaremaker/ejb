@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -54,7 +54,18 @@ public class Lfliefergruppespr implements Serializable {
 
 	@Column(name = "C_BEZ")
 	private String cBez;
+	
+	@Column(name = "X_TEXT")
+	private String xText;
 
+
+	public String getXText() {
+		return xText;
+	}
+
+	public void setXText(String xText) {
+		this.xText = xText;
+	}
 
 	private static final long serialVersionUID = 1L;
 

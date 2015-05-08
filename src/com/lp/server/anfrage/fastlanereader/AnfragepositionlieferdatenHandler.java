@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -136,12 +136,22 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 									theClientDto.getLocUi());
 
 					ArtikellieferantDto alDto = getArtikelFac()
-							.artikellieferantFindByArtikellIIdLieferantIIdOhneExc(
+							.getArtikelEinkaufspreis(
 									position.getFlranfrageposition()
 											.getFlrartikel().getI_id(),
 									position.getFlranfrageposition()
 											.getFlranfrage().getFlrlieferant()
-											.getI_id(), theClientDto);
+											.getI_id(),
+									BigDecimal.ONE,
+
+									position.getFlranfrageposition()
+											.getFlranfrage()
+											.getWaehrung_c_nr_anfragewaehrung(),
+									new java.sql.Date(position
+											.getFlranfrageposition()
+											.getFlranfrage().getT_belegdatum()
+											.getTime()), theClientDto);
+
 					if (alDto != null) {
 						bArtikellieferantVorhanden = true;
 					}
@@ -389,7 +399,7 @@ public class AnfragepositionlieferdatenHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST, // hidden
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_XS,
-							getUIBreiteIdent(), //ident
+							getUIBreiteIdent(), // ident
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_M,
 							QueryParameters.FLR_BREITE_S, },

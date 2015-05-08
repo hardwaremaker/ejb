@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -45,7 +45,9 @@ import com.lp.server.angebot.service.AngebotDto;
 import com.lp.server.angebot.service.AngebotpositionDto;
 import com.lp.server.angebotstkl.service.AgstklDto;
 import com.lp.server.angebotstkl.service.AgstklpositionDto;
+import com.lp.server.artikel.service.ArtgruDto;
 import com.lp.server.artikel.service.ArtikelDto;
+import com.lp.server.artikel.service.ArtklaDto;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.auftrag.service.AuftragpositionDto;
 import com.lp.server.bestellung.service.BestellpositionDto;
@@ -53,6 +55,7 @@ import com.lp.server.bestellung.service.BestellungDto;
 import com.lp.server.bestellung.service.WareneingangDto;
 import com.lp.server.bestellung.service.WareneingangspositionDto;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungzahlungDto;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.fertigung.service.LosablieferungDto;
 import com.lp.server.finanz.service.FinanzamtDto;
@@ -70,16 +73,29 @@ import com.lp.server.projekt.service.HistoryDto;
 import com.lp.server.projekt.service.ProjektDto;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungPositionDto;
+import com.lp.server.rechnung.service.RechnungzahlungDto;
 import com.lp.server.reklamation.service.ReklamationDto;
 import com.lp.server.stueckliste.service.StuecklistepositionDto;
 
 public class DocNodeFactory {
+	
+	/**
+	 * Wird nur von der Dokumentenpfad-Neuzuordnung verwendet.
+	 * F&uuml;r neue Belegarten muss hier nichts hinzugef&uuml;gt werden.
+	 * @param dto
+	 * @param belegart
+	 * @return die Belegspezifische DocNode-Implementierung
+	 */
 	public static DocNodeBase createDocNodeFromDtoBelegart(Object dto[], String belegart) {
 		
 		try {
 			
 			if(DocNodeBase.BELEGART_LAGERSTANDSLISTE.equals(belegart))
 				return new DocNodeLagerstandsliste((String)dto[0]);
+			if(DocNodeBase.BELEGART_ARTIKELGRUPPE.equals(belegart))
+				return new DocNodeArtikelgruppe((ArtgruDto)dto[0]);
+			if(DocNodeBase.BELEGART_ARTIKELKLASSE.equals(belegart))
+				return new DocNodeArtikelklasse((ArtklaDto)dto[0]);
 			/**
 			 * Angebot
 			 */
@@ -156,6 +172,8 @@ public class DocNodeFactory {
 			
 			if(DocNodeBase.BELEGART_EINGANGSRECHNG.equals(belegart))
 				return new DocNodeEingangsrechnung((EingangsrechnungDto)dto[0]);
+			if(DocNodeBase.BELEGART_ER_ZAHLUNG.equals(belegart))
+				return new DocNodeErZahlung((EingangsrechnungzahlungDto)dto[0], (EingangsrechnungDto)dto[1]);
 			
 			if(DocNodeBase.BELEGART_UVA.equals(belegart))
 				return new DocNodeUVAVerprobung((ReportUvaKriterienDto)dto[0], (FinanzamtDto)dto[1]);
@@ -225,6 +243,10 @@ public class DocNodeFactory {
 			if(DocNodeBase.BELEGART_PROFORMAPOS.equals(belegart)) {
 				return new DocNodeProformaPosition((RechnungPositionDto)dto[0], (RechnungDto)dto[1]);
 			}
+
+			if(DocNodeBase.BELEGART_RE_ZAHLUNG.equals(belegart))
+				return new DocNodeRechnungZahlung((RechnungzahlungDto)dto[0], (RechnungDto)dto[1]);
+			
 			/**
 			 * Reklamation
 			 */
@@ -294,7 +316,11 @@ public class DocNodeFactory {
 			 * Artikel
 			 */				
 			if(DocNodeBase.BELEGART_ARTIKEL.equals(belegart) || DocNodeBase.BELEGART_STUECKLISTE.equals(belegart))
-					return new DocNodeArtikel(node);
+				return new DocNodeArtikel(node);
+			if(DocNodeBase.BELEGART_ARTIKELGRUPPE.equals(belegart))
+				return new DocNodeArtikelgruppe(node);
+			if(DocNodeBase.BELEGART_ARTIKELKLASSE.equals(belegart))
+				return new DocNodeArtikelklasse(node);
 			
 			if(DocNodeBase.BELEGART_STKLPOSITION.equals(belegart))
 				return new DocNodeStuecklistePosition(node);
@@ -343,9 +369,12 @@ public class DocNodeFactory {
 			if(DocNodeBase.BELEGART_WEPOSITION.equals(belegart))
 				return new DocNodeWEPosition(node);
 			
-			
+
 			if(DocNodeBase.BELEGART_EINGANGSRECHNG.equals(belegart))
 				return new DocNodeEingangsrechnung(node);
+
+			if(DocNodeBase.BELEGART_ER_ZAHLUNG.equals(belegart))
+				return new DocNodeErZahlung(node);
 			
 			if(DocNodeBase.BELEGART_UVA.equals(belegart))
 				return new DocNodeUVAVerprobung(node);
@@ -356,8 +385,8 @@ public class DocNodeFactory {
 			if(DocNodeBase.BELEGART_SALDENLISTE.equals(belegart)) 
 				return new DocNodeSaldenliste(node);
 			
-			if(DocNodeBase.BELEGART_GUTSCHRIFT.equals(belegart))
-				return new DocNodeGutschrift(node);
+			if(DocNodeBase.BELEGART_BUCHUNGDETAIL.equals(belegart))
+				return new DocNodeBuchungdetail(node);
 			
 			/**
 			 * Los (Fertigung)
@@ -399,6 +428,9 @@ public class DocNodeFactory {
 		
 			if(DocNodeBase.BELEGART_GUTSPOSITION.equals(belegart))
 				return new DocNodeGutsPosition(node);
+			
+			if(DocNodeBase.BELEGART_RE_ZAHLUNG.equals(belegart))
+				return new DocNodeRechnungZahlung(node);
 			
 			/**
 			 * Reklamation

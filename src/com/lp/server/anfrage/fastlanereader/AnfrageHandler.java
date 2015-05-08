@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -99,6 +99,8 @@ public class AnfrageHandler extends UseCaseHandler {
 	private static final long serialVersionUID = 1L;
 	public static final String FLR_ANFRAGE = "flranfrage.";
 	public static final String FLR_ANFRAGE_FROM_CLAUSE = " from FLRAnfrage flranfrage ";
+
+	Integer iAnlegerStattVertreterAnzeigen = 0;
 
 	/**
 	 * gets the data page for the specified row using the current query. The row
@@ -207,6 +209,24 @@ public class AnfrageHandler extends UseCaseHandler {
 
 				rows[row][col++] = anfrage.getC_bez();
 				rows[row][col++] = anfrage.getT_belegdatum();
+
+				if (iAnlegerStattVertreterAnzeigen == 2) {
+					if (anfrage.getFlrpersonalaenderer() != null) {
+						rows[row][col++] = anfrage.getFlrpersonalaenderer()
+								.getC_kurzzeichen();
+					} else {
+						rows[row][col++] = null;
+					}
+				} else {
+					// Bei 0 und 1
+					if (anfrage.getFlrpersonalanleger() != null) {
+						rows[row][col++] = anfrage.getFlrpersonalanleger()
+								.getC_kurzzeichen();
+					} else {
+						rows[row][col++] = null;
+					}
+				}
+
 				String sStatus = anfrage.getAnfragestatus_c_nr();
 				rows[row][col++] = getStatusMitUebersetzung(sStatus,
 						anfrage.getT_versandzeitpunkt(),
@@ -547,11 +567,24 @@ public class AnfrageHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
+
+			try {
+				ParametermandantDto parameter = getParameterFac()
+						.getMandantparameter(
+								theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_ALLGEMEIN,
+								ParameterFac.PARAMETER_ANZEIGE_ANLEGER_STATT_VERTRETER);
+				iAnlegerStattVertreterAnzeigen = (Integer) parameter
+						.getCWertAsObject();
+			} catch (RemoteException ex) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+			}
+
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
 							String.class, String.class, String.class,
-							Date.class, Icon.class, BigDecimal.class,
-							String.class },
+							Date.class, String.class, Icon.class,
+							BigDecimal.class, String.class },
 					new String[] {
 							"i_id",
 							"",
@@ -568,6 +601,9 @@ public class AnfrageHandler extends UseCaseHandler {
 									theClientDto.getMandant(),
 									theClientDto.getLocUi()),
 							getTextRespectUISpr("lp.datum",
+									theClientDto.getMandant(),
+									theClientDto.getLocUi()),
+							getTextRespectUISpr("lp.vertreter",
 									theClientDto.getMandant(),
 									theClientDto.getLocUi()),
 							getTextRespectUISpr("lp.status",
@@ -588,6 +624,7 @@ public class AnfrageHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 							QueryParameters.FLR_BREITE_M,
+							QueryParameters.FLR_BREITE_XS,
 							QueryParameters.FLR_BREITE_XS,
 							QueryParameters.FLR_BREITE_PREIS,
 							QueryParameters.FLR_BREITE_WAEHRUNG },
@@ -619,6 +656,7 @@ public class AnfrageHandler extends UseCaseHandler {
 									+ "." + SystemFac.FLR_LP_LANDPLZORTPLZ,
 							"c_bez",
 							AnfrageFac.FLR_ANFRAGE_T_BELEGDATUM,
+							"flrpersonalaenderer.i_id",
 							AnfrageFac.FLR_ANFRAGE_ANFRAGESTATUS_C_NR,
 							AnfrageFac.FLR_ANFRAGE_N_GESAMTANFRAGEWERTINANFRAGEWAEHRUNG,
 							AnfrageFac.FLR_ANFRAGE_WAEHRUNG_C_NR_ANFRAGEWAEHRUNG }));
@@ -640,19 +678,19 @@ public class AnfrageHandler extends UseCaseHandler {
 			// Nicht gefunden
 		}
 		if (anfrageDto != null) {
-//			String sPath = JCRDocFac.HELIUMV_NODE + "/"
-//					+ theClientDto.getMandant() + "/"
-//					+ LocaleFac.BELEGART_ANFRAGE.trim() + "/"
-//					+ LocaleFac.BELEGART_ANFRAGE.trim() + "/"
-//					+ anfrageDto.getCNr().replace("/", ".");
+			// String sPath = JCRDocFac.HELIUMV_NODE + "/"
+			// + theClientDto.getMandant() + "/"
+			// + LocaleFac.BELEGART_ANFRAGE.trim() + "/"
+			// + LocaleFac.BELEGART_ANFRAGE.trim() + "/"
+			// + anfrageDto.getCNr().replace("/", ".");
 			DocPath docPath = new DocPath(new DocNodeAnfrage(anfrageDto));
 
-			Integer lieferantIId = null;
+			Integer sPartnerIId = null;
 			if (lieferantDto != null) {
-				lieferantIId = lieferantDto.getIId();
+				sPartnerIId = lieferantDto.getPartnerIId();
 			}
 
-			return new PrintInfoDto(docPath, lieferantIId, getSTable());
+			return new PrintInfoDto(docPath, sPartnerIId, getSTable());
 		} else {
 			return null;
 		}

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -109,6 +109,8 @@ public interface LocaleFac {
 	public static final String BELEGART_KUECHE =       "Kueche         ";
 	public static final String BELEGART_INSTANDHALTUNG = "Instandhaltung ";
 	public static final String BELEGART_INSERAT =        "Inserat        ";
+	public static final String BELEGART_EMAIL =          "Email          ";
+	public static final String BELEGART_ZUSATZKOSTEN =   "Zusatzkosten   ";
 
 	// Belegarten in der Fibu (FB_BELEGART)
 	public static final String BELEGART_FIBU_RECHNUNG = "Rechnung       ";
@@ -206,6 +208,7 @@ public interface LocaleFac {
 	public static final String STATUS_BESTELLT =   "Bestellt       ";
 	public static final String STATUS_ERSCHIENEN = "Erschienen     ";
 	public static final String STATUS_VERRECHENBAR="Verrechenbar   ";
+	public static final String STATUS_GELESEN     ="Gelesen        ";
 
 	public static final String POSITIONTYP_ALLES = "Alles";
 	public static final String POSITIONTYP_VERDICHTET = "Verdichtet";
@@ -485,4 +488,12 @@ public interface LocaleFac {
 	public BigDecimal rechneUmInAndereWaehrungGerundetZuDatum(BigDecimal bdBetragI,
 			String currency1I, String currency2I, Date dDatumI, TheClientDto theClient)
 			throws EJBExceptionLP, RemoteException;
+	
+	/**
+	 * Die Bezeichnung einer Status-Kennung liefern sofern vorhanden, ansonsten die CNR
+	 * @param statusCnr
+	 * @param theClientDto
+	 * @return Die Bezeichnung einer Status-Kennung liefern sofern vorhanden, ansonsten die CNR
+	 */
+	String getStatusCBez(String statusCnr, TheClientDto theClientDto) ;	
 }

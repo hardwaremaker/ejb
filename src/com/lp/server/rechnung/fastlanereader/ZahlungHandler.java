@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -44,9 +44,15 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.partner.service.KundeDto;
+import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.rechnung.fastlanereader.generated.FLRRechnungZahlung;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungFac;
+import com.lp.server.rechnung.service.RechnungzahlungDto;
+import com.lp.server.system.jcr.service.PrintInfoDto;
+import com.lp.server.system.jcr.service.docnode.DocNodeRechnungZahlung;
+import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -169,8 +175,9 @@ public class ZahlungHandler extends UseCaseHandler {
 				rows[row][SPALTE_OFFEN] = bdOffen;
 
 				String zahlungsart = zahlung.getZahlungsart_c_nr();
-				if (zahlung.getFlrrechnung().getFlrrechnungart().getC_nr()
-						.equals(RechnungFac.RECHNUNGART_GUTSCHRIFT)) {
+				String bezahlungsbelegart = zahlung.getFlrrechnung().getFlrrechnungart().getC_nr() ;
+				if (bezahlungsbelegart.equals(RechnungFac.RECHNUNGART_GUTSCHRIFT) || 
+						bezahlungsbelegart.equals(RechnungFac.RECHNUNGART_WERTGUTSCHRIFT)) {
 
 					if (!zahlung.getZahlungsart_c_nr().equals(
 							RechnungFac.ZAHLUNGSART_BANK)
@@ -215,9 +222,11 @@ public class ZahlungHandler extends UseCaseHandler {
 				} else if (zahlungsart
 						.equalsIgnoreCase(RechnungFac.RECHNUNGART_RECHNUNG)
 						&& zahlung.getFlrrechnung() != null) {
-					art = zahlung.getFlrrechnung().getC_nr();
-//					art = zahlung.getFlrrechnunggutschrift().getC_nr();
-					// TODO: Flrrechnunggutschrift ist hier doch falsch oder?
+					if(zahlung.getFlrrechnunggutschrift() == null) {
+						art = "?GU?" + zahlung.getFlrrechnung().getC_nr();
+ 					} else {
+ 						art = zahlung.getFlrrechnunggutschrift().getC_nr();
+ 					}
 				}
 				rows[row][SPALTE_ART] = zahlungsartUebersetzt + ": " + art;
 				row++;
@@ -228,7 +237,9 @@ public class ZahlungHandler extends UseCaseHandler {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
 			try {
-				session.close();
+				if(session != null) {
+					session.close();
+				}
 			} catch (HibernateException he) {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
 			}
@@ -373,10 +384,6 @@ public class ZahlungHandler extends UseCaseHandler {
 	 * 
 	 * @see UseCaseHandler#sort(SortierKriterium[], Object)
 	 * @throws EJBExceptionLP
-	 * @param sortierKriterien
-	 *            SortierKriterium[]
-	 * @param selectedId
-	 *            Object
 	 * @return QueryResult
 	 */
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
@@ -456,5 +463,40 @@ public class ZahlungHandler extends UseCaseHandler {
 		}
 
 		return super.getTableInfo();
+	}
+	
+	@Override
+	public PrintInfoDto getSDocPathAndPartner(Object key) {
+		RechnungDto rechnungDto = null;
+		RechnungzahlungDto zahlung = null;
+		KundeDto kundeDto = null;
+		PartnerDto partnerDto = null;
+		try {
+			zahlung = getRechnungFac()
+					.zahlungFindByPrimaryKey((Integer) key);
+			rechnungDto = getRechnungFac().rechnungFindByPrimaryKey(
+					zahlung.getRechnungIId());
+			kundeDto = getKundeFac().kundeFindByPrimaryKey(
+					rechnungDto.getKundeIId(), theClientDto);
+			partnerDto = getPartnerFac().partnerFindByPrimaryKey(
+					kundeDto.getPartnerIId(), theClientDto);
+		} catch (Exception e) {
+			// Nicht gefunden
+		}
+		if (rechnungDto != null && zahlung != null) {
+			DocPath docPath = new DocPath(new DocNodeRechnungZahlung(zahlung, rechnungDto));
+			Integer iPartnerIId = null;
+			if (partnerDto != null) {
+				iPartnerIId = partnerDto.getIId();
+			}
+			return new PrintInfoDto(docPath, iPartnerIId, getSTable());
+		} else {
+			return null;
+		}
+	}
+	
+	@Override
+	public String getSTable() {
+		return "RE ZAHLUNG";
 	}
 }

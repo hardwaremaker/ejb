@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -61,6 +61,7 @@ import com.lp.server.angebotstkl.ejb.Agstkl;
 import com.lp.server.angebotstkl.ejb.Einkaufsangebot;
 import com.lp.server.angebotstkl.service.AgstklDto;
 import com.lp.server.angebotstkl.service.EinkaufsangebotDto;
+import com.lp.server.artikel.ejb.Sperren;
 import com.lp.server.auftrag.ejb.Auftrag;
 import com.lp.server.auftrag.service.AuftragDto;
 import com.lp.server.bestellung.ejb.Bestellung;
@@ -70,6 +71,7 @@ import com.lp.server.inserat.ejb.Inseratrechnung;
 import com.lp.server.lieferschein.ejb.Lieferschein;
 import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.partner.ejb.Ansprechpartner;
+import com.lp.server.partner.ejb.AnsprechpartnerQuery;
 import com.lp.server.partner.ejb.Ansprechpartnerfunktion;
 import com.lp.server.partner.ejb.Ansprechpartnerfunktionspr;
 import com.lp.server.partner.ejb.AnsprechpartnerfunktionsprPK;
@@ -177,6 +179,33 @@ public class AnsprechpartnerFacBean extends Facade implements
 					new Exception("ansprechpartnerDtoI.getIId() != null"));
 		}
 
+		// PJ18553
+		if (ansprechpartnerDtoI.getCKennwort() != null) {
+			// Dann muss es eine E-Mail geben und die muss eindeutig sein
+			if (ansprechpartnerDtoI.getCEmail() == null) {
+				// Fehler
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_ANSPRECHPARTNER_EMAIL_NICHT_DEFINIERT,
+						new Exception("FEHLER_ANSPRECHPARTNER_EMAIL_NICHT_DEFINIERT"));
+				
+				
+			} else {
+
+				// duplicateunique: Pruefung: Artikelgruppe bereits vorhanden.
+				Query query = em
+						.createNamedQuery("AnsprechpartnerfindByCEmail");
+				query.setParameter(1, ansprechpartnerDtoI.getCEmail());
+				Collection c = query.getResultList();
+				if (c.size() > 0) {
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_ANSPRECHPARTNER_EMAIL_NICHT_EINDEUTIG,
+							new Exception("FEHLER_ANSPRECHPARTNER_EMAIL_NICHT_EINDEUTIG"));
+				}
+
+			}
+
+		}
+
 		try {
 			// Generiere einen AnsprechpartnerPK.
 			PKGeneratorObj pkGen = new PKGeneratorObj();
@@ -205,7 +234,8 @@ public class AnsprechpartnerFacBean extends Facade implements
 					ansprechpartnerDtoI.getISort(),
 					ansprechpartnerDtoI.getPersonalIIdAendern(),
 					ansprechpartnerDtoI.getBVersteckt(),
-					Helper.boolean2Short(ansprechpartnerDtoI.isNewsletterEmpfaenger()));
+					Helper.boolean2Short(ansprechpartnerDtoI
+							.isNewsletterEmpfaenger()));
 			em.persist(ansprechpartner);
 			em.flush();
 
@@ -249,6 +279,37 @@ public class AnsprechpartnerFacBean extends Facade implements
 		if (ansprechpartnerAlt == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, "");
 		}
+		
+		
+		if (ansprechpartnerDtoI.getCKennwort() != null) {
+			// Dann muss es eine E-Mail geben und die muss eindeutig sein
+			if (ansprechpartnerDtoI.getCEmail() == null) {
+				// Fehler
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_ANSPRECHPARTNER_EMAIL_NICHT_DEFINIERT,
+						new Exception("FEHLER_ANSPRECHPARTNER_EMAIL_NICHT_DEFINIERT"));
+				
+				
+			} else {
+				Query query = em
+						.createNamedQuery("AnsprechpartnerfindByCEmail");
+				query.setParameter(1, ansprechpartnerDtoI.getCEmail());
+				Collection c = query.getResultList();
+				
+				Iterator it=c.iterator();
+				
+				while(it.hasNext()){
+					Ansprechpartner a=(Ansprechpartner)it.next();					
+					if (!a.getIId().equals(ansprechpartnerAlt.getIId())) {
+						throw new EJBExceptionLP(
+								EJBExceptionLP.FEHLER_ANSPRECHPARTNER_EMAIL_NICHT_EINDEUTIG,
+								new Exception("FEHLER_ANSPRECHPARTNER_EMAIL_NICHT_EINDEUTIG"));
+					}					
+				}			
+			}
+		}
+		
+		
 		if (ansprechpartnerAlt.getPartnerIId().intValue() == ansprechpartnerDtoI
 				.getPartnerIId().intValue()) {
 			// der unique-test
@@ -385,7 +446,10 @@ public class AnsprechpartnerFacBean extends Facade implements
 		ansprechpartner.setCTelefon(ansprechpartnerDto.getCTelefon());
 		ansprechpartner.setCFremdsystemnr(ansprechpartnerDto
 				.getCFremdsystemnr());
-		ansprechpartner.setbNewsletterEmpfaenger(Helper.boolean2Short(ansprechpartnerDto.isNewsletterEmpfaenger()));
+		ansprechpartner.setbNewsletterEmpfaenger(Helper
+				.boolean2Short(ansprechpartnerDto.isNewsletterEmpfaenger()));
+		ansprechpartner.setCAbteilung(ansprechpartnerDto.getCAbteilung());
+		ansprechpartner.setCKennwort(ansprechpartnerDto.getCKennwort());
 
 		em.merge(ansprechpartner);
 		em.flush();
@@ -2198,5 +2262,12 @@ public class AnsprechpartnerFacBean extends Facade implements
 		} catch (RemoteException ex1) {
 			throwEJBExceptionLPRespectOld(ex1);
 		}
+	}
+
+	public AnsprechpartnerDto[] ansprechpartnerFindByEmail(String email,
+			TheClientDto theClientDto) {
+
+		Query query = AnsprechpartnerQuery.byEmail(em, email);
+		return assembleAnsprechpartnerDtos(query.getResultList());
 	}
 }

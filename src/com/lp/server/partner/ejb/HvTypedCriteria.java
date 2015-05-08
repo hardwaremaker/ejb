@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -76,45 +76,39 @@ public class HvTypedCriteria<T> implements Criteria {
 	}
 
 	@Override
-	public HvTypedCriteria<T> createAlias(String arg0, String arg1)
+	public Criteria createAlias(String arg0, String arg1)
 			throws HibernateException {
-		c.createAlias(arg0, arg1);
-		return this;
+		return c.createAlias(arg0, arg1);
 	}
 
 	@Override
-	public HvTypedCriteria<T> createAlias(String arg0, String arg1, int arg2)
+	public Criteria createAlias(String arg0, String arg1, int arg2)
 			throws HibernateException {
-		c.createAlias(arg0, arg1, arg2);
-		return this;
+		return c.createAlias(arg0, arg1, arg2);
 	}
 
 	@Override
-	public HvTypedCriteria<T> createCriteria(String arg0)
+	public Criteria createCriteria(String arg0)
 			throws HibernateException {
-		c.createCriteria(arg0);
-		return this;
+		return c.createCriteria(arg0);
 	}
 
 	@Override
-	public HvTypedCriteria<T> createCriteria(String arg0, int arg1)
+	public Criteria createCriteria(String arg0, int arg1)
 			throws HibernateException {
-		c.createCriteria(arg0, arg1);
-		return this;
+		return c.createCriteria(arg0, arg1);
 	}
 
 	@Override
-	public HvTypedCriteria<T> createCriteria(String arg0, String arg1)
+	public Criteria createCriteria(String arg0, String arg1)
 			throws HibernateException {
-		c.createCriteria(arg0, arg1);
-		return this;
+		return c.createCriteria(arg0, arg1);
 	}
 
 	@Override
-	public HvTypedCriteria<T> createCriteria(String arg0, String arg1, int arg2)
+	public Criteria createCriteria(String arg0, String arg1, int arg2)
 			throws HibernateException {
-		c.createCriteria(arg0, arg1, arg2);
-		return this;
+		return c.createCriteria(arg0, arg1, arg2);
 	}
 
 	@Override
@@ -223,10 +217,10 @@ public class HvTypedCriteria<T> implements Criteria {
 		return this;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public HvTypedCriteria<T> uniqueResult() throws HibernateException {
-		c.uniqueResult();
-		return this;
+	public T uniqueResult() throws HibernateException {
+		return (T) c.uniqueResult();
 	}
 
 }

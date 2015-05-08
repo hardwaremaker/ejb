@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -41,7 +41,9 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "MediaartsprfindByMediaartCNr", query = "SELECT OBJECT (o) FROM Mediaartspr o WHERE o.pk.mediaartCNr=?1") })
+import com.lp.server.artikel.ejb.ArtikelsprPK;
+
+@NamedQueries({ @NamedQuery(name = "MediaartsprfindByMediaartCNr", query = "SELECT OBJECT (o) FROM Mediaartspr o WHERE o.pk.mediaartCNr=?1") })
 @Entity
 @Table(name = "LP_MEDIAARTSPR")
 public class Mediaartspr implements Serializable {
@@ -51,8 +53,6 @@ public class Mediaartspr implements Serializable {
 	@Column(name = "C_BEZ")
 	private String cBez;
 
-
-
 	private static final long serialVersionUID = 1L;
 
 	public Mediaartspr() {
@@ -60,7 +60,9 @@ public class Mediaartspr implements Serializable {
 	}
 
 	public Mediaartspr(String mediaartCNr, String localeCNr) {
-		// TODO Auto-generated constructor stub
+		pk = new MediaartsprPK();
+		pk.setMediaartCNr(mediaartCNr);
+		pk.setLocaleCNr(localeCNr);
 	}
 
 	public MediaartsprPK getPk() {

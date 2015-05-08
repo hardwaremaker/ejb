@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,7 +32,6 @@
  ******************************************************************************/
 package com.lp.server.partner.ejbfac;
 
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -59,14 +58,13 @@ import com.lp.server.util.Facade;
 import com.lp.util.EJBExceptionLP;
 
 @Stateless
-public class LieferantServicesFacBean
-extends Facade implements LieferantServicesFac {
+public class LieferantServicesFacBean extends Facade implements
+		LieferantServicesFac {
 	@PersistenceContext
 	private EntityManager em;
 
 	public Integer createLfliefergruppe(LfliefergruppeDto lfliefergruppeDtoI,
-			TheClientDto theClientDto)
-	throws EJBExceptionLP {
+			TheClientDto theClientDto) throws EJBExceptionLP {
 
 		if (lfliefergruppeDtoI == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
@@ -77,209 +75,36 @@ extends Facade implements LieferantServicesFac {
 					new Exception("lfliefergruppeDtoI.getCNr() == null"));
 		}
 
-
 		Lfliefergruppe lfliefergruppe = null;
 		PKGeneratorObj pkGen = new PKGeneratorObj(); // PKGEN
 		Integer iId = pkGen.getNextPrimaryKey(PKConst.PK_FUNKTION);
 		lfliefergruppeDtoI.setIId(iId);
-		lfliefergruppe = new Lfliefergruppe(lfliefergruppeDtoI.getIId(),lfliefergruppeDtoI.getCNr(),lfliefergruppeDtoI.getMandantCNr());
+		lfliefergruppe = new Lfliefergruppe(lfliefergruppeDtoI.getIId(),
+				lfliefergruppeDtoI.getCNr(), lfliefergruppeDtoI.getMandantCNr());
 		em.persist(lfliefergruppe);
-  em.flush();
-		setLfliefergruppeFromLfliefergruppeDto(lfliefergruppe, lfliefergruppeDtoI);
+		em.flush();
+		setLfliefergruppeFromLfliefergruppeDto(lfliefergruppe,
+				lfliefergruppeDtoI);
 
 		if (lfliefergruppeDtoI.getLfliefergruppesprDto() != null) {
-			Lfliefergruppespr lfliefergruppespr =new Lfliefergruppespr(lfliefergruppeDtoI.getIId(),theClientDto.getLocUiAsString());
+			Lfliefergruppespr lfliefergruppespr = new Lfliefergruppespr(
+					lfliefergruppeDtoI.getIId(),
+					theClientDto.getLocUiAsString());
 			em.persist(lfliefergruppespr);
-  em.flush();
+			em.flush();
 			setLfliefergruppesprFromLfliefergruppesprDto(lfliefergruppespr,
 					lfliefergruppeDtoI.getLfliefergruppesprDto());
 		}
 		return lfliefergruppe.getIId();
 	}
 
-
 	public void removeLfliefergruppe(Integer iIdI, TheClientDto theClientDto)
-	throws EJBExceptionLP {
+			throws EJBExceptionLP {
 
-Lfliefergruppe toRemove = em.find(Lfliefergruppe.class, iIdI);
-if (toRemove == null) {
-  throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
-}
-try {
-  em.remove(toRemove);
-  em.flush();
-} catch (EntityExistsException er) {
-  throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
-}
-	}
-
-
-	public void removeLfliefergruppe(LfliefergruppeDto lfliefergruppeDtoI, TheClientDto theClientDto)
-	throws EJBExceptionLP {
-
-		if (lfliefergruppeDtoI == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER, new Exception("lfliefergruppeDtoI == null"));
-		}
-		Collection<?>  c = null;
-		Query query = em.createNamedQuery("LfliefergruppesprfindByLiefergruppenIId");
-		query.setParameter(1, lfliefergruppeDtoI.getIId());
-		c = query.getResultList();
-//		if (c.isEmpty()) {
-//			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, null);
-//		}
-		// Erst alle SPRs dazu loeschen.
-		for (Iterator<?> iter = c.iterator(); iter.hasNext(); ) {
-			Lfliefergruppespr item = (Lfliefergruppespr) iter.next();
-			em.remove(item);
-		}
-		Integer iId = lfliefergruppeDtoI.getIId();
-		removeLfliefergruppe(iId, theClientDto);
-		//     }
-		//     catch (FinderException ex) {
-		//       throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, ex);
-	}
-
-
-	public void updateLfliefergruppe(LfliefergruppeDto lfliefergruppeDtoI, TheClientDto theClientDto)
-	throws EJBExceptionLP {
-
-			if (lfliefergruppeDtoI == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER, new Exception("statusDtoI == null"));
-		}
-
-
-		Integer iId = lfliefergruppeDtoI.getIId();
-		try {
-			Lfliefergruppe lfliefergruppe = em.find(Lfliefergruppe.class, iId);
-			if (lfliefergruppe == null) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
-			}
-
-			setLfliefergruppeFromLfliefergruppeDto(lfliefergruppe, lfliefergruppeDtoI);
-			if (lfliefergruppeDtoI.getLfliefergruppesprDto() != null) {
-				// -- upd oder create
-				if (lfliefergruppeDtoI.getLfliefergruppesprDto().getLfliefergruppeIId() == null) {
-					// create
-					// Key(teil) setzen.
-					lfliefergruppeDtoI.getLfliefergruppesprDto().setLfliefergruppeIId(
-							lfliefergruppeDtoI.getIId());
-					lfliefergruppeDtoI.getLfliefergruppesprDto().setLocaleCNr(theClientDto.getLocUiAsString());
-					
-					
-					createLfliefergruppespr(lfliefergruppeDtoI.getLfliefergruppesprDto(), theClientDto);
-				}
-				else {
-					// upd
-					updateLfliefergruppespr(lfliefergruppeDtoI.getLfliefergruppesprDto(), theClientDto);
-				}
-			}
-			//     }
-			//     catch (FinderException ex) {
-			//       throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
-		}
-		catch (Throwable e) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, new Exception(e));
-		}
-	}
-
-
-	public LfliefergruppeDto lfliefergruppeFindByPrimaryKey(
-			Integer iIdI,
-			TheClientDto theClientDto) {
-
-		if (iIdI == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("iIdI == null"));
-		}
-
-		LfliefergruppeDto lfliefergruppeDto = null;
-		//    try {
-		Lfliefergruppe lfliefergruppe = em.find(Lfliefergruppe.class, iIdI);
-		if (lfliefergruppe == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
-		}
-		lfliefergruppeDto = assembleLfliefergruppeDto(lfliefergruppe);
-
-		try {
-			Lfliefergruppespr lfliefergruppespr = em.find(Lfliefergruppespr.class, new LfliefergruppesprPK(lfliefergruppeDto.getIId(),theClientDto.getLocUiAsString()));
-			lfliefergruppeDto.setLfliefergruppesprDto(assembleLfliefergruppesprDto(lfliefergruppespr));
-		}
-		catch (Throwable t) {
-			// nothing here.
-		}
-		//     }
-		//     catch (FinderException ex) {
-		//       throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
-		//     }
-		return lfliefergruppeDto;
-	}
-
-
-	private void setLfliefergruppeFromLfliefergruppeDto(Lfliefergruppe lfliefergruppe,LfliefergruppeDto lfliefergruppeDtoI) {
-		lfliefergruppe.setCNr(lfliefergruppeDtoI.getCNr());
-		em.merge(lfliefergruppe);
-  em.flush();
-	}
-
-
-
-
-	private LfliefergruppeDto assembleLfliefergruppeDto(Lfliefergruppe lfliefergruppe) {
-		return LfliefergruppeDtoAssembler.createDto(lfliefergruppe);
-	}
-
-
-	private LfliefergruppeDto[] assembleLfliefergruppeDtos(Collection<?>  lfliefergruppes) {
-		List<LfliefergruppeDto> list = new ArrayList<LfliefergruppeDto>();
-		if (lfliefergruppes != null) {
-			Iterator<?> iterator = lfliefergruppes.iterator();
-			while (iterator.hasNext()) {
-				Lfliefergruppe lfliefergruppe = (Lfliefergruppe) iterator.next();
-				list.add(assembleLfliefergruppeDto(lfliefergruppe));
-			}
-		}
-		LfliefergruppeDto[] returnArray = new LfliefergruppeDto[list.size()];
-		return (LfliefergruppeDto[]) list.toArray(returnArray);
-	}
-
-
-	public Integer createLfliefergruppespr(LfliefergruppesprDto lfliefergruppesprDtoI,
-			TheClientDto theClientDto)
-	throws EJBExceptionLP {
-
-		//precondition
-		if (lfliefergruppesprDtoI == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_DTO_IS_NULL,
-					new Exception("statusspr2DtoI == null"));
-		}
-	
-		Lfliefergruppespr lfliefergruppespr = null;
-
-		lfliefergruppespr = new Lfliefergruppespr(lfliefergruppesprDtoI.getLfliefergruppeIId(),lfliefergruppesprDtoI.getLocaleCNr());
-		em.persist(lfliefergruppespr);
-  em.flush();
-		setLfliefergruppesprFromLfliefergruppesprDto(lfliefergruppespr,
-				lfliefergruppesprDtoI);
-		return lfliefergruppespr.getPk().getLfliefergruppeIId();
-	}
-
-
-	public void removeLfliefergruppespr(LfliefergruppesprDto lfliefergruppesprDtoI,
-			TheClientDto theClientDto)
-	throws EJBExceptionLP {
-
-			if (lfliefergruppesprDtoI == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER, new Exception("lfliefergruppesprDtoI == null"));
-		}
-
-
-		Lfliefergruppespr toRemove = em.find(Lfliefergruppespr.class, new LfliefergruppesprPK(lfliefergruppesprDtoI.getLfliefergruppeIId(),lfliefergruppesprDtoI.getLocaleCNr()));
+		Lfliefergruppe toRemove = em.find(Lfliefergruppe.class, iIdI);
 		if (toRemove == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		try {
 			em.remove(toRemove);
@@ -289,93 +114,281 @@ try {
 		}
 	}
 
+	public void removeLfliefergruppe(LfliefergruppeDto lfliefergruppeDtoI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 
-	public void updateLfliefergruppespr(LfliefergruppesprDto lfliefergruppesprDtoI,
-			TheClientDto theClientDto)
-	throws EJBExceptionLP {
+		if (lfliefergruppeDtoI == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
+					"lfliefergruppeDtoI == null"));
+		}
+		Collection<?> c = null;
+		Query query = em
+				.createNamedQuery("LfliefergruppesprfindByLiefergruppenIId");
+		query.setParameter(1, lfliefergruppeDtoI.getIId());
+		c = query.getResultList();
+		// if (c.isEmpty()) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, null);
+		// }
+		// Erst alle SPRs dazu loeschen.
+		for (Iterator<?> iter = c.iterator(); iter.hasNext();) {
+			Lfliefergruppespr item = (Lfliefergruppespr) iter.next();
+			em.remove(item);
+		}
+		Integer iId = lfliefergruppeDtoI.getIId();
+		removeLfliefergruppe(iId, theClientDto);
+		// }
+		// catch (FinderException ex) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, ex);
+	}
 
-		if (lfliefergruppesprDtoI == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER, new Exception("lfliefergruppesprDtoI == null"));
+	public void updateLfliefergruppe(LfliefergruppeDto lfliefergruppeDtoI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+
+		if (lfliefergruppeDtoI == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
+					"statusDtoI == null"));
 		}
 
-	
+		Integer iId = lfliefergruppeDtoI.getIId();
+		try {
+			Lfliefergruppe lfliefergruppe = em.find(Lfliefergruppe.class, iId);
+			if (lfliefergruppe == null) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			}
+
+			setLfliefergruppeFromLfliefergruppeDto(lfliefergruppe,
+					lfliefergruppeDtoI);
+			if (lfliefergruppeDtoI.getLfliefergruppesprDto() != null) {
+				// -- upd oder create
+				if (lfliefergruppeDtoI.getLfliefergruppesprDto()
+						.getLfliefergruppeIId() == null) {
+					// create
+					// Key(teil) setzen.
+					lfliefergruppeDtoI.getLfliefergruppesprDto()
+							.setLfliefergruppeIId(lfliefergruppeDtoI.getIId());
+					lfliefergruppeDtoI.getLfliefergruppesprDto().setLocaleCNr(
+							theClientDto.getLocUiAsString());
+
+					createLfliefergruppespr(
+							lfliefergruppeDtoI.getLfliefergruppesprDto(),
+							theClientDto);
+				} else {
+					// upd
+					updateLfliefergruppespr(
+							lfliefergruppeDtoI.getLfliefergruppesprDto(),
+							theClientDto);
+				}
+			}
+			// }
+			// catch (FinderException ex) {
+			// throw new
+			// EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
+		} catch (Throwable e) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN,
+					new Exception(e));
+		}
+	}
+
+	public LfliefergruppeDto lfliefergruppeFindByPrimaryKey(Integer iIdI,
+			TheClientDto theClientDto) {
+
+		if (iIdI == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
+					new Exception("iIdI == null"));
+		}
+
+		LfliefergruppeDto lfliefergruppeDto = null;
+		// try {
+		Lfliefergruppe lfliefergruppe = em.find(Lfliefergruppe.class, iIdI);
+		if (lfliefergruppe == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		lfliefergruppeDto = assembleLfliefergruppeDto(lfliefergruppe);
+
+		try {
+			Lfliefergruppespr lfliefergruppespr = em.find(
+					Lfliefergruppespr.class,
+					new LfliefergruppesprPK(lfliefergruppeDto.getIId(),
+							theClientDto.getLocUiAsString()));
+			lfliefergruppeDto
+					.setLfliefergruppesprDto(assembleLfliefergruppesprDto(lfliefergruppespr));
+		} catch (Throwable t) {
+			// nothing here.
+		}
+		// }
+		// catch (FinderException ex) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+		// ex);
+		// }
+		return lfliefergruppeDto;
+	}
+
+	private void setLfliefergruppeFromLfliefergruppeDto(
+			Lfliefergruppe lfliefergruppe, LfliefergruppeDto lfliefergruppeDtoI) {
+		lfliefergruppe.setCNr(lfliefergruppeDtoI.getCNr());
+		em.merge(lfliefergruppe);
+		em.flush();
+	}
+
+	private LfliefergruppeDto assembleLfliefergruppeDto(
+			Lfliefergruppe lfliefergruppe) {
+		return LfliefergruppeDtoAssembler.createDto(lfliefergruppe);
+	}
+
+	private LfliefergruppeDto[] assembleLfliefergruppeDtos(
+			Collection<?> lfliefergruppes) {
+		List<LfliefergruppeDto> list = new ArrayList<LfliefergruppeDto>();
+		if (lfliefergruppes != null) {
+			Iterator<?> iterator = lfliefergruppes.iterator();
+			while (iterator.hasNext()) {
+				Lfliefergruppe lfliefergruppe = (Lfliefergruppe) iterator
+						.next();
+				list.add(assembleLfliefergruppeDto(lfliefergruppe));
+			}
+		}
+		LfliefergruppeDto[] returnArray = new LfliefergruppeDto[list.size()];
+		return (LfliefergruppeDto[]) list.toArray(returnArray);
+	}
+
+	public Integer createLfliefergruppespr(
+			LfliefergruppesprDto lfliefergruppesprDtoI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+
+		// precondition
+		if (lfliefergruppesprDtoI == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
+					new Exception("statusspr2DtoI == null"));
+		}
+
+		Lfliefergruppespr lfliefergruppespr = null;
+
+		lfliefergruppespr = new Lfliefergruppespr(
+				lfliefergruppesprDtoI.getLfliefergruppeIId(),
+				lfliefergruppesprDtoI.getLocaleCNr());
+		em.persist(lfliefergruppespr);
+		em.flush();
+		setLfliefergruppesprFromLfliefergruppesprDto(lfliefergruppespr,
+				lfliefergruppesprDtoI);
+		return lfliefergruppespr.getPk().getLfliefergruppeIId();
+	}
+
+	public void removeLfliefergruppespr(
+			LfliefergruppesprDto lfliefergruppesprDtoI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+
+		if (lfliefergruppesprDtoI == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
+					"lfliefergruppesprDtoI == null"));
+		}
+
+		Lfliefergruppespr toRemove = em.find(
+				Lfliefergruppespr.class,
+				new LfliefergruppesprPK(lfliefergruppesprDtoI
+						.getLfliefergruppeIId(), lfliefergruppesprDtoI
+						.getLocaleCNr()));
+		if (toRemove == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		try {
+			em.remove(toRemove);
+			em.flush();
+		} catch (EntityExistsException er) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
+		}
+	}
+
+	public void updateLfliefergruppespr(
+			LfliefergruppesprDto lfliefergruppesprDtoI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
+
+		if (lfliefergruppesprDtoI == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
+					"lfliefergruppesprDtoI == null"));
+		}
+
 		LfliefergruppesprPK lfliefergruppesprPK = new LfliefergruppesprPK();
-		lfliefergruppesprPK.setLfliefergruppeIId(lfliefergruppesprDtoI.getLfliefergruppeIId());
+		lfliefergruppesprPK.setLfliefergruppeIId(lfliefergruppesprDtoI
+				.getLfliefergruppeIId());
 		lfliefergruppesprPK.setLocaleCNr(lfliefergruppesprDtoI.getLocaleCNr());
-		//    try {
-		Lfliefergruppespr lfliefergruppespr = em.find(Lfliefergruppespr.class, lfliefergruppesprPK);
+		// try {
+		Lfliefergruppespr lfliefergruppespr = em.find(Lfliefergruppespr.class,
+				lfliefergruppesprPK);
 		if (lfliefergruppespr == null) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		setLfliefergruppesprFromLfliefergruppesprDto(lfliefergruppespr,
 				lfliefergruppesprDtoI);
-		//     }
-		//     catch (FinderException ex) {
-		//       throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
-		//     }
+		// }
+		// catch (FinderException ex) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+		// ex);
+		// }
 	}
 
-
 	public LfliefergruppesprDto lfliefergruppesprFindByPrimaryKey(
-			Integer lfliefergruppeIIdI,
-			String localeCNrI,
-			TheClientDto theClientDto)
-	throws EJBExceptionLP {
+			Integer lfliefergruppeIIdI, String localeCNrI,
+			TheClientDto theClientDto) throws EJBExceptionLP {
 
-		//    try {
+		// try {
 		// precondition
 		if (lfliefergruppeIIdI == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER, new Exception("lfliefergruppeIIdI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
+					"lfliefergruppeIIdI == null"));
 		}
 		if (localeCNrI == null) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER, new Exception("localeCNrI == null"));
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(
+					"localeCNrI == null"));
 		}
-		
+
 		LfliefergruppesprPK lfliefergruppesprPK = new LfliefergruppesprPK();
 		lfliefergruppesprPK.setLfliefergruppeIId(lfliefergruppeIIdI);
 		lfliefergruppesprPK.setLocaleCNr(localeCNrI);
-		Lfliefergruppespr lfliefergruppespr = em.find(Lfliefergruppespr.class, lfliefergruppesprPK);
-		if(lfliefergruppespr==null){ 
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		Lfliefergruppespr lfliefergruppespr = em.find(Lfliefergruppespr.class,
+				lfliefergruppesprPK);
+		if (lfliefergruppespr == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
 		return assembleLfliefergruppesprDto(lfliefergruppespr);
 
-		//     }
-	//     catch (FinderException ex) {
-		//       throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, ex);
-		//     }
+		// }
+		// catch (FinderException ex) {
+		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+		// ex);
+		// }
 	}
 
-
-	private void setLfliefergruppesprFromLfliefergruppesprDto(Lfliefergruppespr lfliefergruppespr, LfliefergruppesprDto lfliefergruppeDtoI) {
+	private void setLfliefergruppesprFromLfliefergruppesprDto(
+			Lfliefergruppespr lfliefergruppespr,
+			LfliefergruppesprDto lfliefergruppeDtoI) {
 		lfliefergruppespr.setCBez(lfliefergruppeDtoI.getCBez());
+		lfliefergruppespr.setXText(lfliefergruppeDtoI.getXText());
 		em.merge(lfliefergruppespr);
-  em.flush();
+		em.flush();
 	}
 
-
-
-
-	private LfliefergruppesprDto assembleLfliefergruppesprDto(Lfliefergruppespr
-			lfliefergruppespr) {
+	private LfliefergruppesprDto assembleLfliefergruppesprDto(
+			Lfliefergruppespr lfliefergruppespr) {
 		return LfliefergruppesprDtoAssembler.createDto(lfliefergruppespr);
 	}
 
-
-	private LfliefergruppesprDto[] assembleLfliefergruppesprDtos(Collection<?> 
-			lfliefergruppesprs) {
+	private LfliefergruppesprDto[] assembleLfliefergruppesprDtos(
+			Collection<?> lfliefergruppesprs) {
 		List<LfliefergruppesprDto> list = new ArrayList<LfliefergruppesprDto>();
 		if (lfliefergruppesprs != null) {
 			Iterator<?> iterator = lfliefergruppesprs.iterator();
 			while (iterator.hasNext()) {
-				Lfliefergruppespr lfliefergruppespr = (Lfliefergruppespr) iterator.next();
+				Lfliefergruppespr lfliefergruppespr = (Lfliefergruppespr) iterator
+						.next();
 				list.add(assembleLfliefergruppesprDto(lfliefergruppespr));
 			}
 		}
-		LfliefergruppesprDto[] returnArray = new LfliefergruppesprDto[list.size()];
+		LfliefergruppesprDto[] returnArray = new LfliefergruppesprDto[list
+				.size()];
 		return (LfliefergruppesprDto[]) list.toArray(returnArray);
 	}
 }

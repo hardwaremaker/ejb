@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -58,6 +58,7 @@ import com.lp.server.artikel.ejb.Artikel;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikelsprDto;
+import com.lp.server.artikel.service.MaterialzuschlagDto;
 import com.lp.server.artikel.service.VerkaufspreisDto;
 import com.lp.server.artikel.service.VkpreisfindungDto;
 import com.lp.server.auftrag.service.AuftragServiceFac;
@@ -114,8 +115,9 @@ public class AngebotpositionFacBean extends Facade implements
 			AngebotpositionDto angebotpositionDtoI, TheClientDto theClientDto) {
 		return createAngebotposition(angebotpositionDtoI, true, theClientDto);
 	}
-	
-	private void updateTAendernAngebot(Integer angebotIId, TheClientDto theClientDto) {
+
+	private void updateTAendernAngebot(Integer angebotIId,
+			TheClientDto theClientDto) {
 		Angebot angebot = em.find(Angebot.class, angebotIId);
 		angebot.setPersonalIIdAendern(theClientDto.getIDPersonal());
 		angebot.setTAendern(getTimestamp());
@@ -130,7 +132,7 @@ public class AngebotpositionFacBean extends Facade implements
 		Integer angebotpositionIId = null;
 		pruefePflichtfelderBelegposition(angebotpositionDtoI, theClientDto);
 		updateTAendernAngebot(angebotpositionDtoI.getBelegIId(), theClientDto);
-		
+
 		try {
 			// endsumme: 5 Es kann nur eine Position Endsumme geben
 			if (angebotpositionDtoI.getPositionsartCNr().equals(
@@ -172,6 +174,32 @@ public class AngebotpositionFacBean extends Facade implements
 
 				myLogger.info("Handartikel wurde angelegt, iIdArtikel:"
 						+ iIdArtikel);
+			}
+
+			if (angebotpositionDtoI.getPositionsartCNr().equalsIgnoreCase(
+					AngebotServiceFac.ANGEBOTPOSITIONART_IDENT)) {
+
+				ArtikelDto artikelDto = getArtikelFac()
+						.artikelFindByPrimaryKeySmall(
+								angebotpositionDtoI.getArtikelIId(),
+								theClientDto);
+				if (artikelDto.getMaterialIId() != null) {
+					AngebotDto agDto = getAngebotFac().angebotFindByPrimaryKey(
+							angebotpositionDtoI.getBelegIId(), theClientDto);
+
+					MaterialzuschlagDto mDto = getMaterialFac()
+							.getKursMaterialzuschlagDtoInZielwaehrung(
+									artikelDto.getMaterialIId(),
+									new java.sql.Date(agDto.getTBelegdatum()
+											.getTime()),
+									agDto.getWaehrungCNr(), theClientDto);
+					if (mDto != null) {
+						angebotpositionDtoI.setNMaterialzuschlagKurs(mDto
+								.getNZuschlag());
+						angebotpositionDtoI.setTMaterialzuschlagDatum(mDto
+								.getTGueltigab());
+					}
+				}
 			}
 
 			// generieren von primary key
@@ -223,6 +251,8 @@ public class AngebotpositionFacBean extends Facade implements
 					angebotpositionDtoI.getNGestehungspreis(),
 					angebotpositionDtoI.getMwstsatzIId(),
 					angebotpositionDtoI.getBNettopreisuebersteuert());
+			angebotposition.setBZwsPositionspreisZeigen(Helper
+					.boolean2Short(true));
 			em.persist(angebotposition);
 			em.flush();
 
@@ -279,6 +309,8 @@ public class AngebotpositionFacBean extends Facade implements
 								.setNNettoeinzelpreis(new BigDecimal(0));
 						angebotpositionDtoI.setNMwstbetrag(new BigDecimal(0));
 						angebotpositionDtoI.setNRabattbetrag(new BigDecimal(0));
+						angebotpositionDtoI.setFZusatzrabattsatz(0D);
+						angebotpositionDtoI.setFRabattsatz(0D);
 						angebotpositionDtoI
 								.setNNettoeinzelpreisplusversteckteraufschlag(new BigDecimal(
 										0));
@@ -550,8 +582,9 @@ public class AngebotpositionFacBean extends Facade implements
 		try {
 			pruefeAngebotpositionAendernErlaubt(angebotpositionDtoI,
 					theClientDto);
-			updateTAendernAngebot(angebotpositionDtoI.getBelegIId(), theClientDto);
-			
+			updateTAendernAngebot(angebotpositionDtoI.getBelegIId(),
+					theClientDto);
+
 			if (angebotpositionDtoI.getPositioniIdArtikelset() == null) {
 
 				Query query = em
@@ -800,8 +833,7 @@ public class AngebotpositionFacBean extends Facade implements
 	 *             Ausnahme
 	 */
 	public void vertauschePositionen(Integer iIdAngebotposition1I,
-			Integer iIdAngebotposition2I)
-			throws EJBExceptionLP {
+			Integer iIdAngebotposition2I) throws EJBExceptionLP {
 		checkAngebotpositionIId(iIdAngebotposition1I);
 		myLogger.info("Vertausche: " + iIdAngebotposition1I + ", "
 				+ iIdAngebotposition2I);
@@ -811,7 +843,7 @@ public class AngebotpositionFacBean extends Facade implements
 				iIdAngebotposition2I);
 		Integer iSort1 = oPosition1.getISort();
 		Integer iSort2 = oPosition2.getISort();
-		
+
 		if (oPosition1.getTypCNr() == null && oPosition2.getTypCNr() == null) {
 
 			// das zweite iSort auf ungueltig setzen, damit UK constraint
@@ -899,7 +931,9 @@ public class AngebotpositionFacBean extends Facade implements
 		CompositeISort<Angebotposition> comp = new CompositeISort<Angebotposition>(
 				new AngebotpositionSwapper(this, em));
 		comp.vertauschePositionenMinus(iIdBasePosition, possibleIIds);
-		updateTAendernAngebot(angebotpositionFindByPrimaryKey(iIdBasePosition, theClientDto).getBelegIId(), theClientDto);
+		updateTAendernAngebot(
+				angebotpositionFindByPrimaryKey(iIdBasePosition, theClientDto)
+						.getBelegIId(), theClientDto);
 	}
 
 	public void vertauscheAngebotpositionenPlus(Integer iIdBasePosition,
@@ -908,7 +942,9 @@ public class AngebotpositionFacBean extends Facade implements
 		CompositeISort<Angebotposition> comp = new CompositeISort<Angebotposition>(
 				new AngebotpositionSwapper(this, em));
 		comp.vertauschePositionenPlus(iIdBasePosition, possibleIIds);
-		updateTAendernAngebot(angebotpositionFindByPrimaryKey(iIdBasePosition, theClientDto).getBelegIId(), theClientDto);
+		updateTAendernAngebot(
+				angebotpositionFindByPrimaryKey(iIdBasePosition, theClientDto)
+						.getBelegIId(), theClientDto);
 	}
 
 	/**
@@ -973,7 +1009,7 @@ public class AngebotpositionFacBean extends Facade implements
 		if (angebotpositionDto != null) {
 			AngebotpositionDto[] aAngebotpositionDto = angebotpositionFindByAngebotIId(
 					iIdAngebotI, theClientDto);
-			
+
 			updateTAendernAngebot(iIdAngebotI, theClientDto);
 
 			for (int i = 0; i < aAngebotpositionDto.length; i++) {
@@ -1330,10 +1366,24 @@ public class AngebotpositionFacBean extends Facade implements
 		angebotposition.setZwsBisPosition(angebotpositionDto
 				.getZwsBisPosition());
 		angebotposition.setZwsNettoSumme(angebotpositionDto.getZwsNettoSumme());
-
+		if (angebotpositionDto.getBZwsPositionspreisZeigen() != null) {
+			angebotposition.setBZwsPositionspreisZeigen(angebotpositionDto
+					.getBZwsPositionspreisZeigen());
+		} else {
+			angebotposition.setBZwsPositionspreisZeigen(Helper
+					.boolean2Short(true));
+		}
 		angebotposition.setCLvposition(angebotpositionDto.getCLvposition());
 		angebotposition.setNMaterialzuschlag(angebotpositionDto
 				.getNMaterialzuschlag());
+		angebotposition.setLieferantIId(angebotpositionDto.getLieferantIId());
+		angebotposition.setNEinkaufpreis(angebotpositionDto.getNEinkaufpreis());
+
+		angebotposition.setNMaterialzuschlagKurs(angebotpositionDto
+				.getNMaterialzuschlagKurs());
+		angebotposition.setTMaterialzuschlagDatum(angebotpositionDto
+				.getTMaterialzuschlagDatum());
+
 		em.merge(angebotposition);
 		em.flush();
 	}

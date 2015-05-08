@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,6 +35,7 @@ package com.lp.server.stueckliste.service;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -42,6 +43,8 @@ import java.util.TreeMap;
 import javax.ejb.Remote;
 
 import com.lp.server.artikel.service.ArtikelDto;
+import com.lp.server.system.service.IImportHead;
+import com.lp.server.system.service.IImportPositionen;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.service.StuecklisteInfoDto;
 import com.lp.util.EJBExceptionLP;
@@ -87,7 +90,7 @@ public interface StuecklisteFac {
 	public static final String FLR_STUECKLISTEARBEITSPLAN_L_STUECKZEIT = "l_stueckzeit";
 	public static final String FLR_STUECKLISTEARBEITSPLAN_I_ARBEITSGANG = "i_arbeitsgang";
 	public static final String FLR_STUECKLISTEARBEITSPLAN_I_UNTERARBEITSGANG = "i_unterarbeitsgang";
-	public static final String FLR_STUECKLISTEARBEITSPLAN_I_MASCHINENVERSATZTAGE = "l_maschinenversatztage";
+	public static final String FLR_STUECKLISTEARBEITSPLAN_I_MASCHINENVERSATZTAGE = "i_maschinenversatztage";
 	public static final String FLR_STUECKLISTEARBEITSPLAN_STUECKLISTE_I_ID = "stueckliste_i_id";
 	public static final String FLR_STUECKLISTEARBEITSPLAN_MASCHINE_I_ID = "maschine_i_id";
 	public static final String FLR_STUECKLISTEARBEITSPLAN_FLRSTUECKLISTE = "flrstueckliste";
@@ -96,9 +99,6 @@ public interface StuecklisteFac {
 
 	public static final String FERTIGUNGSGRUPPE_SOFORTVERBRAUCH = "Sofortverbrauch";
 
-	// Feldlaengen
-	public static final int MAX_STUECKLISTE_ABTEILUNG = 10;
-
 	public static final String STUECKLISTEART_STUECKLISTE = "S              ";
 	public static final String STUECKLISTEART_HILFSSTUECKLISTE = "H              ";
 	public static final String STUECKLISTEART_SETARTIKEL = "A              ";
@@ -106,6 +106,13 @@ public interface StuecklisteFac {
 	public static final String AGART_LAUFZEIT = "Laufzeit       ";
 	public static final String AGART_UMSPANNZEIT = "Umspannzeit    ";
 
+	static class FieldLength {		
+		public static final int MAX_STUECKLISTE_ABTEILUNG = 10;
+		public static final int STUECKLISTEPOSITION_KOMMENTAR = 80;
+		public static final int STUECKLISTEPOSITION_POSITION = 40;
+		public static final int STUECKLISTEPOSITION_CBEZ = 40;
+	}
+	
 	public Integer createMontageart(MontageartDto montageartDto,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
@@ -135,11 +142,12 @@ public interface StuecklisteFac {
 	public MontageartDto montageartFindByPrimaryKey(Integer iId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
-	public ArrayList importiereStuecklistenstruktur(
+	public ArrayList<?> importiereStuecklistenstruktur(
 			ArrayList<StrukturierterImportDto> struktur,
 			Integer stuecklisteIId, TheClientDto theClientDto,
 			boolean bAnfragevorschlagErzeugen,
-			java.sql.Timestamp tLieferterminfuerAnfrageVorschlag);
+			java.sql.Timestamp tLieferterminfuerAnfrageVorschlag)
+			throws EJBExceptionLP, RemoteException;
 
 	public ArrayList<ArtikelDto> importiereStuecklistenstrukturSiemensNX(
 			ArrayList<StrukturierterImportSiemensNXDto> struktur,
@@ -329,11 +337,14 @@ public interface StuecklisteFac {
 			boolean bGleichePositionenZusammenfassen, BigDecimal nLosgroesse,
 			BigDecimal nSatzgroesse, boolean bUnterstklstrukurBelassen)
 			throws RemoteException;
-	public ArrayList getStrukturDatenEinerStueckliste(Integer[] stuecklisteIId,
-			TheClientDto theClientDto, int iOptionSortierung, int iEbene,
-			ArrayList strukturMap, boolean bMitUnterstuecklisten,
+
+	public ArrayList<?> getStrukturDatenEinerStueckliste(
+			Integer[] stuecklisteIId, TheClientDto theClientDto,
+			int iOptionSortierung, int iEbene, ArrayList<?> strukturMap,
+			boolean bMitUnterstuecklisten,
 			boolean bGleichePositionenZusammenfassen, BigDecimal nLosgroesse,
 			BigDecimal nSatzgroesse, boolean bUnterstklstrukurBelassen);
+
 	public ArrayList<?> getStrukturDatenEinerStuecklisteMitArbeitsplan(
 			Integer stuecklisteIId, TheClientDto theClientDto,
 			int iOptionSortierung, int iEbene, ArrayList<?> strukturMap,
@@ -341,13 +352,10 @@ public interface StuecklisteFac {
 			boolean bGleichePositionenZusammenfassen, BigDecimal nLosgroesse,
 			BigDecimal nSatzgroesse) throws RemoteException;
 
-	public BigDecimal berechneStuecklistenGestehungspreisAusPositionen(
-			Integer artikelIId, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException;
+	public Map<?, ?> getAllFertigungsgrupe(TheClientDto theClientDto);
 
-	public Map getAllFertigungsgrupe(TheClientDto theClientDto);
-
-	public Map getEingeschraenkteFertigungsgruppen(TheClientDto theClientDto);
+	public Map<?, ?> getEingeschraenkteFertigungsgruppen(
+			TheClientDto theClientDto);
 
 	public BigDecimal berechneZielmenge(Integer stuecklistepositionIId,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
@@ -417,7 +425,8 @@ public interface StuecklisteFac {
 			Integer stuecklistepositionIId);
 
 	public Integer artikelFindenBzwNeuAnlegen(TheClientDto theClientDto,
-			String defaultEinheit, StrukturierterImportDto stkl);
+			String defaultEinheit, StrukturierterImportDto stkl)
+			throws EJBExceptionLP, RemoteException;
 
 	public Integer createKommentarimport(KommentarimportDto dto);
 
@@ -438,4 +447,103 @@ public interface StuecklisteFac {
 
 	public java.util.HashMap<Integer, String> getAlleStuecklistenIIdsFuerVerwendungsnachweis(
 			Integer artikelIId, TheClientDto theClientDto);
+
+	public void importiereStuecklistenINFRA(
+			HashMap<String, HashMap<String, byte[]>> dateien,
+			TheClientDto theClientDto);
+
+	public void stklINFRAanlegen(ArrayList<StklINFRAHelperDto> alDaten,
+			boolean bKopf, Integer stuecklisteIId, Integer montageartIId,
+			TheClientDto theClientDto);
+
+	/**
+	 * Die Positionen einer St&uuml;ckliste laden</br>
+	 * <p>
+	 * Es werden alle Positionsdaten geladen, die auch beim
+	 * stuecklistepositonFindByPrimaryKey geladen werden.
+	 * </p>
+	 * 
+	 * @param stuecklisteIId
+	 *            die Id f&&uml;r die die Positionen ermittelt werden sollen
+	 * @param withPrice
+	 *            Soll der Verkaufspreis ermittelt werden?
+	 * @param theClientDto
+	 * @return eine (leere) Liste aller St&uuml;cklistenpositionen
+	 * @throws EJBExceptionLP
+	 * @throws RemoteException
+	 */
+	List<KundenStuecklistepositionDto> stuecklistepositionFindByStuecklisteIIdAllData(
+			Integer stuecklisteIId, boolean withPrice, TheClientDto theClientDto)
+			throws EJBExceptionLP, RemoteException;
+
+	/**
+	 * Eine Stuecklisteposition ab&auml;ndern.</br>
+	 * <p>
+	 * Vor dem update wird gepr&uuml;ft, ob sich die Daten ge&auml;ndert haben
+	 * k&ouml;nnten. F&uuml;r diese Pr&uuml;fung werden alle Felder
+	 * herangezogen.
+	 * </p>
+	 * 
+	 * @param originalDto
+	 * @param aenderungDto
+	 * @param theClientDto
+	 * @throws RemoteException
+	 * @throws EJBExceptionLP
+	 */
+	void updateStuecklisteposition(StuecklistepositionDto originalDto,
+			StuecklistepositionDto aenderungDto, TheClientDto theClientDto)
+			throws RemoteException, EJBExceptionLP;
+
+	/**
+	 * Eine Stuecklisteposition l&oouml;schen.</br>
+	 * <p>
+	 * Vor dem L&oouml;schen wird gepr&uuml;ft, ob sich die Daten ge&auml;ndert
+	 * haben k&ouml;nnten. F&uuml;r diese Pr&uuml;fung werden alle Felder
+	 * herangezogen.
+	 * </p>
+	 * 
+	 * @param originalDto
+	 * @param removeDto
+	 * @param theClientDto
+	 * @throws RemoteException
+	 * @throws EJBExceptionLP
+	 */
+	void removeStuecklisteposition(StuecklistepositionDto originalDto,
+			StuecklistepositionDto removeDto, TheClientDto theClientDto)
+			throws RemoteException, EJBExceptionLP;
+
+	public StklagerentnahmeDto createStklagerentnahme(
+			StklagerentnahmeDto stklagerentnahmeDto, TheClientDto theClientDto);
+
+	public void removeStklagerentnahme(StklagerentnahmeDto stklagerentnahmeDto,
+			TheClientDto theClientDto);
+
+	public StklagerentnahmeDto stklagerentnahmeFindByPrimaryKey(Integer iId);
+
+	public StklagerentnahmeDto updateStklagerentnahme(
+			StklagerentnahmeDto stklagerentnahmeDto, TheClientDto theClientDto);
+
+	public StklagerentnahmeDto[] stklagerentnahmeFindByStuecklisteIId(
+			Integer stuecklisteIId);
+
+	public void vertauscheStklagerentnahme(Integer iiDLagerentnahme1,
+			Integer iIdLagerentnahme2);
+
+	public void toggleFreigabe(Integer stuecklisteIId, TheClientDto theClientDto);
+	
+	/**
+	 * Liefert die Bean als PositionImporter zur&uuml;ck, um auf die Methoden
+	 * des Interfaces {@link IImportPositionen} zuzugreifen.
+	 * 
+	 * @return this
+	 */
+	public IImportPositionen asPositionImporter() ;
+
+	/**
+	 * Liefert die Bean als HeadImporter zur&uuml;ck, um auf die Methoden
+	 * des Interfaces {@link IImportHead} zuzugreifen.
+	 * 
+	 * @return this
+	 */
+	public IImportHead asHeadImporter();
 }

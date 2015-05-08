@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.system.ejbfac;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -52,6 +53,8 @@ import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.system.ejb.LpDirekthilfe;
+import com.lp.server.system.ejb.LpDirekthilfeQuery;
 import com.lp.server.system.ejb.Positionsartspr;
 import com.lp.server.system.ejb.PositionsartsprPK;
 import com.lp.server.system.ejb.Statusspr;
@@ -60,11 +63,13 @@ import com.lp.server.system.ejb.Text;
 import com.lp.server.system.ejb.TextPK;
 import com.lp.server.system.fastlanereader.generated.FLRStatus;
 import com.lp.server.system.fastlanereader.generated.FLRStatusspr;
+import com.lp.server.system.service.LpHvDirekthilfeDto;
 import com.lp.server.system.service.SystemMultilanguageFac;
 import com.lp.server.system.service.TextDto;
 import com.lp.server.system.service.TextDtoAssembler;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.service.DatenspracheIf;
 import com.lp.util.EJBExceptionLP;
@@ -87,7 +92,7 @@ public class SystemMultilanguageFacBean extends Facade implements
 	 *            Locale
 	 * @return Map
 	 */
-	public Map uebersetzeStatusOptimal(DatenspracheIf[] pArray, Locale locale1,
+	public Map<String, String> uebersetzeStatusOptimal(DatenspracheIf[] pArray, Locale locale1,
 			Locale locale2) {
 		// locale: die optimale uebersetzung fuer ein array finden
 		Map<String, String> uebersetzung = new TreeMap<String, String>();
@@ -193,7 +198,7 @@ public class SystemMultilanguageFacBean extends Facade implements
 	 *            Locale
 	 * @return ComboBoxContentDto[]
 	 */
-	public Map uebersetzePositionsartOptimal(DatenspracheIf[] pArray,
+	public Map<String, String> uebersetzePositionsartOptimal(DatenspracheIf[] pArray,
 			Locale locale1, Locale locale2) {
 		Map<String, String> uebersetzung = new TreeMap<String, String>();
 		for (int i = 0; i < pArray.length; i++) {
@@ -256,7 +261,6 @@ public class SystemMultilanguageFacBean extends Facade implements
 		HashMap<String, String> hm = new HashMap<String, String>();
 		Session session = null;
 		try {
-			long l = System.currentTimeMillis();
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			session = factory.openSession();
 			Criteria c = session.createCriteria(FLRStatus.class);
@@ -264,10 +268,10 @@ public class SystemMultilanguageFacBean extends Facade implements
 			for (Iterator<?> iter = list.iterator(); iter.hasNext();) {
 				FLRStatus item = (FLRStatus) iter.next();
 
-				Set s = item.getStatus_statusspr_set();
+				Set<?> s = item.getStatus_statusspr_set();
 
 				String statusspr = null;
-				Iterator it = s.iterator();
+				Iterator<?> it = s.iterator();
 				while (it.hasNext()) {
 					FLRStatusspr spr = (FLRStatusspr) it.next();
 
@@ -363,6 +367,7 @@ public class SystemMultilanguageFacBean extends Facade implements
 		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		// }
 	}
+	
 
 	private TextDto assembleTextDto(Text text) {
 		return TextDtoAssembler.createDto(text);
@@ -435,4 +440,93 @@ public class SystemMultilanguageFacBean extends Facade implements
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, er);
 		}
 	}
+	
+	@Override
+	public void putHvDirekthilfeText(String token, String locale, String text, Date tAendern,
+			TheClientDto theClientDto) {
+		putDirekthilfeText(token, locale, text, false, tAendern, theClientDto);
+	}
+	@Override
+	public void putDirekthilfeText(String token, String text, boolean anwender,
+			TheClientDto theClientDto) {
+		putDirekthilfeText(token, theClientDto.getLocUiAsString(), text, anwender, getTimestamp(), theClientDto);
+	}
+
+	protected void putDirekthilfeText(String token, String locale, String text, boolean anwender, Date tAendern,
+			TheClientDto theClientDto) {
+		Validator.notEmpty(token, "token");
+		Validator.notEmpty(locale, "locale");
+		Validator.notNull(theClientDto, "theClientDto");
+		
+		String mandant = anwender ? theClientDto.getMandant() : getSystemFac().getHauptmandant();
+		locale = locale.substring(0, 2); // nur die Sprache, nicht das Land beruecksichtigen
+		
+		LpDirekthilfe direkthilfe = LpDirekthilfeQuery.findByTokenMandantLocaleOhneExc(
+				em, token, mandant, locale, anwender);
+		if(direkthilfe == null) {
+			if(text == null || text.isEmpty())
+				return;
+			
+			// gibts noch nicht
+			direkthilfe = new LpDirekthilfe(token, text, mandant,
+					locale, theClientDto.getIDPersonal(), Helper.boolean2Short(anwender));
+			em.persist(direkthilfe);
+			em.flush();
+		} else if(text == null || text.isEmpty()) {
+			em.remove(direkthilfe);
+			em.flush();
+		} else {// gibt es schon
+			direkthilfe.setcText(text);
+			direkthilfe.setPersonalIIdAendern(theClientDto.getIDPersonal());
+			direkthilfe.settAendern(getTimestamp());
+			em.merge(direkthilfe);
+			em.flush();
+		}
+	}
+	
+	@Override
+	public Map<String, String> getAllDirekthilfeTexte(TheClientDto theClientDto, boolean anwender) {
+		if(theClientDto == null) return null;
+		
+
+		String mandant = anwender ? theClientDto.getMandant() : getSystemFac().getHauptmandant();
+		String localeUI = theClientDto.getLocUiAsString().substring(0, 2);
+		String localeFallback = anwender ? theClientDto.getLocMandantAsString() : theClientDto.getLocKonzernAsString();
+		localeFallback = localeFallback.substring(0, 2);
+		
+		Map<String, String> alleTexte = new HashMap<String, String>();
+		List<LpDirekthilfe> uiLocaleTexte = 
+				LpDirekthilfeQuery.findByMandantLocaleOhneExc(em, mandant, localeUI, anwender);
+		List<LpDirekthilfe> fallbackLocaleTexte = 
+				LpDirekthilfeQuery.findByMandantLocaleOhneExc(em, mandant, localeFallback, anwender);
+		
+		// alle Direkthilfe-Texte in ClientLocale laden
+		for(LpDirekthilfe dh : uiLocaleTexte) {
+			alleTexte.put(dh.getcToken(), dh.getcText());
+		}
+
+		// alle Direkthilfe-Texte mit FallbackLocale laden, die nicht
+		// in UILocale definiert sind.
+		for(LpDirekthilfe dh : fallbackLocaleTexte) {
+			if(!alleTexte.containsKey(dh.getcToken()))
+				alleTexte.put(dh.getcToken(), dh.getcText());
+		}
+		return alleTexte;
+	}
+	
+	public List<LpHvDirekthilfeDto> getAllHvDirekthilfeDtos() {
+		List<LpDirekthilfe> list = LpDirekthilfeQuery.findAllOfficial(em);
+		List<LpHvDirekthilfeDto> hvList = new ArrayList<LpHvDirekthilfeDto>();
+		for(LpDirekthilfe dh : list) {
+			if(dh.getcText() != null && !dh.getcText().isEmpty())
+				hvList.add(new LpHvDirekthilfeDto(
+						dh.getiId(),
+						dh.getcToken(),
+						dh.getcText(),
+						dh.gettAendern(),
+						dh.getLocaleCNr()));
+		}
+		return hvList;
+	}
+
 }

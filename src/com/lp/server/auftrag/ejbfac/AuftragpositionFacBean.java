@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -62,6 +62,7 @@ import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikelreservierungDto;
 import com.lp.server.artikel.service.ArtikelsprDto;
+import com.lp.server.artikel.service.MaterialzuschlagDto;
 import com.lp.server.artikel.service.VerkaufspreisDto;
 import com.lp.server.artikel.service.VkPreisfindungEinzelverkaufspreisDto;
 import com.lp.server.artikel.service.VkpreisfindungDto;
@@ -299,6 +300,35 @@ public class AuftragpositionFacBean extends Facade implements
 						.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGPOSITIONSTATUS_OFFEN);
 				auftragpositionDtoI.setNOffeneMenge(auftragpositionDtoI
 						.getNMenge());
+
+				if (auftragpositionDtoI.getPositionsartCNr().equalsIgnoreCase(
+						AuftragServiceFac.AUFTRAGPOSITIONART_IDENT)) {
+					if (auftragpositionDtoI.getNMaterialzuschlagKurs() == null) {
+						ArtikelDto artikelDto = getArtikelFac()
+								.artikelFindByPrimaryKeySmall(
+										auftragpositionDtoI.getArtikelIId(),
+										theClientDto);
+						if (artikelDto.getMaterialIId() != null) {
+
+							MaterialzuschlagDto mDto = getMaterialFac()
+									.getKursMaterialzuschlagDtoInZielwaehrung(
+											artikelDto.getMaterialIId(),
+											new java.sql.Date(auftragDto
+													.getTBelegdatum().getTime()),
+											auftragDto.getCAuftragswaehrung(),
+											theClientDto);
+							if (mDto != null) {
+								auftragpositionDtoI
+										.setNMaterialzuschlagKurs(mDto
+												.getNZuschlag());
+								auftragpositionDtoI
+										.setTMaterialzuschlagDatum(mDto
+												.getTGueltigab());
+							}
+						}
+					}
+				}
+
 			}
 
 			getAuftragFac().pruefeUndSetzeAuftragstatusBeiAenderung(
@@ -380,6 +410,8 @@ public class AuftragpositionFacBean extends Facade implements
 					auftragpositionDtoI.getPositionsartCNr(),
 					auftragpositionDtoI.getAuftragpositionstatusCNr(),
 					auftragpositionDtoI.getBNettopreisuebersteuert());
+			auftragsposition.setBZwsPositionspreisZeigen(Helper
+					.boolean2Short(true));
 			em.persist(auftragsposition);
 			em.flush();
 
@@ -493,6 +525,8 @@ public class AuftragpositionFacBean extends Facade implements
 								.setNNettoeinzelpreis(new BigDecimal(0));
 						auftragpositionDtoI.setNMwstbetrag(new BigDecimal(0));
 						auftragpositionDtoI.setNRabattbetrag(new BigDecimal(0));
+						auftragpositionDtoI.setFZusatzrabattsatz(0D);
+						auftragpositionDtoI.setFRabattsatz(0D);
 						auftragpositionDtoI
 								.setNNettoeinzelpreisplusversteckteraufschlag(new BigDecimal(
 										0));
@@ -740,20 +774,35 @@ public class AuftragpositionFacBean extends Facade implements
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
-			ArtikelreservierungDto reservierungDto = new ArtikelreservierungDto();
-			reservierungDto.setCBelegartnr(LocaleFac.BELEGART_AUFTRAG);
-			reservierungDto.setIBelegartpositionid(oPos.getIId());
-			reservierungDto.setArtikelIId(oPos.getArtikelIId());
-			reservierungDto.setTLiefertermin(oPos
-					.getTUebersteuerterliefertermin());
-			reservierungDto.setNMenge(oPos.getNOffeneMenge());
-			getReservierungFac().createArtikelreservierung(reservierungDto);
-			if (oPos.getNMenge().equals(oPos.getNOffeneMenge())) {
-				oPos.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_OFFEN); // absolute
-				// Menge
-				// buchen
+
+			// SP2356 Reservierung natuerlich nur bei Ident-Position
+			if (oPos.getAuftragpositionartCNr().equals(
+					AuftragServiceFac.AUFTRAGPOSITIONART_IDENT)
+					&& oPos.getArtikelIId() != null) {
+
+				ArtikelreservierungDto reservierungDto = new ArtikelreservierungDto();
+				reservierungDto.setCBelegartnr(LocaleFac.BELEGART_AUFTRAG);
+				reservierungDto.setIBelegartpositionid(oPos.getIId());
+				reservierungDto.setArtikelIId(oPos.getArtikelIId());
+				reservierungDto.setTLiefertermin(oPos
+						.getTUebersteuerterliefertermin());
+				reservierungDto.setNMenge(oPos.getNOffeneMenge());
+				getReservierungFac().createArtikelreservierung(reservierungDto);
+			}
+
+			// Wenn keine Mengenbehaftete position, dann auf OFFEN setzen
+
+			if (oPos.getNMenge() == null) {
+				oPos.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_OFFEN);
 			} else {
-				oPos.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
+
+				if (oPos.getNMenge().equals(oPos.getNOffeneMenge())) {
+					oPos.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_OFFEN); // absolute
+					// Menge
+					// buchen
+				} else {
+					oPos.setAuftragpositionstatusCNr(AuftragServiceFac.AUFTRAGSTATUS_TEILERLEDIGT);
+				}
 			}
 			getAuftragFac().setzeAuftragstatusAufgrundAuftragpositionstati(
 					oPos.getAuftragIId(), theClientDto);
@@ -826,6 +875,11 @@ public class AuftragpositionFacBean extends Facade implements
 								theClientDto);
 
 				ArtikelsprDto oArtikelsprDto = artikelDto.getArtikelsprDto();
+
+				if (oArtikelsprDto == null) {
+					oArtikelsprDto = new ArtikelsprDto();
+				}
+
 				oArtikelsprDto.setCBez(auftragpositionDtoI.getCBez());
 				oArtikelsprDto.setCZbez(auftragpositionDtoI.getCZusatzbez());
 
@@ -1566,9 +1620,24 @@ public class AuftragpositionFacBean extends Facade implements
 		auftragposition.setZwsBisPosition(auftragpositionDto
 				.getZwsBisPosition());
 		auftragposition.setZwsNettoSumme(auftragpositionDto.getZwsNettoSumme());
+		if (auftragpositionDto.getBZwsPositionspreisZeigen() != null) {
+			auftragposition.setBZwsPositionspreisZeigen(auftragpositionDto
+					.getBZwsPositionspreisZeigen());
+		} else {
+			auftragposition.setBZwsPositionspreisZeigen(Helper
+					.boolean2Short(true));
+		}
 		auftragposition.setCLvposition(auftragpositionDto.getCLvposition());
 		auftragposition.setNMaterialzuschlag(auftragpositionDto
 				.getNMaterialzuschlag());
+		auftragposition.setLieferantIId(auftragpositionDto.getLieferantIId());
+		auftragposition
+				.setNEinkaufpreis(auftragpositionDto.getBdEinkaufpreis());
+
+		auftragposition.setNMaterialzuschlagKurs(auftragpositionDto
+				.getNMaterialzuschlagKurs());
+		auftragposition.setTMaterialzuschlagDatum(auftragpositionDto
+				.getTMaterialzuschlagDatum());
 
 		em.merge(auftragposition);
 		em.flush();

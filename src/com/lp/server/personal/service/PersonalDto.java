@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -98,7 +98,8 @@ public class PersonalDto implements Serializable {
 	private String cImapkennwort;
 	private Short bAnwesenheitTerminal;
 	private Short bAnwesenheitalleterminal;
-
+	private String cImapInboxFolder ;
+	
 	public Short getBAnwesenheitalleterminal() {
 		return bAnwesenheitalleterminal;
 	}
@@ -106,6 +107,7 @@ public class PersonalDto implements Serializable {
 	public void setBAnwesenheitalleterminal(Short bAnwesenheitalleterminal) {
 		this.bAnwesenheitalleterminal = bAnwesenheitalleterminal;
 	}
+
 	public Integer getPersonalgruppeIId() {
 		return personalgruppeIId;
 	}
@@ -114,14 +116,23 @@ public class PersonalDto implements Serializable {
 		this.personalgruppeIId = personalgruppeIId;
 	}
 
+	private Short bTelefonzeitstarten;
+
+	public Short getBTelefonzeitstarten() {
+		return bTelefonzeitstarten;
+	}
+
+	public void setBTelefonzeitstarten(Short bTelefonzeitstarten) {
+		this.bTelefonzeitstarten = bTelefonzeitstarten;
+	}
+
 	private PartnerDto partnerDto;
 	private String cFax;
 	private String cTelefon;
 	private String cHandy;
 	private String cDirektfax;
 	private String cEmail;
-	
-	
+
 	public String getCFax() {
 		return cFax;
 	}
@@ -145,7 +156,6 @@ public class PersonalDto implements Serializable {
 	public void setCDirektfax(String cDirektfax) {
 		this.cDirektfax = cDirektfax;
 	}
-
 
 	public String getCEmail() {
 		return cEmail;
@@ -221,6 +231,7 @@ public class PersonalDto implements Serializable {
 		}
 		return ret.trim();
 	}
+
 	public String formatFixName1Name2() {
 		String ret = "";
 		if (getPartnerDto() != null) {
@@ -232,7 +243,7 @@ public class PersonalDto implements Serializable {
 				ret += " "
 						+ getPartnerDto().getCName2vornamefirmazeile2().trim();
 			}
-			
+
 		}
 		return ret.trim();
 	}
@@ -288,6 +299,7 @@ public class PersonalDto implements Serializable {
 	public void setCAusweis(String cAusweis) {
 		this.cAusweis = cAusweis;
 	}
+
 	public String getCImapbenutzer() {
 		return cImapbenutzer;
 	}
@@ -303,6 +315,7 @@ public class PersonalDto implements Serializable {
 	public void setCImapkennwort(String cImapkennwort) {
 		this.cImapkennwort = cImapkennwort;
 	}
+
 	public Short getBMaennlich() {
 		return bMaennlich;
 	}
@@ -424,7 +437,6 @@ public class PersonalDto implements Serializable {
 	public void setKostenstelleIIdStamm(Integer kostenstelleIIdStamm) {
 		this.kostenstelleIIdStamm = kostenstelleIIdStamm;
 	}
-
 
 	public Float getFVerfuegbar() {
 		return fVerfuegbar;
@@ -751,8 +763,6 @@ public class PersonalDto implements Serializable {
 		this.bVersteckt = bVersteckt;
 	}
 
-	
-
 	public String getCUnterschriftsfunktion() {
 		return cUnterschriftsfunktion;
 	}
@@ -765,14 +775,27 @@ public class PersonalDto implements Serializable {
 		return bVersteckt;
 	}
 
-
-
 	public void setBAnwesenheitTerminal(Short bAnwesenheitTerminal) {
 		this.bAnwesenheitTerminal = bAnwesenheitTerminal;
 	}
 
 	public Short getBAnwesenheitTerminal() {
 		return bAnwesenheitTerminal;
+	}
+
+	/**
+	 * Der Name des IMap Ordners der als "inbox" fungiert</br>
+	 * <p>Kann auch leer sein, dann wird in weiterer Folge der
+	 * Default "INBOX" verwendet.</p>
+	 * 
+	 * @return null oder der Name des Ordners der als Inbox verwendet werden soll
+	 */
+	public String getCImapInboxFolder() {
+		return cImapInboxFolder;
+	}
+
+	public void setCImapInboxFolder(String cImapInboxFolder) {
+		this.cImapInboxFolder = cImapInboxFolder;
 	}
 
 	public int hashCode() {

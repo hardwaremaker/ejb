@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -374,8 +374,8 @@ public class PartnerBankHandler extends UseCaseHandler {
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(
 					new Class[] { Integer.class, String.class, String.class,
-							String.class, String.class,String.class, String.class,
-							String.class, Integer.class },
+							String.class, String.class, String.class,
+							String.class, String.class, Integer.class },
 					new String[] {
 							"i_id",
 							getTextRespectUISpr("lp.bankverbindung",
@@ -400,14 +400,14 @@ public class PartnerBankHandler extends UseCaseHandler {
 							QueryParameters.FLR_BREITE_S, },
 					new String[] {
 							"i_id",
-							BankFac.FLR_PARTNERBANK_FLRPARTNER
-									+ "."
-									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
+							BankFac.FLR_PARTNERBANK_FLRPARTNER + "." + PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
 							Facade.NICHT_SORTIERBAR,
 							BankFac.FLR_PARTNERBANK_KTONR,
 							BankFac.FLR_PARTNERBANK_IBAN,
-							BankFac.FLR_PARTNERBANK__C_BIC,
-							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR,
+//							BankFac.FLR_PARTNERBANK__C_BIC,
+							Facade.NICHT_SORTIERBAR,
+							Facade.NICHT_SORTIERBAR,
+							Facade.NICHT_SORTIERBAR,
 							"i_sort" }));
 		}
 		return super.getTableInfo();

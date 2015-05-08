@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -41,6 +41,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.io.StringWriter;
 import java.io.Writer;
@@ -56,6 +57,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -68,6 +70,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
+import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -76,6 +79,8 @@ import javax.imageio.ImageIO;
 import net.sf.jasperreports.engine.JRPrintPage;
 import net.sf.jasperreports.engine.JasperPrint;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.xml.serialize.OutputFormat;
 import org.apache.xml.serialize.XMLSerializer;
 import org.w3c.dom.DOMException;
@@ -98,13 +103,14 @@ import com.lp.server.system.service.MandantDto;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
+import com.lp.server.util.ServerConfiguration;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
 import com.lp.server.util.report.JasperPrintLP;
-import com.lp.util.siprefixparser.BigDecimalSI;
-import com.lp.util.siprefixparser.SiPrefixParserAlternatives;
 import com.sun.media.jai.codec.ByteArraySeekableStream;
 import com.sun.media.jai.codec.ImageCodec;
 import com.sun.media.jai.codec.ImageDecoder;
+import com.sun.media.jai.codec.ImageEncoder;
+import com.sun.media.jai.codec.TIFFEncodeParam;
 
 /**
  * <p>
@@ -142,11 +148,14 @@ public final class Helper {
 	public final static int SORTIERUNG_NACH_ARTIKELKLASSE_UND_MATERIAL = 9;
 	public final static int SORTIERUNG_NACH_ARBEITSGANG = 10;
 	public final static int SORTIERUNG_NACH_BELEGNR = 11;
+	public final static int SORTIERUNG_NACH_ARTIKELBEZEICHNUNG = 12;
 
 	public final static String CR_LF = "" + (char) 0x0d + (char) 0x0a;
 	public final static String LINE_SEPARATOR = "\n";
 
 	public final static Object NO_VALUE_AND_THATS_OK = new Object();
+
+	public final static BigDecimal DAY_IN_MS = new BigDecimal(3600000l);
 
 	/**
 	 * MB: Instantiierung dieser Klasse verhindern.
@@ -303,6 +312,46 @@ public final class Helper {
 		return retVal;
 	}
 
+	public static String fitString2LengthHTMLBefuelltMitLeerzeichen(
+			String string2Fit, int newLength) {
+		return fitString2LengthHTMLBefuelltMitLeerzeichen(string2Fit,
+				newLength, false);
+	}
+
+	public static String fitString2LengthHTMLBefuelltMitLeerzeichen(
+			String string2Fit, int newLength, boolean rechtsbuendig) {
+
+		if (string2Fit == null) {
+			string2Fit = "";
+		}
+
+		string2Fit = string2Fit.trim();
+
+		if (string2Fit.length() == newLength) {
+			return string2Fit;
+		}
+
+		String retVal = null;
+		if (string2Fit.length() > newLength) {
+			retVal = string2Fit.substring(0, newLength);
+		} else {
+			StringBuffer sb = new StringBuffer(string2Fit);
+
+			int iDiff = newLength - sb.length();
+			for (int i = 0; i < iDiff; i++) {
+				if (rechtsbuendig) {
+					sb.insert(0, "&nbsp;");
+				} else {
+					sb.append("&nbsp;");
+				}
+
+			}
+
+			retVal = sb.toString();
+		}
+		return retVal;
+	}
+
 	/**
 	 * Ermittelt die Bezeichnung eines Tages (Montag, Dienstag...)
 	 * 
@@ -368,7 +417,7 @@ public final class Helper {
 	 */
 	public static String getName(String filename) {
 		int dot = filename.lastIndexOf(".");
-		return dot == -1 ? "" : filename.substring(0, dot);
+		return dot == -1 ? filename : filename.substring(0, dot);
 	}
 
 	public static String konvertiereDatum2StelligAuf4Stellig(String jahr2stellig) {
@@ -417,8 +466,8 @@ public final class Helper {
 	}
 
 	/**
-	 * rechnet Tage (Integer) in Millisekunden zur&uuml;ck und gibt eine long wert
-	 * zurueck
+	 * rechnet Tage (Integer) in Millisekunden zur&uuml;ck und gibt eine long
+	 * wert zurueck
 	 * 
 	 * @param value
 	 *            Integer
@@ -493,6 +542,76 @@ public final class Helper {
 			sI = buff.toString();
 		}
 		return sI;
+	}
+
+	public static byte[] konvertierePDFFileInMultipageTiff(byte[] bai,
+			int resolution) {
+		byte[] out = null;
+		try {
+
+			InputStream is = new ByteArrayInputStream(bai);
+			PDDocument document = null;
+			BufferedImage image[] = null;
+			try {
+				document = PDDocument.load(is);
+
+				int numPages = document.getNumberOfPages();
+
+				image = new BufferedImage[numPages];
+
+				PDFRenderer renderer = new PDFRenderer(document);
+				for (int i = 0; i < numPages; i++) {
+
+					image[i] = renderer.renderImageWithDPI(i, resolution); // Windows
+					// native
+					// DPI
+
+				}
+
+				ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+				TIFFEncodeParam param = new TIFFEncodeParam();
+				param.setCompression(TIFFEncodeParam.COMPRESSION_PACKBITS);
+				param.setLittleEndian(true);
+				param.setWriteTiled(false);
+
+				ImageEncoder encoder = com.sun.media.jai.codec.ImageCodec
+						.createImageEncoder("tiff", baos, param);
+				Vector vector = new Vector();
+				for (int i = 1; i < image.length; i++) {
+					vector.add(image[i]);
+				}
+				param.setExtraImages(vector.iterator());
+				encoder.encode(image[0]);
+				baos.flush();
+				baos.close();
+
+				out = baos.toByteArray();
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e.getMessage());
+
+			} finally {
+				if (document != null) {
+
+					try {
+						document.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER,
+								e.getMessage());
+
+					}
+				}
+
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return out;
 	}
 
 	/**
@@ -624,6 +743,18 @@ public final class Helper {
 	}
 
 	/**
+	 * Parst eine mit Komma oder Punkt als Dezimaltrennzeichen formatierte Zahl
+	 * zu einem BigDecimal
+	 * 
+	 * @param commaFormatted
+	 * @return den geparsten BigDecimal Wert
+	 */
+	public static BigDecimal toBigDecimal(String commaFormatted) {
+		return new BigDecimal(commaFormatted
+				.replaceAll("\\.(?=[\\d\\.]*,)", "").replaceAll(",", "."));
+	}
+
+	/**
 	 * Prueft ob ein Datum gleich oder spaeter als eine bestimmte Untergrenze
 	 * liegt. Das Datum darf nicht unter der Untergrenze liegen.
 	 * 
@@ -740,15 +871,10 @@ public final class Helper {
 	}
 
 	public static String cutString(String s, int length) {
-		String result = null;
-		if (s != null) {
-			if (s.trim().length() > length) {
-				result = s.trim().substring(0, length);
-			} else {
-				result = s.trim();
-			}
-		}
-		return result;
+		if (s == null)
+			return null;
+		s = s.trim();
+		return s.trim().length() > length ? s.substring(0, length) : s;
 	}
 
 	public static String getAllStartCharacters(String str) {
@@ -1362,6 +1488,21 @@ public final class Helper {
 		return nf.format(nZahl.doubleValue());
 	}
 
+	public static String formatZahlWennUngleichNull(Number nZahl,
+			int iNachkommastellen, Locale locale) {
+		if (nZahl != null && nZahl.doubleValue() == 0) {
+			return "";
+		}
+
+		if (nZahl instanceof Integer) {
+			return nZahl.toString();
+		}
+		NumberFormat nf = NumberFormat.getNumberInstance(locale);
+		nf.setMaximumFractionDigits(iNachkommastellen);
+		nf.setMinimumFractionDigits(iNachkommastellen);
+		return nf.format(nZahl.doubleValue());
+	}
+
 	// public static String formatAndRoundCurrency(BigDecimal amount, int
 	// iNachkommastellen, Locale locale) {
 	// NumberFormat nf = NumberFormat.getNumberInstance(locale) ;
@@ -1420,8 +1561,14 @@ public final class Helper {
 		DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
 		return dateFormat.format(new Date(time));
 	}
+
 	public static String formatMMTT(long time) {
 		DateFormat dateFormat = new SimpleDateFormat("MMdd");
+		return dateFormat.format(new Date(time));
+	}
+
+	public static String formatTTMM(long time) {
+		DateFormat dateFormat = new SimpleDateFormat("ddMM");
 		return dateFormat.format(new Date(time));
 	}
 
@@ -1530,8 +1677,8 @@ public final class Helper {
 	}
 
 	/**
-	 * Erzeugt aus einem String einzelne Serienummer und pr&uuml;ft die erzeugten
-	 * Strings mit der Menge gegen, wenn angegeben
+	 * Erzeugt aus einem String einzelne Serienummer und pr&uuml;ft die
+	 * erzeugten Strings mit der Menge gegen, wenn angegeben
 	 * 
 	 * @param eingabe
 	 *            String
@@ -1900,17 +2047,42 @@ public final class Helper {
 		return images;
 	}
 
-	public static boolean isLPAdmin(TheClientDto theClientDto) {
+	public static boolean isAbbot(TheClientDto theClientDto) {
 		boolean isLPAdmin = false;
 		if (theClientDto != null) {
 			String benutzername = theClientDto.getBenutzername();
 			if (benutzername != null) {
 				benutzername = benutzername.trim().substring(0,
 						benutzername.indexOf("|"));
-				isLPAdmin = benutzername.equalsIgnoreCase("LPAdmin");
+				isLPAdmin = benutzername.equalsIgnoreCase("abbot");
 			}
 		}
 		return isLPAdmin;
+	}
+
+	public static BufferedImage bildUm90GradDrehenWennNoetig(
+			BufferedImage inputImage) {
+
+		int width = inputImage.getWidth();
+		int height = inputImage.getHeight();
+
+		if (width > height) {
+
+			BufferedImage returnImage = new BufferedImage(height, width,
+					BufferedImage.TYPE_INT_RGB);
+
+			for (int x = 0; x < width; x++) {
+				for (int y = 0; y < height; y++) {
+					returnImage.setRGB(y, width - x - 1,
+							inputImage.getRGB(x, y));
+					// Again check the Picture for better understanding
+				}
+			}
+			return returnImage;
+		} else {
+			return inputImage;
+		}
+
 	}
 
 	/**
@@ -2100,6 +2272,21 @@ public final class Helper {
 		}
 
 		return vorhandenerReport;
+	}
+
+	public static long verfuegbarkeitvonStundenEinesTagesNachLong(
+			BigDecimal bdStunden) {
+		return bdStunden.multiply(DAY_IN_MS).longValue();
+		// return (long) (3600000 * bdStunden.doubleValue());
+	}
+
+	public static BigDecimal verfuegbarkeitvonLongNachStundenEinesTages(long l) {
+		BigDecimal d = new BigDecimal(l).setScale(2);
+		d = d.divide(DAY_IN_MS, BigDecimal.ROUND_HALF_EVEN);
+		return d;
+
+		// double d = ((double) l) / 1000 / 60 / 60;
+		// return new BigDecimal(d);
 	}
 
 	/**
@@ -2428,7 +2615,8 @@ public final class Helper {
 	 */
 	public static BigDecimal berechneMengeInklusiveVerschnitt(
 			BigDecimal bdAusgangsmenge, Double dVerschnittfaktor,
-			Double dVerschnittbasis, BigDecimal losgroesse) {
+			Double dVerschnittbasis, BigDecimal losgroesse,
+			Double dFertigungs_vpe) {
 
 		BigDecimal bdMengeInklusiveVerschnitt = null;
 		if (bdAusgangsmenge == null) {
@@ -2469,6 +2657,24 @@ public final class Helper {
 			}
 			bdMengeInklusiveVerschnitt = new BigDecimal(dAnzahl
 					/ losgroesse.doubleValue() * dVerschnittbasis.doubleValue());
+		}
+
+		// PJ18585
+		if (dFertigungs_vpe != null && dFertigungs_vpe.doubleValue() != 0) {
+
+			
+			BigDecimal bdFertigungsmenge= new BigDecimal( bdMengeInklusiveVerschnitt.doubleValue()*losgroesse.doubleValue());
+			
+			if (bdFertigungsmenge.doubleValue() % dFertigungs_vpe > 0) {
+				
+				
+				
+				double dRest = bdFertigungsmenge.doubleValue()
+						% dFertigungs_vpe;
+				bdMengeInklusiveVerschnitt = (bdFertigungsmenge
+						.add(new BigDecimal(dFertigungs_vpe - dRest))).divide(losgroesse, 12, BigDecimal.ROUND_HALF_EVEN);
+			}
+
 		}
 
 		return bdMengeInklusiveVerschnitt;
@@ -3057,21 +3263,27 @@ public final class Helper {
 		return hexString;
 	}
 
-	public static BigDecimalSI berechneSiWertAusBezeichnung(String cBez,
-			String cZbez, String cZbez2) {
-		// PJ18155
-		String s = cBez;
-		if (cZbez != null) {
-			s += " " + cZbez;
-		}
-		if (cZbez2 != null) {
-			s += " " + cZbez2;
-		}
-		SiPrefixParserAlternatives parser = new SiPrefixParserAlternatives();
-		parser.setUnits("R", "F", "H");
-		parser.setMicroAlternative("u");
-		return parser.parseFirst(s);
-	}
+	// /**
+	// * @param ohneEinheiten true wenn Prefixe ohne Einheiten geparst werden
+	// sollen.
+	// * @param units die Einheiten mit Beistrich getrennt (F, H, J)
+	// * @param bez die Strings, welche durchsucht werden sollen
+	// * @return die geparste Zahl als BigDecimalSI
+	// */
+	// public static BigDecimalSI berechneSiWertAusBezeichnung(boolean
+	// ohneEinheiten, String units, String... bez) {
+	// // PJ18155
+	// StringBuffer sb = new StringBuffer();
+	// for(String s : bez) {
+	// sb.append(s == null ? "" : s);
+	// sb.append(" ");
+	// }
+	//
+	// String[] unitsArray = units.split(" *, *");
+	// ISiPrefixParser parser = new DefaultSiPrefixParser(!ohneEinheiten,
+	// unitsArray);
+	// return parser.parseFirst(sb.toString());
+	// }
 
 	public static char[] getMD5Hash(char[] in) {
 		return getMD5Hash(new String(in)).toString().toCharArray();
@@ -3087,7 +3299,8 @@ public final class Helper {
 	}
 
 	/**
-	 * Helper f&uuml;r KDC100 Konvertiert KDC100 Timestamp auf java.sql.Timestamp
+	 * Helper f&uuml;r KDC100 Konvertiert KDC100 Timestamp auf
+	 * java.sql.Timestamp
 	 * 
 	 * @param in
 	 *            short[4]
@@ -3127,7 +3340,8 @@ public final class Helper {
 	}
 
 	/**
-	 * Helper f&uuml;r KDC100 Konvertiert Calendar auf KDC100 Timestamp als short[4]
+	 * Helper f&uuml;r KDC100 Konvertiert Calendar auf KDC100 Timestamp als
+	 * short[4]
 	 * 
 	 * @param c
 	 *            Datum/Zeit als Calendar
@@ -3192,6 +3406,49 @@ public final class Helper {
 		return gjMonate;
 	}
 
+	public static Timestamp[] getTimestampVonBisEinerKW(java.sql.Timestamp tKW) {
+		Timestamp[] tVonBis = new Timestamp[2];
+
+		Calendar c = Calendar.getInstance();
+		c.setTimeInMillis(tKW.getTime());
+
+		int kwAktuell = c.get(Calendar.WEEK_OF_YEAR);
+
+		Timestamp tKWVon = new Timestamp(tKW.getTime());
+		Timestamp tKWBis = new Timestamp(tKW.getTime());
+
+		// ende der KW suchen
+		while (1 == 1) {
+			Timestamp tTemp = Helper.addiereTageZuTimestamp(tKWBis, 1);
+			Calendar cTemp = Calendar.getInstance();
+			cTemp.setTimeInMillis(tTemp.getTime());
+
+			if (kwAktuell == cTemp.get(Calendar.WEEK_OF_YEAR)) {
+				tKWBis = new Timestamp(tTemp.getTime());
+			} else {
+				break;
+			}
+		}
+
+		// anfang der KW suchen
+		while (1 == 1) {
+			Timestamp tTemp = Helper.addiereTageZuTimestamp(tKWVon, -1);
+			Calendar cTemp = Calendar.getInstance();
+			cTemp.setTimeInMillis(tTemp.getTime());
+
+			if (kwAktuell == cTemp.get(Calendar.WEEK_OF_YEAR)) {
+				tKWVon = new Timestamp(tTemp.getTime());
+			} else {
+				break;
+			}
+		}
+
+		tVonBis[0] = tKWVon;
+		tVonBis[1] = tKWBis;
+
+		return tVonBis;
+	}
+
 	public static boolean istKennwortParameter(String parameter) {
 		return parameter.equals(ParameterFac.PARAMETER_SMTPSERVER_KENNWORT)
 				|| parameter
@@ -3202,22 +3459,36 @@ public final class Helper {
 
 	public static BigDecimal getMehrwertsteuerBetrag(BigDecimal bdBrutto,
 			BigDecimal bdMwstSatz) {
-		if (bdBrutto != null) {
-			// BigDecimal bdBetragBasis = bdBrutto.divide(new BigDecimal(1)
-			// .add(bdMwstSatz), FinanzFac.NACHKOMMASTELLEN,
-			// BigDecimal.ROUND_HALF_EVEN);
-			// return
-			// Helper.rundeKaufmaennisch(bdBetragBasis.multiply(bdMwstSatz),
-			// FinanzFac.NACHKOMMASTELLEN);
-			bdMwstSatz = bdMwstSatz.movePointLeft(2);
-			BigDecimal bdBetragBasis = bdBrutto.divide(
-					new BigDecimal(1).add(bdMwstSatz),
-					FinanzFac.NACHKOMMASTELLEN, BigDecimal.ROUND_HALF_EVEN);
-			return Helper.rundeKaufmaennisch(bdBrutto.subtract(bdBetragBasis),
-					FinanzFac.NACHKOMMASTELLEN);
-		} else {
+		if (bdBrutto == null)
 			return null;
-		}
+
+		bdMwstSatz = bdMwstSatz.movePointLeft(2);
+		BigDecimal bdBetragBasis = bdBrutto.divide(
+				BigDecimal.ONE.add(bdMwstSatz), FinanzFac.NACHKOMMASTELLEN,
+				BigDecimal.ROUND_HALF_EVEN);
+		return Helper.rundeKaufmaennisch(bdBrutto.subtract(bdBetragBasis),
+				FinanzFac.NACHKOMMASTELLEN);
+	}
+
+	/**
+	 * Ermittelt den Mehrwertsteuerbetrag f&uuml;r den gegebenen Nettobetrag und
+	 * Satz
+	 * 
+	 * @param bdNetto
+	 *            ist der Nettobetrag
+	 * @param bdMwstSatz
+	 *            der Prozentsatz
+	 * @return den f&uuml;r Finanz passend gerundeten Mwstbetrag
+	 */
+	public static BigDecimal getMehrwertsteuerBetragFuerNetto(
+			BigDecimal bdNetto, BigDecimal bdMwstSatz) {
+		if (bdNetto == null)
+			return null;
+
+		bdMwstSatz = bdMwstSatz.movePointLeft(2);
+		BigDecimal bdBetragBasis = bdNetto.multiply(bdMwstSatz);
+		return Helper.rundeKaufmaennisch(bdBetragBasis,
+				FinanzFac.NACHKOMMASTELLEN);
 	}
 
 	/**
@@ -3373,29 +3644,49 @@ public final class Helper {
 	 * 
 	 * @param value
 	 *            der zu pruefende String
-	 * @return false wenn der String null oder eine L&auml;nge von 0 hat, ansonsten
-	 *         true
+	 * @return false wenn der String null oder eine L&auml;nge von 0 hat,
+	 *         ansonsten true
 	 */
 	public static boolean isStringEmpty(String value) {
 		if (null == value)
 			return true;
 		return value.trim().length() == 0;
 	}
-	
+
 	/**
-	 * Erzeugt aus einem String Array einen String, welcher dem SQL Operator 'IN'
-	 * &uuml;bergeben werden kann. <br><br>
-	 * Bsp.: values = ["Angelegt"]["Offen"]["Storniert"]
-	 * returns "('Angelegt','Offen','Storniert')" ohne die doppelten Anf&uuml;hrungszeichen.
+	 * Erzeugt aus einem String Array einen String, welcher dem SQL Operator
+	 * 'IN' &uuml;bergeben werden kann. <br>
+	 * <br>
+	 * 
 	 * @param values
-	 * @return
+	 *            ["Angelegt"]["Offen"]["Storniert"]
+	 * @return "('Angelegt','Offen','Storniert')" ohne die doppelten
+	 *         Anf&uuml;hrungszeichen.
 	 */
 	public static String arrayToSqlInList(String... values) {
 		String s = "(";
-		for(String cnr : values) {
-			s+= "'" + cnr + "',";
+		for (String cnr : values) {
+			s += "'" + cnr + "',";
 		}
-		return s.substring(0, s.length()-1)+")";
-		
+		return s.substring(0, s.length() - 1) + ")";
+
+	}
+
+	/**
+	 * Erzeugt aus einer Integer Collection einen String, welcher dem SQL
+	 * Operator 'IN' &uuml;bergeben werden kann. <br>
+	 * <br>
+	 * 
+	 * @param values
+	 *            [1, 2, 4]
+	 * @return "(1,2,4)" ohne die doppelten Anf&uuml;hrungszeichen.
+	 */
+	public static String arrayToSqlInList(Collection<Integer> values) {
+		String s = "(";
+		for (Integer i : values) {
+			s += "" + i + ",";
+		}
+		return s.substring(0, s.length() - 1) + ")";
+
 	}
 }

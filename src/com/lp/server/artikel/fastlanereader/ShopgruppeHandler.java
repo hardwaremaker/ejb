@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.artikel.fastlanereader;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -47,6 +48,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -71,28 +73,24 @@ import com.lp.util.Helper;
  * @version 1.0
  */
 public class ShopgruppeHandler extends UseCaseHandler {
+	private static final long serialVersionUID = 5836700365281757843L;
 
-
-	private static final long serialVersionUID = 1L;
-
-	
 	public ShopgruppeHandler() {
 	}
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
-
 		QueryResult result = null;
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = null;
 		try {
-			int colCount = this.getTableInfo().getColumnClasses().length;
-			int pageSize = ArtikelklaHandler.PAGE_SIZE;
-			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
+			int colCount = getTableInfo().getColumnClasses().length;
+			int pageSize = getLimit() ;
+			int startIndex = getStartIndex(rowIndex,  pageSize) ;
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
-			String queryString = this.getFromClause() + this.buildWhereClause()
-					+ this.buildOrderByClause();
+			String queryString = getFromClause() + buildWhereClause()
+					+ buildOrderByClause();
 
 			Query query = session.createQuery(queryString);
 			session = setFilter(session);
@@ -102,7 +100,7 @@ public class ShopgruppeHandler extends UseCaseHandler {
 			List<?> resultList = query.list();
 			Iterator<?> resultListIterator = resultList.iterator();
 
-			Object[][] rows = new Object[resultList.size()][colCount];
+			Object[][] rows = new Object[resultList.size()][colCount + 1];
 			int row = 0;
 			int col = 0;
 
@@ -110,28 +108,37 @@ public class ShopgruppeHandler extends UseCaseHandler {
 
 			while (resultListIterator.hasNext()) {
 				Object o[] = (Object[]) resultListIterator.next();
-				FLRShopgruppe artikelklasse = (FLRShopgruppe) o[0];
-				Iterator<?> sprsetIterator = artikelklasse
+				FLRShopgruppe flrShopgruppe = (FLRShopgruppe) o[0];
+				Iterator<?> sprsetIterator = flrShopgruppe
 						.getShopgruppesprset().iterator();
 
-				rows[row][col++] = artikelklasse.getI_id();
-				rows[row][col++] = artikelklasse.getC_nr();
+				rows[row][col++] = flrShopgruppe.getI_id();
+				rows[row][col++] = flrShopgruppe.getC_nr();
 				rows[row][col++] = findSpr(sLocUI, sprsetIterator);
-				
-				rows[row][col++] = artikelklasse.getFlrshopgruppe() == null ? null
-						: artikelklasse.getFlrshopgruppe().getC_nr();
-				
-				
-				if( artikelklasse.getFlrshopgruppe() != null){
-					Iterator<?> sprsetIteratorV = artikelklasse
-					.getFlrshopgruppe().getShopgruppesprset().iterator();
+
+				if(flrShopgruppe.getFlrshopgruppe() != null) {
+					rows[row][col++] = flrShopgruppe.getFlrshopgruppe().getC_nr();
+
+					Iterator<?> sprsetIteratorV = 
+							flrShopgruppe.getFlrshopgruppe().getShopgruppesprset().iterator();					
+					rows[row][col++] = findSpr(sLocUI, sprsetIteratorV);
 					
-					rows[row][col++] =findSpr(sLocUI, sprsetIteratorV);
-				} else {
-					rows[row][col++] =null;
+					rows[row][col++] = flrShopgruppe.getFlrshopgruppe().getI_id() ;
 				}
 				
-			
+//				
+//				rows[row][col++] = artikelklasse.getFlrshopgruppe() == null ? null
+//						: artikelklasse.getFlrshopgruppe().getC_nr();
+//				
+//				if( artikelklasse.getFlrshopgruppe() != null){
+//					Iterator<?> sprsetIteratorV = artikelklasse
+//					.getFlrshopgruppe().getShopgruppesprset().iterator();
+//					
+//					rows[row][col++] =findSpr(sLocUI, sprsetIteratorV);
+//				} else {
+//					rows[row][col++] =null;
+//				}			
+//			
 				row++;
 				col = 0;
 			}
@@ -142,11 +149,7 @@ public class ShopgruppeHandler extends UseCaseHandler {
 		catch (HibernateException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
-			try {
-				session.close();
-			} catch (HibernateException he) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
-			}
+			closeSession(session);
 		}
 		return result;
 	}
@@ -361,27 +364,60 @@ public class ShopgruppeHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-			setTableInfo(new TableInfo(new Class[] { Integer.class,
-					String.class, String.class, String.class, String.class },
+			String mandantCNr = theClientDto.getMandant();
+			Locale locUI = theClientDto.getLocUi();
+			setTableInfo(new TableInfo(
+					new Class[] {
+							Integer.class,
+							String.class,
+							String.class,
+							String.class,
+							String.class
+					},
+					
 					new String[] {
 							"PK",
-							getTextRespectUISpr("lp.kennung",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.bezeichnung",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.vatergruppe",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()),
-							getTextRespectUISpr("lp.bezeichnung",
-									theClientDto.getMandant(),
-									theClientDto.getLocUi()) }, new String[] {
-							"shopgruppe.i_id", "shopgruppe.c_nr",
+							getTextRespectUISpr("lp.kennung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI),
+							getTextRespectUISpr("lp.vatergruppe", mandantCNr, locUI),
+							getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI)
+					},
+					
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST
+					},
+					
+					new String[] {
+							"shopgruppe.i_id",
+							"shopgruppe.c_nr",
 							"shopgruppesprset.c_bez",
 							"shopgruppe.flrshopgruppe.c_nr",
-							"vatergruppesprset.c_bez"}));
+							"vatergruppesprset.c_bez"
+					})
+			);
 		}
 		return super.getTableInfo();
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

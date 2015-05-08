@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -110,6 +110,7 @@ import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.LandplzortDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
@@ -736,9 +737,13 @@ public class LieferantFacBean extends Facade implements LieferantFac {
 					// pruefen, ob es zum aktuellen artikel bereits einen
 					// Eintrag beim Ziellieferanten gibt
 					ArtikellieferantDto artikellieferantZielDto = getArtikelFac()
-							.artikellieferantFindByArtikellIIdLieferantIIdOhneExc(
+							.getArtikelEinkaufspreis(
 									aArtikellieferantDtos[j].getArtikelIId(),
-									lieferantZielDto.getIId(), theClientDto);
+									lieferantZielDto.getIId(),
+									BigDecimal.ONE,
+									lieferantQuellDto.getWaehrungCNr(),
+									new java.sql.Date(System
+											.currentTimeMillis()), theClientDto);
 					if (artikellieferantZielDto == null) {
 						// lieferantiid umhaengen
 						LieferantDto lieferantDto = getLieferantFac()
@@ -1052,7 +1057,7 @@ public class LieferantFacBean extends Facade implements LieferantFac {
 		}
 
 	}
-	
+
 	public void reassignInseratBeimZusammenfuehren(
 			LieferantDto lieferantZielDto, LieferantDto lieferantQuellDto,
 			String mandantCNr, TheClientDto theClientDto) throws EJBExceptionLP {
@@ -1069,10 +1074,8 @@ public class LieferantFacBean extends Facade implements LieferantFac {
 			em.merge(b);
 			em.flush();
 		}
-		
 
 	}
-	
 
 	/**
 	 * Fuehrt zwei Lieferanten zusammen
@@ -1189,7 +1192,8 @@ public class LieferantFacBean extends Facade implements LieferantFac {
 			getDokumenteFac().vertauscheBelegartIdBeiBelegartdokumenten(
 					LocaleFac.BELEGART_LIEFERANT, lieferantQuellDto.getIId(),
 					lieferantZielDto.getIId(), theClientDto);
-			getJCRDocFac().fuehreDokumenteZusammen(lieferantZielDto, lieferantQuellDto);
+			getJCRDocFac().fuehreDokumenteZusammen(lieferantZielDto,
+					lieferantQuellDto);
 			reassignLiefergruppeBeimZusammenfuehren(lieferantZielDto,
 					lieferantQuellDto, theClientDto);
 			reassignArtikellieferantBeimZusammenfuehren(lieferantZielDto,
@@ -1724,29 +1728,25 @@ public class LieferantFacBean extends Facade implements LieferantFac {
 		}
 
 		LieferantDto[] aLieferantDto = null;
+		Session session = FLRSessionFactory.getFactory().openSession();
+		String queryString = "SELECT l.id_comp.lieferant_i_id FROM FLRLFLiefergruppe l WHERE l.id_comp.lfliefergruppe_i_id ="
+				+ iIdLiefergruppeI
+				+ " ORDER BY l.flrlieferant.flrpartner.c_name1nachnamefirmazeile1 ASC";
 
-		// try {
-		Query query = em
-				.createNamedQuery("LflfliefergruppefindByLiefergruppeIId");
-		query.setParameter(1, iIdLiefergruppeI);
-		Collection<?> cl = query.getResultList();
-		// if (cl.isEmpty()) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, null);
-		// }
+		org.hibernate.Query query = session.createQuery(queryString);
 
-		LflfliefergruppeDto[] aLflfliefergruppeDto = LflfliefergruppeDtoAssembler
-				.createDtos(cl);
+		List<?> results = query.list();
+		aLieferantDto = new LieferantDto[results.size()];
+		Iterator<?> resultListIterator = results.iterator();
+		int i = 0;
+		while (resultListIterator.hasNext()) {
 
-		aLieferantDto = new LieferantDto[aLflfliefergruppeDto.length];
+			Integer lieferantIId = (Integer) resultListIterator.next();
+			aLieferantDto[i] = lieferantFindByPrimaryKey(lieferantIId,
+					theClientDto);
+			i++;
 
-		for (int i = 0; i < aLflfliefergruppeDto.length; i++) {
-			aLieferantDto[i] = lieferantFindByPrimaryKey(
-					aLflfliefergruppeDto[i].getLieferantIId(), theClientDto);
 		}
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FIND, ex);
-		// }
 
 		return aLieferantDto;
 	}
@@ -2303,7 +2303,15 @@ public class LieferantFacBean extends Facade implements LieferantFac {
 				Query query = em.createNamedQuery("ArtikelfindByCNrMandantCNr");
 				query.setParameter(1,
 						daten.get(i)[ArtikellieferantImportDto._CSV_IDENT]);
-				query.setParameter(2, mandantCNr);
+
+				if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+						MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+						theClientDto)) {
+					query.setParameter(2, getSystemFac().getHauptmandant());
+				} else {
+					query.setParameter(2, mandantCNr);
+				}
+
 				Artikel artikel;
 
 				try {
@@ -2337,13 +2345,12 @@ public class LieferantFacBean extends Facade implements LieferantFac {
 					Integer alId = null;
 					try {
 						ax = getArtikelFac()
-								.artikellieferantFindByArtikellIIdLieferantIIdOhneExc(
-										aiDto.getArtikelIId(),
-										aiDto.getLieferantIId(), theClientDto);
+								.getArtikelEinkaufspreis(aiDto.getArtikelIId(),
+										aiDto.getLieferantIId(),
+										BigDecimal.ONE,
+										theClientDto.getSMandantenwaehrung(),new java.sql.Date(System.currentTimeMillis()),theClientDto);
 					} catch (EJBExceptionLP e1) {
 						//
-					} catch (RemoteException e1) {
-						e1.printStackTrace();
 					}
 
 					// PJ 17365
@@ -2384,7 +2391,8 @@ public class LieferantFacBean extends Facade implements LieferantFac {
 							aiDto.setISort(ax.getISort());
 							// getArtikelFac().removeArtikellieferant(ax);
 							aiDto.setIId(ax.getIId());
-							aiDto.setIWiederbeschaffungszeit(ax.getIWiederbeschaffungszeit());
+							aiDto.setIWiederbeschaffungszeit(ax
+									.getIWiederbeschaffungszeit());
 							getArtikelFac().updateArtikellieferant(aiDto,
 									theClientDto);
 							alId = aiDto.getIId();
@@ -2419,7 +2427,9 @@ public class LieferantFacBean extends Facade implements LieferantFac {
 								//
 							}
 							if (axStaffel != null) {
-								alStaffelDto.setIWiederbeschaffungszeit(axStaffel.getIWiederbeschaffungszeit());
+								alStaffelDto
+										.setIWiederbeschaffungszeit(axStaffel
+												.getIWiederbeschaffungszeit());
 								getArtikelFac().removeArtikellieferantstaffel(
 										axStaffel.getIId());
 							}

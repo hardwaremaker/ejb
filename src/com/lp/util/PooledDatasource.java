@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -42,7 +42,8 @@ public class PooledDatasource {
 	private static Object datasource;
 	private static boolean initialized = false;
 	private static javax.sql.PooledConnection pc = null;
-	
+	private static String cachedConnectionUrl = null ;
+			
 	private PooledDatasource() {
 	}
 
@@ -80,6 +81,7 @@ public class PooledDatasource {
 			initPsql(host, port, database);
 		} else
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_INVALID_REPORT_URL, "Ungueltige Reportconnection: " + url);
+		cachedConnectionUrl = url ;
 	}
 
 	protected void initPsql(String host, int port, String database) {
@@ -96,8 +98,20 @@ public class PooledDatasource {
 	protected void initJtds(String host, int port, String database) {
 		net.sourceforge.jtds.jdbcx.JtdsDataSource ds = new net.sourceforge.jtds.jdbcx.JtdsDataSource();
 		
+		String instance = null;
+		if (database.toLowerCase().contains("instance")) {
+			int i = database.toLowerCase().indexOf("instance");
+			int j = database.indexOf(";", i);
+			if (j==-1)
+				instance = database.substring(i+9);
+			else
+				instance = database.substring(i+9, j);
+			database = database.substring(0,i-1);
+		}
 		ds.setServerName(host);
 		ds.setDatabaseName(database);
+		if (instance != null)
+			ds.setInstance(instance);
 		ds.setPortNumber(port);
 		ds.setUser("hvguest");
 		ds.setPassword("h4gzfdavfs");
@@ -124,5 +138,26 @@ public class PooledDatasource {
 			pc = ((ConnectionPoolDataSource)datasource).getPooledConnection();
 		return pc.getConnection();
 	}
-		
+	
+	/**
+	 * Setzt die Connection-URL</br>
+	 * <p>&Auml;ndert sich die URL wird die darunterliegende Datasource neu 
+	 * aufgebaut. Ansonsten wird eine bereits bestehende verwendet</p>
+	 * @param url die neue Database-Connection-URL. Kann auch null sein.
+	 */
+	public void setUrl(String url) {
+		if(url == null) {
+			cachedConnectionUrl = null ;
+			initialized = false ;
+			datasource = null ;
+		} else {			
+			if(cachedConnectionUrl == null) {
+				initalize(url) ;
+			} else {
+				if(url.compareTo(cachedConnectionUrl) != 0) {
+					initalize(url) ;
+				}				
+			}
+		}
+	}
 }

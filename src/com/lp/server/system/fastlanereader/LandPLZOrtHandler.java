@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -293,16 +293,19 @@ public class LandPLZOrtHandler extends UseCaseHandler {
 							theClientDto.getLocUi()),
 					getTextRespectUISpr("lp.ort", theClientDto.getMandant(),
 							theClientDto.getLocUi()), },
-					new int[] { QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_S,
-							QueryParameters.FLR_BREITE_M, }, new String[] {
-							SystemFac.FLR_LP_LANDPLZORTID,
-							SystemFac.FLR_LP_FLRLAND + "."
-									+ SystemFac.FLR_LP_LANDLKZ, // flrland.c_lkz
-							SystemFac.FLR_LP_LANDPLZORTPLZ,
-							SystemFac.FLR_LP_FLRORT + "."
-									+ SystemFac.FLR_LP_ORTNAME, // "flrort.c_name"
-					// ,
+
+			new int[] {
+					-1, // diese Spalte wird ausgeblendet
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
+			new String[] {
+					SystemFac.FLR_LP_LANDPLZORTID,
+					SystemFac.FLR_LP_FLRLAND + "." + SystemFac.FLR_LP_LANDLKZ, // flrland.c_lkz
+					SystemFac.FLR_LP_LANDPLZORTPLZ,
+					SystemFac.FLR_LP_FLRORT + "." + SystemFac.FLR_LP_ORTNAME, // "flrort.c_name"
+			// ,
 					}));
 
 		}
@@ -337,7 +340,7 @@ public class LandPLZOrtHandler extends UseCaseHandler {
 
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
-				boolean idFound = false;
+//				boolean idFound = false;
 				if (scrollableResult != null) {
 					scrollableResult.beforeFirst();
 					while (scrollableResult.next()) {

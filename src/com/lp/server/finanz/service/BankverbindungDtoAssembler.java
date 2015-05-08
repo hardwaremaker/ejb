@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.lp.server.finanz.ejb.Bankverbindung;
+import com.lp.util.Helper;
 
 public class BankverbindungDtoAssembler {
 	public static BankverbindungDto createDto(Bankverbindung bankverbindung) {
@@ -56,6 +57,7 @@ public class BankverbindungDtoAssembler {
 			bankverbindungDto.setTAendern(bankverbindung.getTAendern());
 			bankverbindungDto.setPersonalIIdAendern(bankverbindung
 					.getPersonalIIdAendern());
+			bankverbindungDto.setbInLiquiditaetsVorschau(Helper.short2boolean(bankverbindung.getbInLiquiditaetsvorschau()));
 		}
 		return bankverbindungDto;
 	}

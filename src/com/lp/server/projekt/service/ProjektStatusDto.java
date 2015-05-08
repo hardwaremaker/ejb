@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -54,8 +54,9 @@ public class ProjektStatusDto implements Serializable {
 	public Integer getISort() {
 		return iSort;
 	}
+
 	private Short bAenderungprotokollieren;
-	
+
 	public Short getBAenderungprotokollieren() {
 		return bAenderungprotokollieren;
 	}
@@ -63,6 +64,17 @@ public class ProjektStatusDto implements Serializable {
 	public void setBAenderungprotokollieren(Short bAenderungprotokollieren) {
 		this.bAenderungprotokollieren = bAenderungprotokollieren;
 	}
+
+	private Short bErledigt;
+
+	public Short getBErledigt() {
+		return bErledigt;
+	}
+
+	public void setBErledigt(Short bErledigt) {
+		this.bErledigt = bErledigt;
+	}
+
 	public String getMandantCNr() {
 		return mandantCNr;
 	}

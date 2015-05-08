@@ -1,36 +1,24 @@
 <?xml version="1.0"?>
-<!--
-  HELIUM V, Open Source ERP software for sustained success
-  at small and medium-sized enterprises.
-  Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
-  
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Affero General Public License as published 
-  by the Free Software Foundation, either version 3 of theLicense, or 
-  (at your option) any later version.
-  
-  According to sec. 7 of the GNU Affero General Public License, version 3, 
-  the terms of the AGPL are supplemented with the following terms:
-  
-  "HELIUM V" and "HELIUM 5" are registered trademarks of 
-  HELIUM V IT-Solutions GmbH. The licensing of the program under the 
-  AGPL does not imply a trademark license. Therefore any rights, title and
-  interest in our trademarks remain entirely with us. If you want to propagate
-  modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
-  you may only do so if you have a written permission by HELIUM V IT-Solutions 
-  GmbH (to acquire a permission please contact HELIUM V IT-Solutions
-  at trademark@heliumv.com).
-  
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Affero General Public License for more details.
-  
-  You should have received a copy of the GNU Affero General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  
-  Contact: developers@heliumv.com
--->
+<!-- HELIUM V, Open Source ERP software for sustained success at small and 
+	medium-sized enterprises. Copyright (C) 2004 - 2014 HELIUM V IT-Solutions 
+	GmbH This program is free software: you can redistribute it and/or modify 
+	it under the terms of the GNU Affero General Public License as published 
+	by the Free Software Foundation, either version 3 of theLicense, or (at your 
+	option) any later version. According to sec. 7 of the GNU Affero General 
+	Public License, version 3, the terms of the AGPL are supplemented with the 
+	following terms: "HELIUM V" and "HELIUM 5" are registered trademarks of HELIUM 
+	V IT-Solutions GmbH. The licensing of the program under the AGPL does not 
+	imply a trademark license. Therefore any rights, title and interest in our 
+	trademarks remain entirely with us. If you want to propagate modified versions 
+	of the Program under the name "HELIUM V" or "HELIUM 5", you may only do so 
+	if you have a written permission by HELIUM V IT-Solutions GmbH (to acquire 
+	a permission please contact HELIUM V IT-Solutions at trademark@heliumv.com). 
+	This program is distributed in the hope that it will be useful, but WITHOUT 
+	ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+	FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+	details. You should have received a copy of the GNU Affero General Public 
+	License along with this program. If not, see <http://www.gnu.org/licenses/>. 
+	Contact: developers@heliumv.com -->
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 <hibernate-mapping package="com.lp.server.artikel.fastlanereader.generated">
 	<class name="FLRArtikelgruppe" table="WW_ARTGRU">
@@ -38,11 +26,12 @@
 			<generator class="native" />
 		</id>
 		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="artgru_i_id" column="ARTGRU_I_ID" type="java.lang.Integer" />
 		<property name="mandant_c_nr" column="MANDANT_C_NR" not-null="true"
 			type="java.lang.String" />
 		<many-to-one name="flrartikelgruppe"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe"
-			column="ARTGRU_I_ID" />
+			column="ARTGRU_I_ID" insert="false" update="false" />
 		<many-to-one name="flrkonto"
 			class="com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto"
 			column="KONTO_I_ID" />
@@ -131,6 +120,8 @@
 		<property name="artikelart_c_nr" column="ARTIKELART_C_NR"
 			type="java.lang.String" />
 		<property name="b_lagerbewertet" column="B_LAGERBEWERTET"
+			type="java.lang.Short" />
+		<property name="b_dokumentenpflicht" column="B_DOKUMENTENPFLICHT"
 			type="java.lang.Short" />
 		<property name="b_lagerbewirtschaftet" column="B_LAGERBEWIRTSCHAFTET"
 			type="java.lang.Short" />
@@ -227,6 +218,17 @@
 		<property name="mwstsatz_i_id" column="MWSTSATZ_I_ID"
 			not-null="false" type="java.lang.Integer" />
 		<property name="f_lagermindest" column="F_LAGERMINDEST" type="java.lang.Double" />
+		<property name="f_verschnittfaktor" column="F_VERSCHNITTFAKTOR"
+			type="java.lang.Double" />
+		<property name="f_verschnittbasis" column="F_VERSCHNITTBASIS"
+			type="java.lang.Double" />
+
+		<property name="f_fertigungs_vpe" column="F_FERTIGUNGS_VPE"
+			type="java.lang.Double" />
+		<property name="c_index" column="C_INDEX" not-null="false"
+			type="java.lang.String" />
+		<property name="c_revision" column="C_REVISION" not-null="false"
+			type="java.lang.String" />
 
 		<many-to-one name="flrartikelgruppe"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelgruppe"
@@ -240,6 +242,11 @@
 		<many-to-one name="flrgeometrie"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRGeometrie"
 			column="I_ID" insert="false" update="false" />
+
+		<many-to-one name="flrvorzug"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRVorzug"
+			column="VORZUG_I_ID" insert="false" update="false" />
+
 		<set name="artikelsperreset" inverse="true">
 			<key column="ARTIKEL_I_ID" />
 			<one-to-many
@@ -273,8 +280,22 @@
 			<one-to-many
 				class="com.lp.server.artikel.fastlanereader.generated.FLRArtikellagerplaetze" />
 		</set>
-		<!-- <property column="SHOPGRUPPE_I_ID" length="5" name="shopgruppe_i_id" 
-			insert="false" update="false" type="java.lang.Integer" /> -->
+		<set name="kundesokoset" inverse="true">
+			<key column="ARTIKEL_I_ID" />
+			<one-to-many
+				class="com.lp.server.partner.fastlanereader.generated.FLRKundesoko" />
+		</set>
+		<set name="kundesokoset2" inverse="true">
+			<key column="ARTIKEL_I_ID" />
+			<one-to-many
+				class="com.lp.server.partner.fastlanereader.generated.FLRKundesoko" />
+			<filter name="filterKundeId" condition=":paramKundeId = KUNDE_I_ID" />
+			<filter name="filterGueltig"
+				condition="COALESCE(T_PREISGUELTIGBIS, :paramGueltig) >= :paramGueltig and :paramGueltig >= T_PREISGUELTIGAB" />
+		</set>
+
+		<property column="SHOPGRUPPE_I_ID" length="5" name="shopgruppe_i_id" 
+			insert="false" update="false" type="java.lang.Integer" />
 	</class>
 	<class name="FLRArtikellistespr" table="WW_ARTIKELSPR">
 		<composite-id
@@ -482,6 +503,34 @@
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
 			column="ARTIKEL_I_ID" insert="false" update="false" />
 	</class>
+
+	<class name="FLRFehlmengeReservierung" table="WW_FEHLMENGERESERVIERUNG">
+		<composite-id
+			class="com.lp.server.artikel.fastlanereader.generated.service.FLRFehlmengeReservierungPK"
+			name="compId">
+			<key-property name="typ" column="TYP" type="java.lang.String" />
+			<key-property name="i_id" column="I_ID" type="java.lang.Integer" />
+		</composite-id>
+
+		<property name="n_menge" column="N_MENGE" type="java.math.BigDecimal" />
+		<property name="t_liefertermin" column="T_LIEFERTERMIN" type="java.sql.Timestamp" />
+		<property name="t_produktionsende" column="T_PRODUKTIONSENDE"
+			type="java.sql.Timestamp" />
+
+		<many-to-one name="flrartikelliste"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrlossollmaterial"
+			class="com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial"
+			column="LOSSOLLMATERIAL_I_ID" insert="false" update="false" />
+		<many-to-one name="flrauftragposition"
+			class="com.lp.server.auftrag.fastlanereader.generated.FLRAuftragposition"
+			column="AUFTRAGPOSITION_I_ID" insert="false" update="false" />
+
+
+	</class>
+
+
 	<class name="FLRArtikelbestellt" table="WW_ARTIKELBESTELLT">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
@@ -494,6 +543,18 @@
 		<many-to-one name="flrartikel"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
 			column="ARTIKEL_I_ID" insert="false" update="false" />
+	</class>
+	<class name="FLRWareneingangsreferez" table="WW_WARENEIGANGSREFERENZ">
+
+		<composite-id>
+			<key-many-to-one name="zubuchung" column="LAGERBEWEGUNG_I_ID_ZUBUCHUNG"
+				class="com.lp.server.artikel.fastlanereader.generated.FLRLagerbewegung" />
+			<key-many-to-one name="abbuchung" column="LAGERBEWEGUNG_I_ID_ABBUCHUNG"
+				class="com.lp.server.artikel.fastlanereader.generated.FLRLagerbewegung" />
+		</composite-id>
+		<property name="n_verbrauchtemenge" column="N_VERBRAUCHTEMENGE"
+			type="java.math.BigDecimal" />
+
 	</class>
 	<class name="FLRLagerbewegung" table="WW_LAGERBEWEGUNG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
@@ -668,6 +729,7 @@
 			type="java.math.BigDecimal" />
 		<property name="c_seriennrchargennr" column="C_SERIENNRCHARGENNR"
 			type="java.lang.String" />
+		<property name="t_aendern" column="T_AENDERN" type="java.sql.Timestamp" />
 		<many-to-one name="flrinventur"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRInventur"
 			column="INVENTUR_I_ID" />
@@ -677,6 +739,9 @@
 		<many-to-one name="flrlager"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRLager"
 			column="LAGER_I_ID" />
+		<many-to-one name="flrpersonal"
+			class="com.lp.server.personal.fastlanereader.generated.FLRPersonal"
+			column="PERSONAL_I_ID_AENDERN" insert="false" update="false" />
 	</class>
 	<class name="FLRInventurstand" table="WW_INVENTURSTAND">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
@@ -688,6 +753,9 @@
 			type="java.math.BigDecimal" />
 		<property name="n_inventurpreis" column="N_INVENTURPREIS"
 			type="java.math.BigDecimal" />
+		<property name="n_basispreis" column="N_BASISPREIS" type="java.math.BigDecimal" />
+		<property name="f_abwertung" column="F_ABWERTUNG" type="java.lang.Double" />
+		<property name="c_kommentar" column="C_KOMMENTAR" type="java.lang.String" />
 		<property name="inventur_i_id" column="INVENTUR_I_ID" type="java.lang.Integer" />
 		<many-to-one name="flrinventur"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRInventur"
@@ -791,6 +859,9 @@
 		<many-to-one name="flrartikelkommentarart"
 			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelkommentarart"
 			column="ARTIKELKOMMENTARART_I_ID" insert="false" update="false" />
+		<many-to-one name="flrartikel"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikel"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
 	</class>
 	<class name="FLRArtikelkommentarspr" table="WW_ARTIKELKOMMENTARSPR">
 		<composite-id>
@@ -949,6 +1020,21 @@
 			class="com.lp.server.artikel.fastlanereader.generated.FLRShopgruppe"
 			column="SHOPGRUPPE_I_ID" insert="false" update="false" />
 	</class>
+	<class name="FLRArtikelalergen" table="WW_ARTIKELALERGEN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="artikel_i_id" column="ARTIKEL_I_ID" type="java.lang.Integer" />
+		<property name="alergen_i_id" column="ALERGEN_I_ID" type="java.lang.Integer" />
+
+		<many-to-one name="flrartikelliste"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste"
+			column="ARTIKEL_I_ID" insert="false" update="false" />
+
+		<many-to-one name="flralergen"
+			class="com.lp.server.artikel.fastlanereader.generated.FLRAlergen"
+			column="ALERGEN_I_ID" insert="false" update="false" />
+	</class>
 	<class name="FLRTrumphtopslog" table="WW_TRUMPHTOPSLOG">
 		<id name="i_id" column="I_ID" type="java.lang.Integer">
 			<generator class="native" />
@@ -1006,10 +1092,68 @@
 
 	</class>
 
+
+
+
+	<class name="FLRReach" table="WW_REACH">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+	</class>
+
+	<class name="FLRVorzug" table="WW_VORZUG">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_nr" column="C_NR" type="java.lang.String" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+	</class>
+	<class name="FLRAlergen" table="WW_ALERGEN">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="i_sort" column="I_SORT" type="java.lang.Integer" />
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+	</class>
+
+	<class name="FLRRohs" table="WW_ROHS">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+	</class>
+	<class name="FLRAutomotive" table="WW_AUTOMOTIVE">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+	</class>
+	<class name="FLRMedical" table="WW_MEDICAL">
+		<id name="i_id" column="I_ID" type="java.lang.Integer">
+			<generator class="native" />
+		</id>
+		<property name="c_bez" column="C_BEZ" type="java.lang.String" />
+		<property name="mandant_c_nr" column="MANDANT_C_NR" type="java.lang.String" />
+	</class>
+
+
 	<filter-def name="filterLocale">
 		<filter-param name="paramLocale" type="java.lang.String" />
 	</filter-def>
 	<filter-def name="filterMandant">
 		<filter-param name="paramMandant" type="java.lang.String" />
+	</filter-def>
+
+	<filter-def name="filterKundeId">
+		<filter-param name="paramKundeId" type="java.lang.Integer" />
+	</filter-def>
+	<filter-def name="filterGueltig">
+		<filter-param name="paramGueltig" type="java.sql.Date" />
 	</filter-def>
 </hibernate-mapping>

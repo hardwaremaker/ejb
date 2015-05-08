@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -46,7 +46,7 @@ import javax.persistence.Table;
 	@NamedQuery(name = "SteuerkategoriekontoBySteuerkategorieIIdandMwStSatzBeziid", 
 			query = "SELECT OBJECT(o) FROM Steuerkategoriekonto o WHERE o.pk.steuerkategorieiid = ?1 AND o.pk.mwstsatzbeziid = ?2"),
 	@NamedQuery(name = "SteuerkategoriekontoByKontoIIdandMwStSatzBeziid", 
-			query = "SELECT OBJECT(o) FROM Steuerkategoriekonto o WHERE (o.kontoIIdVk = ?1 OR o.kontoIIdEk = ?1) AND o.pk.mwstsatzbeziid = ?2")
+			query = "SELECT OBJECT(o) FROM Steuerkategoriekonto o WHERE (o.kontoIIdVk = ?1 OR o.kontoIIdEk = ?1 OR o.kontoIIdEinfuhrUst = ?1) AND o.pk.mwstsatzbeziid = ?2")
 })
 @Entity
 @Table(name = "FB_STEUERKATEGORIEKONTO")

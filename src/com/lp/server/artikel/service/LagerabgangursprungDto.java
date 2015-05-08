@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -44,6 +44,15 @@ public class LagerabgangursprungDto implements Serializable {
 	private Integer iLagerbewegungidursprung;
 	private BigDecimal nVerbrauchtemenge;
 	private BigDecimal nGestehungspreis;
+	private String versionAusUrsprung;
+
+	public String getVersionAusUrsprung() {
+		return versionAusUrsprung;
+	}
+
+	public void setVersionAusUrsprung(String versionAusUrsprung) {
+		this.versionAusUrsprung = versionAusUrsprung;
+	}
 
 	public Integer getILagerbewegungid() {
 		return iLagerbewegungid;

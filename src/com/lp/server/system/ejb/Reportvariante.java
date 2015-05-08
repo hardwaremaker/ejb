@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -41,7 +41,9 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( { @NamedQuery(name = "ReportvarianteFindByCReportname", query = "SELECT OBJECT(o) FROM Reportvariante o WHERE o.cReportname=?1") })
+@NamedQueries({
+		@NamedQuery(name = "ReportvarianteFindByCReportname", query = "SELECT OBJECT(o) FROM Reportvariante o WHERE o.cReportname=?1"),
+		@NamedQuery(name = "ReportvarianteFindByCReportnameCReportnamevariante", query = "SELECT OBJECT(o) FROM Reportvariante o WHERE o.cReportname=?1 AND o.cReportnamevariante=?2") })
 @Entity
 @Table(name = "LP_REPORTVARIANTE")
 public class Reportvariante implements Serializable {
@@ -57,9 +59,6 @@ public class Reportvariante implements Serializable {
 
 	@Column(name = "C_REPORTNAMEVARIANTE")
 	private String cReportnamevariante;
-	
-
-
 
 	private static final long serialVersionUID = 1L;
 
@@ -74,7 +73,6 @@ public class Reportvariante implements Serializable {
 		setCReportname(cReportname);
 		setCReportnamevariante(cReportnamevariante);
 	}
-	
 
 	public String getCReportnamevariante() {
 		return cReportnamevariante;
@@ -100,7 +98,6 @@ public class Reportvariante implements Serializable {
 		this.iId = iId;
 	}
 
-
 	public String getCReportname() {
 		return this.cReportname;
 	}
@@ -108,6 +105,5 @@ public class Reportvariante implements Serializable {
 	public void setCReportname(String cReportname) {
 		this.cReportname = cReportname;
 	}
-
 
 }

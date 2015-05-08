@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -43,8 +43,9 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-@NamedQueries( {
-	@NamedQuery(name = "KassenbuchfindByKontoIId", query = "SELECT OBJECT(o) FROM Kassenbuch o WHERE o.kontoIId=?1")})
+@NamedQueries({
+		@NamedQuery(name = "KassenbuchfindByKontoIId", query = "SELECT OBJECT(o) FROM Kassenbuch o WHERE o.kontoIId=?1"),
+		@NamedQuery(name = "KassenbuchfindByBHauptkassenbuch", query = "SELECT OBJECT(o) FROM Kassenbuch o WHERE o.bHauptkassenbuch=?1 AND o.mandantCNr=?2") })
 @Entity
 @Table(name = "FB_KASSENBUCH")
 public class Kassenbuch implements Serializable {
@@ -93,8 +94,8 @@ public class Kassenbuch implements Serializable {
 
 	public Kassenbuch(Integer id, java.lang.String mandantCNr,
 			java.lang.String bez, Integer kontoIId, Short negativErlaubt,
-			Short hauptkassenbuch, Date gueltigVon,
-			Integer personalIIdAnlegen, Integer personalIIdaendern) {
+			Short hauptkassenbuch, Date gueltigVon, Integer personalIIdAnlegen,
+			Integer personalIIdaendern) {
 		setIId(id);
 		setMandantCNr(mandantCNr);
 		setCBez(bez);

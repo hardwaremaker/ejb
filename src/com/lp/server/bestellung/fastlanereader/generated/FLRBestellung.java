@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,17 +19,17 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.bestellung.fastlanereader.generated;
 
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftrag;
@@ -94,6 +94,9 @@ public class FLRBestellung implements Serializable {
     private String c_bezprojektbezeichnung;
 
     /** nullable persistent field */
+    private String c_lieferantenangebot;
+
+    /** nullable persistent field */
     private Double f_wechselkursmandantwaehrungbestellungswaehrung;
 
     /** nullable persistent field */
@@ -145,7 +148,7 @@ public class FLRBestellung implements Serializable {
     private Set bestellpositionen;
 
     /** full constructor */
-    public FLRBestellung(String c_nr, Date t_belegdatum, Date t_liefertermin, Date t_manuellgeliefert, BigDecimal n_bestellwert, String mandant_c_nr, String bestellungstatus_c_nr, String bestellungart_c_nr, Integer bestellung_i_id_rahmenbestellung, String waehrung_c_nr_bestellwaehrung, Integer lieferant_i_id_bestelladresse, Integer kostenstelle_i_id, Integer auftrag_i_id, String c_bezprojektbezeichnung, Double f_wechselkursmandantwaehrungbestellungswaehrung, Integer mahnstufe_i_id, Date t_versandzeitpunkt, Date t_mahnsperrebis, String c_versandtype, Short b_poenale, Integer projekt_i_id, FLRLieferant flrlieferant, FLRKostenstelle flrkostenstelle, FLRPersonal flrpersonal, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer, com.lp.server.bestellung.fastlanereader.generated.FLRBestellungtextsuche flrbestellungtextsuche, FLRAuftrag flrauftrag, FLRPartner flrpartnerlieferadresse, FLRProjekt flrprojekt, Set bestellpositionen) {
+    public FLRBestellung(String c_nr, Date t_belegdatum, Date t_liefertermin, Date t_manuellgeliefert, BigDecimal n_bestellwert, String mandant_c_nr, String bestellungstatus_c_nr, String bestellungart_c_nr, Integer bestellung_i_id_rahmenbestellung, String waehrung_c_nr_bestellwaehrung, Integer lieferant_i_id_bestelladresse, Integer kostenstelle_i_id, Integer auftrag_i_id, String c_bezprojektbezeichnung, String c_lieferantenangebot, Double f_wechselkursmandantwaehrungbestellungswaehrung, Integer mahnstufe_i_id, Date t_versandzeitpunkt, Date t_mahnsperrebis, String c_versandtype, Short b_poenale, Integer projekt_i_id, FLRLieferant flrlieferant, FLRKostenstelle flrkostenstelle, FLRPersonal flrpersonal, FLRPersonal flrpersonalanleger, FLRPersonal flrpersonalaenderer, com.lp.server.bestellung.fastlanereader.generated.FLRBestellungtextsuche flrbestellungtextsuche, FLRAuftrag flrauftrag, FLRPartner flrpartnerlieferadresse, FLRProjekt flrprojekt, Set bestellpositionen) {
         this.c_nr = c_nr;
         this.t_belegdatum = t_belegdatum;
         this.t_liefertermin = t_liefertermin;
@@ -160,6 +163,7 @@ public class FLRBestellung implements Serializable {
         this.kostenstelle_i_id = kostenstelle_i_id;
         this.auftrag_i_id = auftrag_i_id;
         this.c_bezprojektbezeichnung = c_bezprojektbezeichnung;
+        this.c_lieferantenangebot = c_lieferantenangebot;
         this.f_wechselkursmandantwaehrungbestellungswaehrung = f_wechselkursmandantwaehrungbestellungswaehrung;
         this.mahnstufe_i_id = mahnstufe_i_id;
         this.t_versandzeitpunkt = t_versandzeitpunkt;
@@ -306,6 +310,14 @@ public class FLRBestellung implements Serializable {
 
     public void setC_bezprojektbezeichnung(String c_bezprojektbezeichnung) {
         this.c_bezprojektbezeichnung = c_bezprojektbezeichnung;
+    }
+
+    public String getC_lieferantenangebot() {
+        return this.c_lieferantenangebot;
+    }
+
+    public void setC_lieferantenangebot(String c_lieferantenangebot) {
+        this.c_lieferantenangebot = c_lieferantenangebot;
     }
 
     public Double getF_wechselkursmandantwaehrungbestellungswaehrung() {

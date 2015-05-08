@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,11 +32,15 @@
  ******************************************************************************/
 package com.lp.server.stueckliste.ejbfac;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -55,6 +59,12 @@ import javax.persistence.NonUniqueResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
+import jxl.Cell;
+import jxl.Sheet;
+import jxl.Workbook;
+import jxl.biff.CellReferenceHelper;
+import jxl.read.biff.BiffException;
+
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
@@ -68,27 +78,25 @@ import com.lp.server.angebotstkl.service.AgstklpositionDto;
 import com.lp.server.artikel.ejb.Artikel;
 import com.lp.server.artikel.ejb.Artikelkommentar;
 import com.lp.server.artikel.ejb.Artikelkommentardruck;
-import com.lp.server.artikel.fastlanereader.generated.FLRArtikel;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikelkommentarDto;
-import com.lp.server.artikel.service.ArtikelkommentarDtoAssembler;
 import com.lp.server.artikel.service.ArtikelkommentarFac;
 import com.lp.server.artikel.service.ArtikelkommentardruckDto;
 import com.lp.server.artikel.service.ArtikelkommentarsprDto;
+import com.lp.server.artikel.service.ArtikelsperrenDto;
 import com.lp.server.artikel.service.ArtikelsprDto;
-import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragposition;
-import com.lp.server.auftrag.service.AuftragServiceFac;
-import com.lp.server.auftrag.service.AuftragpositionDto;
+import com.lp.server.artikel.service.VerkaufspreisDto;
+import com.lp.server.artikel.service.VkpreisfindungDto;
 import com.lp.server.benutzer.ejb.Fertigungsgrupperolle;
-import com.lp.server.fertigung.fastlanereader.generated.FLRLossollmaterial;
-import com.lp.server.fertigung.service.FertigungFac;
-import com.lp.server.fertigung.service.LossollmaterialDto;
 import com.lp.server.partner.ejb.Lfliefergruppe;
+import com.lp.server.partner.service.KundeDto;
+import com.lp.server.partner.service.KundesokoDto;
 import com.lp.server.stueckliste.ejb.Fertigungsgruppe;
 import com.lp.server.stueckliste.ejb.Kommentarimport;
 import com.lp.server.stueckliste.ejb.Montageart;
 import com.lp.server.stueckliste.ejb.Posersatz;
+import com.lp.server.stueckliste.ejb.Stklagerentnahme;
 import com.lp.server.stueckliste.ejb.Stueckliste;
 import com.lp.server.stueckliste.ejb.Stuecklistearbeitsplan;
 import com.lp.server.stueckliste.ejb.Stuecklisteart;
@@ -99,12 +107,18 @@ import com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklistearbeitsp
 import com.lp.server.stueckliste.fastlanereader.generated.FLRStuecklisteposition;
 import com.lp.server.stueckliste.service.FertigungsgruppeDto;
 import com.lp.server.stueckliste.service.FertigungsgruppeDtoAssembler;
+import com.lp.server.stueckliste.service.IStklImportResult;
 import com.lp.server.stueckliste.service.KommentarimportDto;
 import com.lp.server.stueckliste.service.KommentarimportDtoAssembler;
+import com.lp.server.stueckliste.service.KundenStuecklistepositionDto;
 import com.lp.server.stueckliste.service.MontageartDto;
 import com.lp.server.stueckliste.service.MontageartDtoAssembler;
 import com.lp.server.stueckliste.service.PosersatzDto;
 import com.lp.server.stueckliste.service.PosersatzDtoAssembler;
+import com.lp.server.stueckliste.service.StklINFRAHelperDto;
+import com.lp.server.stueckliste.service.FertigungsStklImportSpezifikation;
+import com.lp.server.stueckliste.service.StklagerentnahmeDto;
+import com.lp.server.stueckliste.service.StklagerentnahmeDtoAssembler;
 import com.lp.server.stueckliste.service.StrukturierterImportDto;
 import com.lp.server.stueckliste.service.StrukturierterImportSiemensNXDto;
 import com.lp.server.stueckliste.service.StuecklisteDto;
@@ -122,10 +136,18 @@ import com.lp.server.stueckliste.service.StuecklisteeigenschaftartDto;
 import com.lp.server.stueckliste.service.StuecklisteeigenschaftartDtoAssembler;
 import com.lp.server.stueckliste.service.StuecklistepositionDto;
 import com.lp.server.stueckliste.service.StuecklistepositionDtoAssembler;
+import com.lp.server.system.jcr.service.JCRDocDto;
+import com.lp.server.system.jcr.service.JCRDocFac;
+import com.lp.server.system.jcr.service.PrintInfoDto;
+import com.lp.server.system.jcr.service.docnode.DocNodeFile;
+import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.EinheitDto;
+import com.lp.server.system.service.IImportHead;
+import com.lp.server.system.service.IImportPositionen;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.MandantDto;
 import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.MediaFac;
 import com.lp.server.system.service.ParameterFac;
@@ -133,14 +155,18 @@ import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.logger.HvDtoLogger;
+import com.lp.service.BelegpositionDto;
+import com.lp.service.StklImportSpezifikation;
 import com.lp.service.StuecklisteInfoDto;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
 
 @Stateless
-public class StuecklisteFacBean extends Facade implements StuecklisteFac {
+public class StuecklisteFacBean extends Facade implements StuecklisteFac, IImportPositionen, IImportHead {
 
 	@PersistenceContext
 	private EntityManager em;
@@ -1002,6 +1028,18 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 						.boolean2Short((Boolean) parameter.getCWertAsObject()));
 
 			}
+
+			if (stuecklisteDto.getBKeineAutomatischeMaterialbuchung() == null) {
+				ParametermandantDto parameter = (ParametermandantDto) getParameterFac()
+						.getMandantparameter(
+								theClientDto.getMandant(),
+								ParameterFac.KATEGORIE_FERTIGUNG,
+								ParameterFac.PARAMETER_KEINE_AUTOMATISCHE_MATERIALBUCHUNG);
+
+				stuecklisteDto.setBKeineAutomatischeMaterialbuchung(Helper
+						.boolean2Short((Boolean) parameter.getCWertAsObject()));
+			}
+
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
 		}
@@ -1024,7 +1062,8 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 					stuecklisteDto.getBUeberlieferbar(),
 					stuecklisteDto.getIErfassungsfaktor(),
 					stuecklisteDto.getLagerIIdZiellager(),
-					stuecklisteDto.getBDruckeinlagerstandsdetail());
+					stuecklisteDto.getBDruckeinlagerstandsdetail(),
+					stuecklisteDto.getBKeineAutomatischeMaterialbuchung());
 			em.persist(stueckliste);
 			em.flush();
 			setStuecklisteFromStuecklisteDto(stueckliste, stuecklisteDto);
@@ -1081,9 +1120,9 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 			throwEJBExceptionLPRespectOld(e);
 		}
 
-		HvDtoLogger<StuecklisteDto> zeitdatenLogger = new HvDtoLogger<StuecklisteDto>(
+		HvDtoLogger<StuecklisteDto> stuecklisteLogger = new HvDtoLogger<StuecklisteDto>(
 				em, theClientDto);
-		zeitdatenLogger.logInsert(stuecklisteDto);
+		stuecklisteLogger.logInsert(stuecklisteDto);
 
 		return stuecklisteDto.getIId();
 	}
@@ -1600,6 +1639,11 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 		stueckliste.setBUeberlieferbar(stuecklisteDto.getBUeberlieferbar());
 		stueckliste.setBDruckeinlagerstandsdetail(stuecklisteDto
 				.getBDruckeinlagerstandsdetail());
+		stueckliste.setBKeineAutomatischeMaterialbuchung(stuecklisteDto
+				.getBKeineAutomatischeMaterialbuchung());
+		stueckliste.setPersonalIIdFreigabe(stuecklisteDto
+				.getPersonalIIdFreigabe());
+		stueckliste.setTFreigabe(stuecklisteDto.getTFreigabe());
 		em.merge(stueckliste);
 		em.flush();
 	}
@@ -2218,7 +2262,7 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 
 	public void kopiereStuecklistenPositionen(Integer stuecklisteIId_Quelle,
 			Integer stuecklisteIId_Ziel, TheClientDto theClientDto)
-			throws EJBExceptionLP {
+			throws EJBExceptionLP, RemoteException {
 		if (stuecklisteIId_Quelle == null || stuecklisteIId_Ziel == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_FELD_DARF_NICHT_NULL_SEIN,
@@ -2591,12 +2635,446 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 		return alNichtimportiert;
 	}
 
+	private void addToParentINFRA(ArrayList<StklINFRAHelperDto> list,
+			StklINFRAHelperDto row) {
+		StklINFRAHelperDto lastRow = null;
+
+		char c = '.';// das zu zaehlende Zeichen
+		int counter = 0;// Zaehler
+		for (int z = row.ebene.length() - 1; z >= 0; z--) {
+			if (row.ebene.charAt(z) == c)
+				counter++;
+		}
+
+		int rowEbenen = counter;
+
+		if (list.size() > 0 && rowEbenen > 1) {
+			lastRow = list.get(list.size() - 1);
+			while (lastRow.unterpositionen.size() > 0 && (--rowEbenen > 1)) {
+				lastRow = lastRow.unterpositionen.get(lastRow.unterpositionen
+						.size() - 1);
+			}
+
+			lastRow.unterpositionen.add(row);
+		} else {
+			list.add(row);
+		}
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public void importiereStuecklistenINFRA(
+			HashMap<String, HashMap<String, byte[]>> hmDateien,
+			TheClientDto theClientDto) {
+
+		try {
+
+			Iterator<String> it = hmDateien.keySet().iterator();
+
+			while (it.hasNext()) {
+
+				String stuecklistenname = it.next();
+
+				ArtikelDto artikelDto = getArtikelFac()
+						.artikelFindByCNrMandantCNrOhneExc(stuecklistenname,
+								theClientDto.getMandant());
+
+				Integer artikelIId = null;
+
+				if (artikelDto == null) {
+
+					ArtikelDto aDto = new ArtikelDto();
+					aDto.setCNr(stuecklistenname);
+					aDto.setBLagerbewirtschaftet(Helper.boolean2Short(true));
+					aDto.setEinheitCNr(SystemFac.EINHEIT_STUECK);
+					aDto.setArtikelartCNr(ArtikelFac.ARTIKELART_ARTIKEL);
+					aDto.setBVersteckt(Helper.boolean2Short(false));
+
+					artikelIId = getArtikelFac().createArtikel(aDto,
+							theClientDto);
+
+				} else {
+					artikelIId = artikelDto.getIId();
+				}
+
+				StuecklisteDto stklDto = stuecklisteFindByArtikelIIdMandantCNrOhneExc(
+						artikelIId, theClientDto.getMandant());
+
+				if (stklDto == null) {
+					// Nur wenn noch keine STKL vorhanden
+					HashMap<String, byte[]> dateien = hmDateien
+							.get(stuecklistenname);
+
+					byte[] xlsFile = dateien.get("XLS");
+					try {
+						ByteArrayInputStream is = new ByteArrayInputStream(
+								xlsFile);
+						Workbook workbook = Workbook.getWorkbook(is);
+
+						Sheet sheet = workbook.getSheet(0);
+
+						ArrayList<StklINFRAHelperDto> alDaten = new ArrayList<StklINFRAHelperDto>();
+
+						if (sheet.getRows() > 1 && sheet.getColumns() > 4) {
+
+							for (int i = 1; i < sheet.getRows(); i++) {
+								Cell[] sZeile = sheet.getRow(i);
+
+								String ebene = sZeile[CellReferenceHelper
+										.getColumn("A")].getContents();
+
+								String posnr = sZeile[CellReferenceHelper
+										.getColumn("B")].getContents();
+								String artikelnr = sZeile[CellReferenceHelper
+										.getColumn("C")].getContents();
+								String bezeichnung = sZeile[CellReferenceHelper
+										.getColumn("D")].getContents();
+
+								String kommentar1 = sZeile[CellReferenceHelper
+										.getColumn("J")].getContents();
+								String kommentar2 = sZeile[CellReferenceHelper
+										.getColumn("K")].getContents();
+
+								StklINFRAHelperDto posDto = new StklINFRAHelperDto();
+								posDto.artikelnummer = artikelnr;
+								posDto.bezeichnung = bezeichnung;
+								posDto.position = posnr;
+								posDto.ebene = ebene;
+
+								BigDecimal menge = BigDecimal.ZERO;
+
+								String sMenge = sZeile[CellReferenceHelper
+										.getColumn("E")].getContents();
+
+								if (sMenge != null && sMenge.contains(",")) {
+									sMenge = sMenge.replaceAll(",", ".");
+									menge = new BigDecimal(sMenge);
+								}
+								posDto.menge = menge;
+
+								// Wenn Artikelnr Leer, dann ist das die
+								// Zusatzbezeichnung der vorherigen Zeile
+								if (artikelnr == "") {
+									if (i == 1) {
+										posDto.bHandeingabe = true;
+										alDaten.add(posDto);
+									} else {
+
+										StklINFRAHelperDto vorheriger = alDaten
+												.get(alDaten.size() - 1);
+
+										if (vorheriger.kommentar.length() == 0) {
+											vorheriger.kommentar = bezeichnung;
+										} else {
+											vorheriger.kommentar = bezeichnung
+													+ "|"
+													+ vorheriger.kommentar;
+										}
+
+										alDaten.set(alDaten.size() - 1,
+												vorheriger);
+
+									}
+								} else {
+
+									posDto.kommentar = kommentar1;
+									if (kommentar2 != null
+											&& kommentar2.length() > 0) {
+										posDto.kommentar += "|" + kommentar2;
+									}
+
+									alDaten.add(posDto);
+
+								}
+
+							}
+						}
+
+						// Nun noch verschachteln
+						ArrayList<StklINFRAHelperDto> gesamtliste = new ArrayList<StklINFRAHelperDto>();
+
+						for (int i = 0; i < alDaten.size(); i++) {
+
+							addToParentINFRA(gesamtliste, alDaten.get(i));
+						}
+
+						// In Kopfstuecklsite verpacken
+						ArrayList<StklINFRAHelperDto> kopf = new ArrayList<StklINFRAHelperDto>();
+
+						StklINFRAHelperDto kopfDto = new StklINFRAHelperDto();
+						kopfDto.artikelnummer = stuecklistenname;
+						kopfDto.menge = BigDecimal.ONE;
+						kopfDto.unterpositionen = gesamtliste;
+						kopf.add(kopfDto);
+
+						MontageartDto[] dtos = getStuecklisteFac()
+								.montageartFindByMandantCNr(theClientDto);
+
+						Integer monatgartIId = null;
+						if (dtos != null && dtos.length > 0) {
+							monatgartIId = dtos[0].getIId();
+						}
+
+						getStuecklisteFac().stklINFRAanlegen(kopf, true, null,
+								monatgartIId, theClientDto);
+
+						// Nun alles anlegen, was noch nicht vorhandens ist
+
+					} catch (BiffException e) {
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
+					} catch (IOException e) {
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e);
+					}
+
+					dateien.remove("XLS");
+
+					stklDto = stuecklisteFindByArtikelIIdMandantCNrOhneExc(
+							artikelIId, theClientDto.getMandant());
+					if (stklDto != null) {
+						Iterator itPDF = dateien.keySet().iterator();
+
+						while (itPDF.hasNext()) {
+							String pdfFileName = (String) itPDF.next();
+							byte[] pdfFile = dateien.get(pdfFileName);
+							// In Dokumentenbalage
+							PrintInfoDto oInfo = getJCRDocFac()
+									.getPathAndPartnerAndTable(
+											stklDto.getIId(),
+											QueryParameters.UC_ID_STUECKLISTE,
+											theClientDto);
+
+							DocPath docPath = null;
+							if (oInfo != null) {
+								docPath = oInfo.getDocPath();
+							}
+							if (docPath != null) {
+
+								String sName = pdfFileName;
+
+								JCRDocDto jcrDocDto = new JCRDocDto();
+
+								Integer iPartnerIId = null;
+								MandantDto mandantDto = getMandantFac()
+										.mandantFindByPrimaryKey(
+												theClientDto.getMandant(),
+												theClientDto);
+								iPartnerIId = mandantDto.getPartnerIId();
+
+								jcrDocDto.setbData(pdfFile);
+
+								jcrDocDto.setDocPath(docPath
+										.add(new DocNodeFile(sName)));
+								jcrDocDto.setlPartner(iPartnerIId);
+								jcrDocDto.setsBelegnummer("");
+								jcrDocDto
+										.setsBelegart(JCRDocFac.DEFAULT_ARCHIV_BELEGART);
+								jcrDocDto.setlAnleger(theClientDto
+										.getIDPersonal());
+								jcrDocDto.setlZeitpunkt(System
+										.currentTimeMillis());
+								jcrDocDto.setsSchlagworte(" ");
+								jcrDocDto.setsName(sName);
+								jcrDocDto.setsFilename(sName);
+								if (oInfo.getTable() != null) {
+									jcrDocDto.setsTable(oInfo.getTable());
+								} else {
+									jcrDocDto.setsTable(" ");
+								}
+								jcrDocDto.setsRow(" ");
+
+								jcrDocDto.setsMIME(".pdf");
+								jcrDocDto
+										.setlSicherheitsstufe(JCRDocFac.SECURITY_ARCHIV);
+								jcrDocDto
+										.setsGruppierung(JCRDocFac.DEFAULT_ARCHIV_GRUPPE);
+								jcrDocDto.setbVersteckt(false);
+								jcrDocDto.setlVersion(getJCRDocFac()
+										.getNextVersionNumer(jcrDocDto));
+								getJCRDocFac()
+										.addNewDocumentOrNewVersionOfDocument(
+												jcrDocDto, theClientDto);
+
+							}
+
+						}
+					}
+				}
+
+			}
+
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+
+	}
+
+	public void stklINFRAanlegen(ArrayList<StklINFRAHelperDto> alDaten,
+			boolean bKopf, Integer stuecklisteIId, Integer montageartIId,
+			TheClientDto theClientDto) {
+
+		for (int i = 0; i < alDaten.size(); i++) {
+			try {
+				StklINFRAHelperDto zeile = alDaten.get(i);
+
+				String zeileKommentar = zeile.kommentar;
+				if (zeileKommentar.length() > 79) {
+					zeileKommentar = zeileKommentar.substring(0, 79);
+				}
+
+				if (zeile.bHandeingabe == false) {
+
+					// Zuerst Artikel suchen und anlegen
+					ArtikelDto artikelDto = getArtikelFac()
+							.artikelFindByCNrMandantCNrOhneExc(
+									zeile.artikelnummer,
+									theClientDto.getMandant());
+
+					Integer artikelIId = null;
+
+					if (artikelDto == null) {
+
+						ArtikelDto aDto = new ArtikelDto();
+						aDto.setCNr(zeile.artikelnummer);
+						aDto.setBLagerbewirtschaftet(Helper.boolean2Short(true));
+						aDto.setEinheitCNr(SystemFac.EINHEIT_STUECK);
+						aDto.setArtikelartCNr(ArtikelFac.ARTIKELART_ARTIKEL);
+						aDto.setBVersteckt(Helper.boolean2Short(false));
+						ArtikelsprDto asprDto = new ArtikelsprDto();
+						asprDto.setCBez(zeile.bezeichnung);
+						aDto.setArtikelsprDto(asprDto);
+
+						artikelIId = getArtikelFac().createArtikel(aDto,
+								theClientDto);
+
+					} else {
+						artikelIId = artikelDto.getIId();
+					}
+
+					if (zeile.unterpositionen.size() > 0) {
+
+						// Wenn Stkl vorhanden, dann auslassen
+
+						StuecklisteDto stklDto = stuecklisteFindByArtikelIIdMandantCNrOhneExc(
+								artikelIId, theClientDto.getMandant());
+
+						if (stklDto == null) {
+							// Stueckliste anlegen
+
+							StuecklisteDto stuecklisteDto = new StuecklisteDto();
+							stuecklisteDto.setArtikelIId(artikelIId);
+
+							try {
+								ParametermandantDto parameter = (ParametermandantDto) getParameterFac()
+										.getMandantparameter(
+												theClientDto.getMandant(),
+												ParameterFac.KATEGORIE_STUECKLISTE,
+												ParameterFac.PARAMETER_UNTERSTUECKLISTEN_AUTOMATISCH_AUSGEBEN);
+
+								stuecklisteDto
+										.setBAusgabeunterstueckliste(Helper
+												.boolean2Short((Boolean) parameter
+														.getCWertAsObject()));
+
+								parameter = (ParametermandantDto) getParameterFac()
+										.getMandantparameter(
+												theClientDto.getMandant(),
+												ParameterFac.KATEGORIE_STUECKLISTE,
+												ParameterFac.PARAMETER_DEFAULT_MATERIALBUCHUNG_BEI_ABLIEFERUNG);
+
+								stuecklisteDto
+										.setBMaterialbuchungbeiablieferung(Helper
+												.boolean2Short((Boolean) parameter
+														.getCWertAsObject()));
+
+								FertigungsgruppeDto[] fertigungsgruppeDtos = fertigungsgruppeFindByMandantCNr(
+										theClientDto.getMandant(), theClientDto);
+
+								if (fertigungsgruppeDtos.length > 0) {
+									stuecklisteDto
+											.setFertigungsgruppeIId(fertigungsgruppeDtos[0]
+													.getIId());
+								}
+								stuecklisteDto
+										.setLagerIIdZiellager(getLagerFac()
+												.getHauptlagerDesMandanten(
+														theClientDto).getIId());
+								stuecklisteDto
+										.setNLosgroesse(new BigDecimal(1));
+								stuecklisteDto.setIErfassungsfaktor(1);
+
+								stuecklisteDto
+										.setStuecklisteartCNr(StuecklisteFac.STUECKLISTEART_STUECKLISTE);
+
+							} catch (RemoteException e) {
+								throwEJBExceptionLPRespectOld(e);
+							}
+
+							stuecklisteDto.setBFremdfertigung(Helper
+									.boolean2Short(false));
+							Integer stuecklisteIIdNeu = getStuecklisteFac()
+									.createStueckliste(stuecklisteDto,
+											theClientDto);
+
+							getStuecklisteFac().stklINFRAanlegen(
+									zeile.unterpositionen, false,
+									stuecklisteIIdNeu, montageartIId,
+									theClientDto);
+
+						}
+
+					}
+
+					if (bKopf == false) {
+						StuecklistepositionDto stklposDto = new StuecklistepositionDto();
+
+						stklposDto.setStuecklisteIId(stuecklisteIId);
+						stklposDto.setArtikelIId(artikelIId);
+						stklposDto.setMontageartIId(montageartIId);
+						stklposDto.setEinheitCNr(SystemFac.EINHEIT_STUECK);
+						stklposDto.setNMenge(zeile.menge);
+						stklposDto.setCPosition(zeile.position);
+						stklposDto.setCKommentar(zeileKommentar);
+						stklposDto
+								.setPositionsartCNr(LocaleFac.POSITIONSART_IDENT);
+						stklposDto.setBMitdrucken(Helper.boolean2Short(true));
+
+						getStuecklisteFac().createStuecklisteposition(
+								stklposDto, theClientDto);
+
+					}
+
+				} else {
+
+					StuecklistepositionDto stklposDto = new StuecklistepositionDto();
+					stklposDto.setMontageartIId(montageartIId);
+					stklposDto.setStuecklisteIId(stuecklisteIId);
+					stklposDto.setSHandeingabe(zeile.bezeichnung);
+					stklposDto.setEinheitCNr(SystemFac.EINHEIT_STUECK);
+					stklposDto.setNMenge(BigDecimal.ONE);
+					stklposDto
+							.setPositionsartCNr(LocaleFac.POSITIONSART_HANDEINGABE);
+					stklposDto.setBMitdrucken(Helper.boolean2Short(true));
+					stklposDto.setCPosition(zeile.position);
+					stklposDto.setCKommentar(zeileKommentar);
+
+					getStuecklisteFac().createStuecklisteposition(stklposDto,
+							theClientDto);
+
+				}
+
+			} catch (RemoteException e) {
+				throwEJBExceptionLPRespectOld(e);
+			}
+		}
+
+	}
+
 	@TransactionTimeout(5000)
 	public ArrayList importiereStuecklistenstruktur(
 			ArrayList<StrukturierterImportDto> struktur,
 			Integer stuecklisteIId, TheClientDto theClientDto,
 			boolean bAnfragevorschlagErzeugen,
-			java.sql.Timestamp tLieferterminfuerAnfrageVorschlag) {
+			java.sql.Timestamp tLieferterminfuerAnfrageVorschlag)
+			throws EJBExceptionLP, RemoteException {
 		return importiereStuecklistenstruktur(struktur, stuecklisteIId,
 				theClientDto, null, bAnfragevorschlagErzeugen,
 				tLieferterminfuerAnfrageVorschlag, new BigDecimal(1));
@@ -2607,7 +3085,8 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 			Integer stuecklisteIId, TheClientDto theClientDto,
 			ArrayList alArtikelWirdAngelegt, boolean bAnfragevorschlagErzeugen,
 			java.sql.Timestamp tLieferterminfuerAnfrageVorschlag,
-			BigDecimal bdMultiplikatorFuerAnfragevorschlag) {
+			BigDecimal bdMultiplikatorFuerAnfragevorschlag)
+			throws EJBExceptionLP, RemoteException {
 
 		if (alArtikelWirdAngelegt == null) {
 			alArtikelWirdAngelegt = new ArrayList();
@@ -2955,7 +3434,8 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 											tLieferterminfuerAnfrageVorschlag,
 											new BigDecimal(stkl.getMenge())
 													.multiply(bdMultiplikatorFuerAnfragevorschlag),
-											null, theClientDto);
+											null, null, null, null,
+											theClientDto);
 						}
 					}
 
@@ -2990,7 +3470,8 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 	}
 
 	public Integer artikelFindenBzwNeuAnlegen(TheClientDto theClientDto,
-			String defaultEinheit, StrukturierterImportDto stkl) {
+			String defaultEinheit, StrukturierterImportDto stkl)
+			throws EJBExceptionLP, RemoteException {
 		Integer artikelIId = null;
 
 		try {
@@ -3551,7 +4032,7 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 
 	public Integer createStuecklistepositions(
 			StuecklistepositionDto[] stuecklistepositionDtos,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 		Integer iId = null;
 		for (int i = 0; i < stuecklistepositionDtos.length; i++) {
 			iId = createStuecklisteposition(stuecklistepositionDtos[i],
@@ -3573,7 +4054,7 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 
 	public Integer createStuecklisteposition(
 			StuecklistepositionDto stuecklistepositionDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 
 		if (stuecklistepositionDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
@@ -3674,16 +4155,21 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 					theClientDto)) {
 				Artikel artikel = em.find(Artikel.class,
 						stuecklistepositionDto.getArtikelIId());
+				//SP3353
+				Artikel artikelStueckliste = em.find(Artikel.class,
+						stueckliste.getArtikelIId());
+
 				if (Helper.short2boolean(artikel.getBSeriennrtragend())) {
+					if (Helper.short2boolean(artikelStueckliste.getBSeriennrtragend())) {
 
-					if (stuecklistepositionDto.getNMenge().doubleValue() != 1) {
-						throw new EJBExceptionLP(
-								EJBExceptionLP.FEHLER_POSITIONSMENGE_EINES_SNR_ARTIKELS_MUSS_1_SEIN_WENN_GERAETESNR,
-								new Exception(
-										"FEHLER_POSITIONSMENGE_EINES_SNR_ARTIKELS_MUSS_1_SEIN_WENN_GERAETESNR"));
+						if (stuecklistepositionDto.getNMenge().doubleValue() != 1) {
+							throw new EJBExceptionLP(
+									EJBExceptionLP.FEHLER_POSITIONSMENGE_EINES_SNR_ARTIKELS_MUSS_1_SEIN_WENN_GERAETESNR,
+									new Exception(
+											"FEHLER_POSITIONSMENGE_EINES_SNR_ARTIKELS_MUSS_1_SEIN_WENN_GERAETESNR"));
 
+						}
 					}
-
 				}
 
 			}
@@ -3740,14 +4226,23 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 
 		}
 
+		java.sql.Timestamp sqlTimestamp = getTimestamp();
+
 		stuecklistepositionDto.setPersonalIIdAnlegen(theClientDto
 				.getIDPersonal());
 		stuecklistepositionDto.setPersonalIIdAendern(theClientDto
 				.getIDPersonal());
-		stuecklistepositionDto.setTAnlegen(new java.sql.Timestamp(System
-				.currentTimeMillis()));
-		stuecklistepositionDto.setTAendern(new java.sql.Timestamp(System
-				.currentTimeMillis()));
+		stuecklistepositionDto.setTAnlegen(sqlTimestamp);
+		stuecklistepositionDto.setTAendern(sqlTimestamp);
+
+		if (theClientDto.getIStatus() != null) {
+			stuecklistepositionDto.setAnsprechpartnerIIdAnlegen(theClientDto
+					.getIStatus());
+			stuecklistepositionDto.setAnsprechpartnerIIdAendern(theClientDto
+					.getIStatus());
+			stuecklistepositionDto.setTAnlegenAnsprechpartner(sqlTimestamp);
+			stuecklistepositionDto.setTAendernAnsprechpartner(sqlTimestamp);
+		}
 
 		try {
 
@@ -3789,9 +4284,9 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 
 			stueckliste.setPersonalIIdAendernposition(theClientDto
 					.getIDPersonal());
-			stueckliste.setTAendernposition(new java.sql.Timestamp(System
-					.currentTimeMillis()));
-
+			stueckliste.setTAendernposition(getTimestamp());
+			em.merge(stueckliste);
+			em.flush();
 		} catch (EntityExistsException e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, e);
 		} catch (NoResultException ex) {
@@ -3850,7 +4345,7 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 
 	public void updateStuecklisteposition(
 			StuecklistepositionDto stuecklistepositionDto,
-			TheClientDto theClientDto) throws EJBExceptionLP {
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 
 		if (stuecklistepositionDto == null) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DTO_IS_NULL,
@@ -3889,8 +4384,8 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 
 		}
 
-		vergleicheStuecklistepositionDtoVorherNachherUndLoggeAenderungen(
-				stuecklistepositionDto, theClientDto);
+		// vergleicheStuecklistepositionDtoVorherNachherUndLoggeAenderungen(
+		// stuecklistepositionDto, theClientDto);
 
 		Stueckliste stueckliste = em.find(Stueckliste.class,
 				stuecklistepositionDto.getStuecklisteIId());
@@ -3976,7 +4471,6 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 		}
 
 		Integer iId = stuecklistepositionDto.getIId();
-		// try {
 		Stuecklisteposition stuecklisteposition = em.find(
 				Stuecklisteposition.class, iId);
 		if (stuecklisteposition == null) {
@@ -4002,25 +4496,23 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 			stuecklistepositionDto.setArtikelIId(iIdArtikel);
 		}
 
+		java.sql.Timestamp sqlTimestamp = getTimestamp();
 		stuecklistepositionDto.setPersonalIIdAendern(theClientDto
 				.getIDPersonal());
-		stuecklistepositionDto.setTAendern(new java.sql.Timestamp(System
-				.currentTimeMillis()));
+		stuecklistepositionDto.setTAendern(sqlTimestamp);
+		if (theClientDto.getIStatus() != null) {
+			stuecklistepositionDto.setAnsprechpartnerIIdAendern(theClientDto
+					.getIStatus());
+			stuecklistepositionDto.setTAendernAnsprechpartner(sqlTimestamp);
+		}
 
+		vergleicheStuecklistepositionDtoVorherNachherUndLoggeAenderungen(
+				stuecklistepositionDto, theClientDto);
 		setStuecklistepositionFromStuecklistepositionDto(stuecklisteposition,
 				stuecklistepositionDto);
 
 		stueckliste.setPersonalIIdAendernposition(theClientDto.getIDPersonal());
-		stueckliste.setTAendernposition(new java.sql.Timestamp(System
-				.currentTimeMillis()));
-
-		// }
-		// catch (FinderException e) {
-		// throw new EJBExceptionLP(EJBExceptionLP.
-		// FEHLER_BEI_FINDBYPRIMARYKEY,
-		// e);
-
-		// }
+		stueckliste.setTAendernposition(sqlTimestamp);
 	}
 
 	public StuecklistepositionDto stuecklistepositionFindByPrimaryKey(
@@ -4029,14 +4521,43 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_PKFIELD_IS_NULL,
 					new Exception("iId == null"));
 		}
-		// try {
+
 		Stuecklisteposition stuecklisteposition = em.find(
 				Stuecklisteposition.class, iId);
 		if (stuecklisteposition == null) {
 			throw new EJBExceptionLP(
 					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 		}
-		StuecklistepositionDto stuecklistepositionDto = assembleStuecklistepositionDto(stuecklisteposition);
+		return assembleAndLoad(stuecklisteposition, theClientDto);
+		// StuecklistepositionDto stuecklistepositionDto =
+		// assembleStuecklistepositionDto(stuecklisteposition);
+		// Montageart montageart = em.find(Montageart.class,
+		// stuecklistepositionDto.getMontageartIId());
+		// if (montageart == null) {
+		// throw new EJBExceptionLP(
+		// EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		// }
+		// stuecklistepositionDto
+		// .setMontageartDto(assembleMontageartDto(montageart));
+		//
+		// ArtikelDto a = getArtikelFac().artikelFindByPrimaryKey(
+		// stuecklistepositionDto.getArtikelIId(), theClientDto);
+		// stuecklistepositionDto.setArtikelDto(a);
+		//
+		// if (a.getArtikelartCNr().equals(ArtikelFac.ARTIKELART_HANDARTIKEL)) {
+		// stuecklistepositionDto
+		// .setPositionsartCNr(LocaleFac.POSITIONSART_HANDEINGABE);
+		// } else {
+		// stuecklistepositionDto
+		// .setPositionsartCNr(LocaleFac.POSITIONSART_IDENT);
+		// }
+		//
+		// return stuecklistepositionDto;
+	}
+
+	private StuecklistepositionDto assembleAndLoad(
+			Stuecklisteposition position, TheClientDto theClientDto) {
+		StuecklistepositionDto stuecklistepositionDto = assembleStuecklistepositionDto(position);
 		Montageart montageart = em.find(Montageart.class,
 				stuecklistepositionDto.getMontageartIId());
 		if (montageart == null) {
@@ -4059,11 +4580,6 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 		}
 
 		return stuecklistepositionDto;
-		// }
-		// catch (FinderException e) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// e);
-		// }
 	}
 
 	public StuecklistepositionDto stuecklistepositionFindByPrimaryKeyOhneExc(
@@ -4127,6 +4643,118 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 		// FEHLER_BEI_FIND,
 		// e);
 		// }
+	}
+
+	public List<KundenStuecklistepositionDto> stuecklistepositionFindByStuecklisteIIdAllData(
+			Integer stuecklisteIId, boolean withPrice, TheClientDto theClientDto)
+			throws RemoteException, EJBExceptionLP {
+		Validator.notNull(stuecklisteIId, "stuecklisteIId");
+		Validator.notNull(theClientDto, "theClientDto");
+
+		Query query = em
+				.createNamedQuery("StuecklistepositionfindByStuecklisteIId");
+		query.setParameter(1, stuecklisteIId);
+		Collection<Stuecklisteposition> cl = query.getResultList();
+
+		return transformToKundenstuecklisteDto(cl, withPrice, theClientDto);
+	}
+
+	private List<KundenStuecklistepositionDto> transformToKundenstuecklisteDto(
+			Collection<Stuecklisteposition> cl, boolean withPrice,
+			TheClientDto theClientDto) throws RemoteException {
+		KundeDto kundeDto = null;
+		if (theClientDto.getIStatus() != null) {
+			kundeDto = getKundeFac()
+					.kundeFindByAnsprechpartnerIdcNrMandantOhneExc(
+							theClientDto.getIStatus(),
+							theClientDto.getMandant(), theClientDto);
+			if (kundeDto != null
+					&& !kundeDto.getMandantCNr().equals(
+							theClientDto.getMandant())) {
+				kundeDto = null;
+			}
+		}
+
+		java.sql.Date datePrice = new Date(System.currentTimeMillis());
+//		java.sql.Date datePrice = null ;
+		java.sql.Date stuecklisteDate = null ;
+		List<KundenStuecklistepositionDto> stuecklistePositionDtos = new ArrayList<KundenStuecklistepositionDto>();
+		for (Stuecklisteposition position : cl) {
+			StuecklistepositionDto dto = assembleAndLoad(position, theClientDto);
+			// if(dto.getArtikelDto().getBVersteckt() > 0) continue ;
+
+			KundenStuecklistepositionDto kundenPosDto = new KundenStuecklistepositionDto(
+					dto);
+			stuecklistePositionDtos.add(kundenPosDto);
+
+			if (kundeDto == null) continue;
+
+			ArtikelsperrenDto[] sperrenDtos = getArtikelFac().artikelsperrenFindByArtikelIId(dto.getArtikelIId()) ;
+			kundenPosDto.setArtikelGesperrt(sperrenDtos != null && sperrenDtos.length > 0);
+			
+			KundesokoDto sokoDto = getKundesokoFac()
+					.kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
+							kundeDto.getIId(), dto.getArtikelDto().getIId(),
+							datePrice);
+//							new Date(dto.getTAnlegen().getTime()));
+			if (sokoDto != null) {
+				kundenPosDto.setKundenartikelNummer(sokoDto
+						.getCKundeartikelnummer());
+			}
+
+			if (withPrice == false)
+				continue;
+
+			Integer mwstsatzbezId = dto.getArtikelDto().getMwstsatzbezIId();
+			if (mwstsatzbezId == null) {
+				mwstsatzbezId = kundeDto.getMwstsatzbezIId();
+			}
+			// TODO Umrechnen in Lagereinheit
+			VkpreisfindungDto vkpreisfindungDto = getVkPreisfindungFac()
+					.verkaufspreisfindung(
+							dto.getArtikelDto().getIId(),
+							kundeDto.getIId(),
+							dto.getNMenge(),
+							datePrice,
+							kundeDto.getVkpfArtikelpreislisteIIdStdpreisliste(),
+							mwstsatzbezId, kundeDto.getCWaehrung(),
+							theClientDto);
+
+			BigDecimal p = getPriceFromPreisfindung(vkpreisfindungDto);
+			kundenPosDto.setVkPreis(p);
+		}
+
+		return stuecklistePositionDtos;
+	}
+
+	private BigDecimal getMinimumPrice(BigDecimal minimum,
+			VerkaufspreisDto priceDto) {
+		if (priceDto != null && priceDto.nettopreis != null) {
+			return null == minimum ? priceDto.nettopreis : minimum
+					.min(priceDto.nettopreis);
+		}
+
+		return minimum;
+	}
+
+	private BigDecimal getPriceFromPreisfindung(VkpreisfindungDto vkPreisDto) {
+		BigDecimal p = getMinimumPrice(null, vkPreisDto.getVkpStufe3());
+		if (p != null)
+			return p;
+
+		p = getMinimumPrice(null, vkPreisDto.getVkpStufe2());
+		if (p != null)
+			return p;
+
+		p = getMinimumPrice(null, vkPreisDto.getVkpStufe1());
+		if (p != null)
+			return p;
+
+		p = getMinimumPrice(null, vkPreisDto.getVkpPreisbasis());
+		if (p != null)
+			return p;
+
+		return BigDecimal.ZERO;
 	}
 
 	public StuecklistepositionDto[] stuecklistepositionFindByStuecklisteIIdBMitdrucken(
@@ -4253,6 +4881,15 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 		stuecklisteposition.setTAnlegen(stuecklistepositionDto.getTAnlegen());
 		stuecklisteposition.setIBeginnterminoffset(stuecklistepositionDto
 				.getIBeginnterminoffset());
+		stuecklisteposition.setTAnlegenAnsprechpartner(stuecklistepositionDto
+				.getTAnlegenAnsprechpartner());
+		stuecklisteposition.setTAendernAnsprechpartner(stuecklistepositionDto
+				.getTAendernAnsprechpartner());
+		stuecklisteposition.setAnsprechpartnerIIdAendern(stuecklistepositionDto
+				.getAnsprechpartnerIIdAendern());
+		stuecklisteposition.setAnsprechpartnerIIdAnlegen(stuecklistepositionDto
+				.getAnsprechpartnerIIdAnlegen());
+
 		em.merge(stuecklisteposition);
 		em.flush();
 	}
@@ -4326,6 +4963,125 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 
 		returnArray = (FLRStuecklisteposition[]) results.toArray(returnArray);
 
+		// SP3218 Zuerst Zielmengen berechnen
+
+		for (int i = 0; i < returnArray.length; i++) {
+
+			try {
+
+				// Menge nach Zieleinheit umrechnen
+				BigDecimal bdMenge = returnArray[i].getN_menge().multiply(
+						nSatzgroesse);
+
+				EinheitDto einheitDto = getSystemFac().einheitFindByPrimaryKey(
+						returnArray[i].getEinheit_c_nr(), theClientDto);
+
+				// Positionsmenge nach Zielenge umrechnen
+				int dimension = einheitDto.getIDimension().intValue();
+
+				if (dimension == 1) {
+					if (returnArray[i].getF_dimension1() != null) {
+						bdMenge = bdMenge
+								.multiply(new BigDecimal(returnArray[i]
+										.getF_dimension1().doubleValue()));
+					}
+				} else if (dimension == 2) {
+					if (returnArray[i].getF_dimension1() != null
+							&& returnArray[i].getF_dimension2() != null) {
+						bdMenge = bdMenge.multiply(
+								new BigDecimal(returnArray[i].getF_dimension1()
+										.doubleValue())).multiply(
+								new BigDecimal(returnArray[i].getF_dimension2()
+										.doubleValue()));
+					}
+				} else if (dimension == 3) {
+					if (returnArray[i].getF_dimension1() != null
+							&& returnArray[i].getF_dimension2() != null
+							&& returnArray[i].getF_dimension3() != null) {
+						bdMenge = bdMenge
+								.multiply(
+										new BigDecimal(returnArray[i]
+												.getF_dimension1()
+												.doubleValue()))
+								.multiply(
+										new BigDecimal(returnArray[i]
+												.getF_dimension2()
+												.doubleValue()))
+								.multiply(
+										new BigDecimal(returnArray[i]
+												.getF_dimension3()
+												.doubleValue()));
+					}
+				}
+
+				BigDecimal faktor = null;
+				String artikelnummerStueckliste = returnArray[i]
+						.getFlrstueckliste().getFlrartikel().getC_nr();
+				try {
+					faktor = getSystemFac().rechneUmInAndereEinheit(
+							new BigDecimal(1),
+							returnArray[i].getFlrartikel().getEinheit_c_nr(),
+							returnArray[i].getEinheit_c_nr(),
+							returnArray[i].getI_id(), theClientDto);
+				} catch (EJBExceptionLP ex2) {
+					// Projekte 3509/10048/9918
+					String positionsArtikel = returnArray[i].getFlrartikel()
+							.getC_nr();
+					String position = "";
+					if (returnArray[i].getI_sort() != null) {
+						position = returnArray[i].getI_sort() + "";
+					}
+					ArrayList<Object> info = ex2.getAlInfoForTheClient();
+					// Nachricht zusammenbauen
+					String meldung = (String) info.get(0) + "\r\n";
+					meldung += "Zu finden in Ebene " + (iEbene + 1)
+							+ ", St\u00FCckliste: " + artikelnummerStueckliste
+							+ "\r\n";
+					meldung += "Position " + position + "-> Artikelnummer: "
+							+ positionsArtikel;
+					info.set(0, meldung);
+					ex2.setAlInfoForTheClient(info);
+					throwEJBExceptionLPRespectOld(new RemoteException("", ex2));
+				}
+				if (faktor.doubleValue() != 0) {
+					bdMenge = bdMenge.divide(faktor, 12,
+							BigDecimal.ROUND_HALF_EVEN);
+
+					bdMenge = Helper.berechneMengeInklusiveVerschnitt(bdMenge,
+							returnArray[i].getFlrartikel()
+									.getF_verschnittfaktor(), returnArray[i]
+									.getFlrartikel().getF_verschnittbasis(),
+							nLosgroesse, returnArray[i].getFlrartikel()
+									.getF_fertigungs_vpe());
+					// PJ 14352
+					bdMenge = bdMenge.divide(new BigDecimal(returnArray[i]
+							.getFlrstueckliste().getI_erfassungsfaktor()
+							.doubleValue()), 12, BigDecimal.ROUND_HALF_EVEN);
+
+					returnArray[i].bdZielmenge = bdMenge;
+
+				} else {
+					ArrayList<Object> al = new ArrayList<Object>();
+
+					EinheitDto von = getSystemFac().einheitFindByPrimaryKey(
+							returnArray[i].getEinheit_c_nr(), theClientDto);
+					EinheitDto zu = getSystemFac().einheitFindByPrimaryKey(
+							returnArray[i].getFlrartikel().getEinheit_c_nr(),
+							theClientDto);
+
+					al.add(von.formatBez() + " <-> " + zu.formatBez());
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_EINHEITKONVERTIERUNG_KEIN_DIVISOR_DEFINIERT,
+							al,
+							new Exception(
+									"FEHLER_EINHEITKONVERTIERUNG_KEIN_DIVISOR_DEFINIERT"));
+				}
+
+			} catch (RemoteException ex1) {
+				throwEJBExceptionLPRespectOld(ex1);
+			}
+		}
+
 		// NEU Projekt 9730
 		ArrayList<FLRStuecklisteposition> alKomp = new ArrayList();
 		if (bGleichePositionenZusammenfassen == true) {
@@ -4345,6 +5101,8 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 									returnArray[i].getEinheit_c_nr())) {
 						temp.setN_menge(temp.getN_menge().add(
 								returnArray[i].getN_menge()));
+						temp.bdZielmenge = temp.bdZielmenge
+								.add(returnArray[i].bdZielmenge);
 						alKomp.set(j, temp);
 
 						bGefunden = true;
@@ -4457,6 +5215,26 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 				stuecklisteMitStrukturDto
 						.setStuecklistearbeitsplanDto(stuecklistearbeitsplanDto);
 				stuecklisteMitStrukturDto.setBArbeitszeit(true);
+
+				stuecklistearbeitsplanDto.setIArbeitsgang(arbeitsplan[i]
+						.getI_arbeitsgang());
+				stuecklistearbeitsplanDto.setIUnterarbeitsgang(arbeitsplan[i]
+						.getI_unterarbeitsgang());
+				stuecklistearbeitsplanDto.setCKommentar(arbeitsplan[i]
+						.getC_kommentar());
+
+				stuecklisteMitStrukturDto.setTFreigabe(arbeitsplan[i]
+						.getFlrstueckliste().getT_freigabe());
+
+				if (arbeitsplan[i].getFlrstueckliste()
+						.getFlrpersonal_freigabe() != null) {
+					stuecklisteMitStrukturDto
+							.setCKurzzeichenPersonFreigabe(arbeitsplan[i]
+									.getFlrstueckliste()
+									.getFlrpersonal_freigabe()
+									.getC_kurzzeichen());
+				}
+
 				strukturMap.add(stuecklisteMitStrukturDto);
 			}
 			// Wenn Maschine, dann zusaetzlichen Eintrag erstellen:
@@ -4478,12 +5256,29 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 				stuecklistearbeitsplanMaschineDto
 						.setIAufspannung(arbeitsplan[i].getI_aufspannung());
 
+				stuecklistearbeitsplanMaschineDto
+						.setIArbeitsgang(arbeitsplan[i].getI_arbeitsgang());
+				stuecklistearbeitsplanMaschineDto
+						.setIUnterarbeitsgang(arbeitsplan[i]
+								.getI_unterarbeitsgang());
+				stuecklistearbeitsplanMaschineDto.setCKommentar(arbeitsplan[i]
+						.getC_kommentar());
 				StuecklisteMitStrukturDto stuecklisteMitStrukturMaschineDto = new StuecklisteMitStrukturDto(
 						iEbene, null);
 				stuecklisteMitStrukturMaschineDto
 						.setStuecklistearbeitsplanDto(stuecklistearbeitsplanMaschineDto);
 				stuecklisteMitStrukturMaschineDto.setBArbeitszeit(true);
 				stuecklisteMitStrukturMaschineDto.setBMaschinenzeit(true);
+				stuecklisteMitStrukturMaschineDto.setTFreigabe(arbeitsplan[i]
+						.getFlrstueckliste().getT_freigabe());
+				if (arbeitsplan[i].getFlrstueckliste()
+						.getFlrpersonal_freigabe() != null) {
+					stuecklisteMitStrukturMaschineDto
+							.setCKurzzeichenPersonFreigabe(arbeitsplan[i]
+									.getFlrstueckliste()
+									.getFlrpersonal_freigabe()
+									.getC_kurzzeichen());
+				}
 
 				strukturMap.add(stuecklisteMitStrukturMaschineDto);
 			}
@@ -4502,123 +5297,21 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 			stuecklistepositionDto.setEinheitCNr(returnArray[i]
 					.getEinheit_c_nr());
 			stuecklistepositionDto.setNMenge(returnArray[i].getN_menge());
+
+			stuecklistepositionDto.setNZielmenge(returnArray[i].bdZielmenge);
+
 			stuecklistepositionDto.setNKalkpreis(returnArray[i]
 					.getN_kalkpreis());
 			stuecklistepositionDto.setILfdnummer(returnArray[i]
 					.getI_lfdnummer());
 			stuecklistepositionDto.setIId(returnArray[i].getI_id());
+			stuecklistepositionDto.setCKommentar(returnArray[i]
+					.getC_kommentar());
 
-			try {
-
-				// Menge nach Zieleinheit umrechnen
-				BigDecimal bdMenge = returnArray[i].getN_menge().multiply(
-						nSatzgroesse);
-
-				EinheitDto einheitDto = getSystemFac().einheitFindByPrimaryKey(
-						returnArray[i].getEinheit_c_nr(), theClientDto);
-
-				// Positionsmenge nach Zielenge umrechnen
-				int dimension = einheitDto.getIDimension().intValue();
-
-				if (dimension == 1) {
-					if (returnArray[i].getF_dimension1() != null) {
-						bdMenge = bdMenge
-								.multiply(new BigDecimal(returnArray[i]
-										.getF_dimension1().doubleValue()));
-					}
-				} else if (dimension == 2) {
-					if (returnArray[i].getF_dimension1() != null
-							&& returnArray[i].getF_dimension2() != null) {
-						bdMenge = bdMenge.multiply(
-								new BigDecimal(returnArray[i].getF_dimension1()
-										.doubleValue())).multiply(
-								new BigDecimal(returnArray[i].getF_dimension2()
-										.doubleValue()));
-					}
-				} else if (dimension == 3) {
-					if (returnArray[i].getF_dimension1() != null
-							&& returnArray[i].getF_dimension2() != null
-							&& returnArray[i].getF_dimension3() != null) {
-						bdMenge = bdMenge
-								.multiply(
-										new BigDecimal(returnArray[i]
-												.getF_dimension1()
-												.doubleValue()))
-								.multiply(
-										new BigDecimal(returnArray[i]
-												.getF_dimension2()
-												.doubleValue()))
-								.multiply(
-										new BigDecimal(returnArray[i]
-												.getF_dimension3()
-												.doubleValue()));
-					}
-				}
-
-				BigDecimal faktor = null;
-				String artikelnummerStueckliste = returnArray[i]
-						.getFlrstueckliste().getFlrartikel().getC_nr();
-				try {
-					faktor = getSystemFac().rechneUmInAndereEinheit(
-							new BigDecimal(1),
-							returnArray[i].getFlrartikel().getEinheit_c_nr(),
-							returnArray[i].getEinheit_c_nr(),
-							returnArray[i].getI_id(), theClientDto);
-				} catch (EJBExceptionLP ex2) {
-					// Projekte 3509/10048/9918
-					String positionsArtikel = returnArray[i].getFlrartikel()
-							.getC_nr();
-					String position = "";
-					if (returnArray[i].getI_sort() != null) {
-						position = returnArray[i].getI_sort() + "";
-					}
-					ArrayList<Object> info = ex2.getAlInfoForTheClient();
-					// Nachricht zusammenbauen
-					String meldung = (String) info.get(0) + "\r\n";
-					meldung += "Zu finden in Ebene " + (iEbene + 1)
-							+ ", St\u00FCckliste: " + artikelnummerStueckliste
-							+ "\r\n";
-					meldung += "Position " + position + "-> Artikelnummer: "
-							+ positionsArtikel;
-					info.set(0, meldung);
-					ex2.setAlInfoForTheClient(info);
-					throwEJBExceptionLPRespectOld(new RemoteException("", ex2));
-				}
-				if (faktor.doubleValue() != 0) {
-					bdMenge = bdMenge.divide(faktor, 6,
-							BigDecimal.ROUND_HALF_EVEN);
-
-					bdMenge = Helper.berechneMengeInklusiveVerschnitt(bdMenge,
-							returnArray[i].getFlrartikel()
-									.getF_verschnittfaktor(), returnArray[i]
-									.getFlrartikel().getF_verschnittbasis(),
-							nLosgroesse);
-					// PJ 14352
-					bdMenge = bdMenge.divide(new BigDecimal(returnArray[i]
-							.getFlrstueckliste().getI_erfassungsfaktor()
-							.doubleValue()), 6, BigDecimal.ROUND_HALF_EVEN);
-
-					stuecklistepositionDto.setNZielmenge(bdMenge);
-				} else {
-					ArrayList<Object> al = new ArrayList<Object>();
-
-					EinheitDto von = getSystemFac().einheitFindByPrimaryKey(
-							returnArray[i].getEinheit_c_nr(), theClientDto);
-					EinheitDto zu = getSystemFac().einheitFindByPrimaryKey(
-							returnArray[i].getFlrartikel().getEinheit_c_nr(),
-							theClientDto);
-
-					al.add(von.formatBez() + " <-> " + zu.formatBez());
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_EINHEITKONVERTIERUNG_KEIN_DIVISOR_DEFINIERT,
-							al,
-							new Exception(
-									"FEHLER_EINHEITKONVERTIERUNG_KEIN_DIVISOR_DEFINIERT"));
-				}
-
-			} catch (RemoteException ex1) {
-				throwEJBExceptionLPRespectOld(ex1);
-			}
+			stuecklistepositionDto
+					.setfLagermindeststandAusKopfartikel(returnArray[i]
+							.getFlrstueckliste().getFlrartikel()
+							.getF_lagermindest());
 
 			MontageartDto ma = new MontageartDto();
 			ma.setIId(returnArray[i].getFlrmontageart().getI_id());
@@ -4637,8 +5330,18 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 						.getF_dimension3().doubleValue()));
 			}
 
-			strukturMap.add(new StuecklisteMitStrukturDto(iEbene,
-					stuecklistepositionDto));
+			StuecklisteMitStrukturDto zeile = new StuecklisteMitStrukturDto(
+					iEbene, stuecklistepositionDto);
+
+			zeile.setTFreigabe(returnArray[i].getFlrstueckliste()
+					.getT_freigabe());
+			if (returnArray[i].getFlrstueckliste().getFlrpersonal_freigabe() != null) {
+				zeile.setCKurzzeichenPersonFreigabe(returnArray[i]
+						.getFlrstueckliste().getFlrpersonal_freigabe()
+						.getC_kurzzeichen());
+			}
+
+			strukturMap.add(zeile);
 
 			if (bMitUnterstuecklisten == true) {
 				try {
@@ -4670,6 +5373,8 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 								StuecklisteMitStrukturDto strukturTemp = (StuecklisteMitStrukturDto) strukturMap
 										.get(strukturMap.size() - 1);
 								strukturTemp.setBStueckliste(true);
+								strukturTemp
+										.setIAnzahlArbeitsschritte(iAnzahlPositionenArbeitsplan);
 								strukturTemp
 										.setStuecklisteDto(assembleStuecklisteDto(stkl));
 								strukturTemp.setDurchlaufzeit(stkl
@@ -4767,6 +5472,105 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 				.size()];
 		returnArray = (FLRStuecklisteposition[]) results.toArray(returnArray);
 
+		// SP3218 Zuerst alle Zielmengen berechnen
+		for (int i = 0; i < returnArray.length; i++) {
+
+			try {
+
+				// Menge nach Zieleinheit umrechnen
+				BigDecimal bdMenge = returnArray[i].getN_menge().multiply(
+						nSatzgroesse);
+
+				EinheitDto einheitDto = getSystemFac().einheitFindByPrimaryKey(
+						returnArray[i].getEinheit_c_nr(), theClientDto);
+
+				// Positionsmenge nach Zielenge umrechnen
+				int dimension = einheitDto.getIDimension().intValue();
+
+				if (dimension == 1) {
+					if (returnArray[i].getF_dimension1() != null) {
+						bdMenge = bdMenge
+								.multiply(new BigDecimal(returnArray[i]
+										.getF_dimension1().doubleValue()));
+					}
+				} else if (dimension == 2) {
+					if (returnArray[i].getF_dimension1() != null
+							&& returnArray[i].getF_dimension2() != null) {
+						bdMenge = bdMenge.multiply(
+								new BigDecimal(returnArray[i].getF_dimension1()
+										.doubleValue())).multiply(
+								new BigDecimal(returnArray[i].getF_dimension2()
+										.doubleValue()));
+					}
+				} else if (dimension == 3) {
+					if (returnArray[i].getF_dimension1() != null
+							&& returnArray[i].getF_dimension2() != null
+							&& returnArray[i].getF_dimension3() != null) {
+						bdMenge = bdMenge
+								.multiply(
+										new BigDecimal(returnArray[i]
+												.getF_dimension1()
+												.doubleValue()))
+								.multiply(
+										new BigDecimal(returnArray[i]
+												.getF_dimension2()
+												.doubleValue()))
+								.multiply(
+										new BigDecimal(returnArray[i]
+												.getF_dimension3()
+												.doubleValue()));
+					}
+				}
+				BigDecimal faktor = null;
+				if (returnArray[i].getFlrartikel().getEinheit_c_nr()
+						.equals(returnArray[i].getEinheit_c_nr())) {
+					faktor = new BigDecimal(1);
+				} else {
+					faktor = getSystemFac().rechneUmInAndereEinheit(
+							new BigDecimal(1),
+							returnArray[i].getFlrartikel().getEinheit_c_nr(),
+							returnArray[i].getEinheit_c_nr(),
+							returnArray[i].getI_id(), theClientDto);
+				}
+				if (faktor.doubleValue() != 0) {
+					bdMenge = bdMenge.divide(faktor, 12,
+							BigDecimal.ROUND_HALF_EVEN);
+
+					bdMenge = Helper.berechneMengeInklusiveVerschnitt(bdMenge,
+							returnArray[i].getFlrartikel()
+									.getF_verschnittfaktor(), returnArray[i]
+									.getFlrartikel().getF_verschnittbasis(),
+							nLosgroesse, returnArray[i].getFlrartikel()
+									.getF_fertigungs_vpe());
+
+					// PJ 14352
+					bdMenge = bdMenge.divide(new BigDecimal(returnArray[i]
+							.getFlrstueckliste().getI_erfassungsfaktor()
+							.doubleValue()), 12, BigDecimal.ROUND_HALF_EVEN);
+
+					returnArray[i].bdZielmenge = bdMenge;
+
+				} else {
+					ArrayList<Object> al = new ArrayList<Object>();
+
+					EinheitDto von = getSystemFac().einheitFindByPrimaryKey(
+							returnArray[i].getEinheit_c_nr(), theClientDto);
+					EinheitDto zu = getSystemFac().einheitFindByPrimaryKey(
+							returnArray[i].getFlrartikel().getEinheit_c_nr(),
+							theClientDto);
+					al.add(von.formatBez() + " <-> " + zu.formatBez());
+					throw new EJBExceptionLP(
+							EJBExceptionLP.FEHLER_EINHEITKONVERTIERUNG_KEIN_DIVISOR_DEFINIERT,
+							al,
+							new Exception(
+									"FEHLER_EINHEITKONVERTIERUNG_KEIN_DIVISOR_DEFINIERT"));
+				}
+
+			} catch (RemoteException ex1) {
+				throwEJBExceptionLPRespectOld(ex1);
+			}
+		}
+
 		// NEU Projekt 9730
 		ArrayList alKomp = new ArrayList<FLRStuecklisteposition>();
 		if (bGleichePositionenZusammenfassen == true) {
@@ -4786,6 +5590,8 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 									returnArray[i].getEinheit_c_nr())) {
 						temp.setN_menge(temp.getN_menge().add(
 								returnArray[i].getN_menge()));
+						temp.bdZielmenge = temp.bdZielmenge
+								.add(returnArray[i].bdZielmenge);
 
 						// SP1167
 						BigDecimal bdKalkPreis = temp.getN_kalkpreis();
@@ -4861,105 +5667,13 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 			stuecklistepositionDto.setILfdnummer(returnArray[i]
 					.getI_lfdnummer());
 			stuecklistepositionDto.setNMenge(returnArray[i].getN_menge());
+			stuecklistepositionDto.setNZielmenge(returnArray[i].bdZielmenge);
 			stuecklistepositionDto.setNKalkpreis(returnArray[i]
 					.getN_kalkpreis());
 			stuecklistepositionDto.setIId(returnArray[i].getI_id());
 			stuecklistepositionDto.setISort(returnArray[i].getI_sort());
 			stuecklistepositionDto.setBMitdrucken(returnArray[i]
 					.getB_mitdrucken());
-
-			try {
-
-				// Menge nach Zieleinheit umrechnen
-				BigDecimal bdMenge = returnArray[i].getN_menge().multiply(
-						nSatzgroesse);
-
-				EinheitDto einheitDto = getSystemFac().einheitFindByPrimaryKey(
-						returnArray[i].getEinheit_c_nr(), theClientDto);
-
-				// Positionsmenge nach Zielenge umrechnen
-				int dimension = einheitDto.getIDimension().intValue();
-
-				if (dimension == 1) {
-					if (returnArray[i].getF_dimension1() != null) {
-						bdMenge = bdMenge
-								.multiply(new BigDecimal(returnArray[i]
-										.getF_dimension1().doubleValue()));
-					}
-				} else if (dimension == 2) {
-					if (returnArray[i].getF_dimension1() != null
-							&& returnArray[i].getF_dimension2() != null) {
-						bdMenge = bdMenge.multiply(
-								new BigDecimal(returnArray[i].getF_dimension1()
-										.doubleValue())).multiply(
-								new BigDecimal(returnArray[i].getF_dimension2()
-										.doubleValue()));
-					}
-				} else if (dimension == 3) {
-					if (returnArray[i].getF_dimension1() != null
-							&& returnArray[i].getF_dimension2() != null
-							&& returnArray[i].getF_dimension3() != null) {
-						bdMenge = bdMenge
-								.multiply(
-										new BigDecimal(returnArray[i]
-												.getF_dimension1()
-												.doubleValue()))
-								.multiply(
-										new BigDecimal(returnArray[i]
-												.getF_dimension2()
-												.doubleValue()))
-								.multiply(
-										new BigDecimal(returnArray[i]
-												.getF_dimension3()
-												.doubleValue()));
-					}
-				}
-				BigDecimal faktor = null;
-				if (returnArray[i].getFlrartikel().getEinheit_c_nr()
-						.equals(returnArray[i].getEinheit_c_nr())) {
-					faktor = new BigDecimal(1);
-				} else {
-					faktor = getSystemFac().rechneUmInAndereEinheit(
-							new BigDecimal(1),
-							returnArray[i].getFlrartikel().getEinheit_c_nr(),
-							returnArray[i].getEinheit_c_nr(),
-							returnArray[i].getI_id(), theClientDto);
-				}
-				if (faktor.doubleValue() != 0) {
-					bdMenge = bdMenge
-							.divide(faktor, BigDecimal.ROUND_HALF_EVEN);
-
-					bdMenge = Helper.berechneMengeInklusiveVerschnitt(bdMenge,
-							returnArray[i].getFlrartikel()
-									.getF_verschnittfaktor(), returnArray[i]
-									.getFlrartikel().getF_verschnittbasis(),
-							nLosgroesse);
-
-					// PJ 14352
-					bdMenge = bdMenge.divide(new BigDecimal(returnArray[i]
-							.getFlrstueckliste().getI_erfassungsfaktor()
-							.doubleValue()), 4, BigDecimal.ROUND_HALF_EVEN);
-
-					stuecklistepositionDto.setNZielmenge(bdMenge);
-				} else {
-					ArrayList<Object> al = new ArrayList<Object>();
-
-					EinheitDto von = getSystemFac().einheitFindByPrimaryKey(
-							returnArray[i].getEinheit_c_nr(), theClientDto);
-					EinheitDto zu = getSystemFac().einheitFindByPrimaryKey(
-							returnArray[i].getFlrartikel().getEinheit_c_nr(),
-							theClientDto);
-					al.add(von.formatBez() + " <-> " + zu.formatBez());
-					throw new EJBExceptionLP(
-							EJBExceptionLP.FEHLER_EINHEITKONVERTIERUNG_KEIN_DIVISOR_DEFINIERT,
-							al,
-							new Exception(
-									"FEHLER_EINHEITKONVERTIERUNG_KEIN_DIVISOR_DEFINIERT"));
-				}
-
-			} catch (RemoteException ex1) {
-				throwEJBExceptionLPRespectOld(ex1);
-			}
 
 			MontageartDto ma = new MontageartDto();
 			ma.setIId(returnArray[i].getFlrmontageart().getI_id());
@@ -4976,6 +5690,17 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 			if (returnArray[i].getF_dimension3() != null) {
 				stuecklistepositionDto.setFDimension3(new Float(returnArray[i]
 						.getF_dimension3().doubleValue()));
+			}
+
+			StuecklisteMitStrukturDto zeile = new StuecklisteMitStrukturDto(
+					iEbene, stuecklistepositionDto);
+
+			zeile.setTFreigabe(returnArray[i].getFlrstueckliste()
+					.getT_freigabe());
+			if (returnArray[i].getFlrstueckliste().getFlrpersonal_freigabe() != null) {
+				zeile.setCKurzzeichenPersonFreigabe(returnArray[i]
+						.getFlrstueckliste().getFlrpersonal_freigabe()
+						.getC_kurzzeichen());
 			}
 
 			if (bMitUnterstuecklisten == true
@@ -5009,12 +5734,10 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 					}
 				}
 				if (bGefunden == false) {
-					strukturMap.add(new StuecklisteMitStrukturDto(iEbene,
-							stuecklistepositionDto));
+					strukturMap.add(zeile);
 				}
 			} else {
-				strukturMap.add(new StuecklisteMitStrukturDto(iEbene,
-						stuecklistepositionDto));
+				strukturMap.add(zeile);
 			}
 
 			if (bMitUnterstuecklisten == true) {
@@ -5047,6 +5770,8 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 								StuecklisteMitStrukturDto strukturTemp = (StuecklisteMitStrukturDto) strukturMap
 										.get(strukturMap.size() - 1);
 								strukturTemp.setBStueckliste(true);
+								strukturTemp
+										.setIAnzahlArbeitsschritte(iAnzahlPositionenArbeitsplan);
 								strukturTemp
 										.setStuecklisteDto(assembleStuecklisteDto(stkl));
 								strukturMap.set(strukturMap.size() - 1,
@@ -5093,67 +5818,6 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 		session.close();
 
 		return strukturMap;
-	}
-
-	public BigDecimal berechneStuecklistenGestehungspreisAusPositionen(
-			Integer artikelIId, TheClientDto theClientDto)
-			throws EJBExceptionLP {
-		BigDecimal bdSummeGestpreis = null;
-
-		Integer stuecklisteIId = null;
-		try {
-			Query query = em
-					.createNamedQuery("StuecklistefindByArtikelIIdMandantCNr");
-			query.setParameter(1, artikelIId);
-			query.setParameter(2, theClientDto.getMandant());
-			Stueckliste stueckliste = (Stueckliste) query.getSingleResult();
-			if (stueckliste == null) {
-				return null;
-			}
-			stuecklisteIId = stueckliste.getIId();
-		} catch (NoResultException ex2) {
-			return null;
-		} catch (NonUniqueResultException ex1) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT,
-					ex1);
-		}
-
-		try {
-			Query query = em
-					.createNamedQuery("StuecklistepositionfindByStuecklisteIId");
-			query.setParameter(1, stuecklisteIId);
-			Collection<?> cl = query.getResultList();
-			StuecklistepositionDto[] dtos = assembleStuecklistepositionDtos(cl);
-			bdSummeGestpreis = new BigDecimal(0);
-
-			for (int i = 0; i < dtos.length; i++) {
-				try {
-					query = em
-							.createNamedQuery("StuecklistefindByArtikelIIdMandantCNr");
-					query.setParameter(1, dtos[i].getArtikelIId());
-					query.setParameter(2, theClientDto.getMandant());
-					Stueckliste stueckliste1 = (Stueckliste) query
-							.getSingleResult();
-				} catch (NoResultException ex) {
-					try {
-						bdSummeGestpreis = bdSummeGestpreis
-								.add(getLagerFac()
-										.getGemittelterGestehungspreisAllerLaegerEinesMandanten(
-												dtos[i].getArtikelIId(),
-												theClientDto));
-					} catch (RemoteException ex1) {
-						throwEJBExceptionLPRespectOld(ex1);
-					}
-				}
-			}
-		} catch (NoResultException ex3) {
-			// NIX
-		} catch (NonUniqueResultException ex1) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT,
-					ex1);
-		}
-
-		return bdSummeGestpreis;
 	}
 
 	public BigDecimal berechneZielmenge(Integer stuecklistepositionIId,
@@ -5216,18 +5880,20 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 					stuecklistepositionDto.getEinheitCNr(),
 					stuecklistepositionDto.getIId(), theClientDto);
 			if (divisor != null && divisor.doubleValue() != 0) {
-				bdMenge = bdMenge.divide(divisor, BigDecimal.ROUND_HALF_EVEN);
+				bdMenge = bdMenge.divide(divisor, 12,
+						BigDecimal.ROUND_HALF_EVEN);
 
 				bdMenge = Helper.berechneMengeInklusiveVerschnitt(bdMenge,
 						artikelDto.getFVerschnittfaktor(),
 						artikelDto.getFVerschnittbasis(),
-						stuecklisteDto.getNLosgroesse());
+						stuecklisteDto.getNLosgroesse(),
+						artikelDto.getFFertigungsVpe());
 			}
 
 			if (stuecklisteDto.getIErfassungsfaktor() != null
 					&& stuecklisteDto.getIErfassungsfaktor().intValue() != 0) {
 				bdMenge = bdMenge.divide(new BigDecimal(stuecklisteDto
-						.getIErfassungsfaktor().doubleValue()), 4,
+						.getIErfassungsfaktor().doubleValue()), 12,
 						BigDecimal.ROUND_HALF_EVEN);
 			}
 
@@ -5315,11 +5981,26 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 			if (stuecklisteDto != null) {
 				// fuer den Ausgangsartikel hinterlegen, ob es sich um eine
 				// Fremdfertigung handelt
+				BigDecimal bdGesamtdurchlaufzeit=BigDecimal.ZERO;
+				if(stuecklisteInfoDtoI.getGesamtDurchlaufzeitBisInklMeineEbene()!=null){
+					stuecklisteInfoDtoI.setGesamtDurchlaufzeitBisInklMeineEbene(stuecklisteInfoDtoI.getGesamtDurchlaufzeitBisInklMeineEbene().add(stuecklisteDto
+							.getNDefaultdurchlaufzeit()));
+				} else {
+					stuecklisteInfoDtoI.setGesamtDurchlaufzeitBisInklMeineEbene(stuecklisteDto.getNDefaultdurchlaufzeit());
+				}
+				bdGesamtdurchlaufzeit=stuecklisteInfoDtoI.getGesamtDurchlaufzeitBisInklMeineEbene();
+			
+				
 				if (stuecklisteInfoDtoI.getAlStuecklisteAufgeloest().size() == 0) {
 					stuecklisteInfoDtoI.setBIstFremdfertigung(stuecklisteDto
 							.getBFremdfertigung());
+					
+				
 				}
 
+				
+				
+				
 				// fuer die letzte eingefuegte Position hinterlegen, ob es
 				// sich um eine STKL
 				// und/oder eine Fremdfertigung handelt
@@ -5341,6 +6022,10 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 							.setBIstFremdfertigung(Helper
 									.short2boolean(stuecklisteDto
 											.getBFremdfertigung()));
+					((StuecklisteMitStrukturDto) stuecklisteInfoDtoI
+							.getAlStuecklisteAufgeloest().get(
+									iIndexLetztePosition))
+							.setDurchlaufzeit(bdGesamtdurchlaufzeit);
 				}
 
 				// UW 29.03.06 Die naechste Ebene der Positionen wird
@@ -5511,7 +6196,10 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 												flrstuecklisteposition
 														.getFlrartikel()
 														.getF_verschnittbasis(),
-												nWievieleEinheitenDerUnterpositionInStuecklisteI);
+												nWievieleEinheitenDerUnterpositionInStuecklisteI,
+												flrstuecklisteposition
+														.getFlrartikel()
+														.getF_fertigungs_vpe());
 
 								// PJ 14352
 								nMengeUnterposition = nMengeUnterposition
@@ -5574,8 +6262,14 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 							StuecklisteMitStrukturDto stuecklisteMitStrukturDto = new StuecklisteMitStrukturDto(
 									iEbeneI, stuecklistepositionDto);
 
+							stuecklisteMitStrukturDto.setDurchlaufzeit(bdGesamtdurchlaufzeit);
+							
 							stuecklisteInfoDtoI.getAlStuecklisteAufgeloest()
 									.add(stuecklisteMitStrukturDto);
+							
+							
+							
+							
 
 							int iAnzahlPositionen = stuecklisteInfoDtoI
 									.getIiAnzahlPositionen().intValue();
@@ -6245,4 +6939,313 @@ public class StuecklisteFacBean extends Facade implements StuecklisteFac {
 
 		return itemsWithIdentities;
 	}
+
+	protected String getHandartikelBez(IStklImportResult r) {
+		Map<String, String> m = r.getValues();
+		String[] types = { StklImportSpezifikation.BEZEICHNUNG,
+				StklImportSpezifikation.BEZEICHNUNG1,
+				StklImportSpezifikation.BEZEICHNUNG2,
+				StklImportSpezifikation.BEZEICHNUNG3,
+				StklImportSpezifikation.ARTIKELNUMMER,
+				StklImportSpezifikation.HERSTELLERARTIKELNUMMER,
+				StklImportSpezifikation.KUNDENARTIKELNUMMER,
+				StklImportSpezifikation.SI_WERT,
+				StklImportSpezifikation.BAUFORM,
+				StklImportSpezifikation.ARTIKELNUMMER };
+		for (String type : types) {
+			String bez = m.get(type);
+			if (bez != null && !bez.isEmpty())
+				return bez;
+		}
+		return null;
+	}
+
+	public void updateStuecklisteposition(StuecklistepositionDto originalDto,
+			StuecklistepositionDto aenderungDto, TheClientDto theClientDto)
+			throws RemoteException, EJBExceptionLP {
+		Validator.notNull(originalDto, "originalDto");
+		Validator.notNull(aenderungDto, "aenderungDto");
+
+		StuecklistepositionDto rereadDto = stuecklistepositionFindByPrimaryKey(
+				originalDto.getIId(), theClientDto);
+		if (!rereadDto.equals(originalDto)) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_DATEN_MODIFIZIERT_UPDATE, originalDto
+							.getIId().toString());
+		}
+
+		if (rereadDto.getIId().compareTo(aenderungDto.getIId()) != 0) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DATEN_INKOMPATIBEL,
+					aenderungDto.getIId().toString());
+		}
+
+		rereadDto.setArtikelIId(aenderungDto.getArtikelIId());
+		rereadDto.setArtikelDto(null);
+		rereadDto.setNMenge(aenderungDto.getNMenge());
+		rereadDto.setEinheitCNr(aenderungDto.getEinheitCNr());
+		rereadDto.setNZielmenge(null);
+		rereadDto.setCPosition(aenderungDto.getCPosition());
+		rereadDto.setCKommentar(aenderungDto.getCKommentar());
+		updateStuecklisteposition(rereadDto, theClientDto);
+	}
+
+	@Override
+	public void removeStuecklisteposition(StuecklistepositionDto originalDto,
+			StuecklistepositionDto aenderungDto, TheClientDto theClientDto)
+			throws RemoteException, EJBExceptionLP {
+		Validator.notNull(originalDto, "originalDto");
+		Validator.notNull(aenderungDto, "aenderungDto");
+
+		StuecklistepositionDto rereadDto = stuecklistepositionFindByPrimaryKey(
+				originalDto.getIId(), theClientDto);
+		if (!rereadDto.equals(originalDto)) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_DATEN_MODIFIZIERT_REMOVE, originalDto
+							.getIId().toString());
+		}
+
+		removeStuecklisteposition(originalDto, theClientDto);
+	}
+
+	public StklagerentnahmeDto createStklagerentnahme(
+			StklagerentnahmeDto stklagerentnahmeDto, TheClientDto theClientDto) {
+
+		stklagerentnahmeDto.setPersonalIIdAendern(theClientDto.getIDPersonal());
+		// primary key
+		Integer iId = getPKGeneratorObj().getNextPrimaryKey(
+				PKConst.PK_STKLAGERENTNAHME);
+		stklagerentnahmeDto.setIId(iId);
+
+		Integer i = null;
+		try {
+			Query querynext = em
+					.createNamedQuery("StklagerentnahmeejbSelectNextReihung");
+			querynext.setParameter(1, stklagerentnahmeDto.getStuecklisteIId());
+			i = (Integer) querynext.getSingleResult();
+
+			if (i == null) {
+				i = new Integer(0);
+			}
+			i = new Integer(i.intValue() + 1);
+
+		} catch (NonUniqueResultException ex1) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_NO_UNIQUE_RESULT,
+					ex1);
+		}
+		stklagerentnahmeDto.setISort(i);
+
+		try {
+			Stklagerentnahme stklagerentnahme = new Stklagerentnahme(
+					stklagerentnahmeDto.getIId(),
+					stklagerentnahmeDto.getStuecklisteIId(),
+					stklagerentnahmeDto.getLagerIId(),
+					stklagerentnahmeDto.getISort(),
+					stklagerentnahmeDto.getPersonalIIdAendern());
+			em.persist(stklagerentnahme);
+			em.flush();
+			stklagerentnahmeDto.setTAendern(stklagerentnahme.getTAendern());
+			setStklagerentnahmeFromStklagerentnahmeDto(stklagerentnahme,
+					stklagerentnahmeDto);
+			return stklagerentnahmeDto;
+		} catch (EntityExistsException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_ANLEGEN, ex);
+		}
+	}
+
+	public void removeStklagerentnahme(StklagerentnahmeDto stklagerentnahmeDto,
+			TheClientDto theClientDto) {
+
+		if (stklagerentnahmeDto != null) {
+			Integer iId = stklagerentnahmeDto.getIId();
+			Stklagerentnahme toRemove = em.find(Stklagerentnahme.class, iId);
+			if (toRemove == null) {
+				throw new EJBExceptionLP(
+						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+			}
+			try {
+				em.remove(toRemove);
+				em.flush();
+			} catch (EntityExistsException er) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN,
+						er);
+			}
+		}
+
+	}
+
+	public StklagerentnahmeDto stklagerentnahmeFindByPrimaryKey(Integer iId) {
+
+		Stklagerentnahme stklagerentnahme = em
+				.find(Stklagerentnahme.class, iId);
+		if (stklagerentnahme == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+		return assembleStklagerentnahmeDto(stklagerentnahme);
+
+	}
+
+	public StklagerentnahmeDto updateStklagerentnahme(
+			StklagerentnahmeDto stklagerentnahmeDto, TheClientDto theClientDto) {
+		Integer iId = stklagerentnahmeDto.getIId();
+
+		Stklagerentnahme stklagerentnahme = em
+				.find(Stklagerentnahme.class, iId);
+		if (stklagerentnahme == null) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_UPDATE, "");
+		}
+		setStklagerentnahmeFromStklagerentnahmeDto(stklagerentnahme,
+				stklagerentnahmeDto);
+		return stklagerentnahmeDto;
+
+	}
+
+	public StklagerentnahmeDto[] stklagerentnahmeFindByStuecklisteIId(
+			Integer stuecklisteIId) {
+		// try {
+		Query query = em
+				.createNamedQuery("StklagerentnahmefindByStuecklisteIId");
+		query.setParameter(1, stuecklisteIId);
+		Collection<?> cl = query.getResultList();
+
+		return StklagerentnahmeDtoAssembler.createDtos(cl);
+
+	}
+
+	private StklagerentnahmeDto assembleStklagerentnahmeDto(
+			Stklagerentnahme stklagerentnahme) {
+		return StklagerentnahmeDtoAssembler.createDto(stklagerentnahme);
+	}
+
+	private void setStklagerentnahmeFromStklagerentnahmeDto(
+			Stklagerentnahme stklagerentnahme,
+			StklagerentnahmeDto stklagerentnahmeDto) {
+		stklagerentnahme.setStuecklisteIId(stklagerentnahmeDto
+				.getStuecklisteIId());
+		stklagerentnahme.setLagerIId(stklagerentnahmeDto.getLagerIId());
+		stklagerentnahme.setISort(stklagerentnahmeDto.getISort());
+		stklagerentnahme.setTAendern(stklagerentnahmeDto.getTAendern());
+		stklagerentnahme.setPersonalIIdAendern(stklagerentnahmeDto
+				.getPersonalIIdAendern());
+		em.merge(stklagerentnahme);
+		em.flush();
+	}
+
+	public void vertauscheStklagerentnahme(Integer iiDLagerentnahme1,
+			Integer iIdLagerentnahme2) {
+
+		Stklagerentnahme oLieferant1 = em.find(Stklagerentnahme.class,
+				iiDLagerentnahme1);
+		if (oLieferant1 == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+
+		Stklagerentnahme oLieferant2 = em.find(Stklagerentnahme.class,
+				iIdLagerentnahme2);
+		if (oLieferant2 == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+		}
+
+		Integer iSort1 = oLieferant1.getISort();
+		Integer iSort2 = oLieferant2.getISort();
+		// iSort der zweiten Loslagerentnahme auf ungueltig setzen, damit UK
+		// constraint nicht verletzt wird
+		oLieferant2.setISort(new Integer(-1));
+		em.merge(oLieferant2);
+		em.flush();
+		oLieferant1.setISort(iSort2);
+		oLieferant2.setISort(iSort1);
+
+	}
+
+	public void toggleFreigabe(Integer stuecklisteIId, TheClientDto theClientDto) {
+
+		// WG logging
+		StuecklisteDto stklDto = stuecklisteFindByPrimaryKey(stuecklisteIId,
+				theClientDto);
+
+		if (stklDto.getTFreigabe() == null) {
+			stklDto.setTFreigabe(new Timestamp(System.currentTimeMillis()));
+			stklDto.setPersonalIIdFreigabe(theClientDto.getIDPersonal());
+		} else {
+			stklDto.setTFreigabe(null);
+			stklDto.setPersonalIIdFreigabe(null);
+		}
+
+		vergleicheStuecklisteDtoVorherNachherUndLoggeAenderungen(stklDto,
+				theClientDto);
+
+		Stueckliste stkl = em.find(Stueckliste.class, stuecklisteIId);
+		if (stkl.getTFreigabe() == null) {
+			stkl.setTFreigabe(new Timestamp(System.currentTimeMillis()));
+			stkl.setPersonalIIdFreigabe(theClientDto.getIDPersonal());
+			stklDto.setTFreigabe(new Timestamp(System.currentTimeMillis()));
+			stklDto.setPersonalIIdFreigabe(theClientDto.getIDPersonal());
+		} else {
+			stkl.setTFreigabe(null);
+			stkl.setPersonalIIdFreigabe(null);
+			stklDto.setTFreigabe(null);
+			stklDto.setPersonalIIdFreigabe(null);
+		}
+
+	}
+
+	@Override
+	public BelegpositionDto getNewPositionDto() {
+		return new StuecklistepositionDto();
+	}
+
+	@Override
+	public BelegpositionDto preparePositionDtoAusImportResult(
+			BelegpositionDto posDto, StklImportSpezifikation spez,
+			IStklImportResult result, TheClientDto theClientDto) {
+		
+		if(ArtikelFac.ARTIKELART_HANDARTIKEL.equals(result.getSelectedArtikelDto().getArtikelartCNr())) {
+			((StuecklistepositionDto)posDto).setSHandeingabe(getHandartikelBez(result));
+		}
+		((StuecklistepositionDto)posDto).setCPosition(Helper.cutString(result.getValues().get(FertigungsStklImportSpezifikation.POSITION), 
+				StuecklisteFac.FieldLength.STUECKLISTEPOSITION_POSITION));
+		((StuecklistepositionDto)posDto).setMontageartIId(((FertigungsStklImportSpezifikation)spez).getMontageartIId());
+		((StuecklistepositionDto)posDto).setBMitdrucken(Helper.boolean2Short(false));
+		((StuecklistepositionDto)posDto).setCKommentar(Helper.cutString(result.getValues().get(FertigungsStklImportSpezifikation.KOMMENTAR), 
+				StuecklisteFac.FieldLength.STUECKLISTEPOSITION_KOMMENTAR));
+
+		return posDto;
+	}
+
+	@Override
+	public void createPositions(List<BelegpositionDto> posDtos, TheClientDto theClientDto) 
+			throws EJBExceptionLP, RemoteException {
+		createStuecklistepositions(posDtos.toArray(new StuecklistepositionDto[posDtos.size()]), theClientDto);
+	}
+
+
+	@Override
+	public Integer getKundeIIdDerStueckliste(StklImportSpezifikation spez,
+			TheClientDto theClientDto) throws RemoteException {
+		StuecklisteDto stuecklisteDto = stuecklisteFindByPrimaryKey(
+				spez.getStklIId(), theClientDto);
+		if(stuecklisteDto == null || stuecklisteDto.getPartnerIId() == null) {
+			return null;
+		}
+		
+		KundeDto kundeDto = getKundeFac()
+				.kundeFindByiIdPartnercNrMandantOhneExc(stuecklisteDto.getPartnerIId(),
+						theClientDto.getMandant(), theClientDto);
+		
+		return kundeDto == null ? null : kundeDto.getIId();
+	}
+
+	@Override
+	public IImportPositionen asPositionImporter() {
+		return this ;
+	}
+
+	@Override
+	public IImportHead asHeadImporter() {
+		return this ;
+	}
+
 }

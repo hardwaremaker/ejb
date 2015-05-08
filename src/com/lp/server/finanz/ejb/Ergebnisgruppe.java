@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -42,12 +42,14 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.ICBez;
+
 @NamedQueries( { @NamedQuery(name = "ErgebnisgruppeejbSelectNextReihung", query = "SELECT MAX (eg.iReihung) FROM Ergebnisgruppe AS eg WHERE eg.mandantCNr = ?1 AND eg.bBilanzgruppe = ?2"),
 				 @NamedQuery(name = "ErgebnisgruppefindByMandantCNr", query = "SELECT OBJECT(o) FROM Ergebnisgruppe o WHERE o.mandantCNr = ?1 AND o.bBilanzgruppe = ?2 ORDER BY o.iReihung")})
 				 
 @Entity
 @Table(name = "FB_ERGEBNISGRUPPE")
-public class Ergebnisgruppe implements Serializable {
+public class Ergebnisgruppe implements Serializable, ICBez {
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;

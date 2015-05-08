@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,6 +32,10 @@
  ******************************************************************************/
 package com.lp.server.projekt.ejbfac;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
@@ -46,6 +50,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.TreeMap;
 
 import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
@@ -58,6 +63,9 @@ import net.sf.jasperreports.engine.JRDataSource;
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JRField;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -68,14 +76,30 @@ import org.hibernate.criterion.Restrictions;
 
 import com.lp.server.anfrage.service.AnfrageDto;
 import com.lp.server.angebot.service.AngebotDto;
+import com.lp.server.angebotstkl.service.AgstklDto;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.artikel.service.ArtikelkommentarDto;
+import com.lp.server.artikel.service.ArtikellieferantDto;
+import com.lp.server.artikel.service.GeometrieDto;
+import com.lp.server.artikel.service.LagerabgangursprungDto;
+import com.lp.server.artikel.service.SeriennrChargennrMitMengeDto;
+import com.lp.server.artikel.service.VerpackungDto;
 import com.lp.server.auftrag.service.AuftragDto;
+import com.lp.server.auftrag.service.AuftragNachkalkulationDto;
+import com.lp.server.auftrag.service.AuftragReportFac;
 import com.lp.server.auftrag.service.AuftragzeitenDto;
 import com.lp.server.bestellung.service.BestellungDto;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungAuftragszuordnungDto;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.fertigung.service.LosablieferungDto;
+import com.lp.server.fertigung.service.LosistmaterialDto;
+import com.lp.server.fertigung.service.LossollarbeitsplanDto;
+import com.lp.server.fertigung.service.LossollmaterialDto;
+import com.lp.server.fertigung.service.ReportLosnachkalkulationDto;
 import com.lp.server.lieferschein.service.LieferscheinDto;
+import com.lp.server.lieferschein.service.LieferscheinpositionDto;
 import com.lp.server.partner.service.AnsprechpartnerDto;
 import com.lp.server.partner.service.KundeFac;
 import com.lp.server.partner.service.PartnerDto;
@@ -99,8 +123,11 @@ import com.lp.server.projekt.service.ProjektVerlaufHelperDto;
 import com.lp.server.rechnung.service.RechnungDto;
 import com.lp.server.rechnung.service.RechnungFac;
 import com.lp.server.rechnung.service.RechnungartDto;
+import com.lp.server.stueckliste.service.StuecklisteDto;
+import com.lp.server.system.service.BelegartDto;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
+import com.lp.server.system.service.MediaFac;
 import com.lp.server.system.service.ReportJournalKriterienDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.LPReport;
@@ -135,22 +162,8 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 		ProjektDto projektDto = getProjektFac().projektFindByPrimaryKey(
 				projektIId);
 
-		FilterKriterium[] filterKrit = new FilterKriterium[1];
-		FilterKriterium krit1 = new FilterKriterium("projekt_i_id", true,
-				projektDto.getIId().toString(), FilterKriterium.OPERATOR_EQUAL,
-				false);
-
-		filterKrit[0] = krit1;
-
-		QueryParameters p = new QueryParameters(
-				QueryParameters.UC_ID_PROJEKTVERLAUF, null, new FilterBlock(
-						filterKrit, "AND"), null, null);
-
-		ProjektverlaufHandler pv = new ProjektverlaufHandler();
-		pv.setCurrentUser(theClientDto);
-		pv.setQuery(p);
-
-		LinkedHashMap<String, ProjektVerlaufHelperDto> hm = pv.setInhalt();
+		LinkedHashMap<String, ProjektVerlaufHelperDto> hm = getProjektFac()
+				.getProjektVerlauf(projektIId, theClientDto);
 
 		PartnerDto partnerDto = getPartnerFac().partnerFindByPrimaryKey(
 				projektDto.getPartnerIId(), theClientDto);
@@ -176,6 +189,22 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 
 		boolean bProjektHinzugefuegt = false;
 
+		Object[] oZeileProjekt = new Object[ProjektReportFac.REPORT_PROJEKTVERLAUF_ANZAHL_SPALTEN];
+		oZeileProjekt[ProjektReportFac.REPORT_PROJEKTVERLAUF_BELEGART] = LocaleFac.BELEGART_PROJEKT;
+		oZeileProjekt[ProjektReportFac.REPORT_PROJEKTVERLAUF_BELEGNUMMER] = projektDto
+				.getCNr();
+		oZeileProjekt[ProjektReportFac.REPORT_PROJEKTVERLAUF_EBENE] = 0;
+		oZeileProjekt[ProjektReportFac.REPORT_PROJEKTVERLAUF_STATUS] = projektDto
+				.getStatusCNr();
+
+		oZeileProjekt = befuelleZeileProjektverlaufMitZeitdaten(
+				LocaleFac.BELEGART_PROJEKT, projektDto.getIId(), oZeileProjekt,
+				theClientDto);
+
+		alDaten.add(oZeileProjekt);
+
+		bProjektHinzugefuegt = true;
+
 		while (it.hasNext()) {
 			ProjektVerlaufHelperDto belegDto = hm.get(it.next());
 
@@ -191,26 +220,6 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 			String status = null;
 
 			java.util.Date belegdatum = null;
-
-			if (bProjektHinzugefuegt == false) {
-
-				belegart = LocaleFac.BELEGART_PROJEKT;
-				belegnummer = projektDto.getCNr();
-				belegIId = projektDto.getIId();
-				status = projektDto.getStatusCNr();
-
-				Object[] oZeile = new Object[ProjektReportFac.REPORT_PROJEKTVERLAUF_ANZAHL_SPALTEN];
-				oZeile[ProjektReportFac.REPORT_PROJEKTVERLAUF_BELEGART] = belegart;
-				oZeile[ProjektReportFac.REPORT_PROJEKTVERLAUF_BELEGNUMMER] = belegnummer;
-				oZeile[ProjektReportFac.REPORT_PROJEKTVERLAUF_EBENE] = 0;
-				belegdatum = projektDto.getTAnlegen();
-				oZeile = befuelleZeileProjektverlaufMitZeitdaten(belegart,
-						belegIId, oZeile, theClientDto);
-
-				alDaten.add(oZeile);
-
-				bProjektHinzugefuegt = true;
-			}
 
 			BigDecimal bdVKMaterialwert = null;
 			BigDecimal bdVKAZWert = null;
@@ -294,6 +303,15 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 				bdVKAZWert = getLieferscheinFac().berechneVerkaufswertIst(
 						dto.getIId(), null, ArtikelFac.ARTIKELART_ARBEITSZEIT,
 						theClientDto);
+
+				bdEKMaterialwert = getLagerFac().getEinstandsWertEinesBeleges(
+						LocaleFac.BELEGART_LIEFERSCHEIN, dto.getIId(),
+						ArtikelFac.ARTIKELART_ARTIKEL, theClientDto);
+
+				bdEKAZWert = getLagerFac().getEinstandsWertEinesBeleges(
+						LocaleFac.BELEGART_LIEFERSCHEIN, dto.getIId(),
+						ArtikelFac.ARTIKELART_ARBEITSZEIT, theClientDto);
+
 				belegdatum = dto.getTBelegdatum();
 
 				status = dto.getStatusCNr();
@@ -306,8 +324,7 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 				boolean bGutschrift = false;
 
 				RechnungartDto raDto = getRechnungServiceFac()
-						.rechnungartFindByPrimaryKey(
-								RechnungFac.RECHNUNGART_GUTSCHRIFT,
+						.rechnungartFindByPrimaryKey(dto.getRechnungartCNr(),
 								theClientDto);
 
 				if (raDto.getRechnungtypCNr().equals(
@@ -328,6 +345,16 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 				bdVKAZWert = getRechnungFac().berechneVerkaufswertIst(
 						dto.getIId(), ArtikelFac.ARTIKELART_ARBEITSZEIT,
 						theClientDto);
+
+				bdEKMaterialwert = getLagerFac().getEinstandsWertEinesBeleges(
+						bGutschrift ? LocaleFac.BELEGART_GUTSCHRIFT
+								: LocaleFac.BELEGART_RECHNUNG, dto.getIId(),
+						ArtikelFac.ARTIKELART_ARTIKEL, theClientDto);
+
+				bdEKAZWert = getLagerFac().getEinstandsWertEinesBeleges(
+						bGutschrift ? LocaleFac.BELEGART_GUTSCHRIFT
+								: LocaleFac.BELEGART_RECHNUNG, dto.getIId(),
+						ArtikelFac.ARTIKELART_ARBEITSZEIT, theClientDto);
 
 				if (bGutschrift == true) {
 					if (bdGestMaterialwert != null) {
@@ -421,6 +448,24 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 				oZeile[ProjektReportFac.REPORT_PROJEKTVERLAUF_MATERIALWERT_LOS] = ablWert;
 				oZeile[ProjektReportFac.REPORT_PROJEKTVERLAUF_LOS_ABGELIEFERTE_MENGE] = ablMenge;
 
+				bdEKMaterialwert = getLagerFac().getEinstandsWertEinesBeleges(
+						LocaleFac.BELEGART_LOS, dto.getIId(),
+						ArtikelFac.ARTIKELART_ARTIKEL, theClientDto);
+
+				// AZ
+				AuftragzeitenDto[] belegzeitenDtos = getZeiterfassungFac()
+						.getAllZeitenEinesBeleges(LocaleFac.BELEGART_LOS,
+								dto.getIId(), null, null, null, null, true,
+								false, false, theClientDto);
+				BigDecimal bdKostenGesamt = BigDecimal.ZERO;
+
+				for (int i = 0; i < belegzeitenDtos.length; i++) {
+					bdKostenGesamt = bdKostenGesamt.add(belegzeitenDtos[i]
+							.getBdKosten());
+				}
+
+				bdEKAZWert = bdKostenGesamt;
+
 			} else if (belegDto.getBelegDto() instanceof ReiseDto) {
 				ReiseDto reiseDto = (ReiseDto) belegDto.getBelegDto();
 
@@ -428,6 +473,29 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 				oZeile[ProjektReportFac.REPORT_PROJEKTVERLAUF_REISE_KOMMENTAR] = reiseDto
 						.getCKommentar();
 				bdGestMaterialwert = reiseDto.getNKostenDesAbschnitts();
+
+			} else if (belegDto.getBelegDto() instanceof EingangsrechnungAuftragszuordnungDto) {
+				EingangsrechnungAuftragszuordnungDto eaDto = (EingangsrechnungAuftragszuordnungDto) belegDto
+						.getBelegDto();
+				oZeile[ProjektReportFac.REPORT_PROJEKTVERLAUF_ER_KEINE_AUFTRAGSWERTUNG] = Helper
+						.short2Boolean(eaDto.getBKeineAuftragswertung());
+
+				EingangsrechnungDto erDto = getEingangsrechnungFac()
+						.eingangsrechnungFindByPrimaryKey(
+								eaDto.getEingangsrechnungIId());
+
+				belegart = LocaleFac.BELEGART_EINGANGSRECHNUNG;
+				belegnummer = erDto.getCNr();
+
+				bdGestMaterialwert = getLocaleFac()
+						.rechneUmInMandantenWaehrung(eaDto.getNBetrag(),
+								erDto.getNKurs());
+
+			} else if (belegDto.getBelegDto() instanceof AgstklDto) {
+				AgstklDto agstklDto = (AgstklDto) belegDto.getBelegDto();
+
+				belegart = LocaleFac.BELEGART_AGSTUECKLISTE;
+				belegnummer = agstklDto.getCNr();
 
 			} else if (belegDto.getBelegDto() instanceof TelefonzeitenDto) {
 				TelefonzeitenDto telefonzeitenDto = (TelefonzeitenDto) belegDto
@@ -451,10 +519,10 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 					oZeile[ProjektReportFac.REPORT_PROJEKTVERLAUF_AZ_DAUER] = dauer;
 
 					if (pgDto != null && pgDto.getNStundensatz() != null) {
-						
-					
-						oZeile[ProjektReportFac.REPORT_PROJEKTVERLAUF_AZ_KOSTEN]=pgDto.getNStundensatz().multiply(
-								new BigDecimal(dauer));
+
+						oZeile[ProjektReportFac.REPORT_PROJEKTVERLAUF_AZ_KOSTEN] = pgDto
+								.getNStundensatz().multiply(
+										new BigDecimal(dauer));
 
 					}
 				}
@@ -494,6 +562,23 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 			}
 
 			alDaten.add(oZeile);
+
+			if (belegDto.getBelegDto() instanceof LieferscheinDto) {
+
+				LieferscheinDto dto = (LieferscheinDto) belegDto.getBelegDto();
+
+				LieferscheinpositionDto[] lsposDtos = getLieferscheinpositionFac()
+						.lieferscheinpositionFindByLieferscheinIId(dto.getIId());
+
+				for (int i = 0; i < lsposDtos.length; i++) {
+
+					alDaten = losablieferungHinzufuegen(belegart,
+							lsposDtos[i].getIId(), theClientDto,
+							lsposDtos[i].getNMenge(), belegDto.getiEbene() + 1,
+							alDaten);
+				}
+			}
+
 		}
 
 		Object[][] returnArray = new Object[alDaten.size()][ProjektReportFac.REPORT_PROJEKTVERLAUF_ANZAHL_SPALTEN];
@@ -505,6 +590,181 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 				theClientDto);
 
 		return getReportPrint();
+	}
+
+	private ArrayList losablieferungHinzufuegen(String belegartCNr,
+			Integer belegpositionIId, TheClientDto theClientDto,
+			BigDecimal bdVerbrauchteMenge, int iEbene, ArrayList alDaten)
+			throws RemoteException {
+		// PJ18623
+
+		BigDecimal bdLosanteilImLieferschein = new BigDecimal(0);
+		Session session = FLRSessionFactory.getFactory().openSession();
+		String sQuery = "select distinct lagerbewegung.i_id_buchung from FLRLagerbewegung lagerbewegung WHERE lagerbewegung.c_belegartnr='"
+				+ belegartCNr
+				+ "' AND lagerbewegung.i_belegartpositionid="
+				+ belegpositionIId;
+
+		Query inventurliste = session.createQuery(sQuery);
+		List<?> resultList = inventurliste.list();
+		Iterator<?> resultListIterator = resultList.iterator();
+		while (resultListIterator.hasNext()) {
+			Integer o = (Integer) resultListIterator.next();
+			LagerabgangursprungDto[] dtos = getLagerFac()
+					.lagerabgangursprungFindByLagerbewegungIIdBuchung(o);
+
+			// Fuer jeden Lagerabgangs- Ursprung, der aus einem Los
+			// kommt, einen zusaetzlichen eintrag anlegen
+			for (int j = 0; j < dtos.length; j++) {
+				// aber nur wenn verbrauchte menge grosser 0
+				LagerabgangursprungDto dto = dtos[j];
+				if (dto.getNVerbrauchtemenge().doubleValue() != 0) {
+					Session session2 = FLRSessionFactory.getFactory()
+							.openSession();
+					String sQuery2 = "from FLRLagerbewegung lagerbewegung WHERE lagerbewegung.i_id_buchung="
+							+ dtos[j].getILagerbewegungidursprung()
+							+ " AND lagerbewegung.b_historie=0 order by lagerbewegung.t_buchungszeit DESC";
+					Query ursrungsbuchung = session2.createQuery(sQuery2);
+					ursrungsbuchung.setMaxResults(1);
+
+					List<?> resultList2 = ursrungsbuchung.list();
+
+					com.lp.server.artikel.fastlanereader.generated.FLRLagerbewegung lagerbewegung_ursprung = (com.lp.server.artikel.fastlanereader.generated.FLRLagerbewegung) resultList2
+							.iterator().next();
+
+					if (lagerbewegung_ursprung.getC_belegartnr().equals(
+							LocaleFac.BELEGART_LOSABLIEFERUNG)) {
+
+						LosablieferungDto losablieferungDto = getFertigungFac()
+								.losablieferungFindByPrimaryKey(
+										lagerbewegung_ursprung
+												.getI_belegartpositionid(),
+										true, theClientDto);
+
+						LosDto losDto = getFertigungFac().losFindByPrimaryKey(
+								lagerbewegung_ursprung.getI_belegartid());
+						// Neuer Eintrag
+
+						Object[] oZeileLosanteil = new Object[ProjektReportFac.REPORT_PROJEKTVERLAUF_ANZAHL_SPALTEN];
+
+						oZeileLosanteil[ProjektReportFac.REPORT_PROJEKTVERLAUF_LOSANTEIL_LIEFERSCHEIN_LOSNUMMER] = losDto
+								.getCNr();
+
+						oZeileLosanteil[ProjektReportFac.REPORT_PROJEKTVERLAUF_EBENE] = iEbene;
+						BigDecimal gestWertArbeitIst = losablieferungDto
+								.getNArbeitszeitwertdetailliert().multiply(
+										dto.getNVerbrauchtemenge());
+
+						BigDecimal gestWertMaterialIst = losablieferungDto
+								.getNMaterialwertdetailliert().multiply(
+										dto.getNVerbrauchtemenge());
+
+						oZeileLosanteil[ProjektReportFac.REPORT_PROJEKTVERLAUF_LOSANTEIL_LIEFERSCHEIN_EINSTANDSWERT_MATERIAL] = gestWertMaterialIst;
+
+						bdLosanteilImLieferschein = bdLosanteilImLieferschein
+								.add(gestWertArbeitIst)
+								.add(gestWertMaterialIst);
+
+						BigDecimal gesamtAbgeliefert = getFertigungFac()
+								.getErledigteMenge(losDto.getIId(),
+										theClientDto);
+
+						AuftragzeitenDto[] azDtos = getZeiterfassungFac()
+								.getAllZeitenEinesBeleges(
+										LocaleFac.BELEGART_LOS,
+										losDto.getIId(), null, null, null,
+										null, true, false, theClientDto);
+
+						BigDecimal summeKosten = BigDecimal.ZERO;
+						for (int i = 0; i < azDtos.length; i++) {
+							summeKosten = summeKosten.add(azDtos[i]
+									.getBdKosten());
+						}
+
+						oZeileLosanteil[ProjektReportFac.REPORT_PROJEKTVERLAUF_LOSANTEIL_LIEFERSCHEIN_EINSTANDSWERT_AZ] = new BigDecimal(
+								summeKosten.doubleValue()
+										/ gesamtAbgeliefert.doubleValue()
+										* dto.getNVerbrauchtemenge()
+												.doubleValue());
+
+						BigDecimal einstandswert = BigDecimal.ZERO;
+
+						LossollmaterialDto[] sollMatDtos = getFertigungFac()
+								.lossollmaterialFindByLosIId(
+										losablieferungDto.getLosIId());
+						for (int i = 0; i < sollMatDtos.length; i++) {
+							LosistmaterialDto[] istmatDto = getFertigungFac()
+									.losistmaterialFindByLossollmaterialIId(
+											sollMatDtos[i].getIId());
+
+							for (int k = 0; k < istmatDto.length; k++) {
+
+								// Wert
+
+								List<SeriennrChargennrMitMengeDto> snrs = getLagerFac()
+										.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
+												LocaleFac.BELEGART_LOS,
+												istmatDto[k].getIId());
+
+								for (int m = 0; m < snrs.size(); m++) {
+
+									BigDecimal bdWEinstandswertZeile = getLagerFac()
+											.getEinstandspreis(
+													LocaleFac.BELEGART_LOS,
+													istmatDto[k].getIId(),
+													snrs.get(m)
+															.getCSeriennrChargennr());
+									if (bdWEinstandswertZeile != null) {
+										einstandswert = einstandswert
+												.add(bdWEinstandswertZeile);
+									}
+
+								}
+							}
+
+						}
+
+						oZeileLosanteil[ProjektReportFac.REPORT_PROJEKTVERLAUF_LOSANTEIL_LIEFERSCHEIN_EINSTANDSWERT_MATERIAL] = new BigDecimal(
+								einstandswert.doubleValue()
+										/ gesamtAbgeliefert.doubleValue()
+										* dto.getNVerbrauchtemenge()
+												.doubleValue());
+
+						alDaten.add(oZeileLosanteil);
+
+						for (int i = 0; i < sollMatDtos.length; i++) {
+							LosistmaterialDto[] istmatDto = getFertigungFac()
+									.losistmaterialFindByLossollmaterialIId(
+											sollMatDtos[i].getIId());
+
+							for (int k = 0; k < istmatDto.length; k++) {
+								// Wenn istmaterial aus Los kommt
+								losablieferungHinzufuegen(
+										LocaleFac.BELEGART_LOS,
+										istmatDto[k].getIId(), theClientDto,
+										istmatDto[k].getNMenge(), iEbene + 1,
+										alDaten);
+
+								// Wert
+								getLagerFac().getEinstandspreis(
+										LocaleFac.BELEGART_LOS,
+										istmatDto[k].getIId(), null);
+
+							}
+
+						}
+
+						// ev rekursiv aufrufen
+
+					}
+				}
+			}
+
+		}
+
+		session.close();
+
+		return alDaten;
 	}
 
 	private Object[] befuelleZeileProjektverlaufMitZeitdaten(String belegart,
@@ -706,7 +966,107 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 					cAktuellerReport, theClientDto.getMandant(), locDruck,
 					theClientDto);
 
-			aJasperPrint = getReportPrint();
+			// SP2599 Bild anhaengen
+
+			ArrayList<BufferedImage> images = new ArrayList<BufferedImage>();
+
+			// Bild einfuegen
+			if (projektDto.getOAttachments() != null
+					&& projektDto.getCAttachmentsType() != null) {
+
+				if (projektDto.getCAttachmentsType().equals(
+						MediaFac.DATENFORMAT_MIMETYPE_IMAGE_JPEG)
+						|| projektDto.getCAttachmentsType().equals(
+								MediaFac.DATENFORMAT_MIMETYPE_IMAGE_PNG)
+						|| projektDto.getCAttachmentsType().equals(
+								MediaFac.DATENFORMAT_MIMETYPE_IMAGE_GIF)) {
+					byte[] bild = projektDto.getOAttachments();
+
+					images.add(Helper.byteArrayToImage(bild));
+
+				} else if (projektDto.getCAttachmentsType().equals(
+						MediaFac.DATENFORMAT_MIMETYPE_IMAGE_TIFF)) {
+
+					byte[] bild = projektDto.getOAttachments();
+
+					java.awt.image.BufferedImage[] tiffs = Helper
+							.tiffToImageArray(bild);
+					if (tiffs != null) {
+						for (int k = 0; k < tiffs.length; k++) {
+							images.add(tiffs[k]);
+						}
+					}
+
+				} else if (projektDto.getCAttachmentsType().equals(
+						MediaFac.DATENFORMAT_MIMETYPE_APP_PDF)) {
+
+					byte[] pdf = projektDto.getOAttachments();
+
+					PDDocument document = null;
+
+					try {
+
+						InputStream myInputStream = new ByteArrayInputStream(
+								pdf);
+
+						document = PDDocument.load(myInputStream);
+						PDFRenderer renderer = new PDFRenderer(document);
+						int numPages = document.getNumberOfPages();
+
+						for (int p = 0; p < numPages; p++) {
+
+							BufferedImage image = renderer.renderImageWithDPI(
+									p, 150);
+							images.add(image);
+						}
+					} catch (IOException e) {
+						e.printStackTrace();
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER,
+								e.getMessage());
+
+					} finally {
+						if (document != null) {
+
+							try {
+								document.close();
+							} catch (IOException e) {
+								e.printStackTrace();
+								throw new EJBExceptionLP(EJBExceptionLP.FEHLER,
+										e.getMessage());
+
+							}
+						}
+
+					}
+
+				}
+
+			}
+			JasperPrintLP print = getReportPrint();
+			Integer cachedReportvariante = theClientDto.getReportvarianteIId();
+			if (images != null) {
+				for (int k = 0; k < images.size(); k++) {
+					HashMap mapParameter = new HashMap<String, Object>();
+					mapParameter.put("P_BILD", images.get(k));
+					cAktuellerReport = REPORT_GANZSEITIGESBILD;
+					this.index = -1;
+					data = new Object[1][1];
+
+					BufferedImage img = images.get(k);
+
+					img = Helper.bildUm90GradDrehenWennNoetig(img);
+
+					data[0][0] = img;
+					theClientDto.setReportvarianteIId(cachedReportvariante);
+					initJRDS(mapParameter, REPORT_MODUL_ALLGEMEIN,
+							REPORT_GANZSEITIGESBILD, theClientDto.getMandant(),
+							theClientDto.getLocUi(), theClientDto);
+					print = Helper.addReport2Report(print, getReportPrint()
+							.getPrint());
+				}
+			}
+
+			return print;
 
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
@@ -1015,10 +1375,10 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 			// Einschraenkung nach Status Offen, Erledigt
 
 			if (interneErledigungBeruecksichtigen == false) {
-				Collection<String> cStati = new LinkedList<String>();
-				cStati.add(ProjektServiceFac.PROJEKT_STATUS_ERLEDIGT);
-				crit.add(Restrictions.in(ProjektFac.FLR_PROJEKT_STATUS_C_NR,
-						cStati));
+				// PJ18471
+				crit.createAlias("flrprojektstatus", "s");
+				crit.add(Restrictions.eq("s.b_erledigt",
+						Helper.boolean2Short(true)));
 			}
 
 			if (reportJournalKriterienDtoI.dVon != null) {
@@ -1169,7 +1529,8 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 
 				oZeile[ProjektReportFac.REPORT_PROJEKT_JOURNAL_ERLEDIGT_ZIELWOCHE] = ""
 						+ KW;
-
+				oZeile[ProjektReportFac.REPORT_PROJEKT_JOURNAL_ERLEDIGT_STATUS] = projekt
+						.getStatus_c_nr();
 				oZeile[ProjektReportFac.REPORT_PROJEKT_JOURNAL_ERLEDIGT_PRIO] = projekt
 						.getI_prio();
 				oZeile[ProjektReportFac.REPORT_PROJEKT_JOURNAL_ERLEDIGT_TEXT] = Helper
@@ -1292,12 +1653,11 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 					ProjektServiceFac.PROJEKT_STATUS_STORNIERT)));
 			critProjekt.add(Restrictions.eq(
 					ProjektFac.FLR_PROJEKT_BEREICH_I_ID, bereichIId));
-			// Einschraenkung nach Status Offen, Erledigt
-			Collection<String> cStati = new LinkedList<String>();
-			cStati.add(ProjektServiceFac.PROJEKT_STATUS_OFFEN);
-			cStati.add(ProjektServiceFac.PROJEKT_STATUS_ANGELEGT);
-			critProjekt.add(Restrictions.in(ProjektFac.FLR_PROJEKT_STATUS_C_NR,
-					cStati));
+
+			// PJ18471
+			critProjekt.createAlias("flrprojektstatus", "s");
+			critProjekt.add(Restrictions.eq("s.b_erledigt",
+					Helper.boolean2Short(false)));
 
 			// Das Belegdatum muss vor dem Stichtag liegen
 			critProjekt.add(Restrictions.le(ProjektFac.FLR_PROJEKT_T_ANLEGEN,
@@ -1367,6 +1727,10 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 						.getC_nr();
 				data[i][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_STATUS] = projekt
 						.getStatus_c_nr();
+
+				data[i][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_TYP] = projekt
+						.getTyp_c_nr();
+
 				if (projekt.getPersonal_i_id_internerledigt() != null) {
 					PersonalDto personalDto = getPersonalFac()
 							.personalFindByPrimaryKey(
@@ -1387,6 +1751,28 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 								projekt.getI_id(), null, null, null, null,
 								theClientDto);
 				data[i][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_GESAMTDAUER] = ddArbeitszeitist;
+
+				if (projekt.getFlrpartner().getFlrlandplzort() != null) {
+					data[i][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_LKZ] = projekt
+							.getFlrpartner().getFlrlandplzort().getFlrland()
+							.getC_lkz();
+					data[i][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_PLZ] = projekt
+							.getFlrpartner().getFlrlandplzort().getC_plz();
+					data[i][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_ORT] = projekt
+							.getFlrpartner().getFlrlandplzort().getFlrort()
+							.getC_name();
+				}
+
+				if (projekt.getFlrpartner().getFlrpartnerklasse() != null) {
+					data[i][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_PARTNERKLASSE] = projekt
+							.getFlrpartner().getFlrpartnerklasse().getC_nr();
+				}
+
+				if (projekt.getFlrpartner().getFlrbranche() != null) {
+					data[i][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_BRANCHE] = projekt
+							.getFlrpartner().getFlrbranche().getC_nr();
+				}
+
 				data[i][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_KUNDECNAME1] = projekt
 						.getFlrpartner().getC_name1nachnamefirmazeile1();
 				locDruck = Helper.string2Locale(projekt.getFlrpartner()
@@ -1483,9 +1869,6 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 				}
 			}
 
-		} catch (Throwable t) {
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
-					new Exception(t));
 		} finally {
 			try {
 				session.close();
@@ -1936,6 +2319,189 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 	}
 
 	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JasperPrintLP printProjektzeiten(Integer projektIId,
+			int iSortierung, TheClientDto theClientDto) {
+
+		cAktuellerReport = ProjektReportFac.REPORT_PROJEKTZEITDATEN;
+		TreeMap<String, Object[]> alDaten = new TreeMap<String, Object[]>();
+		try {
+			ProjektDto pjDto = getProjektFac().projektFindByPrimaryKey(
+					projektIId);
+
+			FilterKriterium[] filterKrit = new FilterKriterium[1];
+			FilterKriterium krit1 = new FilterKriterium("projekt_i_id", true,
+					projektIId.toString(), FilterKriterium.OPERATOR_EQUAL,
+					false);
+
+			filterKrit[0] = krit1;
+
+			QueryParameters p = new QueryParameters(
+					QueryParameters.UC_ID_PROJEKTVERLAUF, null,
+					new FilterBlock(filterKrit, "AND"), null, null);
+
+			ProjektverlaufHandler pv = new ProjektverlaufHandler();
+			pv.setCurrentUser(theClientDto);
+			pv.setQuery(p);
+
+			LinkedHashMap<String, ProjektVerlaufHelperDto> hm = pv.setInhalt();
+
+			ProjektVerlaufHelperDto pvDto = new ProjektVerlaufHelperDto(0,
+					pjDto);
+			hm.put("PROJEKT", pvDto);
+
+			Iterator<String> it = hm.keySet().iterator();
+
+			while (it.hasNext()) {
+				ProjektVerlaufHelperDto belegDto = hm.get(it.next());
+
+				String belegart = null;
+				String belegnummer = null;
+				Integer belegIId = null;
+				if (belegDto.getBelegDto() instanceof AngebotDto) {
+					AngebotDto dto = (AngebotDto) belegDto.getBelegDto();
+					belegart = LocaleFac.BELEGART_ANGEBOT;
+					belegnummer = dto.getCNr();
+					belegIId = dto.getIId();
+
+				} else if (belegDto.getBelegDto() instanceof AuftragDto) {
+					AuftragDto dto = (AuftragDto) belegDto.getBelegDto();
+					belegart = LocaleFac.BELEGART_AUFTRAG;
+					belegnummer = dto.getCNr();
+					belegIId = dto.getIId();
+				} else if (belegDto.getBelegDto() instanceof LosDto) {
+					LosDto dto = (LosDto) belegDto.getBelegDto();
+					belegart = LocaleFac.BELEGART_LOS;
+					belegnummer = dto.getCNr();
+					belegIId = dto.getIId();
+				} else if (belegDto.getBelegDto() instanceof ProjektDto) {
+					ProjektDto dto = (ProjektDto) belegDto.getBelegDto();
+					belegart = LocaleFac.BELEGART_PROJEKT;
+					belegnummer = dto.getCNr();
+					belegIId = dto.getIId();
+				}
+
+				if (belegart != null && belegIId != null) {
+
+					AuftragzeitenDto[] dtos = getZeiterfassungFac()
+							.getAllZeitenEinesBeleges(belegart, belegIId, null,
+									null, null, null, false, true, theClientDto);
+
+					if (belegart == LocaleFac.BELEGART_PROJEKT) {
+						// Telefonzeiten hinzufuegen und sortieren
+						dtos = AuftragzeitenDto.add2BelegzeitenDtos(
+								getZeiterfassungFac()
+										.getAllTelefonzeitenEinesProjekts(
+												belegIId, null, null, null,
+												theClientDto), dtos);
+
+					}
+
+					for (int i = 0; i < dtos.length; i++) {
+
+						Object[] oZeile = new Object[ProjektReportFac.REPORT_PROJEKTZEITEN_ANZAHL_SPALTEN];
+						oZeile[ProjektReportFac.REPORT_PROJEKTZEITEN_BELEG] = belegnummer;
+						oZeile[ProjektReportFac.REPORT_PROJEKTZEITEN_BELEGART] = belegart;
+						oZeile[ProjektReportFac.REPORT_PROJEKTZEITEN_TELEFONZEIT] = new Boolean(dtos[i].isBTelefonzeit()); 
+
+						oZeile[ProjektReportFac.REPORT_PROJEKTZEITEN_BIS] = dtos[i]
+								.getTsEnde();
+
+						oZeile[ProjektReportFac.REPORT_PROJEKTZEITEN_VON] = dtos[i]
+								.getTsBeginn();
+
+						oZeile[ProjektReportFac.REPORT_PROJEKTZEITEN_PERSON] = dtos[i]
+								.getSPersonalMaschinenname();
+						oZeile[ProjektReportFac.REPORT_PROJEKTZEITEN_DAUER] = dtos[i]
+								.getDdDauer();
+
+						oZeile[ProjektReportFac.REPORT_PROJEKTZEITEN_ARTIKEL] = dtos[i]
+								.getSArtikelcnr();
+						oZeile[ProjektReportFac.REPORT_PROJEKTZEITEN_BEZEICHNUNG] = dtos[i]
+								.getSArtikelbezeichnung();
+						oZeile[ProjektReportFac.REPORT_PROJEKTZEITEN_BEMERKUNG] = dtos[i]
+								.getSZeitbuchungtext();
+						oZeile[ProjektReportFac.REPORT_PROJEKTZEITEN_KOMMENTAR] = dtos[i]
+								.getSKommentar();
+						oZeile[ProjektReportFac.REPORT_PROJEKTZEITEN_KOSTEN] = dtos[i]
+								.getBdKosten();
+						
+						String sort = "";
+						if (iSortierung == SORTIERUNG_PROJEKTZEITEN_BELEGART_BELEG_PERSON) {
+							sort = Helper.fitString2Length(belegart, 15, ' ')
+									+ Helper.fitString2Length(belegnummer, 20,
+											' ')
+									+ Helper.fitString2Length(
+											dtos[i].getSPersonalMaschinenname(),
+											40, ' ') + dtos[i].getTsBeginn();
+						} else if (iSortierung == SORTIERUNG_PROJEKTZEITEN_TAETIEKGKEIT_DATUM_PERSON) {
+							sort = Helper.fitString2Length(
+									dtos[i].getSArtikelcnr(), 40, ' ')
+									+ dtos[i].getTsBeginn()
+									+ Helper.fitString2Length(
+											dtos[i].getSPersonalMaschinenname(),
+											40, ' ');
+						} else if (iSortierung == SORTIERUNG_PROJEKTZEITEN_PERSON_BELEGART_BELEG) {
+							sort = Helper.fitString2Length(
+									dtos[i].getSPersonalMaschinenname(), 40,
+									' ')
+									+ Helper.fitString2Length(belegart, 15, ' ')
+									+ Helper.fitString2Length(belegnummer, 20,
+											' ') + dtos[i].getTsBeginn();
+						}
+
+						alDaten.put(sort, oZeile);
+
+					}
+				}
+
+			}
+			HashMap<String, Object> parameter = new HashMap<String, Object>();
+			if (iSortierung == SORTIERUNG_PROJEKTZEITEN_BELEGART_BELEG_PERSON) {
+				parameter
+						.put("P_SORTIERUNG",
+								getTextRespectUISpr(
+										"proj.projektzeitdaten.sortierung.belegartbelegperson",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()));
+			} else if (iSortierung == SORTIERUNG_PROJEKTZEITEN_PERSON_BELEGART_BELEG) {
+				parameter
+						.put("P_SORTIERUNG",
+								getTextRespectUISpr(
+										"proj.projektzeitdaten.sortierung.personbelegartbeleg",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()));
+			} else if (iSortierung == SORTIERUNG_PROJEKTZEITEN_TAETIEKGKEIT_DATUM_PERSON) {
+				parameter
+						.put("P_SORTIERUNG",
+								getTextRespectUISpr(
+										"proj.report.projektzeiten.sortierungtaetigkeit",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()));
+			}
+
+			data = new Object[alDaten.size()][ProjektReportFac.REPORT_PROJEKTZEITEN_ANZAHL_SPALTEN];
+
+			Iterator itKey = alDaten.keySet().iterator();
+			int i = 0;
+			while (itKey.hasNext()) {
+				data[i] = alDaten.get(itKey.next());
+				i++;
+			}
+
+			parameter.put("P_PROJEKT", pjDto.getCNr());
+			parameter.put("P_TITEL", pjDto.getCTitel());
+
+			initJRDS(parameter, ProjektReportFac.REPORT_MODUL,
+					cAktuellerReport, theClientDto.getMandant(),
+					theClientDto.getLocUi(), theClientDto);
+		} catch (RemoteException e) {
+			throwEJBExceptionLPRespectOld(e);
+		}
+		return getReportPrint();
+
+	}
+
+	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public JasperPrintLP printProjektOffeneAuswahlListe(
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException {
 
@@ -1993,6 +2559,16 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 					data[i][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_ORT] = projekt
 							.getFlrpartner().getFlrlandplzort().getFlrort()
 							.getC_name();
+				}
+
+				if (projekt.getFlrpartner().getFlrpartnerklasse() != null) {
+					data[i][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_PARTNERKLASSE] = projekt
+							.getFlrpartner().getFlrpartnerklasse().getC_nr();
+				}
+
+				if (projekt.getFlrpartner().getFlrbranche() != null) {
+					data[i][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_BRANCHE] = projekt
+							.getFlrpartner().getFlrbranche().getC_nr();
 				}
 
 				locDruck = Helper.string2Locale(projekt.getFlrpartner()
@@ -2152,6 +2728,10 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 				value = data[index][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_KUNDECNAME1];
 			} else if ("F_ORT".equals(fieldName)) {
 				value = data[index][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_ORT];
+			} else if ("F_BRANCHE".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_BRANCHE];
+			} else if ("F_PARTNERKLASSE".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_PARTNERKLASSE];
 			} else if ("F_LKZ".equals(fieldName)) {
 				value = data[index][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_LKZ];
 			} else if ("F_PLZ".equals(fieldName)) {
@@ -2213,6 +2793,10 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 				value = data[index][ProjektReportFac.REPORT_PROJEKT_JOURNAL_OFFENE_INTERNERLEDIGT_ZEIT];
 			}
 
+		} else if (cAktuellerReport.equals(REPORT_GANZSEITIGESBILD)) {
+			if ("F_BILD".equals(fieldName)) {
+				value = data[index][0];
+			}
 		} else if (cAktuellerReport
 				.equals(ProjektReportFac.REPORT_PROJEKT_JOURNAL_ALLE)) {
 			if ("F_CNR".equals(fieldName)) {
@@ -2446,6 +3030,46 @@ public class ProjektReportFacBean extends LPReport implements ProjektReportFac,
 				value = data[index][ProjektReportFac.REPORT_PROJEKTVERLAUF_TELEFON_KOMMENTAR_EXTERN];
 			} else if ("F_TELEFON_KOMMENTAR_INTERN".equals(fieldName)) {
 				value = data[index][ProjektReportFac.REPORT_PROJEKTVERLAUF_TELEFON_KOMMENTAR_INTERN];
+			} else if ("F_ER_KEINE_AUFTRAGSWERTUNG".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTVERLAUF_ER_KEINE_AUFTRAGSWERTUNG];
+			}
+
+			else if ("F_LOSANTEIL_LIEFERSCHEIN_LOSNUMMER".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTVERLAUF_LOSANTEIL_LIEFERSCHEIN_LOSNUMMER];
+			} else if ("F_LOSANTEIL_LIEFERSCHEIN_EINSTANDSWERT_MATERIAL"
+					.equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTVERLAUF_LOSANTEIL_LIEFERSCHEIN_EINSTANDSWERT_MATERIAL];
+			} else if ("F_LOSANTEIL_LIEFERSCHEIN_EINSTANDSWERT_AZ"
+					.equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTVERLAUF_LOSANTEIL_LIEFERSCHEIN_EINSTANDSWERT_AZ];
+			}
+
+		} else if (cAktuellerReport
+				.equals(ProjektReportFac.REPORT_PROJEKTZEITDATEN)) {
+			if ("Belegart".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTZEITEN_BELEGART];
+			} else if ("Belegnummer".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTZEITEN_BELEG];
+			} else if ("Ende".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTZEITEN_BIS];
+			} else if ("Dauer".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTZEITEN_DAUER];
+			} else if ("Person".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTZEITEN_PERSON];
+			} else if ("Beginn".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTZEITEN_VON];
+			} else if ("Artikel".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTZEITEN_ARTIKEL];
+			} else if ("Bezeichnung".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTZEITEN_BEZEICHNUNG];
+			} else if ("Bemerkung".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTZEITEN_BEMERKUNG];
+			} else if ("Kommentar".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTZEITEN_KOMMENTAR];
+			} else if ("Kosten".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTZEITEN_KOSTEN];
+			} else if ("Telefonzeit".equals(fieldName)) {
+				value = data[index][ProjektReportFac.REPORT_PROJEKTZEITEN_TELEFONZEIT];
 			}
 
 		}

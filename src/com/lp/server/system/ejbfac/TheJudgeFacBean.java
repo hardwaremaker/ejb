@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -44,6 +44,8 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
+import com.lp.server.benutzer.service.BenutzermandantsystemrolleDto;
+import com.lp.server.benutzer.service.SystemrolleDto;
 import com.lp.server.system.ejb.TheJudgePK;
 import com.lp.server.system.ejb.Thejudge;
 import com.lp.server.system.service.LockMeDto;
@@ -81,10 +83,12 @@ public class TheJudgeFacBean extends Facade implements TheJudgeFac {
 			// AD wegen lpwebappzemecs aus Webservice
 			sBenutzer = sBenutzer.trim();
 
-			return getBenutzerFac()
+			BenutzermandantsystemrolleDto bmsr = getBenutzerFac()
 					.benutzermandantsystemrolleFindByBenutzerCNrMandantCNr(
-							sBenutzer, theClientDto.getMandant())
-					.getSystemrolleIId();
+							sBenutzer, theClientDto.getMandant());
+			SystemrolleDto rolle = getBenutzerFac().systemrolleFindByPrimaryKey(bmsr.getSystemrolleIId());
+			
+			return rolle.getAliasRolleIId() == null ? rolle.getIId() : rolle.getAliasRolleIId();
 		} catch (RemoteException ex) {
 			throwEJBExceptionLPRespectOld(ex);
 			return null;
@@ -286,4 +290,67 @@ public class TheJudgeFacBean extends Facade implements TheJudgeFac {
 		// }
 		return aLockMeDto;
 	}
+	
+	public LockMeDto[] findMyLocks(TheClientDto theClientDto) {
+		LockMeDto[] aLockMeDto = null;
+		Query query = em.createNamedQuery("TheJudgefindByUsernr");
+		query.setParameter("usernr", theClientDto.getIDUser());
+		Collection<Thejudge> colLoclMe = query.getResultList();
+		aLockMeDto = assembleTheJudgeDtos(colLoclMe);
+		return aLockMeDto;		
+	}
+	
+	public void removeMyLocks(TheClientDto theClientDto) {
+		Query query = em.createNamedQuery("TheJudgefindByUsernr");
+		query.setParameter("usernr", theClientDto.getIDUser());
+		Collection<Thejudge> colMyLocks = query.getResultList();
+		for (Thejudge myLock : colMyLocks) {
+			em.remove(myLock);
+		}
+		em.flush();
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

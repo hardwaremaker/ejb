@@ -1,33 +1,33 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.system.jcr.ejbfac;
@@ -84,6 +84,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
@@ -121,8 +123,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
-
-import net.sf.jasperreports.engine.JasperExportManager;
 
 import org.hibernate.Criteria;
 import org.hibernate.SessionFactory;
@@ -180,6 +180,7 @@ import com.lp.server.system.jcr.service.DokumentgruppierungDto;
 import com.lp.server.system.jcr.service.DokumentnichtarchiviertDto;
 import com.lp.server.system.jcr.service.JCRDocDto;
 import com.lp.server.system.jcr.service.JCRDocFac;
+import com.lp.server.system.jcr.service.JCRRepoInfo;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeAnfrage;
 import com.lp.server.system.jcr.service.docnode.DocNodeAngebot;
@@ -223,10 +224,13 @@ import com.lp.server.system.service.VersandFac;
 import com.lp.server.system.service.VersandanhangDto;
 import com.lp.server.system.service.VersandauftragDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.HelperServer;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
+
+import net.sf.jasperreports.engine.JasperExportManager;
 
 @Stateless
 // @Service
@@ -377,7 +381,7 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 
 			// localpathMap.put(BELEGART_VERSANDAUFTRAG, PATH_VERSANDAUFTRAG);
 			// localpathMap.put(BELEGART_VERSANDANHANG, PATH_VERSANDANHANG);
-			
+
 			pathMap = localpathMap ;
 		}
 
@@ -616,21 +620,21 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 					printNodeTree(vIter.nextVersion(), depth+1);
 				}
 			} catch (Exception e) {
-				
+
 			}
 		} catch (RepositoryException e) {
 			e.printStackTrace();
 		}
 	}
-	
+
 	@TransactionAttribute(TransactionAttributeType.NEVER)
 	public void setVisibilityOfDocument(String basePath, String versionPath, boolean hidden) {
 		try {
 			Node base = getNode(basePath);
 			Node version = getNode(versionPath);
-			
+
 			new JCRDocDto(version, false); //pruefen ob es auch wirklich ein dokument ist
-			
+
 			if(base.isLocked())
 				base.unlock();
 			boolean versionable = false;
@@ -638,12 +642,12 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 				if(mixin.getName().equals("mix:versionable"))
 						versionable = true;
 			}
-			
+
 			if(!versionable)
 				base.addMixin("mix:versionable");
 			if(!base.isCheckedOut())
 				base.checkout();
-			
+
 			PropertyIterator iter = version.getProperties();
 			while (iter.hasNext()) {
 				Property prop = iter.nextProperty();
@@ -659,7 +663,7 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 			base.checkin();
 			getSession().save();
 			//jetzt gibt es eine neue Version
-			
+
 			closeSession();
 			//muss neue session sein, sonst tritt ein Fehler auf
 			base = getNode(basePath);
@@ -667,7 +671,7 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 			String verName = version.getParent().getName();
 			base.getVersionHistory().removeVersion(verName);
 			getSession().save();
-			
+
 		} catch (Throwable e) {
 			e.printStackTrace(System.out);
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEIM_LOESCHEN, "");
@@ -1057,11 +1061,27 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 		}
 	}
 
-	public boolean checkIfNodeExists(DocPath dPath) {
-		return checkIfNodeExists(dPath.getPathAsString());
+	@TransactionAttribute(TransactionAttributeType.NEVER)
+	public JCRRepoInfo checkIfNodeExists(DocPath dPath) {
+		JCRRepoInfo info = new JCRRepoInfo() ;
+		info.setOnline(isOnline());
+		if(info.isOnline()) {
+			try {
+				boolean exists = checkIfNodeExistsWithinTransaction(dPath) ;
+				info.setExists(exists);
+			} finally {
+				closeSession();
+			}
+		}
+
+		return info ;
 	}
 
-	public boolean checkIfNodeExists(String sPath) {
+	public boolean checkIfNodeExistsWithinTransaction(DocPath dPath) {
+		return checkIfNodeExistsWithinTransaction(dPath.getPathAsString());
+	}
+
+	public boolean checkIfNodeExistsWithinTransaction(String sPath) {
 		try {
 			if (sPath == null) {
 				return false;
@@ -1080,7 +1100,10 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 				rootNode = getSession().getRootNode();
 			}
 			try {
-				rootNode.getNode(sPath).getProperty(PROPERTY_VERSION);
+				String propertyName = PROPERTY_VERSION ;
+//				boolean exists = rootNode.getNode(sPath).hasProperty(propertyName) ;
+//				return exists ;
+				rootNode.getNode(sPath).getProperty(propertyName);
 				return true;
 			} catch (PathNotFoundException ex) {
 				try {
@@ -1094,9 +1117,15 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 				// getSession().logout();
 			}
 		} catch (Exception e) {
-			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Fehler. Login an JCR fehlgeschlagen oder kein root-Node vorhanden");
+			String s = "JCR-Node-Exists:Path: <" + sPath + ">." ;
+			myLogger.error(s, e);
+			ArrayList<Object> ao = new ArrayList<Object>() ;
+			ao.add(s) ;
+
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_JCR_ROOT_EXISTIERT_NICHT, ao, e);
+//			throw new EJBExceptionLP(
+//					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+//					"Fehler. Login an JCR fehlgeschlagen oder kein root-Node vorhanden");
 		}
 	}
 
@@ -1181,7 +1210,7 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 
 	/**
 	 * Gibt die DocNodes aus dem angegeben Pfad sortiert zurueck.
-	 * 
+	 *
 	 */
 	public List<DocNodeBase> getDocNodeChildrenFromNode(DocPath docPath,
 			TheClientDto theClientDto) throws RepositoryException, IOException {
@@ -1218,7 +1247,7 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 						docNodes.add(dn);
 					} catch (PathNotFoundException pnfEx) {
 						myLogger.warn("PathNotFound", pnfEx) ;
-						
+
 						// Die alten Ordner anhaengen
 						DocNodeBase dn = new VisualNodeLiteral(
 								helper.getName(), "color:gray");
@@ -1257,24 +1286,25 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 
 	/**
 	 * Darf der DocNode in diesem Pfad angezeigt werden?
-	 * 
+	 *
 	 * @param node
 	 * @param path
 	 * @param theClientDto
-	 * @return
+	 * @return true wenn der Knoten angezeigt werden darf
 	 */
 	private boolean isNodeValidForPath(DocNodeBase node, DocPath path,
 			TheClientDto theClientDto) {
-		boolean isLPAdmin = Helper.isLPAdmin(theClientDto);
-
-		if (NodesFromCMSToFilter.contains(node.asPath()))
+		if (NodesFromCMSToFilter.contains(node.asPath())) {
 			return false;
-		if (!isLPAdmin) {
-			if (NodesFromCMSToFilterWhenNotAdmin.contains(node.asPath()))
+		}
+		if (!HelperServer.isLPAdmin(theClientDto)) {
+			if (NodesFromCMSToFilterWhenNotAdmin.contains(node.asPath())) {
 				return false;
+			}
 			if (path.size() == 1
-					&& theClientDto != null && !node.asPath().equals(theClientDto.getMandant()))
+					&& theClientDto != null && !node.asPath().equals(theClientDto.getMandant())) {
 				return false;
+			}
 		}
 		return true;
 	}
@@ -1284,10 +1314,10 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 	 * zB. wird im Pfad HELIUMV/Partner/Partner fuer jeden Partner (also auch
 	 * ohne hinterlegten Dokumenten) ein DocNodePartner angehaengt.<br>
 	 * Die zurueckgegebenen Nodes koennen, aber muessen nicht im CMS existieren.
-	 * 
+	 *
 	 * @param docPath
 	 * @param theClientDto
-	 * @return
+	 * @return eine (leere) Liste von Knoten im angegebenen Pfad
 	 * @throws RemoteException
 	 * @throws EJBExceptionLP
 	 */
@@ -1332,12 +1362,14 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 	}
 
 	/**
-	 * Gibt die immer (in der View) existierenden Nodes im uebergebenen Pfad
-	 * zurueck. Moeglicherweise existieren diese im CMS nicht.
-	 * 
+	 * Gibt die immer in der View anzuzeigenden Nodes im &uuml;bergebenen Pfad
+	 * zur&uuml;ck.</br>
+	 * <p>Wir zeigen beispielsweise immer einen Partner-Knoten an, der physisch
+	 * im DMS so gar nicht existiert, hier aber mitgeliefert wird</p>
+	 *
 	 * @param docPath
 	 * @param mandant
-	 * @return
+	 * @return eine (leere) Liste von Knoten im angegebenen Pfad
 	 */
 	private List<DocNodeBase> getStaticNodesForPath(DocPath docPath,
 			String mandant) {
@@ -1368,17 +1400,17 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 
 	/**
 	 * Nur fuer Instanzierung von DocNodes verwenden!!!!
-	 * 
-	 * @param partner
-	 * @return
+	 *
+	 * @param flrPartner
+	 * @return ein PartnerDto bei dem nur die Adressinfos gefuellt sind
 	 */
-	private PartnerDto createPartnerDtoFromFLRPartner(FLRPartner partner) {
+	private PartnerDto createPartnerDtoFromFLRPartner(FLRPartner flrPartner) {
 		PartnerDto dto = new PartnerDto();
-		dto.setIId(partner.getI_id());
-		dto.setCName1nachnamefirmazeile1(partner
+		dto.setIId(flrPartner.getI_id());
+		dto.setCName1nachnamefirmazeile1(flrPartner
 				.getC_name1nachnamefirmazeile1());
-		dto.setCName2vornamefirmazeile2(partner.getC_name2vornamefirmazeile2());
-		dto.setCName3vorname2abteilung(partner.getC_name3vorname2abteilung());
+		dto.setCName2vornamefirmazeile2(flrPartner.getC_name2vornamefirmazeile2());
+		dto.setCName3vorname2abteilung(flrPartner.getC_name3vorname2abteilung());
 		return dto;
 	}
 
@@ -1386,8 +1418,8 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 	 * Gibt eine Liste von DocNodePartner ALLER Partner unsortiert zurueck,
 	 * unabhaengig davon, ob der Partner wirklich Dokumente hinterlegt hat, oder
 	 * nicht
-	 * 
-	 * @return
+	 *
+	 * @return eine (leere) Liste von DocNodePartner
 	 */
 	private List<DocNodePartner> getAllPartnerNodes() {
 		List<DocNodePartner> docNodes = new ArrayList<DocNodePartner>();
@@ -1412,8 +1444,8 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 	 * Gibt eine Liste von DocNodeLieferant ALLER Lieferanten unsortiert
 	 * zurueck, unabhaengig davon, ob der Kunde wirklich Dokumente hinterlegt
 	 * hat, oder nicht
-	 * 
-	 * @return
+	 *
+	 * @return (leere) Liste aller DocNodeLieferant(en) fuer den Mandanten
 	 */
 	private List<DocNodeLieferant> getAllLieferantenNodes(String mandant) {
 		List<DocNodeLieferant> docNodes = new ArrayList<DocNodeLieferant>();
@@ -1441,8 +1473,8 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 	 * Gibt eine Liste von DocNodeKunde ALLER Kunden unsortiert zurueck,
 	 * unabhaengig davon, ob der Kunde wirklich Dokumente hinterlegt hat, oder
 	 * nicht
-	 * 
-	 * @return
+	 *
+	 * @return (leere) LIste aller DocNodeKunden im angegebenen Mandanten
 	 */
 	private List<DocNodeKunde> getAllKundenNodes(String mandant) {
 		List<DocNodeKunde> docNodes = new ArrayList<DocNodeKunde>();
@@ -1676,7 +1708,7 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 			em.persist(dokumentgruppierung);
 			em.flush();
 		} catch (EntityExistsException e) {
-			// Nothing we are ok
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_PRIMARY_KEY, e);
 		}
 	}
 
@@ -1688,7 +1720,7 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 			em.persist(dokumentbelegart);
 			em.flush();
 		} catch (EntityExistsException e) {
-			// Nothing we are ok
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_DUPLICATE_PRIMARY_KEY, e);
 		}
 	}
 
@@ -1697,6 +1729,7 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 				dokumentbelegartDto.getDokumentbelegartPK());
 		em.remove(dokumentbelegart);
 		em.flush();
+
 	}
 
 	public long getNextVersionNumer(JCRDocDto jcrDocDto) {
@@ -2530,7 +2563,7 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 		List<DocNodeBase> existingNodes = new ArrayList<DocNodeBase>();
 		for (DocNodeBase node : nodes) {
 			DocPath tempPath = new DocPath(node);
-			if (checkIfNodeExists(tempPath)) {
+			if (checkIfNodeExistsWithinTransaction(tempPath)) {
 				DocPath viewPath = tempPath.getDeepCopy();
 				viewPath.asDocNodeList().remove(0); // HELIUMV und Mandant
 				viewPath.asDocNodeList().remove(0); // entfernen
@@ -2610,7 +2643,7 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 		}
 		return jcrDocs;
 	}
-	
+
 	public boolean isOnline() {
 		return repo != null;
 	}
@@ -2637,7 +2670,7 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 					session = null;
 				}
 			} catch(IllegalStateException e) {
-				
+
 			}
 		}
 		session = null;
@@ -2653,17 +2686,13 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 		session = null;
 	}
 
-	private String getCorrectBelegNr(String cnr, String mandantCNr) {
-
-		Integer geschaeftsJahr;
-		Integer belegNummer;
-		try {
-			geschaeftsJahr = Integer
-					.parseInt(cnr.substring(0, cnr.indexOf(".")));
-			belegNummer = Integer.parseInt(cnr.substring(cnr.indexOf(".") + 1));
-		} catch (Exception ex) {
+	private String getCorrectBelegNr(String cnr, String mandantCNr) throws EJBExceptionLP, RemoteException {
+		Matcher m = Pattern.compile("([0-9]*)(?:\\.[^0-9]*)([0-9]*)").matcher(cnr);
+		if(!m.find())
 			return cnr;
-		}
+		Integer geschaeftsJahr = Integer
+				.parseInt(m.group(1));
+		Integer belegNummer = Integer.parseInt(m.group(2));
 
 		if (geschaeftsJahr < 100 && geschaeftsJahr > 50) { // belege von 1950
 															// bis 1999
@@ -2672,10 +2701,14 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 			geschaeftsJahr += 2000;
 		}
 
+		ParametermandantDto pm = getParameterFac().getMandantparameter(
+				mandantCNr, ParameterFac.KATEGORIE_ALLGEMEIN,
+				ParameterFac.PARAMETER_BELEGNUMMER_MANDANTKENNUNG);
+		String mk = pm.getCWert().trim();
 		BelegnummerGeneratorObj generator = new BelegnummerGeneratorObj();
 		LpBelegnummerFormat bnFormat = generator
 				.getBelegnummernFormat(mandantCNr);
-		LpBelegnummer belegnummer = new LpBelegnummer(geschaeftsJahr, "",
+		LpBelegnummer belegnummer = new LpBelegnummer(geschaeftsJahr, mk,
 				belegNummer);
 		return bnFormat.format(belegnummer);
 	}
@@ -3167,7 +3200,7 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 	}
 
 	private Object[] getDtos(JCRDocDto jcr, String basePath, String belegart,
-			String mandantCNr) {
+			String mandantCNr) throws EJBExceptionLP, RemoteException {
 
 		if (!acceptBeleg(belegart, jcr.getsName()))
 			return new Object[] { IGNORE_FLAG };
@@ -3415,7 +3448,7 @@ public class JCRDocFacBean extends Facade implements JCRDocFac {
 	private int repairAllVersions(List<JCRDocDto> list, DocPath docPath) {
 		Collections.reverse(list);
 		// boolean nodeExists = getJCRDocFac().checkIfNodeExists(docPath);
-		boolean nodeExists = checkIfNodeExists(docPath);
+		boolean nodeExists = checkIfNodeExistsWithinTransaction(docPath);
 		if (overwriteExisting && nodeExists) {
 			try {
 				String path = docPath.getPathAsString();

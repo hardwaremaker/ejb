@@ -1,33 +1,33 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published 
- * by the Free Software Foundation, either version 3 of theLicense, or 
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of theLicense, or
  * (at your option) any later version.
- * 
- * According to sec. 7 of the GNU Affero General Public License, version 3, 
+ *
+ * According to sec. 7 of the GNU Affero General Public License, version 3,
  * the terms of the AGPL are supplemented with the following terms:
- * 
- * "HELIUM V" and "HELIUM 5" are registered trademarks of 
- * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
+ *
+ * "HELIUM V" and "HELIUM 5" are registered trademarks of
+ * HELIUM V IT-Solutions GmbH. The licensing of the program under the
  * AGPL does not imply a trademark license. Therefore any rights, title and
  * interest in our trademarks remain entirely with us. If you want to propagate
  * modified versions of the Program under the name "HELIUM V" or "HELIUM 5",
- * you may only do so if you have a written permission by HELIUM V IT-Solutions 
+ * you may only do so if you have a written permission by HELIUM V IT-Solutions
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Contact: developers@heliumv.com
  ******************************************************************************/
 package com.lp.server.lieferschein.fastlanereader;
@@ -51,6 +51,7 @@ import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.lieferschein.fastlanereader.generated.FLRLieferschein;
 import com.lp.server.lieferschein.service.LieferscheinDto;
 import com.lp.server.lieferschein.service.LieferscheinFac;
+import com.lp.server.lieferschein.service.LieferscheinServiceFac;
 import com.lp.server.partner.service.KundeDto;
 import com.lp.server.partner.service.KundeFac;
 import com.lp.server.partner.service.LieferantFac;
@@ -79,26 +80,26 @@ import com.lp.util.Helper;
  * <p>
  * FLR fuer LS_LIEFERSCHEIN.
  * </p>
- * 
+ *
  * <p>
  * Copyright Logistik Pur Software GmbH (c) 2004-2007
  * </p>
- * 
+ *
  * <p>
  * Erstellung: Uli Walch; 21.10.04
  * </p>
- * 
+ *
  * <p>
- * 
+ *
  * @author $Author: robert $
  *         </p>
- * 
+ *
  * @version $Revision: 1.27 $ Date $Date: 2013/01/19 11:47:31 $
  */
 public class LieferscheinHandler extends UseCaseHandler {
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 	public static final String FLR_LIEFERSCHEIN = "flrlieferschein.";
@@ -108,7 +109,7 @@ public class LieferscheinHandler extends UseCaseHandler {
 	/**
 	 * gets the data page for the specified row using the current query. The row
 	 * at rowIndex will be located in the middle of the page.
-	 * 
+	 *
 	 * @param rowIndex
 	 *            diese Zeile soll selektiert sein
 	 * @return QueryResult das Ergebnis der Abfrage
@@ -130,6 +131,7 @@ public class LieferscheinHandler extends UseCaseHandler {
 			String queryString = this.getFromClause() + this.buildWhereClause()
 					+ this.buildOrderByClause();
 			// myLogger.info("HQL: " + queryString);
+//			logQuery(queryString);
 			Query query = session.createQuery(queryString);
 			query.setFirstResult(startIndex);
 			query.setMaxResults(pageSize);
@@ -172,7 +174,7 @@ public class LieferscheinHandler extends UseCaseHandler {
 				}
 
 				rows[row][col++] = cAnschrift;
-				
+
 				String proj_bestellnummer = "";
 				if (lieferschein.getC_bez_projektbezeichnung() != null) {
 					proj_bestellnummer = lieferschein.getC_bez_projektbezeichnung();
@@ -225,7 +227,14 @@ public class LieferscheinHandler extends UseCaseHandler {
 				if (!Helper.short2boolean(lieferschein.getB_verrechenbar())) {
 					rows[row][col++] = Color.LIGHT_GRAY;
 				} else {
-					rows[row][col++] = null;
+
+					if((lieferschein.getFlrverkettet()!=null && lieferschein.getFlrverkettet().size()>0) || lieferschein.getFlrverkettet2()!=null && lieferschein.getFlrverkettet2().size()>0){
+						rows[row][col++] = Color.BLUE;
+					}else {
+						rows[row][col++] = null;
+					}
+
+
 				}
 
 				row++;
@@ -247,7 +256,7 @@ public class LieferscheinHandler extends UseCaseHandler {
 
 	/**
 	 * gets the total number of rows represented by the current query.
-	 * 
+	 *
 	 * @return int die Anzehl der Zeilen im Ergebnis
 	 * @see UseCaseHandler#getRowCountFromDataBase()
 	 */
@@ -259,6 +268,7 @@ public class LieferscheinHandler extends UseCaseHandler {
 			session = factory.openSession();
 			String queryString = "select count(*) " + this.getFromClause()
 					+ this.buildWhereClause();
+//			logQuery(queryString);
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
 			if (rowCountResult != null && rowCountResult.size() > 0) {
@@ -282,7 +292,7 @@ public class LieferscheinHandler extends UseCaseHandler {
 	/**
 	 * builds the where clause of the HQL (Hibernate Query Language) statement
 	 * using the current query.
-	 * 
+	 *
 	 * @return the HQL where clause.
 	 */
 	private String buildWhereClause() {
@@ -325,6 +335,11 @@ public class LieferscheinHandler extends UseCaseHandler {
 							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
 									ex);
 						}
+					} else if (filterKriterien[i].kritName
+							.equals(LieferscheinServiceFac.LS_HANDLER_OHNE_VERKETTETE)) {
+
+						where.append(" flrlieferschein.i_id not in (SELECT v.lieferschein_i_id_verkettet FROM FLRVerkettet v) AND flrlieferschein.i_id not in (SELECT v.lieferschein_i_id FROM FLRVerkettet v) ");
+
 					} else if (filterKriterien[i].kritName
 							.equals("c_bez_projektbezeichnung")) {
 						where.append(" (upper(flrlieferschein.c_kommission) LIKE "
@@ -445,7 +460,7 @@ public class LieferscheinHandler extends UseCaseHandler {
 	/**
 	 * builds the HQL (Hibernate Query Language) order by clause using the sort
 	 * criterias contained in the current query.
-	 * 
+	 *
 	 * @return the HQL order by clause.
 	 */
 	private String buildOrderByClause() {
@@ -503,7 +518,7 @@ public class LieferscheinHandler extends UseCaseHandler {
 
 	/**
 	 * get the basic from clause for the HQL statement.
-	 * 
+	 *
 	 * @return the from clause.
 	 */
 	private String getFromClause() {
@@ -518,7 +533,7 @@ public class LieferscheinHandler extends UseCaseHandler {
 	/**
 	 * sorts the data described by the current query using the specified sort
 	 * criterias. The current query is also updated with the new sort criterias.
-	 * 
+	 *
 	 * @param sortierKriterien
 	 *            nach diesen Kriterien wird das Ergebnis sortiert
 	 * @param selectedId
@@ -545,6 +560,7 @@ public class LieferscheinHandler extends UseCaseHandler {
 						+ LieferscheinFac.FLR_LIEFERSCHEIN_I_ID
 						+ FLR_LIEFERSCHEIN_FROM_CLAUSE
 						+ this.buildWhereClause() + this.buildOrderByClause();
+//				logQuery(queryString);
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
 				if (scrollableResult != null) {

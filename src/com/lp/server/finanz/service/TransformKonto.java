@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -115,6 +115,7 @@ public class TransformKonto  implements Serializable  {
 		csvKonto.setBManuellbebuchbar(booleanParser.parse(getValue(csvFields, "F_MANUELL_BEBUCHBAR"), "F_MANUELL_BEBUCHBAR")) ;
 		csvKonto.setBVersteckt(booleanParser.parse(getValue(csvFields, "F_VERSTECKT"), "F_VERSTECKT")) ;
 		csvKonto.setCsortierung(getTrimmed(getValue(csvFields, "F_SORTIERUNG"))) ;
+		csvKonto.setcSteuerart(getTrimmed(getValue(csvFields, "F_STEUERART"))) ;
 		
 		return csvKonto ;
 	}	

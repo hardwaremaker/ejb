@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -53,6 +53,7 @@ import com.lp.server.artikel.ejbfac.WebshopItemServiceFacLocal;
 import com.lp.server.artikel.service.ArtikelFac;
 import com.lp.server.artikel.service.ArtikelReportFac;
 import com.lp.server.artikel.service.ArtikelbestelltFac;
+import com.lp.server.artikel.service.ArtikelimportFac;
 import com.lp.server.artikel.service.ArtikelkommentarFac;
 import com.lp.server.artikel.service.FehlmengeFac;
 import com.lp.server.artikel.service.InventurFac;
@@ -103,6 +104,8 @@ import com.lp.server.lieferschein.service.LieferscheinFac;
 import com.lp.server.lieferschein.service.LieferscheinReportFac;
 import com.lp.server.lieferschein.service.LieferscheinServiceFac;
 import com.lp.server.lieferschein.service.LieferscheinpositionFac;
+import com.lp.server.media.ejbfac.EmailMediaLocalFac;
+import com.lp.server.media.service.EmailMediaFac;
 import com.lp.server.partner.ejbfac.WebshopCustomerServiceFacLocal;
 import com.lp.server.partner.service.AnsprechpartnerFac;
 import com.lp.server.partner.service.BankFac;
@@ -115,6 +118,8 @@ import com.lp.server.partner.service.LieferantServicesFac;
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.partner.service.PartnerReportFac;
 import com.lp.server.partner.service.PartnerServicesFac;
+import com.lp.server.personal.service.MaschineFac;
+import com.lp.server.personal.service.PersonalApiFac;
 import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.personal.service.ZeiterfassungFac;
 import com.lp.server.personal.service.ZeiterfassungReportFac;
@@ -128,8 +133,10 @@ import com.lp.server.reklamation.service.ReklamationFac;
 import com.lp.server.stueckliste.service.StuecklisteFac;
 import com.lp.server.stueckliste.service.StuecklisteReportFac;
 import com.lp.server.system.ejbfac.BatcherFac;
+import com.lp.server.system.ejbfac.BatcherSingleTransactionFac;
 import com.lp.server.system.fastlanereader.service.FastLaneReader;
 import com.lp.server.system.jcr.service.JCRDocFac;
+import com.lp.server.system.jcr.service.JCRMediaFac;
 import com.lp.server.system.pkgenerator.bl.BelegnummerGeneratorObj;
 import com.lp.server.system.pkgenerator.bl.PKGeneratorObj;
 import com.lp.server.system.service.AutoBestellvorschlagFac;
@@ -144,11 +151,13 @@ import com.lp.server.system.service.AutomatiktimerFac;
 import com.lp.server.system.service.BelegpositionkonvertierungFac;
 import com.lp.server.system.service.DokumenteFac;
 import com.lp.server.system.service.DruckerFac;
+import com.lp.server.system.service.IntelligenterStklImportFac;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.MediaFac;
 import com.lp.server.system.service.PanelFac;
 import com.lp.server.system.service.ParameterFac;
+import com.lp.server.system.service.PflegeFac;
 import com.lp.server.system.service.SystemFac;
 import com.lp.server.system.service.SystemMultilanguageFac;
 import com.lp.server.system.service.SystemReportFac;
@@ -218,6 +227,7 @@ public class FacadeBeauftragter implements Serializable {
 	private MandantFac mandantFac = null;
 	private PartnerFac partnerFac = null;
 	private PanelFac panelFac = null;
+	private PflegeFac pflegeFac = null;
 	private PartnerServicesFac partnerServicesFac = null;
 	private PersonalFac personalFac = null;
 	private ReklamationFac reklamationFac = null;
@@ -272,6 +282,7 @@ public class FacadeBeauftragter implements Serializable {
 	private KundesokoFac kundesokoFac = null;
 	private BelegbuchungFac belegbuchungFac = null;
 	private BelegbuchungFac belegbuchungIstversteurerFac = null;
+	private BelegbuchungFac belegbuchungMischversteurerFac = null;
 	private DokumenteFac dokumenteFac = null;
 	private ZutrittscontrollerFac zutrittscontrollerFac = null;
 	private ProjektFac projektFac = null;
@@ -305,8 +316,16 @@ public class FacadeBeauftragter implements Serializable {
 	private	WebshopOrderServiceFacLocal webshopOrderServicesFac = null ;
 	private	WebshopOrderServiceFacLocal webshopCustomerOrderServicesFac = null ;
 	private	InseratFac inseratFac = null ;
-	private BatcherFac batcherFac = null ;
 	private WebshopCustomerServiceFacLocal webshopCustomerServicesFac = null ;
+	private JCRMediaFac jcrMediaFac = null ;
+	private EmailMediaFac emailMediaFac = null ;
+	private EmailMediaLocalFac emailMediaLocalFac = null ;
+	private BatcherFac batcherFac = null ;
+	private BatcherSingleTransactionFac batcherSingleTransactionFac = null ;
+	private MaschineFac maschineFac = null ;
+	private ArtikelimportFac artikelimportFac = null ;
+	private PersonalApiFac personalApiFac = null ;
+	private IntelligenterStklImportFac intellStklimportFac = null;
 	
 	@PersistenceContext
 	private EntityManager em;
@@ -495,6 +514,17 @@ public class FacadeBeauftragter implements Serializable {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
 		}
 		return artikelFac;
+	}
+
+	public ArtikelimportFac getArtikelimportFac() throws EJBExceptionLP {
+		try {
+			if (artikelimportFac == null) {
+				artikelimportFac = (ArtikelimportFac) context.lookup("lpserver/ArtikelimportFacBean/remote");
+			}
+		} catch (Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
+		}
+		return artikelimportFac;
 	}
 
 	/**
@@ -936,6 +966,16 @@ public class FacadeBeauftragter implements Serializable {
 		}
 		return panelFac;
 	}
+	public PflegeFac getPflegeFac() throws EJBExceptionLP {
+		try {
+			if (pflegeFac == null) {
+				pflegeFac = (PflegeFac) context.lookup("lpserver/PflegeFacBean/remote");
+			}
+		} catch (Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
+		}
+		return pflegeFac;
+	}
 
 	public PartnerServicesFac getPartnerServicesFac() throws EJBExceptionLP {
 		try {
@@ -1135,6 +1175,18 @@ public class FacadeBeauftragter implements Serializable {
 		}
 		return stuecklisteFac;
 	}
+	
+	public IntelligenterStklImportFac getIntelligenterStklImportFac() throws EJBExceptionLP {
+		try {
+			if (intellStklimportFac == null) {
+				intellStklimportFac = (IntelligenterStklImportFac) context
+						.lookup("lpserver/IntelligenterStklImportFacBean/remote");
+			}
+		} catch (Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
+		}
+		return intellStklimportFac;
+	}
 
 	/**
 	 * SessionFacade fuer FinanzReport holen.
@@ -1270,7 +1322,7 @@ public class FacadeBeauftragter implements Serializable {
 		return systemReportFac;
 	}
 
-	public SystemServicesFac getSystemServicesFac() throws Throwable {
+	public SystemServicesFac getSystemServicesFac() throws EJBExceptionLP {
 		if (systemServicesFac == null) {
 			try {
 				systemServicesFac = (SystemServicesFac) context
@@ -1318,6 +1370,17 @@ public class FacadeBeauftragter implements Serializable {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
 		}
 		return zeiterfassungFac;
+	}
+	public MaschineFac getMaschineFac() throws EJBExceptionLP {
+		try {
+			if (maschineFac == null) {
+				maschineFac = (MaschineFac) context
+						.lookup("lpserver/MaschineFacBean/remote");
+			}
+		} catch (Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
+		}
+		return maschineFac;
 	}
 	public ZeiterfassungReportFac getZeiterfassungReportFac() throws EJBExceptionLP {
 		try {
@@ -1678,7 +1741,8 @@ public class FacadeBeauftragter implements Serializable {
 
 	public BelegbuchungFac getBelegbuchungFac(String mandantCNr) throws EJBExceptionLP {
 		boolean istVersteurer = getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_ISTVERSTEURER, mandantCNr);
-		if (!istVersteurer) {
+		boolean mischVersteurer = getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_MISCHVERSTEURER, mandantCNr);
+		if (!istVersteurer && !mischVersteurer) {
 			try {
 				if (belegbuchungFac == null) {
 					belegbuchungFac = (BelegbuchungFac) context
@@ -1688,6 +1752,16 @@ public class FacadeBeauftragter implements Serializable {
 				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
 			}
 			return belegbuchungFac;
+		} else if (mischVersteurer) {
+			try {
+				if (belegbuchungMischversteurerFac == null) {
+					belegbuchungMischversteurerFac = (BelegbuchungFac) context
+							.lookup("lpserver/BelegbuchungMischversteurerFacBean/remote");
+				}
+			} catch (Throwable t) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
+			}
+			return belegbuchungMischversteurerFac;
 		} else {
 			try {
 				if (belegbuchungIstversteurerFac == null) {
@@ -2063,12 +2137,73 @@ public class FacadeBeauftragter implements Serializable {
 	public WebshopCustomerServiceFacLocal getWebshopCustomerServiceFac() throws EJBExceptionLP {
 		try {
 			if(null == webshopCustomerServicesFac) {
-				webshopCustomerServicesFac = (WebshopCustomerServiceFacLocal) context.lookup("lpserver/WebshopCustomerServiceEjb/local") ;				
+				webshopCustomerServicesFac = (WebshopCustomerServiceFacLocal)
+						context.lookup("lpserver/WebshopCustomerServiceEjb/local") ;				
 			} 
 		} catch(Throwable t) {			
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));			
 		}
 
 		return webshopCustomerServicesFac ;
+	}
+	
+	public JCRMediaFac getJCRMediaFac() throws EJBExceptionLP {
+		try {
+			if (jcrMediaFac == null) {
+				jcrMediaFac = (JCRMediaFac) context.lookup("lpserver/JCRMediaFacBean/remote");
+			}
+		} catch (Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
+		}
+		return jcrMediaFac;		
+	}
+
+	public EmailMediaFac getEmailMediaFac() throws EJBExceptionLP {
+		try {
+			if (emailMediaFac == null) {
+				emailMediaFac = (EmailMediaFac) context.lookup("lpserver/EmailMediaFacBean/remote");
+			}
+		} catch (Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
+		}
+		return emailMediaFac;		
+	}
+	
+	public EmailMediaLocalFac getEmailMediaLocalFac()  throws EJBExceptionLP {
+		try {
+			if (emailMediaLocalFac == null) {
+				emailMediaLocalFac = (EmailMediaLocalFac) context.lookup("lpserver/EmailMediaLocalFacBean/local");
+			}
+		} catch (Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));
+		}
+		
+		return emailMediaLocalFac;		
+	}
+	
+	public BatcherSingleTransactionFac getBatcherSingleTransactionFac() throws EJBExceptionLP {
+		try {
+			if(null == batcherSingleTransactionFac) {
+				batcherSingleTransactionFac = (BatcherSingleTransactionFac)
+						context.lookup("lpserver/BatcherSingleTransactionBean/local") ;
+			}
+		} catch(Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));						
+		}
+		return batcherSingleTransactionFac ;
+	}
+	
+	
+	public PersonalApiFac getPersonalApiFac()  throws EJBExceptionLP {
+		try {
+			if (personalApiFac == null) {
+				personalApiFac = (PersonalApiFac) context.lookup("lpserver/PersonalApiFacBean/remote");
+			}
+			
+		} catch(Throwable t) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, new Exception(t));			
+		}
+		
+		return personalApiFac ;
 	}
 }

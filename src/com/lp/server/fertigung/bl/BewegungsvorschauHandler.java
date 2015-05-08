@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -43,6 +43,7 @@ import com.lp.server.artikel.service.LagerDto;
 import com.lp.server.auftrag.bl.UseCaseHandlerTabelle;
 import com.lp.server.bestellung.service.BewegungsvorschauDto;
 import com.lp.server.fertigung.service.InternebestellungFac;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -71,13 +72,21 @@ public class BewegungsvorschauHandler extends UseCaseHandlerTabelle {
 	 */
 	private static final long serialVersionUID = 1L;
 	private final int iAnzahlZeilen = 500;
-	private final int iAnzahlSpalten = 7;
+	private int iAnzahlSpalten = 7;
+
+	boolean bZentralerArtikelstamm = false;
 
 	/**
 	 * Konstruktor.
 	 */
 	public BewegungsvorschauHandler() {
 		super();
+		
+
+		if(bZentralerArtikelstamm==true){
+			iAnzahlSpalten=8;
+		}
+		
 		setAnzahlZeilen(iAnzahlZeilen);
 		setAnzahlSpalten(iAnzahlSpalten);
 	}
@@ -91,26 +100,78 @@ public class BewegungsvorschauHandler extends UseCaseHandlerTabelle {
 	 */
 	public TableInfo getTableInfo() throws EJBExceptionLP {
 		if (tableInfo == null) {
+			
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
-			tableInfo = new TableInfo(new Class[] { String.class, String.class,
-					String.class, String.class, Date.class, BigDecimal.class,
-					BigDecimal.class }, new String[] {
-					" ",
-					getTextRespectUISpr("lp.belegart", mandantCNr, locUI),
-					getTextRespectUISpr("lp.belegnummer", mandantCNr, locUI),
-					getTextRespectUISpr("lp.partner", mandantCNr, locUI),
-					getTextRespectUISpr("lp.termin", mandantCNr, locUI),
-					getTextRespectUISpr("lp.menge", mandantCNr, locUI),
-					getTextRespectUISpr("lp.theoretischerlagerstand",
-							mandantCNr, locUI) }, new int[] {
-					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-					QueryParameters.FLR_BREITE_XM,
-					QueryParameters.FLR_BREITE_M,
-					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-					QueryParameters.FLR_BREITE_M, QueryParameters.FLR_BREITE_M,
-					QueryParameters.FLR_BREITE_M }, new String[] { "", "", "",
-					"", "", "", "" });
+
+			bZentralerArtikelstamm = getMandantFac()
+					.darfAnwenderAufZusatzfunktionZugreifen(
+							MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+							theClientDto);
+			
+			if (bZentralerArtikelstamm == false) {
+
+				tableInfo = new TableInfo(new Class[] { String.class,
+						String.class, String.class, String.class, Date.class,
+						BigDecimal.class, BigDecimal.class },
+						new String[] {
+								" ",
+								getTextRespectUISpr("lp.belegart", mandantCNr,
+										locUI),
+								getTextRespectUISpr("lp.belegnummer",
+										mandantCNr, locUI),
+								getTextRespectUISpr("lp.partner", mandantCNr,
+										locUI),
+								getTextRespectUISpr("lp.termin", mandantCNr,
+										locUI),
+								getTextRespectUISpr("lp.menge", mandantCNr,
+										locUI),
+								getTextRespectUISpr(
+										"lp.theoretischerlagerstand",
+										mandantCNr, locUI) }, new int[] {
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_XM,
+								QueryParameters.FLR_BREITE_M,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_M,
+								QueryParameters.FLR_BREITE_M,
+								QueryParameters.FLR_BREITE_M }, new String[] {
+								"", "", "", "", "", "", "" });
+			} else {
+				
+				setAnzahlSpalten(getAnzahlSpalten()+1);
+				
+				tableInfo = new TableInfo(new Class[] { String.class,
+						String.class, String.class, String.class, String.class,
+						Date.class, BigDecimal.class, BigDecimal.class },
+						new String[] {
+								" ",
+								getTextRespectUISpr("lp.belegart", mandantCNr,
+										locUI),
+								getTextRespectUISpr("lp.belegnummer",
+										mandantCNr, locUI),
+								getTextRespectUISpr("report.mandant", mandantCNr,
+										locUI),
+								getTextRespectUISpr("lp.partner", mandantCNr,
+										locUI),
+								getTextRespectUISpr("lp.termin", mandantCNr,
+										locUI),
+								getTextRespectUISpr("lp.menge", mandantCNr,
+										locUI),
+								getTextRespectUISpr(
+										"lp.theoretischerlagerstand",
+										mandantCNr, locUI) }, new int[] {
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_XM,
+								QueryParameters.FLR_BREITE_M,
+								QueryParameters.FLR_BREITE_XS,
+								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+								QueryParameters.FLR_BREITE_M,
+								QueryParameters.FLR_BREITE_M,
+								QueryParameters.FLR_BREITE_M }, new String[] {
+								"", "", "", "", "", "", "", "" });
+			}
+
 		}
 		return this.tableInfo;
 	}
@@ -154,8 +215,6 @@ public class BewegungsvorschauHandler extends UseCaseHandlerTabelle {
 			int startIndex = 0;
 			long endIndex = startIndex + getAnzahlZeilen() - 1;
 
-			
-
 			// wenn kein Filter dann Tabelle leer
 
 			Collection<?> cBewegungvorschau = getInternebestellungFac()
@@ -188,6 +247,9 @@ public class BewegungsvorschauHandler extends UseCaseHandlerTabelle {
 					}
 				}
 			}
+			
+			
+			
 			Object[][] rows = new Object[cBewegungvorschau.size()][getAnzahlSpalten()];
 			int row = 0;
 			int col = 0;
@@ -207,6 +269,11 @@ public class BewegungsvorschauHandler extends UseCaseHandlerTabelle {
 					rows[row][col++] = "Interne Bestellung";
 				}
 				rows[row][col++] = oBewegungsvorschauDto.getCBelegnummer();
+				
+				if (bZentralerArtikelstamm == true) {
+					rows[row][col++] = oBewegungsvorschauDto.getMandantCNr();
+				}
+				
 				// PartnerDto (wenn vorhanden) richtig formatieren
 				if (oBewegungsvorschauDto.getPartnerDto() != null) {
 					rows[row][col++] = oBewegungsvorschauDto.getPartnerDto()
@@ -226,8 +293,7 @@ public class BewegungsvorschauHandler extends UseCaseHandlerTabelle {
 				row++;
 				col = 0;
 			}
-			result = new QueryResult(rows, row, startIndex, endIndex,
-					0);
+			result = new QueryResult(rows, row, startIndex, endIndex, 0);
 		} catch (RemoteException e) {
 			throwEJBExceptionLPRespectOld(e);
 		}

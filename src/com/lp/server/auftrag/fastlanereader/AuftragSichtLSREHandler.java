@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -210,7 +210,7 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 	private void befuelleMitRechnungDto(RechnungDto rDto, String typ1,
 			String typ2, String typ3) {
 		Object[] oZeile = new Object[ANZAHL_SPALTEN];
-		oZeile[0] = "";
+		oZeile[0] = rDto;
 
 		if (typ1 != null) {
 
@@ -292,7 +292,7 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 			String typ2, String typ3)
 			throws Throwable {
 		Object[] oZeile = new Object[ANZAHL_SPALTEN];
-		oZeile[0] = "";
+		oZeile[0] = lDto;
 		oZeile[SPALTE_TYP1] = typ1;
 		oZeile[SPALTE_TYP2] = typ2;
 		oZeile[SPALTE_TYP3] = typ3;
@@ -389,31 +389,7 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 			}
 		}
 
-		// Alle Lieferscheine die ueber die Auftragsposition zugeordnet sind
-
-		Session session = FLRSessionFactory.getFactory().openSession();
-		Query query = session
-				.createQuery("SELECT ls FROM FLRLieferscheinposition ls WHERE ls.flrpositionensichtauftrag.auftrag_i_id="
-						+ auftragIId);
-
-		List<?> resultList = query.list();
-		Iterator<?> resultListIterator = resultList.iterator();
-		while (resultListIterator.hasNext()) {
-
-			FLRLieferscheinposition lspos = (FLRLieferscheinposition) resultListIterator
-					.next();
-
-			if (!lieferscheine
-					.containsKey(lspos.getFlrlieferschein().getI_id())) {
-
-				LieferscheinDto lsDto = getLieferscheinFac()
-						.lieferscheinFindByPrimaryKey(
-								lspos.getFlrlieferschein().getI_id());
-				lieferscheine.put(lspos.getFlrlieferschein().getI_id(), lsDto);
-			}
-		}
-
-		session.close();
+		
 
 		// Lieferscheine einfuegen
 
@@ -438,13 +414,13 @@ public class AuftragSichtLSREHandler extends UseCaseHandlerTabelle {
 			}
 		}
 
-		session = FLRSessionFactory.getFactory().openSession();
-		query = session
+		Session session = FLRSessionFactory.getFactory().openSession();
+		Query query = session
 				.createQuery("SELECT re FROM FLRRechnungPosition re WHERE re.flrpositionensichtauftrag.auftrag_i_id="
 						+ auftragIId);
 
-		resultList = query.list();
-		resultListIterator = resultList.iterator();
+		List resultList = query.list();
+		Iterator resultListIterator = resultList.iterator();
 		while (resultListIterator.hasNext()) {
 
 			FLRRechnungPosition repos = (FLRRechnungPosition) resultListIterator

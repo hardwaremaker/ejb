@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -35,16 +35,15 @@ package com.lp.server.artikel.fastlanereader;
 import java.awt.Color;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
-import javax.swing.Icon;
-
-import org.apache.batik.svggen.font.table.HmtxTable;
 import org.apache.commons.lang.StringUtils;
+import org.apache.pdfbox.contentstream.operator.Operator;
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
 import org.hibernate.ScrollableResults;
@@ -54,10 +53,15 @@ import org.hibernate.SessionFactory;
 import com.lp.server.artikel.fastlanereader.generated.FLRArtikelsperren;
 import com.lp.server.artikel.service.ArtikelDto;
 import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.artikel.service.ArtikellisteFLRDataDto;
+import com.lp.server.artikel.service.ArtikellisteHandlerFeature;
+import com.lp.server.artikel.service.ArtikellisteQueryResult;
+import com.lp.server.artikel.service.IArtikellisteFLRData;
 import com.lp.server.artikel.service.LagerFac;
 import com.lp.server.artikel.service.SperrenIcon;
 import com.lp.server.artikel.service.VkpfartikelpreislisteDto;
 import com.lp.server.benutzer.service.RechteFac;
+import com.lp.server.partner.service.KundeDto;
 import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeArtikel;
@@ -67,21 +71,25 @@ import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.HelperServer;
+import com.lp.server.util.QueryFeature;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
 import com.lp.server.util.fastlanereader.service.query.QueryParameters;
+import com.lp.server.util.fastlanereader.service.query.QueryParametersFeatures;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
+import com.lp.util.siprefixparser.DefaultSiPrefixParser;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Artikel implementiert. Pro UseCase
- * gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r den Artikel implementiert. Pro
+ * UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -106,18 +114,151 @@ public class ArtikellisteHandler extends UseCaseHandler {
 	boolean bVkPreisStattGestpreis = false;
 	boolean bVkPreisLief1preis = false;
 	boolean bTextsucheInklusiveArtikelnummer = false;
+	boolean bTextsucheInklusiveIndexRevision = false;
+	boolean bTextsucheInklusiveHersteller = false;
 	private boolean bArtikelgruppeAnzeigen = false;
+	private boolean bZusatzbezeichnung2Anzeigen = false;
 	private boolean bLagerplaetzeAnzeigen = false;
 	private boolean bArtikelklasseAnzeigen = false;
 	private boolean bKurzbezeichnungAnzeigen = false;
 	private boolean bDarfPreiseSehen = false;
+	private boolean bReferenznummerAnzeigen = false;
+	private boolean bLagerstandDesAnderenMandantenAnzeigen = false;
+	private int vkPreisliste = -1;
+	private Feature cachedFeature = null;
+	private String cachedWhereClause = null ;
+	
+	private class Feature extends QueryFeature<IArtikellisteFLRData> {
+		private boolean featureEinheitCnr = false;
+		private boolean featureKundenartikelnummer = false ;
+		private boolean featureSoko = false ;
+		
+		private Integer kundeId ;
+		private Date sokoDate ;
+		private Integer partnerId ;
+		
+		public Feature() {
+			if (getQuery() instanceof QueryParametersFeatures) {
+				initializeFeature((QueryParametersFeatures) getQuery());
+			}
+		}
 
-	int vkPreisliste = -1;
+		@Override
+		protected void initializeFeature(QueryParametersFeatures query) {
+			featureEinheitCnr = query
+					.hasFeature(ArtikellisteHandlerFeature.EINHEIT_CNR);
+			featureKundenartikelnummer = query
+					.hasFeatureValue(ArtikellisteHandlerFeature.KUNDENARTIKELNUMMER_CNR) ;
+			featureSoko = query.hasFeature(ArtikellisteHandlerFeature.SOKO) ;
+			
+			if(featureKundenartikelnummer) {
+				try {
+					partnerId = Integer.parseInt(query.getFeatureValue(
+							ArtikellisteHandlerFeature.KUNDENARTIKELNUMMER_CNR));					
+				} catch(NumberFormatException e) {
+					myLogger.error("Feature '" + ArtikellisteHandlerFeature.KUNDENARTIKELNUMMER_CNR 
+							+ "' hat keine auswertbare PartnerId! (Deaktiviere Feature)");
+					featureKundenartikelnummer = false ;
+				}
+			}
+		}
 
-	// private TableColumnInformation columns;
+		@Override
+		protected IArtikellisteFLRData[] createFlrData(int rows) {
+			return new ArtikellisteFLRDataDto[rows];
+		}
 
+		public boolean hasFeatureEinheitCnr() {
+			return featureEinheitCnr;
+		}
+
+		public boolean hasFeatureKundenartikelCnr() {
+			return featureKundenartikelnummer ;
+		}
+		
+		public boolean hasFeatureSoko() {
+			return featureSoko ;
+		}
+		
+		private Integer getKundeIdFromPartner(Integer partnerId) throws RemoteException {
+			if(kundeId == null) {
+				KundeDto kundeDto = getKundeFac().kundeFindByiIdPartnercNrMandantOhneExc(
+						partnerId, theClientDto.getMandant(), theClientDto) ;
+				kundeId = kundeDto.getIId() ;
+			}
+			return kundeId ;
+		}
+		
+		private Date getSokoDate() {
+			if(sokoDate == null) {
+				sokoDate = new Date(getTimestamp().getTime()) ;
+			}
+			return sokoDate ;
+		}
+		
+		public String getSokoDateAsString() {
+			return Helper.formatDateWithSlashes(getSokoDate()) ;
+		}
+//		
+//		private void setKundenartikelnummer(int row, String kundenartikelCnr) {
+//			IArtikellisteFLRData flrDataEntry = getFlrDataObject(row) ;
+//			if(flrDataEntry == null) {
+//				flrDataEntry = new ArtikellisteFLRDataDto() ;
+//				setFlrDataObject(row, flrDataEntry);
+// 			}
+//
+//			flrDataEntry.setKundenartikelCnr(kundenartikelCnr);
+//		}
+		
+//		protected void buildKundenartikelnummer(int row, Integer itemId, Integer partnerId) {
+//			try {
+//				KundesokoDto dto = getKundesokoFac().kundesokoFindByKundeIIdArtikelIIdGueltigkeitsdatumOhneExc(
+//						getKundeIdFromPartner(partnerId), itemId, getSokoDate()) ;
+//				if(dto != null) {
+//					setKundenartikelnummer(row, dto.getCKundeartikelnummer()) ;
+//				}
+//			} catch(RemoteException e) {
+//				setKundenartikelnummer(row, "Nicht ermittelbar") ;
+//			}
+//		}
+		
+		public void buildFeatureData(int row, Object o[]) {
+			if (hasFeatureEinheitCnr()) {
+				setFlrDataObject(row, new ArtikellisteFLRDataDto((String) o[22]));
+			}
+
+			if(hasFeatureKundenartikelCnr()) {
+				getFlrDataObject(row).setKundenartikelCnr((String) o[27]);
+			}
+//			if(hasFeatureKundenartikelCnr()) {
+//				buildKundenartikelnummer(row, (Integer) o[0], partnerId) ;
+//			}
+		}
+		
+		public Integer getKundeId()  {
+			try { 
+				return hasFeatureKundenartikelCnr() ? getKundeIdFromPartner(partnerId) : null ;
+			} catch(RemoteException e) {
+				throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
+			}
+		}
+	}
+
+	private Feature getFeature() {
+		if (cachedFeature == null) {
+			cachedFeature = new Feature();
+		}
+		return cachedFeature;
+	}
+
+	@Override
+	public QueryResult setQuery(QueryParameters queryParameters)
+			throws EJBExceptionLP {
+		cachedWhereClause = null ;
+		return super.setQuery(queryParameters);
+	}
+	
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
-
 		QueryResult result = null;
 		SessionFactory factory = FLRSessionFactory.getFactory();
 		Session session = null;
@@ -126,23 +267,25 @@ public class ArtikellisteHandler extends UseCaseHandler {
 		List resultList = null;
 
 		try {
-			int colCount = getTableInfo().getColumnClasses().length;
+			int colCount = getTableInfo().getColumnClasses().length + 1 ;
 			int pageSize = getLimit();
-			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
-
+			int startIndex = getStartIndex(rowIndex, pageSize);
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
 			session = setFilter(session);
 
 			String queryString = "SELECT artikelliste.i_id FROM FLRArtikelliste AS artikelliste "
-					+ " LEFT OUTER JOIN artikelliste.artikellagerset AS alager "
-					+ " LEFT OUTER JOIN artikelliste.flrgeometrie AS geo "
-					+ " LEFT OUTER JOIN artikelliste.artikellieferantset AS artikellieferantset "
-					+ " LEFT OUTER JOIN artikelliste.stuecklisten AS stuecklisten "
-					+ " LEFT OUTER JOIN artikelliste.artikelsprset AS aspr "
-					+ " LEFT OUTER JOIN artikelliste.flrartikelgruppe AS ag "
-					+ " LEFT OUTER JOIN artikelliste.flrartikelklasse AS ak "
+					+ buildJoinClause()
+//					+ " LEFT OUTER JOIN artikelliste.artikellagerset AS alager "
+//					+ " LEFT OUTER JOIN artikelliste.flrgeometrie AS geo "
+//					+ " LEFT OUTER JOIN artikelliste.artikellieferantset AS artikellieferantset "
+//					+ " LEFT OUTER JOIN artikelliste.stuecklisten AS stuecklisten "
+//					+ " LEFT OUTER JOIN artikelliste.artikelsprset AS aspr "
+//					+ " LEFT OUTER JOIN artikelliste.flrartikelgruppe AS ag "
+//					+ " LEFT OUTER JOIN artikelliste.flrartikelklasse AS ak "
+//					+ " LEFT OUTER JOIN artikelliste.flrvorzug AS vz "
+//					+ " LEFT OUTER JOIN artikelliste.kundesokoset AS soko "
 					+ this.buildWhereClause()
 					+ this.buildGroupByClause()
 					+ this.buildOrderByClause();
@@ -296,6 +439,7 @@ public class ArtikellisteHandler extends UseCaseHandler {
 			int row = 0;
 
 			String[] tooltipData = new String[resultList.size()];
+			getFeature().setFlrRowCount(rows.length);
 
 			while (resultListIterator.hasNext()) {
 				Object o[] = (Object[]) resultListIterator.next();
@@ -329,6 +473,16 @@ public class ArtikellisteHandler extends UseCaseHandler {
 							"artikel.zusatzbez")] = o[6];
 				}
 
+				if (bReferenznummerAnzeigen) {
+					prepareReferenznummer(o, rowToAddCandidate);
+				}
+				if (bZusatzbezeichnung2Anzeigen) {
+					prepareZusatzbezeichnung2(o, rowToAddCandidate);
+				}
+				if (bKurzbezeichnungAnzeigen) {
+					prepareKurzbezeichnung(o, rowToAddCandidate);
+				}
+
 				if (bArtikelgruppeAnzeigen) {
 					prepareArtikelGruppe(o, rowToAddCandidate);
 				} else {
@@ -354,35 +508,47 @@ public class ArtikellisteHandler extends UseCaseHandler {
 					prepareLagerplaetze((Integer) o[0], rowToAddCandidate);
 				}
 
-				if (bDarfPreiseSehen) {
-					// Gestehungspreis holen
-					BigDecimal gestehungspreis = (BigDecimal) o[4];
-					if (gestehungspreis != null
-							&& ((BigDecimal) rowToAddCandidate[getTableColumnInformation()
-									.getViewIndex("lp.lagerstand")])
-									.doubleValue() > 0) {
-						gestehungspreis = gestehungspreis
-								.divide(new BigDecimal(
-										((BigDecimal) rowToAddCandidate[getTableColumnInformation()
-												.getViewIndex("lp.lagerstand")])
-												.doubleValue()), 4,
-										BigDecimal.ROUND_HALF_EVEN);
-					} else {
-						// Projekt 10870: WH: Wenn kein Gestpreis zustandekommt,
-						// dann Gestpreis des Hauptlagers anzeigen
-						if (Helper.short2boolean((Short) o[5]) && o[8] != null) {
-							gestehungspreis = (BigDecimal) o[8];
-						} else {
-							gestehungspreis = new BigDecimal(0);
-						}
-					}
-					if (bVkPreisStattGestpreis == false) {
-						rowToAddCandidate[getTableColumnInformation()
-								.getViewIndex("lp.preis")] = gestehungspreis;
-					}
-				} else {
+				if (bLagerstandDesAnderenMandantenAnzeigen == true) {
+
 					rowToAddCandidate[getTableColumnInformation().getViewIndex(
-							"lp.preis")] = new BigDecimal(0);
+							"artikel.lagerstand.anderermandant")] = (BigDecimal) o[26];
+				} else {
+
+					if (bDarfPreiseSehen) {
+						// Gestehungspreis holen
+						BigDecimal gestehungspreis = (BigDecimal) o[4];
+						if (gestehungspreis != null
+								&& rowToAddCandidate[getTableColumnInformation()
+										.getViewIndex("lp.lagerstand")] != null
+								&& ((BigDecimal) rowToAddCandidate[getTableColumnInformation()
+										.getViewIndex("lp.lagerstand")])
+										.doubleValue() > 0) {
+							gestehungspreis = gestehungspreis
+									.divide(new BigDecimal(
+											((BigDecimal) rowToAddCandidate[getTableColumnInformation()
+													.getViewIndex(
+															"lp.lagerstand")])
+													.doubleValue()), 4,
+											BigDecimal.ROUND_HALF_EVEN);
+						} else {
+							// Projekt 10870: WH: Wenn kein Gestpreis
+							// zustandekommt,
+							// dann Gestpreis des Hauptlagers anzeigen
+							if (Helper.short2boolean((Short) o[5])
+									&& o[8] != null) {
+								gestehungspreis = (BigDecimal) o[8];
+							} else {
+								gestehungspreis = new BigDecimal(0);
+							}
+						}
+						if (bVkPreisStattGestpreis == false) {
+							rowToAddCandidate[getTableColumnInformation()
+									.getViewIndex("lp.preis")] = gestehungspreis;
+						}
+					} else {
+						rowToAddCandidate[getTableColumnInformation()
+								.getViewIndex("lp.preis")] = new BigDecimal(0);
+					}
 				}
 
 				Long lAnzahlReklamationen = (Long) o[15];
@@ -410,6 +576,9 @@ public class ArtikellisteHandler extends UseCaseHandler {
 					}
 
 				}
+				// PJ18548
+				rowToAddCandidate[getTableColumnInformation().getViewIndex(
+						"artikel.vorzugsteil")] = o[23];
 
 				if (!Helper.short2boolean((Short) o[18])) {
 					rowToAddCandidate[getTableColumnInformation().getViewIndex(
@@ -418,7 +587,7 @@ public class ArtikellisteHandler extends UseCaseHandler {
 
 				rows[row] = rowToAddCandidate;
 
-				// PJ18025
+				// PJ18205
 				String tooltip = (String) hmKommentarTooltip.get(o[0]);
 				if (tooltip != null) {
 					String text = tooltip;
@@ -427,10 +596,23 @@ public class ArtikellisteHandler extends UseCaseHandler {
 					tooltipData[row] = text;
 				}
 
+				getFeature().buildFeatureData(row, o);
 				row++;
 			}
-			result = new QueryResult(rows, getRowCount(), startIndex, endIndex,
-					0, tooltipData);
+
+			if (getFeature().hasFeatureEinheitCnr()) {
+				ArtikellisteQueryResult artikellisteResult = new ArtikellisteQueryResult(
+						rows, getRowCount(), startIndex, endIndex, 0);
+				artikellisteResult.setFlrData(getFeature().getFlrData());
+				result = artikellisteResult;
+			} else {
+				result = new QueryResult(rows, this.getRowCount(), startIndex,
+						endIndex, 0, tooltipData);
+			}
+
+			// result = new QueryResult(rows, getRowCount(), startIndex,
+			// endIndex,
+			// 0, tooltipData);
 		} catch (Exception e) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
 		} finally {
@@ -438,6 +620,7 @@ public class ArtikellisteHandler extends UseCaseHandler {
 		}
 		return result;
 	}
+
 
 	protected void prepareArtikelGruppeInAbmessung(Object[] source,
 			Object[] target) {
@@ -455,6 +638,14 @@ public class ArtikellisteHandler extends UseCaseHandler {
 
 	protected void prepareKurzbezeichnung(Object[] source, Object[] target) {
 		target[getTableColumnInformation().getViewIndex("lp.kurzbezeichnung")] = source[16];
+	}
+
+	protected void prepareReferenznummer(Object[] source, Object[] target) {
+		target[getTableColumnInformation().getViewIndex("lp.referenznummer")] = source[21];
+	}
+
+	protected void prepareZusatzbezeichnung2(Object[] source, Object[] target) {
+		target[getTableColumnInformation().getViewIndex("artikel.zusatzbez2")] = source[20];
 	}
 
 	protected void prepareLagerplaetze(Integer artikelIId, Object[] target)
@@ -532,11 +723,38 @@ public class ArtikellisteHandler extends UseCaseHandler {
 	}
 
 	protected long getRowCountFromDataBase() {
-		String queryString = "SELECT  COUNT(distinct artikelliste.i_id) FROM com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste AS artikelliste LEFT OUTER JOIN artikelliste.artikelsprset AS aspr  LEFT OUTER JOIN artikelliste.artikellieferantset AS artikellieferantset LEFT OUTER JOIN artikelliste.flrgeometrie AS geo  LEFT OUTER JOIN artikelliste.flrartikelgruppe AS ag   LEFT OUTER JOIN artikelliste.flrartikelklasse AS ak "
+		String queryString = "SELECT  COUNT(distinct artikelliste.i_id) FROM com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste AS artikelliste "
+				+ buildJoinClause() 
+//				+ " LEFT OUTER JOIN artikelliste.artikelsprset AS aspr "
+//				+ " LEFT OUTER JOIN artikelliste.artikellieferantset AS artikellieferantset "
+//				+ " LEFT OUTER JOIN artikelliste.flrgeometrie AS geo "
+//				+ " LEFT OUTER JOIN artikelliste.flrartikelgruppe AS ag "
+//				+ " LEFT OUTER JOIN artikelliste.flrartikelklasse AS ak "
+//				+ " LEFT OUTER JOIN artikelliste.stuecklisten AS stuecklisten "
+//				+ " LEFT OUTER JOIN artikelliste.flrvorzug AS vz "
+//				+ " LEFT OUTER JOIN artikelliste.kundesokoset AS soko "
 				+ buildWhereClause();
 		return getRowCountFromDataBaseByQuery(queryString);
 	}
 
+	protected String buildJoinClause() {
+		String joinClause =  
+				" LEFT OUTER JOIN artikelliste.artikellagerset AS alager "
+				+ " LEFT OUTER JOIN artikelliste.flrgeometrie AS geo "
+				+ " LEFT OUTER JOIN artikelliste.artikellieferantset AS artikellieferantset "
+				+ " LEFT OUTER JOIN artikelliste.stuecklisten AS stuecklisten "
+				+ " LEFT OUTER JOIN artikelliste.artikelsprset AS aspr "
+				+ " LEFT OUTER JOIN artikelliste.flrartikelgruppe AS ag "
+				+ " LEFT OUTER JOIN artikelliste.flrartikelklasse AS ak "
+				+ " LEFT OUTER JOIN artikelliste.flrvorzug AS vz " ;
+
+		if(getFeature().hasFeatureKundenartikelCnr() || getFeature().hasFeatureSoko()) {
+			joinClause += " LEFT OUTER JOIN artikelliste.kundesokoset2 AS soko " ; 
+		}
+
+		return joinClause ; 
+	}
+	
 	/**
 	 * builds the where clause of the HQL (Hibernate Query Language) statement
 	 * using the current query.
@@ -545,9 +763,10 @@ public class ArtikellisteHandler extends UseCaseHandler {
 	 */
 
 	private String buildWhereClause() {
+		if(cachedWhereClause != null) return cachedWhereClause ;
+		
 		StringBuffer where = new StringBuffer("");
-
-		where = new StringBuffer("");
+		
 		if (getQuery() != null && getQuery().getFilterBlock() != null
 				&& getQuery().getFilterBlock().filterKrit != null) {
 
@@ -569,15 +788,27 @@ public class ArtikellisteHandler extends UseCaseHandler {
 						s = filterKriterien[i].value.toLowerCase();
 						filterKriterien[i].value = s;
 					}
+					if (filterKriterien[i].kritName
+							.equals("artikelliste."
+									+ ArtikelFac.FLR_ARTIKELLISTE_STUECKLISTE_PARTNER_ID)) {
+						where.append("(stuecklisten.partner_i_id IS NULL OR stuecklisten.partner_i_id="
+								+ filterKriterien[i].value + ")");
+						bTextsucheInklusiveArtikelnummer = true;
+						continue;
+					}
+					if(filterKriterien[i].kritName.equals(ArtikelFac.FLR_ARTIKELLISTE_SHOPGRUPPE_ID)) {
+						buildFilterShopGruppe(filterKriterien[i], where) ;
+						continue ;
+					}
 					if (filterKriterien[i].kritName.equals("c_volltext")) {
 						filterKriterien[i].kritName = "aspr.c_bez";
 					}
 					if (filterKriterien[i].kritName.equals("aspr.c_bez")) {
+						
 						filterKriterien[i].kritName = "aspr.c_bez";
-						String s = "";
-						s = filterKriterien[i].value.toLowerCase();
-						filterKriterien[i].value = s;
+																		
 						bvolltext = true;
+						
 					} else {
 						bvolltext = false;
 					}
@@ -593,29 +824,85 @@ public class ArtikellisteHandler extends UseCaseHandler {
 						if (bTextsucheInklusiveArtikelnummer) {
 							suchstring += "||' '||lower(artikelliste.c_nr)";
 						}
+
+						if (bTextsucheInklusiveHersteller) {
+							suchstring += "||' '||lower(coalesce(artikelliste.c_artikelnrhersteller,''))||' '||lower(coalesce(artikelliste.c_artikelbezhersteller,''))";
+						}
+						if (bTextsucheInklusiveIndexRevision) {
+							suchstring += "||' '||lower(coalesce(artikelliste.c_index,''))||' '||lower(coalesce(artikelliste.c_revision,''))";
+						}
 						
-						String[] teile = filterKriterien[i].value.toLowerCase()
-								.split(" ");
-						where.append("(");
-
-						for (int p = 0; p < teile.length; p++) {
-
-							if (teile[p].startsWith("-")) {
-								where.append(" NOT ");
-
-								teile[p] = teile[p].substring(1);
-
+						String[] teile = filterKriterien[i].value.trim().split(" ") ;
+						
+						if (getSiSortKrit()) {
+							List<String> siList = new ArrayList<String>();
+							List<String> nonSiList = new ArrayList<String>();
+							
+							for (String teil : teile) {
+								if(getSiValue(teil)!=null){
+									siList.add(teil);
+								}
+								else {
+									nonSiList.add(teil);
+								}
 							}
-
-							where.append("lower(" + suchstring + ") like '%"
-									+ teile[p].toLowerCase() + "%'");
-							if (p < teile.length - 1) {
+							
+							int counter = 0;
+							for (String nonSiEntry : nonSiList) {
+								
+								if (nonSiEntry.startsWith("-")){
+									where.append(" NOT ");
+									nonSiEntry = nonSiEntry.substring(1);
+								}
+								
+								where.append("(");
+								where.append(suchstring + " like '%" + nonSiEntry.toLowerCase() + "%'");
+								where.append(")");
+							
+							if (counter<nonSiList.size()-1)
 								where.append(" AND ");
+							
+								counter++;
+							}
+							
+							if (siList.size() > 0) {
+								if (siList.size() > 0 & nonSiList.size() > 0)
+									where.append(" AND coalesce(aspr.c_siwert,'')");
+								else if (siList.size() > 0)
+									where.append(" coalesce(aspr.c_siwert,'')");
+								
+								where.append(" like ");
+								where.append("(");
+								where.append("'" + getSiValue(siList.get(0)) + "'");
+								where.append(")");
 							}
 						}
+						
+						else {
+							
+							where.append("(");
 
-						where.append(")");
+							for (int p = 0; p < teile.length; p++) {
 
+								if (teile[p].startsWith("-")) {
+									where.append(" NOT ");
+
+									teile[p] = teile[p].substring(1);
+
+								}
+
+								where.append("lower(" + suchstring
+										+ ") like '%" + teile[p].toLowerCase()
+										+ "%'");
+								if (p < teile.length - 1) {
+									where.append(" AND ");
+								}
+							}
+
+							where.append(")");
+				
+						}
+						
 					} else if (filterKriterien[i].kritName
 							.equals(ArtikelFac.FLR_ARTIKELLIEFERANT_C_ARTIKELNRLIEFERANT)) {
 						where.append(" (lower(artikellieferantset."
@@ -629,7 +916,9 @@ public class ArtikellisteHandler extends UseCaseHandler {
 						where.append(" " + filterKriterien[i].operator);
 						where.append(" "
 								+ filterKriterien[i].value.toLowerCase() + ")");
-					} else if (filterKriterien[i].kritName.equals("akag")) {
+					}
+					
+					else if (filterKriterien[i].kritName.equals("akag")) {
 						where.append(" (lower(artikelliste.flrartikelgruppe.c_nr)");
 						where.append(" " + filterKriterien[i].operator);
 						where.append(" "
@@ -639,7 +928,26 @@ public class ArtikellisteHandler extends UseCaseHandler {
 						where.append(" "
 								+ filterKriterien[i].value.toLowerCase() + ")");
 
-					} else {
+					}
+					
+					else if (filterKriterien[i].kritName.equals("ag.i_id")) {
+						where.append(" ag.i_id ");
+						where.append(filterKriterien[i].operator);
+						String value = filterKriterien[i].value.toLowerCase().trim() ;
+						if(FilterKriterium.OPERATOR_IN.equals(filterKriterien[i].operator)) {
+							if(!(value == null || value.length() == 0)) {
+								if(value.startsWith("(") && value.endsWith(")")) {
+									where.append(" " + value) ;
+								} else {
+									where.append(" (" + value + ")");
+								}
+							}
+						} else {
+							where.append(value);
+						}
+					}
+					
+					else {
 						if (filterKriterien[i].isBIgnoreCase()) {
 							where.append(" LOWER("
 									+ filterKriterien[i].kritName + ")");
@@ -654,21 +962,51 @@ public class ArtikellisteHandler extends UseCaseHandler {
 						} else {
 							where.append(" " + filterKriterien[i].value);
 						}
-
-					}
+					}					
 				}
 			}
+
+//			if(getFeature().hasFeatureKundenartikelCnr()) {
+//				where.append(" AND soko.kunde_i_id = " + getFeature().getKundeId()) ;				
+//			}
 
 			if (filterAdded) {
 				where.insert(0, " WHERE ");
 			}
 		}
 
-		return where.toString();
+		cachedWhereClause = where.toString() ;
+		return cachedWhereClause ;
+//		return where.toString();
 	}
 
+	private void buildFilterShopGruppe(FilterKriterium filter, StringBuffer where) {
+		if("[0]".equals(filter.value)) {
+			where.append(" (artikelliste.shopgruppe_i_id IS NOT NULL OR soko.kunde_i_id = " + getFeature().getKundeId() + ")") ;
+			bTextsucheInklusiveArtikelnummer = true ;
+			return ;
+		}
+		if("[1]".equals(filter.value)) {
+			where.append(" (artikelliste.shopgruppe_i_id IS NULL AND soko.kunde_i_id = " + getFeature().getKundeId() + ")") ;
+			bTextsucheInklusiveArtikelnummer = true ;
+			return ;			
+		}
+		if(FilterKriterium.OPERATOR_IN.equals(filter.operator)) {
+			where.append(" artikelliste.shopgruppe_i_id IN " + filter.value) ;
+			bTextsucheInklusiveArtikelnummer = true ;
+			return ;						
+		}
+		
+		where.append(" artikelliste.shopgruppe_i_id = " + filter.value) ;
+	}
+	
 	private String buildGroupByClause() {
-		return " GROUP BY artikelliste.i_id,artikelliste.c_nr, aspr.c_bez, artikelliste.b_lagerbewirtschaftet, aspr.c_zbez, geo.c_breitetext, geo.f_breite , geo.f_hoehe , geo.f_tiefe, stuecklisten.stuecklisteart_c_nr, ag.c_nr, aspr.c_kbez,ak.c_nr,aspr.c_siwert ";
+		return " GROUP BY artikelliste.i_id,artikelliste.c_nr, aspr.c_bez, artikelliste.b_lagerbewirtschaftet, aspr.c_zbez, geo.c_breitetext" 
+				+ ", geo.f_breite , geo.f_hoehe , geo.f_tiefe, stuecklisten.stuecklisteart_c_nr, ag.c_nr, aspr.c_kbez,ak.c_nr,aspr.c_siwert" 
+				+ ", aspr.c_zbez2, artikelliste.c_referenznr, artikelliste.einheit_c_nr, vz.c_nr, artikelliste.c_artikelnrhersteller" 
+				+ " , artikelliste.c_artikelbezhersteller "
+				+ (getFeature().hasFeatureKundenartikelCnr() ? ", soko.c_kundeartikelnummer" : "")
+				;
 	}
 
 	/**
@@ -730,7 +1068,9 @@ public class ArtikellisteHandler extends UseCaseHandler {
 	 * @return the from clause.
 	 */
 	private String getFromClause() throws Exception {
-		return "SELECT artikelliste.i_id, artikelliste.c_nr, aspr.c_bez, (SELECT sum(artikellager.n_lagerstand) FROM FLRArtikellager AS artikellager WHERE artikellager.compId.artikel_i_id=artikelliste.i_id  AND artikellager.flrlager.b_konsignationslager=0 AND artikellager.flrlager.lagerart_c_nr NOT IN('"
+		return "SELECT artikelliste.i_id, artikelliste.c_nr, aspr.c_bez, (SELECT sum(artikellager.n_lagerstand) FROM FLRArtikellager AS artikellager WHERE artikellager.compId.artikel_i_id=artikelliste.i_id AND artikellager.flrlager.mandant_c_nr='"
+				+ theClientDto.getMandant()
+				+ "'  AND artikellager.flrlager.b_konsignationslager=0 AND artikellager.flrlager.lagerart_c_nr NOT IN('"
 				+ LagerFac.LAGERART_WERTGUTSCHRIFT
 				+ "')),"
 				+ " (SELECT sum(artikellager.n_lagerstand*artikellager.n_gestehungspreis) FROM FLRArtikellager AS artikellager WHERE artikellager.compId.artikel_i_id=artikelliste.i_id AND artikellager.flrlager.b_konsignationslager=0 AND artikellager.flrlager.lagerart_c_nr NOT IN('"
@@ -740,16 +1080,24 @@ public class ArtikellisteHandler extends UseCaseHandler {
 						.getIId()
 				+ " AND al.compId.artikel_i_id=artikelliste.i_id) as gestpreishauptlager, geo.c_breitetext, geo.f_breite , geo.f_hoehe , geo.f_tiefe, stuecklisten.stuecklisteart_c_nr, ag.c_nr,(SELECT COUNT(*) FROM FLRReklamation r WHERE r.flrartikel.i_id=artikelliste.i_id AND r.status_c_nr='"
 				+ LocaleFac.STATUS_ANGELEGT
-				+ "'), aspr.c_kbez, ak.c_nr,artikelliste.b_lagerbewirtschaftet,lower(coalesce(geo.c_breitetext,'')||coalesce(cast(geo.f_breite as string),'')||case  WHEN geo.f_hoehe IS NULL THEN '' ELSE 'x' END||coalesce(cast(geo.f_hoehe as string),'')||case  WHEN geo.f_tiefe IS NULL THEN '' ELSE 'x' END||coalesce(cast(geo.f_tiefe as string),'')) "
+				+ "'), aspr.c_kbez, ak.c_nr,artikelliste.b_lagerbewirtschaftet,lower(coalesce(geo.c_breitetext,'')||coalesce(cast(geo.f_breite as string),'')||case  WHEN geo.f_hoehe IS NULL THEN '' ELSE 'x' END||coalesce(cast(geo.f_hoehe as string),'')||case  WHEN geo.f_tiefe IS NULL THEN '' ELSE 'x' END||coalesce(cast(geo.f_tiefe as string),'')), aspr.c_zbez2, "
+				+ " artikelliste.c_referenznr, artikelliste.einheit_c_nr, vz.c_nr, artikelliste.c_artikelnrhersteller, artikelliste.c_artikelbezhersteller, (SELECT sum(artikellager.n_lagerstand) FROM FLRArtikellager AS artikellager WHERE artikellager.compId.artikel_i_id=artikelliste.i_id  AND artikellager.flrlager.b_konsignationslager=0 AND artikellager.flrlager.mandant_c_nr<>'"
+				+ theClientDto.getMandant()
+				+ "' AND artikellager.flrlager.lagerart_c_nr NOT IN('"
+				+ LagerFac.LAGERART_WERTGUTSCHRIFT
+				+ "'))"
+				+ (getFeature().hasFeatureKundenartikelCnr() ? ", soko.c_kundeartikelnummer" : "")
 				+ " FROM FLRArtikelliste AS artikelliste"
-				+ " LEFT OUTER JOIN artikelliste.artikellieferantset AS artikellieferantset "
-				+ " LEFT OUTER JOIN artikelliste.stuecklisten AS stuecklisten "
-				+ " LEFT OUTER JOIN artikelliste.artikellagerset AS alager "
-				+ " LEFT OUTER JOIN artikelliste.flrgeometrie AS geo "
-				+ " LEFT OUTER JOIN artikelliste.artikelsprset AS aspr "
-				+ " LEFT OUTER JOIN artikelliste.flrartikelgruppe AS ag "
-				+ " LEFT OUTER JOIN artikelliste.flrartikelklasse AS ak ";
-
+				+ buildJoinClause() ;
+//				+ " LEFT OUTER JOIN artikelliste.artikellieferantset AS artikellieferantset "
+//				+ " LEFT OUTER JOIN artikelliste.stuecklisten AS stuecklisten "
+//				+ " LEFT OUTER JOIN artikelliste.artikellagerset AS alager "
+//				+ " LEFT OUTER JOIN artikelliste.flrgeometrie AS geo "
+//				+ " LEFT OUTER JOIN artikelliste.artikelsprset AS aspr "
+//				+ " LEFT OUTER JOIN artikelliste.flrartikelgruppe AS ag "
+//				+ " LEFT OUTER JOIN artikelliste.flrartikelklasse AS ak "
+//				+ " LEFT OUTER JOIN artikelliste.flrvorzug AS vz " 
+//				+ " LEFT OUTER JOIN artikelliste.kundesokoset AS soko ";
 	}
 
 	public Session setFilter(Session session) {
@@ -763,9 +1111,25 @@ public class ArtikellisteHandler extends UseCaseHandler {
 			session.enableFilter("filterMandant").setParameter("paramMandant",
 					sMandant);
 		}
+		
+		if(getFeature().hasFeatureKundenartikelCnr() || getFeature().hasFeatureSoko()) {
+			session.enableFilter("filterKundeId")
+				.setParameter("paramKundeId", getFeature().getKundeId());
+//			session.enableFilter("filterGueltig")
+//				.setParameter("paramGueltig", "'" + getFeature().getSokoDateAsString() + "'");
+			
+			session.enableFilter("filterGueltig")
+				.setParameter("paramGueltig", Helper.cutDate(getFeature().getSokoDate()));
+		}
+		
 		return session;
 	}
 
+//	public QueryResult sort(SortierKriterium[] sortierKriterien,
+//			Object selectedIdI) throws EJBExceptionLP {
+//		
+//		getQuery().setSortKrit(sortierKriterien);
+	
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
 			Object selectedIdI) throws EJBExceptionLP {
 
@@ -775,53 +1139,60 @@ public class ArtikellisteHandler extends UseCaseHandler {
 		int rowNumber = 0;
 		ScrollableResults scrollableResult = null;
 		if (selectedIdI instanceof Integer) {
-			if (selectedIdI != null && ((Integer) selectedIdI).intValue() >= 0) {
-				SessionFactory factory = FLRSessionFactory.getFactory();
-				Session session = null;
-
-				try {
-					session = factory.openSession();
-					session = setFilter(session);
-
-					String queryString = null;
+			if (((Integer) selectedIdI).intValue() >= 0) {
+				if(getQuery().getIsApi()) {
+					rowNumber = (Integer) selectedIdI ;
+				} else {					
+					SessionFactory factory = FLRSessionFactory.getFactory();
+					Session session = null;
+	
 					try {
-
-						queryString = "SELECT artikelliste.i_id FROM FLRArtikelliste AS artikelliste LEFT OUTER JOIN artikelliste.artikellagerset AS alager "
-								+ " LEFT OUTER JOIN artikelliste.flrgeometrie AS geo "
-								+ " LEFT OUTER JOIN artikelliste.stuecklisten AS stuecklisten "
-								+ " LEFT OUTER JOIN artikelliste.artikellieferantset AS artikellieferantset "
-								+ " LEFT OUTER JOIN artikelliste.artikelsprset AS aspr "
-								+ " LEFT OUTER JOIN artikelliste.flrartikelgruppe AS ag "
-								+ " LEFT OUTER JOIN artikelliste.flrartikelklasse AS ak "
-								+ buildWhereClause()
-								+ buildGroupByClause()
-								+ buildOrderByClause();
-					} catch (Exception ex) {
-						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, ex);
-					}
-
-					Query query = session.createQuery(queryString);
-					scrollableResult = query.scroll();
-
-					if (scrollableResult != null) {
-						scrollableResult.beforeFirst();
-						while (scrollableResult.next()) {
-							Integer id = (Integer) scrollableResult
-									.getInteger(0);
-							if (selectedIdI.equals(id)) {
-								rowNumber = scrollableResult.getRowNumber();
-								break;
-							}
+						session = factory.openSession();
+						session = setFilter(session);
+	
+						String queryString = null;
+						try {
+	
+							queryString = "SELECT artikelliste.i_id FROM FLRArtikelliste AS artikelliste " 
+									+ buildJoinClause()
+	//								+ " LEFT OUTER JOIN artikelliste.artikellagerset AS alager "
+	//								+ " LEFT OUTER JOIN artikelliste.flrgeometrie AS geo "
+	//								+ " LEFT OUTER JOIN artikelliste.stuecklisten AS stuecklisten "
+	//								+ " LEFT OUTER JOIN artikelliste.artikellieferantset AS artikellieferantset "
+	//								+ " LEFT OUTER JOIN artikelliste.artikelsprset AS aspr "
+	//								+ " LEFT OUTER JOIN artikelliste.flrartikelgruppe AS ag "
+	//								+ " LEFT OUTER JOIN artikelliste.flrartikelklasse AS ak "
+	//								+ " LEFT OUTER JOIN artikelliste.flrvorzug AS vz "
+									+ buildWhereClause()
+									+ buildGroupByClause()
+									+ buildOrderByClause();
+						} catch (Exception ex) {
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, ex);
 						}
-					}
-				} catch (HibernateException e) {
-					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
-				} finally {
-					try {
-						if (session != null)
-							session.close();
-					} catch (HibernateException he) {
-						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
+	
+						Query query = session.createQuery(queryString);
+						scrollableResult = query.scroll();
+	
+						if (scrollableResult != null) {
+							scrollableResult.beforeFirst();
+							while (scrollableResult.next()) {
+								Integer id = (Integer) scrollableResult
+										.getInteger(0);
+								if (selectedIdI.equals(id)) {
+									rowNumber = scrollableResult.getRowNumber();
+									break;
+								}
+							}													
+						}
+					} catch (HibernateException e) {
+						throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, e);
+					} finally {
+						try {
+							if (session != null)
+								session.close();
+						} catch (HibernateException he) {
+							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, he);
+						}
 					}
 				}
 			}
@@ -873,6 +1244,7 @@ public class ArtikellisteHandler extends UseCaseHandler {
 					getTextRespectUISpr("lp.kurzbezeichnung", mandant, locUi),
 					QueryParameters.FLR_BREITE_XM, "aspr.c_kbez");
 		}
+
 		columns.add("bes.artikelbezeichnung", String.class,
 				getTextRespectUISpr("bes.artikelbezeichnung", mandant, locUi),
 				QueryParameters.FLR_BREITE_XL, "aspr.c_bez");
@@ -903,6 +1275,18 @@ public class ArtikellisteHandler extends UseCaseHandler {
 					QueryParameters.FLR_BREITE_SHARE_WITH_REST, "aspr.c_zbez");
 		}
 
+		if (bReferenznummerAnzeigen) {
+			columns.add("lp.referenznummer", String.class,
+					getTextRespectUISpr("lp.referenznummer", mandant, locUi),
+					QueryParameters.FLR_BREITE_XM, "artikelliste.c_referenznr");
+		}
+
+		if (bZusatzbezeichnung2Anzeigen) {
+			columns.add("artikel.zusatzbez2", String.class,
+					getTextRespectUISpr("artikel.zusatzbez2", mandant, locUi),
+					QueryParameters.FLR_BREITE_L, "aspr.c_zbez2");
+		}
+
 		if (bArtikelgruppeAnzeigen) {
 			columns.add("lp.artikelgruppe", String.class,
 					getTextRespectUISpr("lp.artikelgruppe", mandant, locUi),
@@ -924,19 +1308,37 @@ public class ArtikellisteHandler extends UseCaseHandler {
 					Facade.NICHT_SORTIERBAR);
 		}
 
-		columns.add("lp.lagerstand", BigDecimal.class,
-				getTextRespectUISpr("lp.lagerstand", mandant, locUi),
+		columns.add(
+				"lp.lagerstand",
+				BigDecimal.class,
+				getTextRespectUISpr(
+						bLagerstandDesAnderenMandantenAnzeigen ? "artikel.lagerstand.eigenermandant"
+								: "lp.lagerstand", mandant, locUi),
 				QueryParameters.FLR_BREITE_M, Facade.NICHT_SORTIERBAR);
 
-		columns.add(
-				"lp.preis",
-				BigDecimal.class,
-				getTextRespectUISpr(bVkPreisStattGestpreis ? "lp.vkpreis"
-						: "lp.gestpreis", mandant, locUi),
-				QueryParameters.FLR_BREITE_M, Facade.NICHT_SORTIERBAR);
+		if (bLagerstandDesAnderenMandantenAnzeigen == true) {
+			columns.add(
+					"artikel.lagerstand.anderermandant",
+					BigDecimal.class,
+					getTextRespectUISpr("artikel.lagerstand.anderermandant",
+							mandant, locUi), QueryParameters.FLR_BREITE_M,
+					Facade.NICHT_SORTIERBAR);
+		} else {
+			columns.add(
+					"lp.preis",
+					BigDecimal.class,
+					getTextRespectUISpr(bVkPreisStattGestpreis ? "lp.vkpreis"
+							: "lp.gestpreis", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, Facade.NICHT_SORTIERBAR);
+		}
 
 		columns.add("Icon", SperrenIcon.class, "S",
 				QueryParameters.FLR_BREITE_XS, Facade.NICHT_SORTIERBAR);
+
+		columns.add("artikel.vorzugsteil", String.class,
+				getTextRespectUISpr("artikel.vorzugsteil", mandant, locUi),
+				QueryParameters.FLR_BREITE_S, "vz.c_nr");
+
 		columns.add("Color", Color.class, "", 1, "");
 		return columns;
 	}
@@ -956,6 +1358,12 @@ public class ArtikellisteHandler extends UseCaseHandler {
 			bTextsucheInklusiveArtikelnummer = getBooleanParameter(
 					ParameterFac.KATEGORIE_ARTIKEL,
 					ParameterFac.PARAMETER_TEXTSUCHE_INKLUSIVE_ARTIKELNUMMER);
+			bTextsucheInklusiveIndexRevision = getBooleanParameter(
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_TEXTSUCHE_INKLUSIVE_INDEX_REVISION);
+			bTextsucheInklusiveHersteller = getBooleanParameter(
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_ARTIKELSUCHE_MIT_HERSTELLER);
 
 			bArtikelgruppeStattZusatzbezeichnung = getBooleanParameter(
 					ParameterFac.KATEGORIE_ARTIKEL,
@@ -964,6 +1372,9 @@ public class ArtikellisteHandler extends UseCaseHandler {
 			bVkPreisStattGestpreis = getBooleanParameter(
 					ParameterFac.KATEGORIE_ARTIKEL,
 					ParameterFac.PARAMETER_VKPREIS_STATT_GESTPREIS_IN_ARTIKELAUSWAHL);
+			bLagerstandDesAnderenMandantenAnzeigen = getBooleanParameter(
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_LAGERSTAND_DES_ANDEREN_MANDANTEN_ANZEIGEN);
 
 			bVkPreisLief1preis = getBooleanParameter(
 					ParameterFac.KATEGORIE_ARTIKEL,
@@ -972,12 +1383,19 @@ public class ArtikellisteHandler extends UseCaseHandler {
 			bArtikelgruppeAnzeigen = getBooleanParameter(
 					ParameterFac.KATEGORIE_ARTIKEL,
 					ParameterFac.PARAMETER_ANZEIGEN_ARTIKELGRUPPE_IN_AUSWAHLLISTE);
+
+			bZusatzbezeichnung2Anzeigen = getBooleanParameter(
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_ANZEIGEN_ZUSATZBEZ2_IN_AUSWAHLLISTE);
 			bArtikelklasseAnzeigen = getBooleanParameter(
 					ParameterFac.KATEGORIE_ARTIKEL,
 					ParameterFac.PARAMETER_ANZEIGEN_ARTIKELKLASSE_IN_AUSWAHLLISTE);
 			bKurzbezeichnungAnzeigen = getBooleanParameter(
 					ParameterFac.KATEGORIE_ARTIKEL,
 					ParameterFac.PARAMETER_ANZEIGEN_KURZBEZEICHNUNG_IN_AUSWAHLLISTE);
+			bReferenznummerAnzeigen = getBooleanParameter(
+					ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_ANZEIGEN_REFERENZNUMMER_IN_AUSWAHLLISTE);
 			bLagerplaetzeAnzeigen = getBooleanParameter(
 					ParameterFac.KATEGORIE_ARTIKEL,
 					ParameterFac.PARAMETER_ANZEIGEN_LAGERPLATZ_IN_AUSWAHLLISTE);
@@ -997,170 +1415,6 @@ public class ArtikellisteHandler extends UseCaseHandler {
 		} catch (RemoteException ex) {
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
 		}
-	}
-
-	public TableInfo old_getTableInfo() {
-		if (super.getTableInfo() == null) {
-
-			setupParameters();
-
-			if (bAbmessungenStattZusatzbezeichnung == true) {
-
-				setTableInfo(new TableInfo(
-						new Class[] { Integer.class, String.class,
-								String.class, String.class, String.class,
-								BigDecimal.class, BigDecimal.class,
-								SperrenIcon.class, }, new String[] {
-								"i_id",
-								getTextRespectUISpr(
-										"artikel.artikelnummerlang",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.stuecklistenart",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("bes.artikelbezeichnung",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.abmessungen",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.lagerstand",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()),
-								getTextRespectUISpr("lp.gestpreis",
-										theClientDto.getMandant(),
-										theClientDto.getLocUi()), "S" },
-						new int[] {
-								-1, // diese Spalte wird ausgeblendet
-								QueryParameters.FLR_BREITE_L,
-								QueryParameters.FLR_BREITE_S,
-								QueryParameters.FLR_BREITE_XL,
-								QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_M,
-								QueryParameters.FLR_BREITE_XS }, new String[] {
-								"i_id", "artikelliste.c_nr",
-								"stuecklisten.stuecklisteart_c_nr",
-								"aspr.c_bez", "aspr.c_zbez",
-								Facade.NICHT_SORTIERBAR,
-								Facade.NICHT_SORTIERBAR,
-								Facade.NICHT_SORTIERBAR }));
-			} else {
-
-				if (bVkPreisStattGestpreis == true) {
-
-					setTableInfo(new TableInfo(
-							new Class[] { Integer.class, String.class,
-									String.class, String.class, String.class,
-									BigDecimal.class, BigDecimal.class,
-									Icon.class, },
-							new String[] {
-									"i_id",
-									getTextRespectUISpr(
-											"artikel.artikelnummerlang",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									getTextRespectUISpr("lp.stuecklistenart",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									getTextRespectUISpr(
-											"bes.artikelbezeichnung",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-
-									bArtikelgruppeStattZusatzbezeichnung ? getTextRespectUISpr(
-											"lp.artikelgruppe",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi())
-											: getTextRespectUISpr(
-													"artikel.zusatzbez",
-													theClientDto.getMandant(),
-													theClientDto.getLocUi()),
-
-									getTextRespectUISpr("lp.lagerstand",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									getTextRespectUISpr("lp.vkpreis",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()), "S" },
-							new int[] {
-									-1, // diese Spalte wird ausgeblendet
-									QueryParameters.FLR_BREITE_L,
-									QueryParameters.FLR_BREITE_S,
-									QueryParameters.FLR_BREITE_XL,
-									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-									QueryParameters.FLR_BREITE_M,
-									QueryParameters.FLR_BREITE_M,
-									QueryParameters.FLR_BREITE_XS },
-							new String[] {
-									"i_id",
-									"artikelliste.c_nr",
-									"stuecklisten.stuecklisteart_c_nr",
-									"aspr.c_bez",
-									bArtikelgruppeStattZusatzbezeichnung ? "ag.c_nr"
-											: "aspr.c_zbez",
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR }));
-
-				} else {
-					setTableInfo(new TableInfo(
-							new Class[] { Integer.class, String.class,
-									String.class, String.class, String.class,
-									BigDecimal.class, BigDecimal.class,
-									Icon.class, },
-							new String[] {
-									"i_id",
-									getTextRespectUISpr(
-											"artikel.artikelnummerlang",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									getTextRespectUISpr("lp.stuecklistenart",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									getTextRespectUISpr(
-											"bes.artikelbezeichnung",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									bArtikelgruppeStattZusatzbezeichnung ? getTextRespectUISpr(
-											"lp.artikelgruppe",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi())
-											: getTextRespectUISpr(
-													"artikel.zusatzbez",
-													theClientDto.getMandant(),
-													theClientDto.getLocUi()),
-									getTextRespectUISpr("lp.lagerstand",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()),
-									getTextRespectUISpr("lp.gestpreis",
-											theClientDto.getMandant(),
-											theClientDto.getLocUi()), "S" },
-							new int[] {
-									-1, // diese Spalte wird ausgeblendet
-									QueryParameters.FLR_BREITE_L,
-									QueryParameters.FLR_BREITE_S,
-									QueryParameters.FLR_BREITE_XL,
-									QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-									QueryParameters.FLR_BREITE_M,
-									QueryParameters.FLR_BREITE_M,
-									QueryParameters.FLR_BREITE_XS },
-							new String[] {
-									"i_id",
-									"artikelliste.c_nr",
-									"stuecklisten.stuecklisteart_c_nr",
-									"aspr.c_bez",
-									bArtikelgruppeStattZusatzbezeichnung ? "ag.c_nr"
-											: "aspr.c_zbez",
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR,
-									Facade.NICHT_SORTIERBAR }));
-
-				}
-			}
-		}
-		return super.getTableInfo();
 	}
 
 	public PrintInfoDto getSDocPathAndPartner(Object key) {
@@ -1188,4 +1442,23 @@ public class ArtikellisteHandler extends UseCaseHandler {
 		return "ARTIKEL";
 	}
 
+	private String getSiValue(String searchString){
+		DefaultSiPrefixParser spa = new DefaultSiPrefixParser();
+
+		// first located si value
+		return HelperServer.getDBValueFromBigDecimal(spa.parseFirst(searchString), 60);
+	}
+	
+	private boolean getSiSortKrit(){
+		SortierKriterium[] sortierKriterien = getQuery().getSortKrit();
+		if(sortierKriterien == null) return false ;
+		
+		for (SortierKriterium sortierKriterium : sortierKriterien) {
+			if(sortierKriterium.kritName.equals("aspr.c_siwert")) {
+				return true;
+			}
+		}
+		return false;
+	}
 }
+

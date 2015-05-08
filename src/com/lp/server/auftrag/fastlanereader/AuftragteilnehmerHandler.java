@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.auftrag.fastlanereader;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -44,7 +45,6 @@ import org.hibernate.SessionFactory;
 import com.lp.server.auftrag.fastlanereader.generated.FLRAuftragteilnehmer;
 import com.lp.server.auftrag.service.AuftragFac;
 import com.lp.server.auftrag.service.AuftragteilnehmerFac;
-import com.lp.server.partner.service.LieferantFac;
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.personal.service.PersonalFac;
 import com.lp.server.system.fastlanereader.FunktionHandler;
@@ -52,6 +52,7 @@ import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
@@ -320,28 +321,36 @@ public class AuftragteilnehmerHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
-				setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class,String.class, String.class,
-							String.class },
+			String mandantCNr = theClientDto.getMandant();
+			Locale locUI = theClientDto.getLocUi();
+			setTableInfo(new TableInfo(
+					new Class[] { Integer.class, String.class, String.class,
+							String.class, String.class },
 					new String[] {
 							"i_id",
-							getTextRespectUISpr("auft.teilnehmer", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
+							getTextRespectUISpr("auft.teilnehmer", mandantCNr,
+									locUI),
 							getTextRespectUISpr("lp.kurzbezeichnung",
-									theClientDto
-									.getMandant(), theClientDto.getLocUi()),			
-							getTextRespectUISpr("lp.funktion", theClientDto
-									.getMandant(), theClientDto.getLocUi()),
-							getTextRespectUISpr("auft.erfasstvon", theClientDto
-									.getMandant(), theClientDto.getLocUi()), },
+									mandantCNr, locUI),
+							getTextRespectUISpr("lp.funktion", mandantCNr,
+									locUI),
+							getTextRespectUISpr("auft.erfasstvon", mandantCNr,
+									locUI), },
+
+					new int[] {
+							-1, // diese Spalte wird ausgeblendet
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+							QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
 					new String[] {
 							AuftragteilnehmerFac.FLR_AUFTRAGTEILNEHMER_I_ID,
 							AuftragteilnehmerFac.FLR_AUFTRAGTEILNEHMER_FLRPARNTER
 									+ "."
 									+ PartnerFac.FLR_PARTNER_NAME1NACHNAMEFIRMAZEILE1,
 							AuftragteilnehmerFac.FLR_AUFTRAGTEILNEHMER_FLRPARNTER
-									+ "."
-									+ PartnerFac.FLR_PARTNER_C_KBEZ,		
+									+ "." + PartnerFac.FLR_PARTNER_C_KBEZ,
 							AuftragteilnehmerFac.FLR_AUFTRAGTEILNEHMER_FLRFUNKTION
 									+ "." + FunktionHandler.FLR_FUNKTION_C_NR,
 							AuftragteilnehmerFac.FLR_AUFTRAGTEILNEHMER_FLRPERSONAL

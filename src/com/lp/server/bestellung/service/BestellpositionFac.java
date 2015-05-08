@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -104,6 +104,10 @@ public interface BestellpositionFac {
 	static public String PREISPFLEGEARTIKELLIEFERANT_EINZELPREIS_RUECKPFLEGEN = "Einzelpreis anlegen";
 	static public String PREISPFLEGEARTIKELLIEFERANT_STAFFELPREIS_RUECKPFLEGEN = "Staffelpreis anlegen";
 
+	public static final int SICHT_LIEFERANTENTERMINE_ABTERMIN_SETZEN_OPTION_ALLE = 0;
+	public static final int SICHT_LIEFERANTENTERMINE_ABTERMIN_SETZEN_OPTION_LEERE = 1;
+	public static final int SICHT_LIEFERANTENTERMINE_ABTERMIN_SETZEN_OPTION_MARKIERTE = 2;
+	
 	public void befuelleZusaetzlichePreisfelder(Integer iIdPositionI)
 			throws EJBExceptionLP, RemoteException;
 
@@ -222,8 +226,8 @@ public interface BestellpositionFac {
 			BestellpositionDto bestellpositionDto, TheClientDto theClientDto)
 			throws EJBExceptionLP, RemoteException;
 
-	public void setForAllPositionenABTermin(Integer bestellungIId,
-			Date abDatum, String abNummer, boolean selectAllOrEmpty,
+	public void setForAllPositionenABTermin(Integer bestellungIId, Integer[] markierteBestellpositionenIIds,
+			Date abDatum, String abNummer, int iOption,
 			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException;
 
 	public int getAnzahlMengenbehaftetBSPOS(Integer iIdBestellungI,
@@ -262,7 +266,8 @@ public interface BestellpositionFac {
 			TheClientDto theClientDto);
 	
 	public void preispflege(BestellpositionDto besPosDto,
-			String sPreispflegeI, Integer artikellieferantstaffelIId_ZuAendern,
+			String sPreispflegeI, Integer artikellieferantstaffelIId_ZuAendern, boolean bNullPreiseZurueckpflegen,
 			TheClientDto theClientDto);
+	
 	
 }

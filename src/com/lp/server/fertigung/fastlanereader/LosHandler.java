@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -39,6 +39,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import javax.swing.Icon;
 
@@ -48,17 +49,23 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
+import com.lp.server.artikel.service.ArtikelFac;
+import com.lp.server.artikel.service.SperrenIcon;
+import com.lp.server.artikel.service.VkpfartikelpreislisteDto;
+import com.lp.server.benutzer.service.RechteFac;
 import com.lp.server.fertigung.fastlanereader.generated.FLRLos;
 import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.partner.service.PartnerFac;
 import com.lp.server.stueckliste.service.StuecklisteFac;
+import com.lp.server.system.fastlanereader.service.TableColumnInformation;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.jcr.service.docnode.DocNodeLos;
 import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.system.pkgenerator.format.LpBelegnummerFormat;
 import com.lp.server.system.pkgenerator.format.LpDefaultBelegnummerFormat;
 import com.lp.server.system.service.LocaleFac;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.util.Facade;
@@ -72,6 +79,7 @@ import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
+import com.lp.util.DoppelIcon;
 
 /**
  * <p>
@@ -98,10 +106,14 @@ public class LosHandler extends UseCaseHandler {
 	private static final String FLR_LOS = " flrlos.";
 	private String sMaterialliste = "";
 	boolean bKundeStattBezeichnung = false;
+	boolean bBewertungAnzeigen = false;
 	int bLosnummerAuftragsbezogen = 0;
 	boolean bEndeStattBeginnTermin = false;
 	boolean bAuftragStattArtikel = false;
 	boolean bSuchenInklusiveKbez = true;
+	boolean bZusatzbezeichnungInAuwahlliste = false;
+	boolean bTextsucheInklusiveArtikelnummer = false;
+	boolean bTextsucheInklusiveIndexRevision = false;
 
 	public QueryResult getPageAt(Integer rowIndex) throws EJBExceptionLP {
 		QueryResult result = null;
@@ -109,14 +121,16 @@ public class LosHandler extends UseCaseHandler {
 		Session session = null;
 		try {
 			int colCount = getTableInfo().getColumnClasses().length;
-			int pageSize = PAGE_SIZE;
-			int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2), 0);
+			int pageSize = getLimit();
+			// int startIndex = Math.max(rowIndex.intValue() - (pageSize / 2),
+			// 0);
+			int startIndex = getStartIndex(rowIndex, pageSize);
 			int endIndex = startIndex + pageSize - 1;
 
 			session = factory.openSession();
 			session = setFilter(session);
 
-			String queryString = "SELECT distinct flrlos, flrlos.flrauftrag.c_nr,flrlos.flrauftrag.c_bez, flrlos.flrstueckliste.flrartikel, aspr FROM FLRLos AS flrlos LEFT OUTER JOIN flrlos.flrstueckliste.flrartikel.artikelsprset AS aspr LEFT OUTER JOIN flrlos.flrauftrag.flrkunde.flrpartner AS partner LEFT OUTER JOIN flrlos.flrkunde.flrpartner AS partnerK  LEFT OUTER JOIN flrlos.technikerset AS technikerset "
+			String queryString = "SELECT distinct flrlos, flrlos.flrauftrag.c_nr,flrlos.flrauftrag.c_bez, flrlos.flrstueckliste.flrartikel, aspr, partner.c_name1nachnamefirmazeile1 FROM FLRLos AS flrlos LEFT OUTER JOIN flrlos.flrstueckliste.flrartikel.artikelsprset AS aspr LEFT OUTER JOIN flrlos.flrauftrag.flrkunde.flrpartner AS partner LEFT OUTER JOIN flrlos.flrkunde.flrpartner AS partnerK  LEFT OUTER JOIN flrlos.flrauftrag AS auftrag LEFT OUTER JOIN flrlos.technikerset AS technikerset  LEFT OUTER JOIN flrlos.flrprojekt AS projekt  LEFT OUTER JOIN flrlos.flrauftrag.flrprojekt AS projekt_auftrag  "
 					+ this.buildWhereClause() + this.buildOrderByClause();
 
 			Query query = session.createQuery(queryString);
@@ -127,6 +141,9 @@ public class LosHandler extends UseCaseHandler {
 			Object[][] rows = new Object[resultList.size()][colCount];
 
 			String in = "";
+
+			Map<Integer, String> m = getFertigungFac().getAllZusatzstatus(
+					theClientDto);
 
 			if (resultList.size() > 0) {
 				in = " AND flrlos.i_id IN(";
@@ -190,11 +207,53 @@ public class LosHandler extends UseCaseHandler {
 						rows[row][col++] = o[6];
 
 					}
+
+					if (bZusatzbezeichnungInAuwahlliste) {
+						rows[row][col++] = o[18];
+					}
+
 				}
 
 				rows[row][col++] = o[4];
 				String sStatus = (String) o[3];
-				rows[row][col++] = getStatusMitUebersetzung(sStatus);
+
+				if (m.size() > 0) {
+
+					DoppelIcon ia = new DoppelIcon();
+
+					Object[] oIcon1 = getStatusMitUebersetzung(sStatus);
+
+					if (oIcon1 != null) {
+
+						if (oIcon1.length > 0) {
+							ia.setIcon1((String) oIcon1[0]);
+						}
+						if (oIcon1.length > 1) {
+							ia.setTooltip1((String) oIcon1[1]);
+						}
+
+					}
+					// Juengsten Zusatzstatus holen
+
+					Integer zusatzstatusIId = getFertigungFac()
+							.getJuengstenZusatzstatuseinesLoses((Integer) o[0]);
+
+					if (zusatzstatusIId != null) {
+						m.get(zusatzstatusIId);
+
+						String zusatzstatus = Helper.fitString2Length(
+								m.get(zusatzstatusIId), 15, ' ');
+
+						ia.setIcon2(zusatzstatus);
+						ia.setTooltip2(zusatzstatus);
+					}
+
+					rows[row][col++] = ia;
+				} else {
+
+					rows[row][col++] = getStatusMitUebersetzung(sStatus);
+
+				}
 
 				if (bEndeStattBeginnTermin) {
 					rows[row][col++] = o[13];
@@ -205,6 +264,12 @@ public class LosHandler extends UseCaseHandler {
 				// erledigte Menge
 				rows[row][col++] = o[9];
 
+				
+
+				if (bBewertungAnzeigen) {
+					rows[row][col++] =o[19];
+				}
+				
 				// Fehlmenge vorhanden
 				if (o[10] != null && ((BigDecimal) o[10]).doubleValue() != 0) {
 					rows[row][col++] = "F";
@@ -255,7 +320,7 @@ public class LosHandler extends UseCaseHandler {
 		try {
 			session = factory.openSession();
 			session = setFilter(session);
-			String queryString = "SELECT COUNT(distinct flrlos) FROM com.lp.server.fertigung.fastlanereader.generated.FLRLos AS flrlos LEFT OUTER JOIN flrlos.flrstueckliste.flrartikel.artikelsprset AS aspr LEFT OUTER JOIN flrlos.flrauftrag AS auftrag LEFT OUTER JOIN flrlos.flrauftrag.flrkunde.flrpartner AS partner LEFT OUTER JOIN flrlos.flrkunde.flrpartner AS partnerK  LEFT OUTER JOIN flrlos.technikerset AS technikerset "
+			String queryString = "SELECT COUNT(distinct flrlos) FROM com.lp.server.fertigung.fastlanereader.generated.FLRLos AS flrlos LEFT OUTER JOIN flrlos.flrstueckliste.flrartikel.artikelsprset AS aspr LEFT OUTER JOIN flrlos.flrauftrag AS auftrag LEFT OUTER JOIN flrlos.flrauftrag.flrkunde.flrpartner AS partner LEFT OUTER JOIN flrlos.flrkunde.flrpartner AS partnerK LEFT OUTER JOIN flrlos.flrauftrag AS auftrag  LEFT OUTER JOIN flrlos.technikerset AS technikerset  LEFT OUTER JOIN flrlos.flrprojekt AS projekt LEFT OUTER JOIN flrlos.flrauftrag.flrprojekt AS projekt_auftrag "
 					+ this.buildWhereClause();
 			Query query = session.createQuery(queryString);
 			List<?> rowCountResult = query.list();
@@ -319,16 +384,15 @@ public class LosHandler extends UseCaseHandler {
 						}
 					}
 
-					
 					if (bSuchenInklusiveKbez
 							&& filterKriterien[i].kritName
-							.equals("flrlos.flrauftrag.flrkunde.flrpartner.c_name1nachnamefirmazeile1")) {
-						
-						
+									.equals("flrlos.flrauftrag.flrkunde.flrpartner.c_name1nachnamefirmazeile1")) {
+
 						where.append(" (lower(partnerK.c_name1nachnamefirmazeile1)");
 						where.append(" " + filterKriterien[i].operator);
-						where.append(" " + filterKriterien[i].value.toLowerCase());
-						
+						where.append(" "
+								+ filterKriterien[i].value.toLowerCase());
+
 						where.append(" OR lower(partner.c_name1nachnamefirmazeile1)");
 						where.append(" " + filterKriterien[i].operator);
 						where.append(" "
@@ -352,17 +416,18 @@ public class LosHandler extends UseCaseHandler {
 						continue;
 					} else if (bSuchenInklusiveKbez == false
 							&& filterKriterien[i].kritName
-							.equals("flrlos.flrauftrag.flrkunde.flrpartner.c_name1nachnamefirmazeile1")) {
-						
+									.equals("flrlos.flrauftrag.flrkunde.flrpartner.c_name1nachnamefirmazeile1")) {
+
 						where.append(" (lower(partnerK.c_name1nachnamefirmazeile1)");
 						where.append(" " + filterKriterien[i].operator);
-						where.append(" " + filterKriterien[i].value.toLowerCase());
-						
+						where.append(" "
+								+ filterKriterien[i].value.toLowerCase());
+
 						where.append(" OR lower(partner.c_name1nachnamefirmazeile1)");
 						where.append(" " + filterKriterien[i].operator);
 						where.append(" "
 								+ filterKriterien[i].value.toLowerCase());
-						
+
 						where.append(" OR lower(partnerK.c_name2vornamefirmazeile2)");
 						where.append(" " + filterKriterien[i].operator);
 						where.append(" "
@@ -372,9 +437,44 @@ public class LosHandler extends UseCaseHandler {
 						where.append(" "
 								+ filterKriterien[i].value.toLowerCase() + ")");
 						continue;
-					} 
-					
-					
+					}
+
+					if (filterKriterien[i].kritName
+							.equals(ArtikelFac.FLR_ARTIKELLISTE_C_VOLLTEXT)) {
+
+						String suchstring = "lower(coalesce(aspr.c_bez,'')||' '||coalesce(aspr.c_kbez,'')||' '||coalesce(aspr.c_zbez,'')||' '||coalesce(aspr.c_zbez2,''))";
+
+						if (bTextsucheInklusiveArtikelnummer) {
+							suchstring += "||' '||lower(flrlos.flrstueckliste.flrartikel.c_nr)";
+						}
+
+						if (bTextsucheInklusiveIndexRevision) {
+							suchstring += "||' '||lower(coalesce(flrlos.flrstueckliste.flrartikel.c_index,''))||' '||lower(coalesce(flrlos.flrstueckliste.flrartikel.c_revision,''))";
+						}
+
+						String[] teile = filterKriterien[i].value.toLowerCase()
+								.split(" ");
+						where.append("(");
+
+						for (int p = 0; p < teile.length; p++) {
+
+							if (teile[p].startsWith("-")) {
+								where.append(" NOT ");
+
+								teile[p] = teile[p].substring(1);
+
+							}
+
+							where.append("lower(" + suchstring + ") like '%"
+									+ teile[p].toLowerCase() + "%'");
+							if (p < teile.length - 1) {
+								where.append(" AND ");
+							}
+						}
+
+						where.append(") ");
+						continue;
+					}
 
 					// Belegnummern Filter
 					if (filterKriterien[i].kritName.equals("VJ")) {
@@ -447,6 +547,7 @@ public class LosHandler extends UseCaseHandler {
 								where.append(" " + fkLocal.kritName);
 								where.append(" " + fkLocal.operator);
 								where.append(" " + sValue + "");
+
 							} else {
 
 								int iStellenGesamtAuftragsbezogen = defaultFormat
@@ -459,6 +560,14 @@ public class LosHandler extends UseCaseHandler {
 									if (iStellenGesamtAuftragsbezogen > 12) {
 
 										iStellenGesamtAuftragsbezogen = 12;
+
+									}
+								}
+								// SP2765
+								if (defaultFormat.getStellenGeschaeftsjahr() == 4) {
+									if (iStellenGesamtAuftragsbezogen > 13) {
+
+										iStellenGesamtAuftragsbezogen = 13;
 
 									}
 								}
@@ -544,6 +653,7 @@ public class LosHandler extends UseCaseHandler {
 											+ valueBelegnummernfilterAuftragsbezogen
 											+ "");
 								} else {
+									where.append("(");
 									where.append(" (" + fkLocal.kritName);
 									where.append(" " + fkLocal.operator);
 									where.append(" " + sValue + " OR ");
@@ -562,6 +672,13 @@ public class LosHandler extends UseCaseHandler {
 															valueBelegnummernfilterAuftragsbezogen
 																	.length() - 2)
 											+ "_'" + ") ");
+
+									where.append(" OR ");
+									fkLocal.kritName = "flrlos."
+											+ FertigungFac.FLR_LOSREPORT_FLRAUFTRAG
+											+ ".c_nr";
+									whereAuftrag(where, fkLocal);
+									where.append(")");
 								}
 
 							}
@@ -573,6 +690,12 @@ public class LosHandler extends UseCaseHandler {
 					} else if (filterKriterien[i].kritName.equals("flrlos."
 							+ FertigungFac.FLR_LOSREPORT_FLRAUFTRAG + ".c_nr")) {
 
+						whereAuftrag(where, filterKriterien[i]);
+
+					} else if (filterKriterien[i].kritName.equals("flrlos."
+							+ FertigungFac.FLR_LOSREPORT_FLRAUFTRAG
+							+ ".flrprojekt.c_nr")) {
+
 						try {
 
 							String sValue = super.buildWhereBelegnummer(
@@ -580,13 +703,20 @@ public class LosHandler extends UseCaseHandler {
 
 							// Belegnummernsuche auch in "altem" Jahr, wenn im
 							// neuen noch keines vorhanden ist
-							if (!istBelegnummernInJahr("FLRAuftrag", sValue)) {
+							if (!istBelegnummernInJahr("FLRProjekt", sValue)) {
 								sValue = super.buildWhereBelegnummer(
 										filterKriterien[i], true);
 							}
-							where.append(" " + filterKriterien[i].kritName);
+							where.append(" (" + "projekt_auftrag.c_nr");
 							where.append(" " + filterKriterien[i].operator);
 							where.append(" " + sValue);
+
+							where.append(" OR projekt.c_nr");
+							where.append(" " + filterKriterien[i].operator);
+							where.append(" " + sValue + "");
+
+							where.append(")");
+
 						} catch (Exception ex) {
 							throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR,
 									ex);
@@ -624,6 +754,25 @@ public class LosHandler extends UseCaseHandler {
 		}
 
 		return where.toString();
+	}
+
+	private void whereAuftrag(StringBuffer where,
+			FilterKriterium filterKriterium) {
+		try {
+
+			String sValue = super.buildWhereBelegnummer(filterKriterium, false);
+
+			// Belegnummernsuche auch in "altem" Jahr, wenn im
+			// neuen noch keines vorhanden ist
+			if (!istBelegnummernInJahr("FLRAuftrag", sValue)) {
+				sValue = super.buildWhereBelegnummer(filterKriterium, true);
+			}
+			where.append(" " + filterKriterium.kritName);
+			where.append(" " + filterKriterium.operator);
+			where.append(" " + sValue);
+		} catch (Exception ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FLR, ex);
+		}
 	}
 
 	/**
@@ -695,13 +844,15 @@ public class LosHandler extends UseCaseHandler {
 				+ " flrlos.flrauftrag.b_poenale,"
 				+ " flrlos.t_produktionsende,auftrag.c_nr,auftrag.c_bez, (select count(z.i_id) FROM FLRZeitdaten z WHERE z.i_belegartid=flrlos.i_id AND z.c_belegartnr='"
 				+ LocaleFac.BELEGART_LOS
-				+ "')"
+				+ "') , partner.c_name1nachnamefirmazeile1, aspr.c_zbez, flrlos.f_bewertung "
 				+ " FROM FLRLos AS flrlos "
 				+ " LEFT OUTER JOIN flrlos.flrstueckliste.flrartikel.artikelsprset AS aspr "
 				+ " LEFT OUTER JOIN flrlos.flrauftrag.flrkunde.flrpartner AS partner "
 				+ " LEFT OUTER JOIN flrlos.flrkunde.flrpartner AS partnerK "
 				+ " LEFT OUTER JOIN flrlos.flrauftrag AS auftrag "
-				+ " LEFT OUTER JOIN flrlos.technikerset AS technikerset ";
+				+ " LEFT OUTER JOIN flrlos.technikerset AS technikerset "
+				+ " LEFT OUTER JOIN flrlos.flrprojekt AS projekt "
+				+ " LEFT OUTER JOIN flrlos.flrauftrag.flrprojekt AS projekt_auftrag ";
 
 	}
 
@@ -719,7 +870,7 @@ public class LosHandler extends UseCaseHandler {
 			try {
 				session = factory.openSession();
 				session = setFilter(session);
-				String queryString = "SELECT distinct flrlos, flrlos.flrauftrag.c_nr,flrlos.flrauftrag.c_bez, flrlos.flrstueckliste.flrartikel, aspr FROM FLRLos AS flrlos LEFT OUTER JOIN flrlos.flrstueckliste.flrartikel.artikelsprset AS aspr LEFT OUTER JOIN flrlos.flrauftrag.flrkunde.flrpartner AS partner LEFT OUTER JOIN flrlos.flrkunde.flrpartner AS partnerK  LEFT OUTER JOIN flrlos.technikerset AS technikerset "
+				String queryString = "SELECT distinct flrlos, flrlos.flrauftrag.c_nr,flrlos.flrauftrag.c_bez, flrlos.flrstueckliste.flrartikel, aspr, partner.c_name1nachnamefirmazeile1 FROM FLRLos AS flrlos LEFT OUTER JOIN flrlos.flrstueckliste.flrartikel.artikelsprset AS aspr LEFT OUTER JOIN flrlos.flrauftrag.flrkunde.flrpartner AS partner LEFT OUTER JOIN flrlos.flrauftrag AS auftrag LEFT OUTER JOIN flrlos.flrkunde.flrpartner AS partnerK  LEFT OUTER JOIN flrlos.technikerset AS technikerset  LEFT OUTER JOIN flrlos.flrprojekt AS projekt  LEFT OUTER JOIN flrlos.flrauftrag.flrprojekt AS projekt_auftrag  "
 						+ this.buildWhereClause() + this.buildOrderByClause();
 				Query query = session.createQuery(queryString);
 				ScrollableResults scrollableResult = query.scroll();
@@ -753,122 +904,180 @@ public class LosHandler extends UseCaseHandler {
 		return result;
 	}
 
-	public TableInfo getTableInfo() {
-		if (super.getTableInfo() == null) {
-			String mandantCNr = theClientDto.getMandant();
-			Locale locUI = theClientDto.getLocUi();
-			sMaterialliste = getTextRespectUISpr("fert.materialliste",
-					mandantCNr, locUI);
-			try {
-				ParametermandantDto parameter = getParameterFac()
-						.getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_FERTIGUNG,
-								ParameterFac.PARAMETER_KUNDE_STATT_BEZEICHNUNG_IN_AUSWAHLLISTE);
-				bKundeStattBezeichnung = (Boolean) parameter.getCWertAsObject();
-				parameter = getParameterFac().getMandantparameter(
-						theClientDto.getMandant(),
-						ParameterFac.KATEGORIE_FERTIGUNG,
-						ParameterFac.PARAMETER_LOSNUMMER_AUFTRAGSBEZOGEN);
-				bLosnummerAuftragsbezogen = (Integer) parameter
-						.getCWertAsObject();
-				parameter = getParameterFac()
-						.getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_FERTIGUNG,
-								ParameterFac.PARAMETER_ENDE_TERMIN_ANSTATT_BEGINN_TERMIN_ANZEIGEN);
-				bEndeStattBeginnTermin = (Boolean) parameter.getCWertAsObject();
-				parameter = getParameterFac()
-						.getMandantparameter(
-								theClientDto.getMandant(),
-								ParameterFac.KATEGORIE_FERTIGUNG,
-								ParameterFac.PARAMETER_AUFTRAG_STATT_ARTIKEL_IN_AUSWAHLLISTE);
-				bAuftragStattArtikel = (Boolean) parameter.getCWertAsObject();
+	private TableColumnInformation createColumnInformation(String mandant,
+			Locale locUi) {
+		TableColumnInformation columns = new TableColumnInformation();
 
-				parameter = getParameterFac().getMandantparameter(
-						theClientDto.getMandant(),
-						ParameterFac.KATEGORIE_ALLGEMEIN,
-						ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
-				bSuchenInklusiveKbez = (java.lang.Boolean) parameter
-						.getCWertAsObject();
+		columns.add("i_id", Integer.class, "i_id", -1, FLR_LOS + "i_id");
 
-			} catch (RemoteException ex) {
-				throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+		columns.add("lp.losnr", String.class,
+				getTextRespectUISpr("lp.losnr", mandant, locUi),
+				QueryParameters.FLR_BREITE_M, FLR_LOS + "c_nr");
+		columns.add("lp.menge", Integer.class,
+				getTextRespectUISpr("lp.menge", mandant, locUi), 8, FLR_LOS
+						+ FertigungFac.FLR_LOS_N_LOSGROESSE);
+
+		if (bAuftragStattArtikel) {
+
+			columns.add("lp.auftrag", String.class,
+					getTextRespectUISpr("lp.auftrag", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, FLR_LOS
+							+ FertigungFac.FLR_LOSREPORT_FLRAUFTRAG + ".c_nr");
+
+			columns.add(
+					"lp.projektausauftrag",
+					String.class,
+					getTextRespectUISpr("lp.projektausauftrag", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, FLR_LOS
+							+ FertigungFac.FLR_LOSREPORT_FLRAUFTRAG + ".c_bez");
+
+		} else {
+
+			columns.add("lp.artikelnummer", String.class,
+					getTextRespectUISpr("lp.artikelnummer", mandant, locUi),
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST, FLR_LOS
+							+ "flrstueckliste.flrartikel.c_nr");
+
+			if (bKundeStattBezeichnung) {
+				columns.add("lp.kunde", String.class,
+						getTextRespectUISpr("lp.kunde", mandant, locUi),
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						"partner.c_name1nachnamefirmazeile1");
+			} else {
+				columns.add("lp.bezeichnung", String.class,
+						getTextRespectUISpr("lp.bezeichnung", mandant, locUi),
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						"aspr.c_bez");
 			}
 
-			setTableInfo(new TableInfo(
-					new Class[] { Integer.class, String.class, Integer.class,
-							String.class, String.class, String.class,
-							Icon.class, Date.class, BigDecimal.class,
-							String.class, Color.class, },
-
-					new String[] {
-							"i_id",
-							getTextRespectUISpr("lp.losnr", mandantCNr, locUI),
-							getTextRespectUISpr("lp.menge", mandantCNr, locUI),
-							bAuftragStattArtikel ? getTextRespectUISpr(
-									"lp.auftrag", mandantCNr, locUI)
-									: getTextRespectUISpr("lp.artikelnummer",
-											mandantCNr, locUI),
-
-							bAuftragStattArtikel ? getTextRespectUISpr(
-									"lp.projektausauftrag", mandantCNr, locUI)
-									: bKundeStattBezeichnung ? getTextRespectUISpr(
-											"lp.kunde", mandantCNr, locUI)
-											: getTextRespectUISpr(
-													"lp.bezeichnung",
-													mandantCNr, locUI),
-							getTextRespectUISpr("fert.los.projekt", mandantCNr,
-									locUI),
-							getTextRespectUISpr("lp.status", mandantCNr, locUI),
-
-							bEndeStattBeginnTermin ? getTextRespectUISpr(
-									"lp.ende", mandantCNr, locUI)
-									: getTextRespectUISpr("lp.beginn",
-											mandantCNr, locUI)
-
-							,
-							getTextRespectUISpr("lp.fertig", mandantCNr, locUI),
-							"" },
-					new int[] {
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_M,
-							8,
-							bAuftragStattArtikel ? QueryParameters.FLR_BREITE_M
-									: QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_SHARE_WITH_REST,
-							QueryParameters.FLR_BREITE_XS,
-							QueryParameters.FLR_BREITE_M, 8, 1 },
-					new String[] {
-							FLR_LOS + "i_id",
-							FLR_LOS + "c_nr",
-							FLR_LOS + FertigungFac.FLR_LOS_N_LOSGROESSE,
-
-							bAuftragStattArtikel ? FLR_LOS
-									+ FertigungFac.FLR_LOSREPORT_FLRAUFTRAG
-									+ ".c_nr" : FLR_LOS
-									+ "flrstueckliste.flrartikel.c_nr",
-
-							bAuftragStattArtikel ? FLR_LOS
-									+ FertigungFac.FLR_LOSREPORT_FLRAUFTRAG
-									+ ".c_bez"
-									: bKundeStattBezeichnung ? "partner.c_name1nachnamefirmazeile1"
-											: "aspr.c_bez"
-
-							,
-							FLR_LOS + FertigungFac.FLR_LOS_C_PROJEKT,
-							FLR_LOS + FertigungFac.FLR_LOS_STATUS_C_NR,
-
-							bEndeStattBeginnTermin ?
-
-							FLR_LOS + FertigungFac.FLR_LOS_T_PRODUKTIONSENDE
-									: FLR_LOS
-											+ FertigungFac.FLR_LOS_T_PRODUKTIONSBEGINN,
-							Facade.NICHT_SORTIERBAR, Facade.NICHT_SORTIERBAR }));
+			if (bZusatzbezeichnungInAuwahlliste) {
+				columns.add(
+						"artikel.zusatzbez",
+						String.class,
+						getTextRespectUISpr("artikel.zusatzbez", mandant, locUi),
+						QueryParameters.FLR_BREITE_SHARE_WITH_REST,
+						"aspr.c_zbez");
+			}
 
 		}
-		return super.getTableInfo();
+
+		columns.add("fert.los.projekt", String.class,
+				getTextRespectUISpr("fert.los.projekt", mandant, locUi),
+				QueryParameters.FLR_BREITE_SHARE_WITH_REST, FLR_LOS
+						+ FertigungFac.FLR_LOS_C_PROJEKT);
+
+		columns.add("lp.status", Icon.class,
+				getTextRespectUISpr("lp.status", mandant, locUi),
+				QueryParameters.FLR_BREITE_XS, FLR_LOS
+						+ FertigungFac.FLR_LOS_STATUS_C_NR);
+
+		if (bEndeStattBeginnTermin) {
+			columns.add("lp.ende", Date.class,
+					getTextRespectUISpr("lp.ende", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, FLR_LOS
+							+ FertigungFac.FLR_LOS_T_PRODUKTIONSENDE);
+
+		} else {
+			columns.add("lp.beginn", Date.class,
+					getTextRespectUISpr("lp.beginn", mandant, locUi),
+					QueryParameters.FLR_BREITE_M, FLR_LOS
+							+ FertigungFac.FLR_LOS_T_PRODUKTIONSBEGINN);
+		}
+
+		columns.add("lp.fertig", BigDecimal.class,
+				getTextRespectUISpr("lp.fertig", mandant, locUi), 8,
+				Facade.NICHT_SORTIERBAR);
+
+		if (bBewertungAnzeigen) {
+			columns.add("fert.bewertung", Double.class,
+					getTextRespectUISpr("fert.bewertung", mandant, locUi),
+					QueryParameters.FLR_BREITE_XS, FLR_LOS
+							+ FertigungFac.FLR_LOS_F_BEWERTUNG);
+		}
+
+		columns.add("", String.class, "", 1, Facade.NICHT_SORTIERBAR);
+		columns.add("Color", Color.class, "", 1, "");
+
+		return columns;
+	}
+
+	private void setupParameters() {
+		try {
+			ParametermandantDto parameter = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_FERTIGUNG,
+							ParameterFac.PARAMETER_KUNDE_STATT_BEZEICHNUNG_IN_AUSWAHLLISTE);
+			bKundeStattBezeichnung = (Boolean) parameter.getCWertAsObject();
+			parameter = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_FERTIGUNG,
+					ParameterFac.PARAMETER_LOSNUMMER_AUFTRAGSBEZOGEN);
+			bLosnummerAuftragsbezogen = (Integer) parameter.getCWertAsObject();
+
+			parameter = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_FERTIGUNG,
+					ParameterFac.PARAMETER_ZUSATZBEZEICHNUNG_IN_AUSWAHLLISTE);
+			bZusatzbezeichnungInAuwahlliste = (Boolean) parameter
+					.getCWertAsObject();
+
+			parameter = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_FERTIGUNG,
+							ParameterFac.PARAMETER_ENDE_TERMIN_ANSTATT_BEGINN_TERMIN_ANZEIGEN);
+			bEndeStattBeginnTermin = (Boolean) parameter.getCWertAsObject();
+			parameter = getParameterFac()
+					.getMandantparameter(
+							theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_FERTIGUNG,
+							ParameterFac.PARAMETER_AUFTRAG_STATT_ARTIKEL_IN_AUSWAHLLISTE);
+			bAuftragStattArtikel = (Boolean) parameter.getCWertAsObject();
+
+			parameter = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(),
+					ParameterFac.KATEGORIE_ALLGEMEIN,
+					ParameterFac.PARAMETER_SUCHEN_INKLUSIVE_KBEZ);
+			bSuchenInklusiveKbez = (java.lang.Boolean) parameter
+					.getCWertAsObject();
+
+			parameter = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_TEXTSUCHE_INKLUSIVE_ARTIKELNUMMER);
+			bTextsucheInklusiveArtikelnummer = (java.lang.Boolean) parameter
+					.getCWertAsObject();
+
+			parameter = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_ARTIKEL,
+					ParameterFac.PARAMETER_TEXTSUCHE_INKLUSIVE_INDEX_REVISION);
+			bTextsucheInklusiveIndexRevision = (java.lang.Boolean) parameter
+					.getCWertAsObject();
+			parameter = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_FERTIGUNG,
+					ParameterFac.PARAMETER_BEWERTUNG_IN_AUSWAHLLISTE);
+			bBewertungAnzeigen = (java.lang.Boolean) parameter
+					.getCWertAsObject();
+
+		} catch (RemoteException ex) {
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, ex);
+		}
+	}
+
+	public TableInfo getTableInfo() {
+		TableInfo info = super.getTableInfo();
+		if (info != null)
+			return info;
+
+		setupParameters();
+		setTableColumnInformation(createColumnInformation(
+				theClientDto.getMandant(), theClientDto.getLocUi()));
+
+		TableColumnInformation c = getTableColumnInformation();
+		info = new TableInfo(c.getClasses(), c.getHeaderNames(), c.getWidths(),
+				c.getDbColumNames());
+		setTableInfo(info);
+		return info;
 	}
 
 	public PrintInfoDto getSDocPathAndPartner(Object key) {

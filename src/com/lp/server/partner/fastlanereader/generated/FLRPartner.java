@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,22 +19,21 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.partner.fastlanereader.generated;
 
 import com.lp.server.system.fastlanereader.generated.FLRLandplzort;
 import java.io.Serializable;
-import java.sql.Timestamp;
 import java.util.Date;
 import java.util.Set;
 import org.apache.commons.lang.builder.ToStringBuilder;
@@ -42,9 +41,8 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 
 /** @author Hibernate CodeGenerator */
 public class FLRPartner implements Serializable {
-	private static final long serialVersionUID = 4482981642873591617L;
 
-	/** identifier field */
+    /** identifier field */
     private Integer i_id;
 
     /** nullable persistent field */
@@ -117,10 +115,16 @@ public class FLRPartner implements Serializable {
     private Date t_geburtsdatumansprechpartner;
 
     /** nullable persistent field */
+    private Date t_aendern;
+
+    /** nullable persistent field */
     private FLRLandplzort flrlandplzort;
 
     /** nullable persistent field */
     private com.lp.server.partner.fastlanereader.generated.FLRPartnerklasse flrpartnerklasse;
+
+    /** nullable persistent field */
+    private com.lp.server.partner.fastlanereader.generated.FLRBranche flrbranche;
 
     /** persistent field */
     private Set partner_paselektion_set;
@@ -128,10 +132,8 @@ public class FLRPartner implements Serializable {
     /** persistent field */
     private Set ansprechpartner;
 
-    private Timestamp t_aendern ;
-    
     /** full constructor */
-    public FLRPartner(String anrede_c_nr, String c_name1nachnamefirmazeile1, String c_name2vornamefirmazeile2, String c_name3vorname2abteilung, String c_strasse, String c_titel, String c_ntitel, String partnerart_c_nr, Short b_versteckt, String c_kbez, String locale_c_nr_kommunikation, String x_bemerkung, Integer branche_i_id, Integer partnerklasse_i_id, String c_adressart, String c_iln, String c_uid, String c_filialnummer, Double f_gmtversatz, String c_email, String c_fax, String c_telefon, Date t_geburtsdatumansprechpartner, FLRLandplzort flrlandplzort, com.lp.server.partner.fastlanereader.generated.FLRPartnerklasse flrpartnerklasse, Set partner_paselektion_set, Set ansprechpartner) {
+    public FLRPartner(String anrede_c_nr, String c_name1nachnamefirmazeile1, String c_name2vornamefirmazeile2, String c_name3vorname2abteilung, String c_strasse, String c_titel, String c_ntitel, String partnerart_c_nr, Short b_versteckt, String c_kbez, String locale_c_nr_kommunikation, String x_bemerkung, Integer branche_i_id, Integer partnerklasse_i_id, String c_adressart, String c_iln, String c_uid, String c_filialnummer, Double f_gmtversatz, String c_email, String c_fax, String c_telefon, Date t_geburtsdatumansprechpartner, Date t_aendern, FLRLandplzort flrlandplzort, com.lp.server.partner.fastlanereader.generated.FLRPartnerklasse flrpartnerklasse, com.lp.server.partner.fastlanereader.generated.FLRBranche flrbranche, Set partner_paselektion_set, Set ansprechpartner) {
         this.anrede_c_nr = anrede_c_nr;
         this.c_name1nachnamefirmazeile1 = c_name1nachnamefirmazeile1;
         this.c_name2vornamefirmazeile2 = c_name2vornamefirmazeile2;
@@ -155,8 +157,10 @@ public class FLRPartner implements Serializable {
         this.c_fax = c_fax;
         this.c_telefon = c_telefon;
         this.t_geburtsdatumansprechpartner = t_geburtsdatumansprechpartner;
+        this.t_aendern = t_aendern;
         this.flrlandplzort = flrlandplzort;
         this.flrpartnerklasse = flrpartnerklasse;
+        this.flrbranche = flrbranche;
         this.partner_paselektion_set = partner_paselektion_set;
         this.ansprechpartner = ansprechpartner;
     }
@@ -363,6 +367,14 @@ public class FLRPartner implements Serializable {
         this.t_geburtsdatumansprechpartner = t_geburtsdatumansprechpartner;
     }
 
+    public Date getT_aendern() {
+        return this.t_aendern;
+    }
+
+    public void setT_aendern(Date t_aendern) {
+        this.t_aendern = t_aendern;
+    }
+
     public FLRLandplzort getFlrlandplzort() {
         return this.flrlandplzort;
     }
@@ -377,6 +389,14 @@ public class FLRPartner implements Serializable {
 
     public void setFlrpartnerklasse(com.lp.server.partner.fastlanereader.generated.FLRPartnerklasse flrpartnerklasse) {
         this.flrpartnerklasse = flrpartnerklasse;
+    }
+
+    public com.lp.server.partner.fastlanereader.generated.FLRBranche getFlrbranche() {
+        return this.flrbranche;
+    }
+
+    public void setFlrbranche(com.lp.server.partner.fastlanereader.generated.FLRBranche flrbranche) {
+        this.flrbranche = flrbranche;
     }
 
     public Set getPartner_paselektion_set() {
@@ -395,18 +415,10 @@ public class FLRPartner implements Serializable {
         this.ansprechpartner = ansprechpartner;
     }
 
-
-	public Timestamp getT_aendern() {
-		return t_aendern;
-	}
-
-	public void setT_aendern(Timestamp t_aendern) {
-		this.t_aendern = t_aendern;
-	}
-
     public String toString() {
         return new ToStringBuilder(this)
             .append("i_id", getI_id())
             .toString();
     }
+
 }

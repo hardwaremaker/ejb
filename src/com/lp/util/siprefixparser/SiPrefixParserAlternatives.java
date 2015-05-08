@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -50,12 +50,12 @@ public class SiPrefixParserAlternatives extends SiPrefixParser {
 		Map<String, Integer> allPrefixes = new HashMap<String, Integer>();
 		allPrefixes.putAll(siAlternatives);
 		allPrefixes.putAll(siPrefixes);
-		return new SiPrefixParserCore(allPrefixes, units).parse(toParse);
+		return new SiPrefixParserCore(allPrefixes, units, isForceZeroUnit()).parse(toParse);
 	}
 
 	protected void checkNotAlreadyTakenAlternative(String prefix) {
 		if(siAlternatives.containsKey(prefix))
-			throw new IllegalArgumentException("'" + prefix + "' is already used as SI alternative");
+			throw new IllegalArgumentException("'" + prefix + "' is already used as SI alternative. Use setForceZeroUnit(true) for enabeling Units contained in SI alternatives.");
 	}
 	
 	protected void checkNotAlreadyTakenAlternatives(List<String> prefixes) {
@@ -66,7 +66,7 @@ public class SiPrefixParserAlternatives extends SiPrefixParser {
 	
 	@Override
 	public void setUnits(List<String> units) {
-		if(units != null) 
+		if(units != null && !isForceZeroUnit()) 
 			checkNotAlreadyTakenAlternatives(units);
 		super.setUnits(units);
 	}

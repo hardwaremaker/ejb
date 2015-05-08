@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -40,6 +40,8 @@ public class PartnerQuery  {
 	public final static String ByUID = "PartnerFindByUID" ;
 	public final static String ByLowerCName1 = "LowerPartnerfindByCName1" ;
 	public final static String ByKbez = "PartnerFindByKbez" ;
+	public final static String ByEmail = "PartnerFindByEmail" ;
+	
 	
 	/**
 	 * Einen Partner anhand seiner UID Nummer ermitteln
@@ -77,4 +79,17 @@ public class PartnerQuery  {
 	public static List<Partner> listByUid(EntityManager em, String uidNummer) {
 		return byUID(em, uidNummer).getResultList() ;
 	}
+	
+	public static HvTypedQuery<Partner> byEmail(EntityManager em, String email) {
+		HvTypedQuery<Partner> theQuery = new HvTypedQuery<Partner>(em.createNamedQuery(ByEmail)) ;
+		theQuery.setParameter("email", email.toLowerCase()) ;
+		return theQuery ;
+	}
+
+
+	public static List<Partner> listByEmail(EntityManager em, String email) {
+		return byEmail(em, email).getResultList() ;
+	}
+	
+
 }

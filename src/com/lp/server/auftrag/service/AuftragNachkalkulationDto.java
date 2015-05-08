@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -51,11 +51,86 @@ public class AuftragNachkalkulationDto extends TabelleDto implements
 	private AuftragDto auftragDto;
 
 	private String sBelegart;
+	private String sBelegstatus;
+	public String getSBelegstatus() {
+		return sBelegstatus;
+	}
+
+	public void setSBelegstatus(String sBelegstatus) {
+		this.sBelegstatus = sBelegstatus;
+	}
+
 	private String sBelegnummer;
 	private String sBelegkundename;
 	private String sRechnungsart;
+	private BigDecimal bdZahlbetrag;
 
-	
+	public BigDecimal getBdZahlbetrag() {
+		return bdZahlbetrag;
+	}
+
+	public void setBdZahlbetrag(BigDecimal bdZahlbetrag) {
+		this.bdZahlbetrag = bdZahlbetrag;
+	}
+
+	private String sReisePartner;
+	private String sReiseKommentar;
+	private String sReiseMitarbeiter;
+
+	private Timestamp tReiseVon;
+
+	public Timestamp gettReiseVon() {
+		return tReiseVon;
+	}
+
+	public void settReiseVon(Timestamp tReiseVon) {
+		this.tReiseVon = tReiseVon;
+	}
+
+	public Timestamp gettReiseBis() {
+		return tReiseBis;
+	}
+
+	public void settReiseBis(Timestamp tReiseBis) {
+		this.tReiseBis = tReiseBis;
+	}
+
+	private Timestamp tReiseBis;
+
+	public String getSReiseMitarbeiter() {
+		return sReiseMitarbeiter;
+	}
+
+	public void setSReiseMitarbeiter(String sReiseMitarbeiter) {
+		this.sReiseMitarbeiter = sReiseMitarbeiter;
+	}
+
+	boolean bKeineAuftragswertung = false;
+
+	public boolean isBKeineAuftragswertung() {
+		return bKeineAuftragswertung;
+	}
+
+	public void setBKeineAuftragwertung(boolean bKeineAuftragswertung) {
+		this.bKeineAuftragswertung = bKeineAuftragswertung;
+	}
+
+	public String getSReisePartner() {
+		return sReisePartner;
+	}
+
+	public void setSReisePartner(String sReisePartner) {
+		this.sReisePartner = sReisePartner;
+	}
+
+	public String getSReiseKommentar() {
+		return sReiseKommentar;
+	}
+
+	public void setSReiseKommentar(String sReiseKommentar) {
+		this.sReiseKommentar = sReiseKommentar;
+	}
+
 	public String getSRechnungsart() {
 		return sRechnungsart;
 	}
@@ -64,14 +139,48 @@ public class AuftragNachkalkulationDto extends TabelleDto implements
 		this.sRechnungsart = sRechnungsart;
 	}
 
+	private String sEingangsgrechnungsart;
+
+	public String getSEingangsgrechnungsart() {
+		return sEingangsgrechnungsart;
+	}
+
+	public void setSEingangsgrechnungsart(String sEingangsgrechnungsart) {
+		this.sEingangsgrechnungsart = sEingangsgrechnungsart;
+	}
+	
+	private String sErSchlussrechnungNr;
+	
+
+	public String getSErSchlussrechnungNr() {
+		return sErSchlussrechnungNr;
+	}
+
+	public void setSErSchlussrechnungNr(String sErSchlussrechnungNr) {
+		this.sErSchlussrechnungNr = sErSchlussrechnungNr;
+	}
+
 	private String sEingangsrechnungtext;
 	private String sRechnungsnummerLSVerrechnet;
+
 	public String getSRechnungsnummerLSVerrechnet() {
 		return sRechnungsnummerLSVerrechnet;
 	}
 
-	public void setSRechnungsnummerLSVerrechnet(String sRechnungsnummerLSVerrechnet) {
+	public void setSRechnungsnummerLSVerrechnet(
+			String sRechnungsnummerLSVerrechnet) {
 		this.sRechnungsnummerLSVerrechnet = sRechnungsnummerLSVerrechnet;
+	}
+
+	
+	private String losnummerLiQuelle;
+	
+	public String getLosnummerLiQuelle() {
+		return losnummerLiQuelle;
+	}
+
+	public void setLosnummerLiQuelle(String losnummerLiQuelle) {
+		this.losnummerLiQuelle = losnummerLiQuelle;
 	}
 
 	private BigDecimal bdVkwArbeitsoll;
@@ -91,7 +200,7 @@ public class AuftragNachkalkulationDto extends TabelleDto implements
 	private Double ddMaschinenzeitsoll;
 	private Double ddMaschinenzeitist;
 	private String cArtikelnummerArbeitszeit;
-	
+
 	public String getErLieferant() {
 		return erLieferant;
 	}
@@ -111,12 +220,12 @@ public class AuftragNachkalkulationDto extends TabelleDto implements
 	private String erLieferant;
 	private String reBestellnummer;
 
-	
 	public String getSLosstuecklistenartikelnummer() {
 		return sLosstuecklistenartikelnummer;
 	}
 
-	public void setSLosstuecklistenartikelnummer(String losstuecklistenartikelnummer) {
+	public void setSLosstuecklistenartikelnummer(
+			String losstuecklistenartikelnummer) {
 		sLosstuecklistenartikelnummer = losstuecklistenartikelnummer;
 	}
 
@@ -161,12 +270,9 @@ public class AuftragNachkalkulationDto extends TabelleDto implements
 	private String sLoskommentar;
 	private String sLosprojekt;
 
-	
 	private Double dLosbewertung;
 	private Timestamp tLoserledigungsdatum;
 
-	
-	
 	public Double getdLosbewertung() {
 		return dLosbewertung;
 	}

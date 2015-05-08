@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -58,8 +58,8 @@ import com.lp.util.EJBExceptionLP;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Zeitmodelle implementiert. Pro
- * UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Zeitmodelle implementiert.
+ * Pro UseCase gibt es einen Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -122,6 +122,7 @@ public class MaschinenkostenHandler extends UseCaseHandler {
 				rows[row][col++] = flrmaschinenkosten.getI_id();
 				rows[row][col++] = flrmaschinenkosten.getT_gueltigab();
 				rows[row][col++] = flrmaschinenkosten.getN_stundensatz();
+				rows[row][col++] = flrmaschinenkosten.getN_vkstundensatz();
 
 				row++;
 				col = 0;
@@ -338,18 +339,23 @@ public class MaschinenkostenHandler extends UseCaseHandler {
 			String mandantCNr = theClientDto.getMandant();
 			Locale locUI = theClientDto.getLocUi();
 			setTableInfo(new TableInfo(new Class[] { Integer.class, Date.class,
-					BigDecimal.class }, new String[] { "Id",
+					BigDecimal.class, BigDecimal.class }, new String[] {
+					"Id",
 					getTextRespectUISpr("lp.gueltig_ab", mandantCNr, locUI),
-					getTextRespectUISpr("lp.stundensatz", mandantCNr, locUI) }
+					getTextRespectUISpr("lp.stundensatz", mandantCNr, locUI),
+					getTextRespectUISpr("pers.maschinenkostenvk.vkstundensatz",
+							mandantCNr, locUI) }
 
 			, new int[] {
 					-1, // diese Spalte wird ausgeblendet
 					QueryParameters.FLR_BREITE_L,
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST,
 					QueryParameters.FLR_BREITE_SHARE_WITH_REST }
 
 			, new String[] { "i_id",
 					ZeiterfassungFac.FLR_MASCHINENKOSTEN_T_GUELTIGAB,
-					ZeiterfassungFac.FLR_MASCHINENKOSTEN_N_STUNDENSATZ }));
+					ZeiterfassungFac.FLR_MASCHINENKOSTEN_N_STUNDENSATZ,
+					ZeiterfassungFac.FLR_MASCHINENKOSTEN_N_VKSTUNDENSATZ }));
 
 		}
 		return super.getTableInfo();

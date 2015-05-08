@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,17 +19,17 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.artikel.fastlanereader.generated;
 
 import java.io.Serializable;
@@ -53,6 +53,15 @@ public class FLRInventurstand implements Serializable {
     private BigDecimal n_inventurpreis;
 
     /** nullable persistent field */
+    private BigDecimal n_basispreis;
+
+    /** nullable persistent field */
+    private Double f_abwertung;
+
+    /** nullable persistent field */
+    private String c_kommentar;
+
+    /** nullable persistent field */
     private Integer inventur_i_id;
 
     /** nullable persistent field */
@@ -65,10 +74,13 @@ public class FLRInventurstand implements Serializable {
     private com.lp.server.artikel.fastlanereader.generated.FLRLager flrlager;
 
     /** full constructor */
-    public FLRInventurstand(BigDecimal n_inventurmenge, BigDecimal n_abgewerteterpreis, BigDecimal n_inventurpreis, Integer inventur_i_id, com.lp.server.artikel.fastlanereader.generated.FLRInventur flrinventur, com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste flrartikel, com.lp.server.artikel.fastlanereader.generated.FLRLager flrlager) {
+    public FLRInventurstand(BigDecimal n_inventurmenge, BigDecimal n_abgewerteterpreis, BigDecimal n_inventurpreis, BigDecimal n_basispreis, Double f_abwertung, String c_kommentar, Integer inventur_i_id, com.lp.server.artikel.fastlanereader.generated.FLRInventur flrinventur, com.lp.server.artikel.fastlanereader.generated.FLRArtikelliste flrartikel, com.lp.server.artikel.fastlanereader.generated.FLRLager flrlager) {
         this.n_inventurmenge = n_inventurmenge;
         this.n_abgewerteterpreis = n_abgewerteterpreis;
         this.n_inventurpreis = n_inventurpreis;
+        this.n_basispreis = n_basispreis;
+        this.f_abwertung = f_abwertung;
+        this.c_kommentar = c_kommentar;
         this.inventur_i_id = inventur_i_id;
         this.flrinventur = flrinventur;
         this.flrartikel = flrartikel;
@@ -109,6 +121,30 @@ public class FLRInventurstand implements Serializable {
 
     public void setN_inventurpreis(BigDecimal n_inventurpreis) {
         this.n_inventurpreis = n_inventurpreis;
+    }
+
+    public BigDecimal getN_basispreis() {
+        return this.n_basispreis;
+    }
+
+    public void setN_basispreis(BigDecimal n_basispreis) {
+        this.n_basispreis = n_basispreis;
+    }
+
+    public Double getF_abwertung() {
+        return this.f_abwertung;
+    }
+
+    public void setF_abwertung(Double f_abwertung) {
+        this.f_abwertung = f_abwertung;
+    }
+
+    public String getC_kommentar() {
+        return this.c_kommentar;
+    }
+
+    public void setC_kommentar(String c_kommentar) {
+        this.c_kommentar = c_kommentar;
     }
 
     public Integer getInventur_i_id() {

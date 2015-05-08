@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -66,6 +66,7 @@ import com.lp.server.finanz.service.KontoDtoSmall;
 import com.lp.server.inserat.ejb.Inseratrechnung;
 import com.lp.server.lieferschein.ejb.Lieferschein;
 import com.lp.server.lieferschein.service.LieferscheinDto;
+import com.lp.server.partner.ejb.Ansprechpartner;
 import com.lp.server.partner.ejb.HvTypedQuery;
 import com.lp.server.partner.ejb.Kunde;
 import com.lp.server.partner.ejb.KundeQuery;
@@ -218,6 +219,26 @@ public class KundeFacBean extends Facade implements KundeFac {
 				}
 			}
 
+			ParametermandantDto parameter = getParameterFac()
+					.getMandantparameter(theClientDto.getMandant(),
+							ParameterFac.KATEGORIE_KUNDEN,
+							ParameterFac.PARAMETER_DEFAULT_KOPIEN_LIEFERSCHEIN);
+
+			if (parameter.getCWert().length() > 0) {
+				Integer kopienLieferschein = (Integer) parameter
+						.getCWertAsObject();
+				kundeDto.setIDefaultlskopiendrucken(kopienLieferschein);
+			}
+
+			parameter = getParameterFac().getMandantparameter(
+					theClientDto.getMandant(), ParameterFac.KATEGORIE_KUNDEN,
+					ParameterFac.PARAMETER_DEFAULT_KOPIEN_RECHNUNG);
+
+			if (parameter.getCWert().length() > 0) {
+				Integer kopienRechnung = (Integer) parameter.getCWertAsObject();
+				kundeDto.setIDefaultrekopiendrucken(kopienRechnung);
+			}
+
 			KundeDto kundeDto1 = getKundeFac()
 					.kundeFindByiIdPartnercNrMandantOhneExc(
 							partnerDto.getIId(), theClientDto.getMandant(),
@@ -305,7 +326,8 @@ public class KundeFacBean extends Facade implements KundeFac {
 	 * 
 	 * @param iIdLieferant
 	 *            lieferant mit partner
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param theClientDto
+	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 * @throws RemoteException
 	 * @return Integer kundeKey
@@ -469,7 +491,8 @@ public class KundeFacBean extends Facade implements KundeFac {
 	 * 
 	 * @param kundeDto
 	 *            KundeDto
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param theClientDto
+	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 */
 	public void updateKunde(KundeDto kundeDto, TheClientDto theClientDto)
@@ -878,6 +901,34 @@ public class KundeFacBean extends Facade implements KundeFac {
 			return null;
 
 		KundeDto kundeDto = assembleKundeDto(kunde);
+		return kundeFindByPrimaryKeyImpl(kundeDto, theClientDto);
+		// kundeDto.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(
+		// kundeDto.getPartnerIId(), theClientDto));
+		//
+		// // Partnerrechnungsadresse.
+		// Integer iIdPartnerRE = kundeDto.getPartnerIIdRechnungsadresse();
+		//
+		// if (iIdPartnerRE != null) {
+		// kundeDto.setPartnerRechnungsadresseDto(getPartnerFac()
+		// .partnerFindByPrimaryKey(iIdPartnerRE, theClientDto));
+		// }
+		//
+		// KontoDtoSmall k = null;
+		// if (kundeDto.getIidDebitorenkonto() != null) {
+		// k = getFinanzFac().kontoFindByPrimaryKeySmall(
+		// kundeDto.getIidDebitorenkonto());
+		// }
+		// Integer iD = null;
+		// if (k != null && k.getCNr() != null) {
+		// iD = new Integer(Integer.parseInt(k.getCNr()));
+		// }
+		// kundeDto.setIDebitorenkontoAsIntegerNotiId(iD);
+		//
+		// return kundeDto;
+	}
+
+	private KundeDto kundeFindByPrimaryKeyImpl(KundeDto kundeDto,
+			TheClientDto theClientDto) throws RemoteException {
 		kundeDto.setPartnerDto(getPartnerFac().partnerFindByPrimaryKey(
 				kundeDto.getPartnerIId(), theClientDto));
 
@@ -1005,6 +1056,28 @@ public class KundeFacBean extends Facade implements KundeFac {
 		return kundeDto;
 	}
 
+	public KundeDto kundeFindByAnsprechpartnerIdcNrMandantOhneExc(
+			Integer ansprechpartnerId, String mandantCnr,
+			TheClientDto theClientDto) throws RemoteException {
+		Validator.notNull(ansprechpartnerId, "ansprechpartnerId");
+		Validator.notEmpty(mandantCnr, "mandantCnr");
+
+		Ansprechpartner ansprechpartner = em.find(Ansprechpartner.class,
+				ansprechpartnerId);
+		if (ansprechpartner == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
+					ansprechpartnerId.toString());
+		}
+
+		KundeDto kundeDto = kundeFindByiIdPartnercNrMandantOhneExc(
+				ansprechpartner.getPartnerIId(), mandantCnr, theClientDto);
+		if (kundeDto != null) {
+			kundeDto = kundeFindByPrimaryKeyImpl(kundeDto, theClientDto);
+		}
+		return kundeDto;
+	}
+
 	public KundeDto kundeFindByLieferantenCnrMandantCnrNull(
 			String lieferantenCnr, String mandantCnr) {
 		if (Helper.isStringEmpty(lieferantenCnr))
@@ -1100,7 +1173,8 @@ public class KundeFacBean extends Facade implements KundeFac {
 	 * 
 	 * @param kundeIId
 	 *            Integer
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param theClientDto
+	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 *             wenn der Kunde keine UID-Nummer hat
 	 */
@@ -1720,6 +1794,15 @@ public class KundeFacBean extends Facade implements KundeFac {
 			kundeZielDto.setIidDebitorenkonto(kundeQuelle
 					.getKontoIIdDebitorenkonto());
 
+			KontoDtoSmall k = getFinanzFac().kontoFindByPrimaryKeySmall(
+					kundeQuelle.getKontoIIdDebitorenkonto());
+
+			Integer iD = null;
+			if (k != null && k.getCNr() != null) {
+				iD = new Integer(Integer.parseInt(k.getCNr()));
+			}
+			kundeZielDto.setIDebitorenkontoAsIntegerNotiId(iD);
+
 		}
 
 		if (kundeQuelle.getMwstsatzIId() != null
@@ -1828,9 +1911,10 @@ public class KundeFacBean extends Facade implements KundeFac {
 		}
 
 	}
-	
-	public boolean hatKundeVersandweg(Integer kundeIId, TheClientDto theClientDto) throws RemoteException {
-		KundeDto kundeDto = kundeFindByPrimaryKey(kundeIId, theClientDto) ;
-		return kundeDto.getPartnerDto().getVersandwegIId() != null ;
+
+	public boolean hatKundeVersandweg(Integer kundeIId,
+			TheClientDto theClientDto) throws RemoteException {
+		KundeDto kundeDto = kundeFindByPrimaryKey(kundeIId, theClientDto);
+		return kundeDto.getPartnerDto().getVersandwegIId() != null;
 	}
 }

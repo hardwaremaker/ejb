@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -41,13 +41,15 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import com.lp.server.util.ICNr;
+
 @NamedQueries( 
 		{ @NamedQuery(name = "UvaartfindByCNrMandant", query = "SELECT OBJECT(o) FROM Uvaart o WHERE o.cNr=?1 AND o.mandantCNr=?2"),
 		  @NamedQuery(name = "UvaartfindAll", query = "SELECT OBJECT(o) FROM Uvaart o WHERE o.mandantCNr=?1")})
 
 @Entity
 @Table(name = "FB_UVAART")
-public class Uvaart implements Serializable {
+public class Uvaart implements Serializable, ICNr {
 	@Id
 	@Column(name = "I_ID")
 	private Integer iId;

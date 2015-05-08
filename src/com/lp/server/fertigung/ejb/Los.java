@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -47,6 +47,8 @@ import javax.persistence.Table;
 @NamedQueries( {
 		@NamedQuery(name = "LosfindByCNrMandantCNr", query = "SELECT OBJECT (o) FROM Los o WHERE o.cNr=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = "LosfindByAuftragIId", query = "SELECT OBJECT (o) FROM Los o WHERE o.auftragIId=?1"),
+		@NamedQuery(name = "LosfindByAuftragIIdStuecklisteIId", query = "SELECT OBJECT (o) FROM Los o WHERE o.auftragIId=?1 ANd o.stuecklisteIId=?2"),
+		@NamedQuery(name = "LosfindByStuecklisteIId", query = "SELECT OBJECT (o) FROM Los o WHERE o.stuecklisteIId=?1"),
 		@NamedQuery(name = "LosfindByAuftragpositionIId", query = "SELECT OBJECT (o) FROM Los o WHERE o.auftragpositionIId=?1"),
 		@NamedQuery(name = "LosfindByFertigungsortpartnerIIdMandantCNr", query = "SELECT OBJECT (o) FROM Los o WHERE o.partnerIIdFertigungsort=?1 AND o.mandantCNr=?2"),
 		@NamedQuery(name = "LosfindWiederholendeloseIIdTProduktionsbeginnMandantCNr", query = "SELECT OBJECT (o) FROM Los o WHERE o.wiederholendeloseIId=?1 AND o.tProduktionsbeginn=?2 AND o.mandantCNr=?3") })
@@ -125,6 +127,17 @@ public class Los implements Serializable {
 	@Column(name = "AUFTRAG_I_ID")
 	private Integer auftragIId;
 	
+	@Column(name = "PROJEKT_I_ID")
+	private Integer projektIId;
+	
+	public Integer getProjektIId() {
+		return projektIId;
+	}
+
+	public void setProjektIId(Integer projektIId) {
+		this.projektIId = projektIId;
+	}
+	
 	public Integer getKundeIId() {
 		return kundeIId;
 	}
@@ -187,6 +200,31 @@ public class Los implements Serializable {
 	@Column(name = "STUECKLISTE_I_ID")
 	private Integer stuecklisteIId;
 
+
+	@Column(name = "PERSONAL_I_ID_MATERIAL_VOLLSTAENDIG")
+	private Integer personalIIdMaterialvollstaendig;
+	
+	public Integer getPersonalIIdMaterialvollstaendig() {
+		return personalIIdMaterialvollstaendig;
+	}
+
+	public void setPersonalIIdMaterialvollstaendig(
+			Integer personalIIdMaterialvollstaendig) {
+		this.personalIIdMaterialvollstaendig = personalIIdMaterialvollstaendig;
+	}
+
+	public Timestamp getTMaterialvollstaendig() {
+		return tMaterialvollstaendig;
+	}
+
+	public void setTMaterialvollstaendig(Timestamp tMaterialvollstaendig) {
+		this.tMaterialvollstaendig = tMaterialvollstaendig;
+	}
+
+	@Column(name = "T_MATERIAL_VOLLSTAENDIG")
+	private Timestamp tMaterialvollstaendig;
+	
+	
 	@Column(name = "LOSBEREICH_I_ID")
 	private Integer losbereichIId;
 

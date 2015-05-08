@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.angebot.ejb;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -138,6 +139,17 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 	@Column(name = "ANGEBOT_I_ID")
 	private Integer angebotIId;
 	
+	public Integer getLieferantIId() {
+		return lieferantIId;
+	}
+
+	public void setLieferantIId(Integer lieferantIId) {
+		this.lieferantIId = lieferantIId;
+	}
+
+	@Column(name = "LIEFERANT_I_ID")
+	private Integer lieferantIId;
+	
 	@Column(name = "N_MATERIALZUSCHLAG")
 	private BigDecimal nMaterialzuschlag;
 	
@@ -160,6 +172,17 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 	@Column(name = "VERLEIH_I_ID")
 	private Integer verleihIId;
 
+	@Column(name = "N_EINKAUFPREIS") 
+	private BigDecimal nEinkaufpreis;
+	
+	public BigDecimal getNEinkaufpreis() {
+		return this.nEinkaufpreis;
+	}
+
+	public void setNEinkaufpreis(BigDecimal nEinkaufpreis) {
+		this.nEinkaufpreis = nEinkaufpreis;
+	}
+	
 	@Column(name = "KOSTENTRAEGER_I_ID")
 	private Integer kostentraegerIId;
 	
@@ -205,7 +228,34 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 	@Column(name = "N_ZWSNETTOSUMME") 
 	private BigDecimal zwsNettoSumme ;
 
+	@Column(name = "B_ZWSPOSITIONSPREISZEIGEN")
+	private Short bZwsPositionspreisZeigen ;
 	
+	
+	@Column(name = "T_MATERIALZUSCHLAG_DATUM")
+	private Timestamp tMaterialzuschlagDatum ;
+	
+
+	public Timestamp getTMaterialzuschlagDatum() {
+		return tMaterialzuschlagDatum;
+	}
+
+	public void setTMaterialzuschlagDatum(Timestamp tMaterialzuschlagDatum) {
+		this.tMaterialzuschlagDatum = tMaterialzuschlagDatum;
+	}
+
+	@Column(name = "N_MATERIALZUSCHLAG_KURS")
+	private BigDecimal nMaterialzuschlagKurs ;
+
+	
+	public BigDecimal getNMaterialzuschlagKurs() {
+		return nMaterialzuschlagKurs;
+	}
+
+	public void setNMaterialzuschlagKurs(BigDecimal nMaterialzuschlagKurs) {
+		this.nMaterialzuschlagKurs = nMaterialzuschlagKurs;
+	}
+
 	public Integer getPositionIIdArtikelset() {
 		return positionIIdArtikelset;
 	}
@@ -531,5 +581,13 @@ public class Angebotposition implements Serializable, IISort, IPositionIIdArtike
 
 	public void setZwsNettoSumme(BigDecimal zwsNettoSumme) {
 		this.zwsNettoSumme = zwsNettoSumme;
+	}
+	
+	public Short getBZwsPositionspreisZeigen() {
+		return bZwsPositionspreisZeigen;
+	}
+
+	public void setBZwsPositionspreisZeigen(Short bZwsPositionpreisZeigen) {
+		this.bZwsPositionspreisZeigen = bZwsPositionpreisZeigen;
 	}	
 }

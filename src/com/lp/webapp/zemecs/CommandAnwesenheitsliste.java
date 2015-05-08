@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,7 +32,6 @@
  ******************************************************************************/
 package com.lp.webapp.zemecs;
 
-import java.io.PrintWriter;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Locale;
@@ -47,7 +46,6 @@ import net.sf.jasperreports.engine.JRExporterParameter;
 import net.sf.jasperreports.engine.export.JRHtmlExporter;
 import net.sf.jasperreports.engine.export.JRHtmlExporterParameter;
 
-import com.lp.server.benutzer.service.LogonFac;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.HelperServer;
 import com.lp.server.util.report.JasperPrintLP;
@@ -100,21 +98,12 @@ public class CommandAnwesenheitsliste extends Command {
 		
 		if (command.equals(TheApp.CMD_ANWESENHEITSLITE)) {
 			String mandant = request.getParameter("mandant");
+			
 			TheClientDto theclientDto = getLogonFac()
 					.logon( Helper.getFullUsername(sUser), 				
-							Helper.getMD5Hash((sUser + new String("lpwebappzemecs")).toCharArray()),
-							localeLogon, null, null,
+							Helper.getMD5Hash((sUser + "lpwebappzemecs").toCharArray()),
+							localeLogon, mandant,
 							new Timestamp(System.currentTimeMillis()));
-
-			
-			if (mandant != null) {
-
-				theclientDto = getLogonFac().logon(
-						Helper.getFullUsername(sUser),							
-						Helper.getMD5Hash((sUser + new String("lpwebappzemecs")).toCharArray()),
-						localeLogon, mandant, theclientDto,
-						new Timestamp(System.currentTimeMillis()));
-			}
 			
 			JasperPrintLP jasperprint = getZeiterfassungsFac()
 					.printAnwesenheitsliste(theclientDto);
@@ -148,6 +137,7 @@ public class CommandAnwesenheitsliste extends Command {
 									.getMessage());
 				}
 			}
+			getLogonFac().logout(theclientDto);
 
 		}
 

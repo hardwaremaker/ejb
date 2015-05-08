@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -89,7 +89,8 @@ public abstract class DocNodeBase implements Serializable {
 	public static final String BELEGART_RE_ZAHLUNG = "REZahlung      ";
 	public static final String BELEGART_INSTANDHALTUNG = "Instandhaltung ";
 	public static final String BELEGART_ER_ZAHLUNG = "ERZahlung      ";
-	public static final String BELEGART_INSERAT = "Inserat        ";
+	public static final String BELEGART_INSERAT = 		  "Inserat        ";
+	public static final String BELEGART_WOCHENABSCHLUSS = "Wochenabschluss";
 
 	public static final String BELEGART_VERSANDAUFTRAG = "Versandauftrag ";
 	public static final String BELEGART_VERSANDANHANG = "Versandanhang  ";
@@ -111,6 +112,10 @@ public abstract class DocNodeBase implements Serializable {
 	public static final String BELEGART_PROFORMAPOS = "ProformPosition";
 	public static final String BELEGART_AUFGLFEHLMENGEN = "AufglFehlmengen";
 	public static final String BELEGART_LAGERSTANDSLISTE = "Lagerstandslist";
+	public static final String BELEGART_ARTIKELGRUPPE = "Artikelgruppe";
+	public static final String BELEGART_ARTIKELKLASSE = "Artikelklasse";
+	public static final String BELEGART_BUCHUNGDETAIL = "Buchungdetail";
+	public static final String BELEGART_ARTIKELETIKETT = "Artikeletikett";
 
 	public static final String NODEPROPERTY_IID = "NODEIID";
 	public static final String NODEPROPERTY_NODETYPE = "NODETYPE";
@@ -122,6 +127,9 @@ public abstract class DocNodeBase implements Serializable {
 	public static final String NODEPROPERTY_HELPERCNR = "NODEHELPERCNR";
 	public static final String NODEPROPERTY_HELPERIID = "NODEHELPERIID";
 
+	public static final String BELEGART_MEDIA_EMAIL      = "MediaEmail     ";
+	public static final String BELEGART_MEDIA_ATTACHMENT = "MediaEmailAttmt" ;
+	
 	private int nodeType;
 	private int version = 2;
 

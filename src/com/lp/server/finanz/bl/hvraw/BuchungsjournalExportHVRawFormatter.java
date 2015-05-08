@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -49,6 +49,7 @@ public class BuchungsjournalExportHVRawFormatter implements
 		IBuchungsjournalExportFormatter {
 	
 	private List<FLRFinanzBuchungDetail> buchungen;
+	private boolean mitStornierte;
 	private Map<String,String> buchungsartKz = new HashMap<String, String>() {
 		private static final long serialVersionUID = 7371113587086555801L;
 
@@ -62,14 +63,17 @@ public class BuchungsjournalExportHVRawFormatter implements
 		}
 	};
 	
-	public BuchungsjournalExportHVRawFormatter(List<FLRFinanzBuchungDetail> buchungen) {
+	public BuchungsjournalExportHVRawFormatter(List<FLRFinanzBuchungDetail> buchungen, boolean mitStornierte) {
 		this.buchungen = buchungen;
+		this.mitStornierte = mitStornierte;
 	}
 
 	@Override
 	public List<String> getExportLines() {
 		List<String> output = new ArrayList<String>();
 		output.add("Datum\tBuchung\tBelegnummer\tBuchungsart\tKonto\tKontonamen\tKontotyp\tSoll\tHaben\tStorniert");
+		if(!mitStornierte)
+			output.add("ACHTUNG: Ohne Stornobuchungen\t\t\t\t\t\t\t\t\t");
 		SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
 		DecimalFormat decimalFormat = new DecimalFormat();
 		decimalFormat.setGroupingUsed(false);

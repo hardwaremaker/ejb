@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -44,14 +44,17 @@ import org.hibernate.SessionFactory;
 
 import com.lp.server.benutzer.fastlanereader.generated.FLRSystemrolle;
 import com.lp.server.benutzer.service.BenutzerFac;
+import com.lp.server.system.service.TheJudgeFac;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
 import com.lp.server.util.fastlanereader.service.query.FilterBlock;
 import com.lp.server.util.fastlanereader.service.query.FilterKriterium;
+import com.lp.server.util.fastlanereader.service.query.QueryParameters;
 import com.lp.server.util.fastlanereader.service.query.QueryResult;
 import com.lp.server.util.fastlanereader.service.query.SortierKriterium;
 import com.lp.server.util.fastlanereader.service.query.TableInfo;
 import com.lp.util.EJBExceptionLP;
+import com.lp.util.Helper;
 
 /**
  * <p>
@@ -75,6 +78,9 @@ public class SystemrolleHandler extends UseCaseHandler {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	private static final String[] filterRollen = new String[]{
+		TheJudgeFac.ROLLE_HVADMIN
+	};
 
 	/**
 	 * the size of the data page returned in QueryResult.
@@ -175,21 +181,18 @@ public class SystemrolleHandler extends UseCaseHandler {
 			FilterKriterium[] filterKriterien = this.getQuery()
 					.getFilterBlock().filterKrit;
 			String booleanOperator = filterBlock.boolOperator;
-			boolean filterAdded = false;
+			
+			where.append(" WHERE")
+				.append(" systemrolle.c_bez NOT IN ")
+				.append(Helper.arrayToSqlInList(filterRollen));
 
 			for (int i = 0; i < filterKriterien.length; i++) {
 				if (filterKriterien[i].isKrit) {
-					if (filterAdded) {
-						where.append(" " + booleanOperator);
-					}
-					filterAdded = true;
+					where.append(" " + booleanOperator);
 					where.append(" systemrolle." + filterKriterien[i].kritName);
 					where.append(" " + filterKriterien[i].operator);
 					where.append(" " + filterKriterien[i].value);
 				}
-			}
-			if (filterAdded) {
-				where.insert(0, " WHERE");
 			}
 		}
 
@@ -319,7 +322,11 @@ public class SystemrolleHandler extends UseCaseHandler {
 			setTableInfo(new TableInfo(new Class[] { Integer.class,
 					String.class }, new String[] { "Id",
 					getTextRespectUISpr("lp.bezeichnung", mandantCNr, locUI) },
-					new String[] { "i_id", BenutzerFac.FLR_SYSTEMROLLE_C_BEZ }));
+
+			new int[] { -1, // diese Spalte wird ausgeblendet
+					QueryParameters.FLR_BREITE_SHARE_WITH_REST },
+
+			new String[] { "i_id", BenutzerFac.FLR_SYSTEMROLLE_C_BEZ }));
 
 		}
 		return super.getTableInfo();

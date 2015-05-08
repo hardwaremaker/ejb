@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -61,6 +61,9 @@ public interface FibuExportFac {
 
 	public final static String DATEV = "DATEV";
 	public final static String HV_RAW = "HV RAW";
+	public static final String RZL_CSV = "RZL-CSV";
+	
+	public final static String RZL_CSV_FILENAME_PREFIX = "EXTF_";
 	
 	public String exportiereBelege(
 			FibuExportKriterienDto fibuExportKriterienDto, TheClientDto theClientDto)
@@ -133,7 +136,7 @@ public interface FibuExportFac {
 		throws EJBExceptionLP;
 	
 	public List<String> exportiereBuchungsjournal(String format, Date von, Date bis,
-			boolean mitAutoEB, boolean mitManEB, boolean mitAutoB, String bezeichnung,
+			boolean mitAutoEB, boolean mitManEB, boolean mitAutoB, boolean mitStornierte, String bezeichnung,
 			TheClientDto theClientDto) throws RemoteException, EJBExceptionLP;
 	
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -74,8 +74,9 @@ import com.lp.util.Helper;
 
 /**
  * <p>
- * Hier wird die FLR Funktionalit&auml;t f&uuml;r die Angebotspositionsstuecklisten
- * implementiert. Pro UseCase gibt es einen Handler.
+ * Hier wird die FLR Funktionalit&auml;t f&uuml;r die
+ * Angebotspositionsstuecklisten implementiert. Pro UseCase gibt es einen
+ * Handler.
  * </p>
  * <p>
  * Copright Logistik Pur Software GmbH (c) 2004-2007
@@ -150,6 +151,19 @@ public class AgstklpositionHandler extends UseCaseHandler {
 					}
 				}
 				rows[row][col++] = artikelart;
+
+				if (iKalkulationsart == 3) {
+
+				} else {
+					if (agstklposition.getFlrartikel() != null) {
+						rows[row][col++] = agstklposition.getFlrartikel()
+								.getC_nr();
+					} else {
+						rows[row][col++] = null;
+					}
+
+				}
+
 				rows[row][col++] = agstklposition.getEinheit_c_nr() == null ? ""
 						: agstklposition.getEinheit_c_nr().trim();
 
@@ -220,7 +234,6 @@ public class AgstklpositionHandler extends UseCaseHandler {
 										.wareneingangFindByPrimaryKey(
 												wepDto.getWareneingangIId());
 
-								
 								rows[row][col++] = wepDto
 										.getNGelieferterpreis();
 								rows[row][col++] = weDto
@@ -456,7 +469,11 @@ public class AgstklpositionHandler extends UseCaseHandler {
 
 	public TableInfo getTableInfo() {
 		if (super.getTableInfo() == null) {
+			int iNachkommastellenMenge = 3;
 			try {
+				iNachkommastellenMenge = getMandantFac()
+						.getNachkommastellenMenge(theClientDto.getMandant());
+				
 				ParametermandantDto parameterMand = getParameterFac()
 						.getMandantparameter(theClientDto.getMandant(),
 								ParameterFac.KATEGORIE_ANGEBOTSSTUECKLISTE,
@@ -469,7 +486,7 @@ public class AgstklpositionHandler extends UseCaseHandler {
 			if (iKalkulationsart == 3) {
 
 				setTableInfo(new TableInfo(
-						new Class[] { Integer.class, BigDecimal.class,
+						new Class[] { Integer.class, super.getUIClassBigDecimalNachkommastellen(iNachkommastellenMenge),
 								String.class, String.class, String.class,
 								BigDecimal.class, BigDecimal.class,
 								BigDecimal.class, java.util.Date.class,
@@ -531,13 +548,16 @@ public class AgstklpositionHandler extends UseCaseHandler {
 				setTableInfo(new TableInfo(
 						new Class[] { Integer.class, BigDecimal.class,
 								String.class, String.class, String.class,
-								BigDecimal.class, Boolean.class },
+								String.class, BigDecimal.class, Boolean.class },
 						new String[] {
 								"i_id",
 								getTextRespectUISpr("lp.menge",
 										theClientDto.getMandant(),
 										theClientDto.getLocUi()),
 								getTextRespectUISpr("lp.stuecklistenart",
+										theClientDto.getMandant(),
+										theClientDto.getLocUi()),
+								getTextRespectUISpr("artikel.artikelnummer",
 										theClientDto.getMandant(),
 										theClientDto.getLocUi()),
 								getTextRespectUISpr("lp.einheit",
@@ -556,7 +576,9 @@ public class AgstklpositionHandler extends UseCaseHandler {
 								// ausgeblendet
 								QueryParameters.FLR_BREITE_M, // Format 1234.123
 								QueryParameters.FLR_BREITE_M, // Format 1234.123
+								QueryParameters.FLR_BREITE_XM,
 								QueryParameters.FLR_BREITE_XS,
+								
 								QueryParameters.FLR_BREITE_SHARE_WITH_REST, // Breite
 								// variabel
 								QueryParameters.FLR_BREITE_M, // Format
@@ -567,6 +589,8 @@ public class AgstklpositionHandler extends UseCaseHandler {
 								"i_id",
 								AngebotstklpositionFac.FLR_AGSTKLPOSITION_N_MENGE,
 								Facade.NICHT_SORTIERBAR,
+								AngebotstklpositionFac.FLR_AGSTKLPOSITION_FLRARTIKEL
+										+ ".c_nr",
 								AngebotstklpositionFac.FLR_AGSTKLPOSITION_EINHEIT_C_NR,
 								AngebotstklpositionFac.FLR_AGSTKLPOSITION_C_BEZ,
 								AngebotstklpositionFac.FLR_AGSTKLPOSITION_N_NETTOGESAMTPREIS,

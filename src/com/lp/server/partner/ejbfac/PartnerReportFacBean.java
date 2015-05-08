@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -42,6 +42,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.ResourceBundle;
+import java.util.Set;
 
 import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
@@ -63,6 +64,8 @@ import com.lp.server.partner.fastlanereader.generated.FLRAnsprechpartner;
 import com.lp.server.partner.fastlanereader.generated.FLRKontakt;
 import com.lp.server.partner.fastlanereader.generated.FLRKunde;
 import com.lp.server.partner.fastlanereader.generated.FLRKurzbrief;
+import com.lp.server.partner.fastlanereader.generated.FLRPASelektion;
+import com.lp.server.partner.fastlanereader.generated.FLRPartner;
 import com.lp.server.partner.service.AnsprechpartnerDto;
 import com.lp.server.partner.service.AnsprechpartnerFac;
 import com.lp.server.partner.service.AnsprechpartnerfunktionDto;
@@ -76,6 +79,7 @@ import com.lp.server.partner.service.SelektionDto;
 import com.lp.server.partner.service.SerienbriefDto;
 import com.lp.server.partner.service.SerienbriefEmpfaengerDto;
 import com.lp.server.partner.service.SerienbriefselektionDto;
+import com.lp.server.partner.service.SerienbriefselektionnegativDto;
 import com.lp.server.personal.service.PersonalDto;
 import com.lp.server.system.jcr.service.PrintInfoDto;
 import com.lp.server.system.service.MandantDto;
@@ -853,7 +857,7 @@ public class PartnerReportFacBean extends LPReport implements PartnerReportFac {
 
 			Session session = FLRSessionFactory.getFactory().openSession();
 
-			String queryString = "SELECT distinct p.i_id,(SELECT k.i_id FROM FLRKunde as k WHERE k.flrpartner.i_id=p.i_id AND k.mandant_c_nr='"
+			String queryString = "SELECT p.i_id,(SELECT k.i_id FROM FLRKunde as k WHERE k.flrpartner.i_id=p.i_id AND k.mandant_c_nr='"
 					+ theClientDto.getMandant() + "'";
 			queryString += ") ,"
 					+ "(SELECT k.b_istinteressent FROM FLRKunde as k WHERE k.flrpartner.i_id=p.i_id AND k.mandant_c_nr='"
@@ -866,7 +870,7 @@ public class PartnerReportFacBean extends LPReport implements PartnerReportFac {
 					+ "(SELECT l.b_moeglicherlieferant FROM FLRLieferant as l WHERE l.flrpartner.i_id=p.i_id AND l.mandant_c_nr='"
 					+ theClientDto.getMandant() + "'";
 
-			queryString += "),p.c_name1nachnamefirmazeile1  FROM FLRPartner as p left outer join p.partner_paselektion_set as sel   WHERE 1=1 ";
+			queryString += "),p.c_name1nachnamefirmazeile1, p  FROM FLRPartner as p  WHERE 1=1 ";
 
 			if (Helper.short2boolean(serienbriefDto.getBVersteckteDabei()) == false) {
 				queryString += " AND p.b_versteckt=0";
@@ -894,21 +898,11 @@ public class PartnerReportFacBean extends LPReport implements PartnerReportFac {
 			// Selektionen
 			SerienbriefselektionDto[] serienbriefselektionDtos = getPartnerServicesFac()
 					.serienbriefselektionFindBySerienbriefIId(serienbriefIId);
-			if (serienbriefselektionDtos != null
-					&& serienbriefselektionDtos.length > 0) {
-				String sel = "(";
-				for (int i = 0; i < serienbriefselektionDtos.length; i++) {
-					if (i == serienbriefselektionDtos.length - 1) {
-						sel += serienbriefselektionDtos[i].getSelektionIId();
-					} else {
-						sel += serienbriefselektionDtos[i].getSelektionIId()
-								+ ",";
-					}
 
-				}
-				sel += ")";
-				queryString += " AND sel.id_comp.selektion_i_id IN " + sel;
-			}
+			// PJ18074 negative Selektionen
+			SerienbriefselektionnegativDto[] serienbriefselektionnegattivDtos = getPartnerServicesFac()
+					.serienbriefselektionnegativFindBySerienbriefIId(
+							serienbriefIId);
 
 			queryString += " ORDER BY p.c_name1nachnamefirmazeile1";
 
@@ -927,6 +921,116 @@ public class PartnerReportFacBean extends LPReport implements PartnerReportFac {
 				Boolean bMoegliche = false;
 				if (o[4] != null) {
 					bMoegliche = Helper.short2Boolean((Short) o[4]);
+				}
+
+				FLRPartner flrPartner = (FLRPartner) o[6];
+
+				Set<FLRPASelektion> sSelektionen = flrPartner
+						.getPartner_paselektion_set();
+
+				// Selektionen
+
+				if (serienbriefselektionDtos != null
+						&& serienbriefselektionDtos.length > 0) {
+
+					if (sSelektionen.size() == 0) {
+						continue;
+					}
+
+					if (Helper.short2boolean(serienbriefDto
+							.getBSelektionenLogischesOder()) == true) {
+
+						// LOGISCHES ODER -> Wenn einer passt, dann ist er dabei
+						boolean bEinerPasst = false;
+
+						Iterator<FLRPASelektion> itSelektionen = sSelektionen
+								.iterator();
+
+						while (itSelektionen.hasNext()) {
+							FLRPASelektion pasel = itSelektionen.next();
+
+							for (int i = 0; i < serienbriefselektionDtos.length; i++) {
+								if (serienbriefselektionDtos[i]
+										.getSelektionIId().intValue() == pasel
+										.getId_comp().getSelektion_i_id()
+										.intValue()) {
+									bEinerPasst = true;
+									break;
+								}
+							}
+
+						}
+
+						if (bEinerPasst == false) {
+							continue;
+						}
+
+					} else {
+						
+						// LOGISCHES UND
+						// Es muessen alle passen
+						// LOGISCHES ODER -> Wenn einer passt, dann ist er dabei
+						boolean bEinerFehlt=false;
+						
+						for (int i = 0; i < serienbriefselektionDtos.length; i++) {
+
+							boolean bGefunden = false;
+							Iterator<FLRPASelektion> itSelektionen = sSelektionen
+									.iterator();
+							while (itSelektionen.hasNext()) {
+								FLRPASelektion pasel = itSelektionen.next();
+
+								if (serienbriefselektionDtos[i]
+										.getSelektionIId().intValue() == pasel
+										.getId_comp().getSelektion_i_id()
+										.intValue()) {
+									bGefunden = true;
+								}
+
+							}
+							
+							if(bGefunden==false){
+								bEinerFehlt=true;
+								break;
+							}
+							
+
+						}
+
+						if (bEinerFehlt == true) {
+							continue;
+						}
+					}
+
+				}
+
+				// Negative Selektionen
+				if (serienbriefselektionnegattivDtos != null
+						&& serienbriefselektionnegattivDtos.length > 0) {
+
+					Iterator<FLRPASelektion> itSelektionen = sSelektionen
+							.iterator();
+
+					boolean bEinerPasst = false;
+					while (itSelektionen.hasNext()) {
+						FLRPASelektion pasel = itSelektionen.next();
+
+						for (int i = 0; i < serienbriefselektionnegattivDtos.length; i++) {
+							if (serienbriefselektionnegattivDtos[i]
+									.getSelektionIId().intValue() == pasel
+									.getId_comp().getSelektion_i_id()
+									.intValue()) {
+								bEinerPasst = true;
+								break;
+							}
+						}
+
+					}
+
+					if (bEinerPasst) {
+						continue;
+					}
+
 				}
 
 				boolean bBekommtSerienbrief = false;
@@ -1088,6 +1192,52 @@ public class PartnerReportFacBean extends LPReport implements PartnerReportFac {
 											.short2Boolean(serienbriefDto
 													.getBAnsprechpartnerfunktionAuchOhne())) {
 								al.add(dto);
+							} else if (resultListansp.size() == 0
+									&& Helper
+											.short2Boolean(serienbriefDto
+													.getBWennkeinanspmitfktDannersteransp())) {
+								// PJ18074
+
+								Session sessionAnspErster = FLRSessionFactory
+										.getFactory().openSession();
+								org.hibernate.Criteria critAnspErster = sessionAnspErster
+										.createCriteria(FLRAnsprechpartner.class);
+								critAnspErster
+										.add(Restrictions
+												.eq(AnsprechpartnerFac.FLR_ANSPRECHPARTNER_PARTNER_I_ID,
+														partner_i_id));
+
+								if (Helper.short2boolean(serienbriefDto
+										.getBVersteckteDabei()) == false) {
+									critAnspErster
+											.add(Restrictions
+													.eq(AnsprechpartnerFac.FLR_ANSPRECHPARTNER_VERSTECKT,
+															Helper.boolean2Short(false)));
+								}
+
+								critAnsp.addOrder(Order.asc("i_sort"));
+								critAnsp.setMaxResults(1);
+								List<?> resultListanspErster = critAnspErster
+										.list();
+								Iterator<?> resultListIteratorAnspErster = resultListanspErster
+										.iterator();
+								if (resultListIteratorAnspErster.hasNext()) {
+									FLRAnsprechpartner flrAnsprechpartnerErster = (FLRAnsprechpartner) resultListIteratorAnspErster
+											.next();
+									AnsprechpartnerDto ansprechpartnerDto = getAnsprechpartnerFac()
+											.ansprechpartnerFindByPrimaryKey(
+													flrAnsprechpartnerErster
+															.getI_id(),
+													theClientDto);
+									SerienbriefEmpfaengerDto dtoTemp = dto
+											.clone();
+									dtoTemp.setAnsprechpartnerDto(ansprechpartnerDto);
+
+									al.add(dtoTemp);
+
+								}
+								sessionAnspErster.close();
+
 							} else {
 								while (resultListIteratorAnsp.hasNext()) {
 									FLRAnsprechpartner flrAnsprechpartner = (FLRAnsprechpartner) resultListIteratorAnsp
@@ -1537,20 +1687,21 @@ public class PartnerReportFacBean extends LPReport implements PartnerReportFac {
 			data[0][REPORT_KURZBRIEF_ERSTELLUNGSDATUM] = kurzbriefDtoI
 					.getTAnlegen();
 
-			PartnerDto partner = getPartnerFac().partnerFindByPrimaryKey(iIdPartnerI, theClientDto);
-			Locale loc = Helper.string2Locale(partner.getLocaleCNrKommunikation());
+			PartnerDto partner = getPartnerFac().partnerFindByPrimaryKey(
+					iIdPartnerI, theClientDto);
+			Locale loc = Helper.string2Locale(partner
+					.getLocaleCNrKommunikation());
 			String cBriefanrede;
 			if (kurzbriefDtoI.getAnsprechpartnerIId() != null) {
-						cBriefanrede = getPartnerServicesFac().getBriefanredeFuerBeleg(
-								kurzbriefDtoI.getAnsprechpartnerIId(),
-								iIdPartnerI, loc, theClientDto);
-					} else {
-						cBriefanrede = getBriefanredeNeutralOderPrivatperson(
-								iIdPartnerI, loc, theClientDto);
-					}
+				cBriefanrede = getPartnerServicesFac().getBriefanredeFuerBeleg(
+						kurzbriefDtoI.getAnsprechpartnerIId(), iIdPartnerI,
+						loc, theClientDto);
+			} else {
+				cBriefanrede = getBriefanredeNeutralOderPrivatperson(
+						iIdPartnerI, loc, theClientDto);
+			}
 
 			data[0][REPORT_KURZBRIEF_BRIEFANREDE] = cBriefanrede;
-			
 
 			HashMap<String, Object> mapParameter = new HashMap<String, Object>();
 

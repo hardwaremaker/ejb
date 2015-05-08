@@ -1,16 +1,16 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
- * 
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
+ *  
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
  * by the Free Software Foundation, either version 3 of theLicense, or 
  * (at your option) any later version.
- * 
+ *  
  * According to sec. 7 of the GNU Affero General Public License, version 3, 
  * the terms of the AGPL are supplemented with the following terms:
- * 
+ *
  * "HELIUM V" and "HELIUM 5" are registered trademarks of 
  * HELIUM V IT-Solutions GmbH. The licensing of the program under the 
  * AGPL does not imply a trademark license. Therefore any rights, title and
@@ -19,17 +19,17 @@
  * you may only do so if you have a written permission by HELIUM V IT-Solutions 
  * GmbH (to acquire a permission please contact HELIUM V IT-Solutions
  * at trademark@heliumv.com).
- * 
+ *  
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *   
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *   
  * Contact: developers@heliumv.com
- ******************************************************************************/
+ *******************************************************************************/
 package com.lp.server.finanz.fastlanereader.generated;
 
 import com.lp.server.system.fastlanereader.generated.FLRKostenstelle;
@@ -93,6 +93,15 @@ public class FLRFinanzKonto implements Serializable {
     private String waehrung_c_nr_druck;
 
     /** nullable persistent field */
+    private Date d_eb_anlegen;
+
+    /** nullable persistent field */
+    private Integer i_eb_geschaeftsjahr;
+
+    /** nullable persistent field */
+    private String c_steuerart;
+
+    /** nullable persistent field */
     private com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkontoust;
 
     /** nullable persistent field */
@@ -112,13 +121,9 @@ public class FLRFinanzKonto implements Serializable {
 
     /** nullable persistent field */
     private com.lp.server.finanz.fastlanereader.generated.FLRFinanzUVAArt flruvaart;
-    
-    private Integer i_eb_geschaeftsjahr ;
-    
-    private Date d_eb_anlegen ;
-    
+
     /** full constructor */
-    public FLRFinanzKonto(String mandant_c_nr, String c_nr, String c_bez, String kontotyp_c_nr, Integer ergebnisgruppe_i_id, Date d_gueltigbis, Short b_allgemeinsichtbar, Short b_versteckt, String kontoart_c_nr, Short b_manuellbebuchbar, Integer uvaart_i_id, Integer finanzamt_i_id, String c_sortierung, Date d_gueltigvon, Short b_automeroeffnungsbuchung, String waehrung_c_nr_druck, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkontoust, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkontoskonto, FLRKostenstelle flrkostenstelle, com.lp.server.finanz.fastlanereader.generated.FLRFinanzErgebnisgruppe flrergebnisgruppe, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKontoart flrkontoart, com.lp.server.finanz.fastlanereader.generated.FLRSteuerkategorie flrsteuerkategorie, com.lp.server.finanz.fastlanereader.generated.FLRFinanzUVAArt flruvaart) {
+    public FLRFinanzKonto(String mandant_c_nr, String c_nr, String c_bez, String kontotyp_c_nr, Integer ergebnisgruppe_i_id, Date d_gueltigbis, Short b_allgemeinsichtbar, Short b_versteckt, String kontoart_c_nr, Short b_manuellbebuchbar, Integer uvaart_i_id, Integer finanzamt_i_id, String c_sortierung, Date d_gueltigvon, Short b_automeroeffnungsbuchung, String waehrung_c_nr_druck, Date d_eb_anlegen, Integer i_eb_geschaeftsjahr, String c_steuerart, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkontoust, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto flrkontoskonto, FLRKostenstelle flrkostenstelle, com.lp.server.finanz.fastlanereader.generated.FLRFinanzErgebnisgruppe flrergebnisgruppe, com.lp.server.finanz.fastlanereader.generated.FLRFinanzKontoart flrkontoart, com.lp.server.finanz.fastlanereader.generated.FLRSteuerkategorie flrsteuerkategorie, com.lp.server.finanz.fastlanereader.generated.FLRFinanzUVAArt flruvaart) {
         this.mandant_c_nr = mandant_c_nr;
         this.c_nr = c_nr;
         this.c_bez = c_bez;
@@ -135,6 +140,9 @@ public class FLRFinanzKonto implements Serializable {
         this.d_gueltigvon = d_gueltigvon;
         this.b_automeroeffnungsbuchung = b_automeroeffnungsbuchung;
         this.waehrung_c_nr_druck = waehrung_c_nr_druck;
+        this.d_eb_anlegen = d_eb_anlegen;
+        this.i_eb_geschaeftsjahr = i_eb_geschaeftsjahr;
+        this.c_steuerart = c_steuerart;
         this.flrkontoust = flrkontoust;
         this.flrkontoskonto = flrkontoskonto;
         this.flrkostenstelle = flrkostenstelle;
@@ -284,6 +292,30 @@ public class FLRFinanzKonto implements Serializable {
         this.waehrung_c_nr_druck = waehrung_c_nr_druck;
     }
 
+    public Date getD_eb_anlegen() {
+        return this.d_eb_anlegen;
+    }
+
+    public void setD_eb_anlegen(Date d_eb_anlegen) {
+        this.d_eb_anlegen = d_eb_anlegen;
+    }
+
+    public Integer getI_eb_geschaeftsjahr() {
+        return this.i_eb_geschaeftsjahr;
+    }
+
+    public void setI_eb_geschaeftsjahr(Integer i_eb_geschaeftsjahr) {
+        this.i_eb_geschaeftsjahr = i_eb_geschaeftsjahr;
+    }
+
+    public String getC_steuerart() {
+        return this.c_steuerart;
+    }
+
+    public void setC_steuerart(String c_steuerart) {
+        this.c_steuerart = c_steuerart;
+    }
+
     public com.lp.server.finanz.fastlanereader.generated.FLRFinanzKonto getFlrkontoust() {
         return this.flrkontoust;
     }
@@ -340,23 +372,7 @@ public class FLRFinanzKonto implements Serializable {
         this.flruvaart = flruvaart;
     }
 
-	public Integer getI_eb_geschaeftsjahr() {
-		return i_eb_geschaeftsjahr;
-	}
-
-	public void setI_eb_geschaeftsjahr(Integer i_eb_geschaeftsjahr) {
-		this.i_eb_geschaeftsjahr = i_eb_geschaeftsjahr;
-	}
-
-	public Date getD_eb_anlegen() {
-		return d_eb_anlegen;
-	}
-
-	public void setD_eb_anlegen(Date d_eb_anlegen) {
-		this.d_eb_anlegen = d_eb_anlegen;
-	}
-
-	public String toString() {
+    public String toString() {
         return new ToStringBuilder(this)
             .append("i_id", getI_id())
             .toString();

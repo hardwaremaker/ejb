@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -60,6 +60,7 @@ import org.hibernate.HibernateException;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.criterion.CriteriaSpecification;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
@@ -135,6 +136,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 	private int useCase;
 	private Object[][] data = null;
 	private BigDecimal summePreis = null;
+	// private BigDecimal summeWert = null ;
 
 	private IJasperPrintTransformer jasperPrintTransformer;
 
@@ -370,11 +372,21 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 		} else if ("F_SETARTIKEL_TYP".equals(fieldName)) {
 			value = data[index][REPORT_STATISTIK_SETARTIKEL_TYP];
 		} else if ("F_WERT".equals(fieldName)) {
-			BigDecimal preis = (BigDecimal) data[index][REPORT_STATISTIK_PREIS];
+			// BigDecimal preis = (BigDecimal)
+			// data[index][REPORT_STATISTIK_PREIS];
+			// BigDecimal menge = (BigDecimal)
+			// data[index][REPORT_STATISTIK_MENGE];
+			// BigDecimal wert = preis;
+			// if (preis != null && menge != null) {
+			// wert = preis.multiply(menge);
+			// }
+			// value = wert;
+
+			value = data[index][REPORT_STATISTIK_WERT];
+			BigDecimal wert = (BigDecimal) data[index][REPORT_STATISTIK_PREIS];
 			BigDecimal menge = (BigDecimal) data[index][REPORT_STATISTIK_MENGE];
-			BigDecimal wert = preis;
-			if (preis != null && menge != null) {
-				wert = preis.multiply(menge);
+			if (wert != null && menge != null) {
+				wert = wert.multiply(menge);
 			}
 			value = wert;
 		} else if ("F_PREIS".equals(fieldName)) {
@@ -1257,19 +1269,24 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 							preisDto.setCalculatedPrice(artikelPreisliste
 									.getNArtikelfixpreis());
 						} else {
+							
+							BigDecimal standardRabattsatz=artikelPreisliste
+									.getNArtikelstandardrabattsatz();
+							if(iPreisbasis==1){
+								standardRabattsatz=BigDecimal.ZERO;
+							}
+							
+							
+							
 							// zeile[4] = artikelPreisliste
 							// .getNArtikelstandardrabattsatz()
 							// .doubleValue();
-							preisDto.setDiscountRate(artikelPreisliste
-									.getNArtikelstandardrabattsatz()
-									.doubleValue());
+							preisDto.setDiscountRate(standardRabattsatz.doubleValue());
 							if (preisBasis != null) {
 								BigDecimal p = getVkPreisfindungFac()
 										.berechneVerkaufspreis(
 												preisBasis,
-												artikelPreisliste
-														.getNArtikelstandardrabattsatz()
-														.doubleValue()).nettopreis;
+												standardRabattsatz.doubleValue()).nettopreis;
 								preisDto.setCalculatedPrice(p);
 								// zeile[5] = getVkPreisfindungFac()
 								// .berechneVerkaufspreis(
@@ -2135,8 +2152,14 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 		org.hibernate.Criteria crit = session.createCriteria(FLRKunde.class);
 		crit.createAlias(KundeFac.FLR_PARTNER, "p");
 		crit.createAlias("p." + PartnerFac.FLR_PARTNER_FLRLANDPLZORT,
-				"landplzort");
-		crit.createAlias("landplzort.flrland", "land");
+				"landplzort", CriteriaSpecification.LEFT_JOIN);
+		crit.createAlias("landplzort.flrland", "land",
+				CriteriaSpecification.LEFT_JOIN);
+
+		// SP3266
+		crit.add(Restrictions.eq(KundeFac.FLR_KUNDE_B_VERSTECKTERLIEFERANT,
+				Helper.boolean2Short(false)));
+
 		if (kundeIIdSelektiert != null) {
 			crit.add(Restrictions.eq("i_id", kundeIIdSelektiert));
 		}
@@ -2641,7 +2664,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			}
 
 			if (dVon != null) {
-				queryRechnung += " AND rechpos.flrrechnung.d_belegdatum>'"
+				queryRechnung += " AND rechpos.flrrechnung.d_belegdatum>='"
 						+ Helper.formatDateWithSlashes(Helper.cutDate(dVon))
 						+ "'";
 			}
@@ -2702,7 +2725,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 				if (dVon != null) {
 
-					queryLieferschein += " AND lspos.flrlieferschein.flrrechnung.d_belegdatum>'"
+					queryLieferschein += " AND lspos.flrlieferschein.flrrechnung.d_belegdatum>='"
 							+ Helper.formatDateWithSlashes(dVon) + "'";
 				}
 				if (dBis != null) {
@@ -2712,7 +2735,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			} else {
 				if (dVon != null) {
 
-					queryLieferschein += " AND lspos.flrlieferschein.d_belegdatum>'"
+					queryLieferschein += " AND lspos.flrlieferschein.d_belegdatum>='"
 							+ Helper.formatDateWithSlashes(dVon) + "'";
 				}
 				if (dBis != null) {
@@ -2739,6 +2762,10 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			while (resultListIteratorRechnung.hasNext()) {
 				FLRRechnungPosition rePos = (FLRRechnungPosition) resultListIteratorRechnung
 						.next();
+				if (RechnungFac.POSITIONSART_RECHNUNG_INTELLIGENTE_ZWISCHENSUMME
+						.equals(rePos.getPositionsart_c_nr())) {
+					continue;
+				}
 
 				RechnungDto d = fac.getRechnungFac().rechnungFindByPrimaryKey(
 						rePos.getRechnung_i_id());
@@ -2835,11 +2862,10 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 							|| Helper.short2boolean(rePos.getFlrartikel()
 									.getB_chargennrtragend())) {
 						dto.setSnrs(getLagerFac()
-								.getAllSeriennrchargennrEinerBelegartposition(
+								.getAllSeriennrchargennrEinerBelegartpositionOhneChargeneigenschaften(
 										LocaleFac.BELEGART_RECHNUNG,
 										rePos.getI_id()));
 					}
-
 				}
 
 				if (rePos.getPositionsart_c_nr().equals(
@@ -2870,6 +2896,11 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 					}
 				}
 
+				// String posartCnr = rePos.getPositionsart_c_nr() ;
+				// if(!RechnungFac.POSITIONSART_RECHNUNG_TEXTEINGABE.equals(posartCnr)
+				// &&
+				// !RechnungFac.POSITIONSART_RECHNUNG_INTELLIGENTE_ZWISCHENSUMME.equals(posartCnr))
+				// {
 				if (!rePos.getPositionsart_c_nr().equals(
 						RechnungFac.POSITIONSART_RECHNUNG_TEXTEINGABE)) {
 					if (rePos.getFlrartikel() != null) {
@@ -2890,14 +2921,45 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 
 						dto.setNMaterialzuschlag(rePos.getN_materialzuschlag());
 
-						if (rePos.getFlrrechnung().getN_kurs().doubleValue() != 0
-								&& rePos.getN_nettoeinzelpreis() != null) {
-							dto.setNPreis(rePos.getN_nettoeinzelpreis().divide(
-									rePos.getFlrrechnung().getN_kurs(), 4,
-									BigDecimal.ROUND_HALF_EVEN));
-						} else {
-							dto.setNPreis(new BigDecimal(0));
+						// if (rePos.getFlrrechnung().getN_kurs().doubleValue()
+						// != 0
+						// && rePos.getN_nettoeinzelpreis() != null) {
+						// dto.setNPreis(rePos.getN_nettoeinzelpreis().divide(
+						// rePos.getFlrrechnung().getN_kurs(), 4,
+						// BigDecimal.ROUND_HALF_EVEN));
+						// } else {
+						// dto.setNPreis(BigDecimal.ZERO);
+						// }
+
+						if (rePos.getFlrrechnung().getN_kurs().signum() != 0) {
+							BigDecimal kurs = rePos.getFlrrechnung()
+									.getN_kurs();
+							if (rePos
+									.getN_nettoeinzelpreis_plus_aufschlag_minus_rabatt() != null) {
+								dto.setNPreis(rePos
+										.getN_nettoeinzelpreis_plus_aufschlag_minus_rabatt()
+										.divide(kurs, 4,
+												BigDecimal.ROUND_HALF_EVEN));
+							} else {
+								dto.setNPreis(BigDecimal.ZERO);
+							}
+
+							// if(rePos.getN_nettoeinzelpreis() != null) {
+							// dto.setNPreis(rePos.getN_nettoeinzelpreis().divide(kurs,
+							// 4, BigDecimal.ROUND_HALF_EVEN));
+							// } else {
+							// dto.setNPreis(BigDecimal.ZERO) ;
+							// }
+							//
+							// if(rePos.getN_nettoeinzelpreis_plus_aufschlag_minus_rabatt()
+							// != null) {
+							// dto.setNWert(rePos.getN_nettoeinzelpreis_plus_aufschlag_minus_rabatt()
+							// .divide(kurs, 4, BigDecimal.ROUND_HALF_EVEN));
+							// } else {
+							// dto.setNWert(BigDecimal.ZERO);
+							// }
 						}
+
 						if (rePos.getFlrartikel().getFlrartikelgruppe() != null) {
 							dto.setSArtikelgruppe(rePos.getFlrartikel()
 									.getFlrartikelgruppe().getC_nr());
@@ -2928,16 +2990,16 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 								BigDecimal mengeNeu = dto.getNMenge().add(
 										temp.getNMenge());
 
-								BigDecimal wertAlt = temp.getNPreis().multiply(
-										temp.getNMenge());
-								BigDecimal wertNeu = dto.getNPreis().multiply(
-										dto.getNMenge());
+								BigDecimal preisWertAlt = temp.getNPreis()
+										.multiply(temp.getNMenge());
+								BigDecimal preisWertNeu = dto.getNPreis()
+										.multiply(dto.getNMenge());
 
 								BigDecimal preisNeu = dto.getNPreis();
 								if (mengeNeu.doubleValue() != 0) {
-									preisNeu = wertNeu.add(wertAlt).divide(
-											mengeNeu,
-											BigDecimal.ROUND_HALF_EVEN);
+									preisNeu = preisWertNeu.add(preisWertAlt)
+											.divide(mengeNeu,
+													BigDecimal.ROUND_HALF_EVEN);
 								}
 								temp.setNMenge(mengeNeu);
 								temp.setNPreis(preisNeu);
@@ -2962,14 +3024,18 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				} else {
 					cResult.add(dto);
 				}
-
 			}
+
 			Iterator<?> resultListIteratorLieferschein = resultListLieferschein
 					.iterator();
 			// lieferscheinpositionen verarbeiten
 			while (resultListIteratorLieferschein.hasNext()) {
 				FLRLieferscheinposition lsPos = (FLRLieferscheinposition) resultListIteratorLieferschein
 						.next();
+				if (RechnungFac.POSITIONSART_RECHNUNG_INTELLIGENTE_ZWISCHENSUMME
+						.equals(lsPos.getPositionsart_c_nr())) {
+					continue;
+				}
 
 				KundeLieferstatistikDto dto = new KundeLieferstatistikDto();
 
@@ -3045,26 +3111,30 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				}
 				dto.setNMenge(lsPos.getN_menge());
 
-				BigDecimal bdKurs = new BigDecimal(
-						lsPos.getFlrlieferschein()
-								.getF_wechselkursmandantwaehrungzulieferscheinwaehrung()
-								.doubleValue());
+				// BigDecimal bdKurs = new BigDecimal(
+				// lsPos.getFlrlieferschein()
+				// .getF_wechselkursmandantwaehrungzulieferscheinwaehrung()
+				// .doubleValue());
 
-				if (bdKurs.doubleValue() != 0
-						&& lsPos.getN_nettogesamtpreis() != null) {
-					dto.setNPreis(lsPos.getN_nettogesamtpreis().divide(bdKurs,
-							4, BigDecimal.ROUND_HALF_EVEN));
-				} else {
-					dto.setNPreis(new BigDecimal(0));
-				}
+				// if (bdKurs.doubleValue() != 0
+				// && lsPos.getN_nettogesamtpreis() != null) {
+				// dto.setNPreis(lsPos.getN_nettogesamtpreis().divide(bdKurs,
+				// 4, BigDecimal.ROUND_HALF_EVEN));
+				// } else {
+				// dto.setNPreis(new BigDecimal(0));
+				// }
 
-				dto.setNPreis(lsPos.getN_nettogesamtpreis());
+				// TODO: Hier werden die Werte erneut gesetzt. Ein paar Zeilen
+				// oberhalb wird mit Kurs gerechnet?
+				// dto.setNPreis(lsPos.getN_nettogesamtpreis());
+				dto.setNPreis(lsPos
+						.getN_nettogesamtpreisplusversteckteraufschlagminusrabatt());
 				dto.setNMaterialzuschlag(lsPos.getN_materialzuschlag());
 
 				if (lsPos.getPositionsart_c_nr().equals(
 						RechnungFac.POSITIONSART_RECHNUNG_IDENT)) {
 					dto.setSnrs(getLagerFac()
-							.getAllSeriennrchargennrEinerBelegartposition(
+							.getAllSeriennrchargennrEinerBelegartpositionUeberHibernate(
 									LocaleFac.BELEGART_LIEFERSCHEIN,
 									lsPos.getI_id()));
 
@@ -3253,6 +3323,14 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			boolean bEingeschraenkt, boolean bMonatsstatistik,
 			int iOptionAdresse, boolean bRechnungsdatum) {
 
+		if (dBisI != null) {
+			dBisI = Helper.cutDate(dBisI);
+			Calendar cal = Calendar.getInstance();
+			cal.setTimeInMillis(dBisI.getTime());
+			cal.add(Calendar.DAY_OF_MONTH, 1);
+			dBisI = new java.sql.Date(cal.getTimeInMillis());
+		}
+
 		long t = System.currentTimeMillis();
 		myLogger.logData("KD>Lieferstatistik serverentrytime 0: " + t);
 		myLogger.logData("KD>Lieferstatistik 1: 0");
@@ -3290,6 +3368,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 			Calendar cAktuell = Calendar.getInstance();
 			cAktuell.setTimeInMillis(((Timestamp) data[data.length - 1][REPORT_STATISTIK_DATUM])
 					.getTime());
+			cAktuell.set(Calendar.DAY_OF_MONTH, 1);
 
 			while (cAktuell.getTimeInMillis() <= ((Timestamp) data[0][REPORT_STATISTIK_DATUM])
 					.getTime()) {
@@ -3324,7 +3403,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 				zeileMonate[REPORT_MONATSSTATISTIK_MENGE] = menge;
 				zeileMonate[REPORT_MONATSSTATISTIK_WERT] = wert;
 				alMonate.add(zeileMonate);
-				cAktuell.set(Calendar.MONTH, cAktuell.get(Calendar.MONTH) + 1);
+				cAktuell.add(Calendar.MONTH, 1);
 			}
 
 			Object[][] dataTemp = new Object[1][1];
@@ -3337,7 +3416,8 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 		try {
 			KundeDto kundeDto = getKundeFac().kundeFindByPrimaryKey(iIdkundeI,
 					theClientDto);
-			summePreis = new BigDecimal(0);
+			summePreis = BigDecimal.ZERO;
+
 			parameter = new HashMap<String, Object>();
 			parameter.put("P_KUNDE_NAME", kundeDto.getPartnerDto()
 					.formatTitelAnrede());
@@ -3933,7 +4013,7 @@ public class KundeReportFacBean extends LPReport implements KundeReportFac,
 					reportDto.getItemclass() != null ? reportDto.getItemclass()
 							.getValue() : null);
 			parameter.put("P_ARTIKELNRVON", reportDto.getItemRangeFrom());
-			parameter.put("P_ARTIKELNRBIS", reportDto.getItemRangeFrom());
+			parameter.put("P_ARTIKELNRBIS", reportDto.getItemRangeTo());
 			parameter.put("P_MITVERSTECKTEN", reportDto.getWithHidden());
 			parameter.put("P_NURSOKO", reportDto.getOnlySpecialCondition());
 			parameter.put("P_MITMANDANTENSPRACHE",

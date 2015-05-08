@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -48,7 +48,35 @@ public class StuecklisteMitStrukturDto implements Serializable {
 	private boolean bMaschinenzeit = false;
 	private boolean bArbeitszeit = false;
 	private BigDecimal durchlaufzeit = null;
-	private StuecklisteDto stuecklisteDto=null;
+	private StuecklisteDto stuecklisteDto = null;
+	private java.util.Date tFreigabe = null;
+	private String cKurzzeichenPersonFreigabe = null;
+
+	private Integer iAnzahlArbeitsschritte=null;
+	
+	public Integer getiAnzahlArbeitsschritte() {
+		return iAnzahlArbeitsschritte;
+	}
+
+	public void setIAnzahlArbeitsschritte(Integer iAnzahlArbeitsschritte) {
+		this.iAnzahlArbeitsschritte = iAnzahlArbeitsschritte;
+	}
+
+	public String getCKurzzeichenPersonFreigabe() {
+		return cKurzzeichenPersonFreigabe;
+	}
+
+	public void setCKurzzeichenPersonFreigabe(String cKurzzeichenPersonFreigabe) {
+		this.cKurzzeichenPersonFreigabe = cKurzzeichenPersonFreigabe;
+	}
+
+	public java.util.Date getTFreigabe() {
+		return tFreigabe;
+	}
+
+	public void setTFreigabe(java.util.Date tFreigabe) {
+		this.tFreigabe = tFreigabe;
+	}
 
 	public StuecklisteDto getStuecklisteDto() {
 		return stuecklisteDto;

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -69,15 +69,15 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 	private Integer kundeIIdStueckliste;
 	private Integer partnerIIdFinanzamt;
 	private Integer jahreRueckdatierbar;
-	
+
 	public void setJahreRueckdatierbar(Integer jahreRueckdatierbar) {
 		this.jahreRueckdatierbar = jahreRueckdatierbar;
 	}
-	
+
 	public Integer getJahreRueckdatierbar() {
 		return jahreRueckdatierbar;
 	}
-	
+
 	public Integer getKundeIIdStueckliste() {
 		return kundeIIdStueckliste;
 	}
@@ -94,9 +94,10 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 			Integer mwstsatzIIdStandarddrittlandmwstsatz) {
 		this.mwstsatzIIdStandarddrittlandmwstsatz = mwstsatzIIdStandarddrittlandmwstsatz;
 	}
+
 	transient private byte[] oCode;
 	transient private byte[] oHash;
-	
+
 	public Integer getPartnerIIdLieferadresse() {
 		return partnerIIdLieferadresse;
 	}
@@ -104,10 +105,13 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 	public void setPartnerIIdLieferadresse(Integer partnerIIdLieferadresse) {
 		this.partnerIIdLieferadresse = partnerIIdLieferadresse;
 	}
+
 	private Short bDemo;
+
 	public void setBDemo(Short demo) {
 		bDemo = demo;
 	}
+
 	// Manuell hinzugefuegt!
 	private PartnerDto partnerDto = new PartnerDto();
 	private AnwenderDto anwenderDto = new AnwenderDto();
@@ -124,6 +128,15 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 		return bDemo;
 	}
 
+	private Integer kostenstelleIIdFibu;
+
+	public Integer getKostenstelleIIdFibu() {
+		return kostenstelleIIdFibu;
+	}
+
+	public void setKostenstelleIIdFibu(Integer kostenstelleIIdFibu) {
+		this.kostenstelleIIdFibu = kostenstelleIIdFibu;
+	}
 
 	public Integer getIBankverbindung() {
 		return iBankverbindung;
@@ -141,7 +154,7 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 			Integer mwstsatzbezIIdStandardinlandmwstsatz) {
 		this.mwstsatzbezIIdStandardinlandmwstsatz = mwstsatzbezIIdStandardinlandmwstsatz;
 	}
-	
+
 	public Integer getMwstsatzbezIIdStandardauslandmwstsatz() {
 		return mwstsatzbezIIdStandardauslandmwstsatz;
 	}
@@ -413,8 +426,10 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 		result = 37 * result + this.iAnlegen.hashCode();
 		result = 37 * result + this.tAendern.hashCode();
 		result = 37 * result + this.iAendern.hashCode();
-		result = 37 * result + this.mwstsatzbezIIdStandardinlandmwstsatz.hashCode();
-		result = 37 * result + this.mwstsatzbezIIdStandardauslandmwstsatz.hashCode();
+		result = 37 * result
+				+ this.mwstsatzbezIIdStandardinlandmwstsatz.hashCode();
+		result = 37 * result
+				+ this.mwstsatzbezIIdStandardauslandmwstsatz.hashCode();
 		result = 37 * result + this.iBankverbindung.hashCode();
 		result = 37 * result + this.partnerIIdFinanzamt.hashCode();
 		result = 37 * result + this.jahreRueckdatierbar.hashCode();
@@ -454,19 +469,22 @@ public class MandantDto extends CryptDto implements Serializable, ICryptDto {
 		returnString += Arrays.hashCode(oCode);
 		return returnString;
 	}
-	
+
 	@Override
 	public boolean validate() {
-		if (this.oHash == null) return false;
+		if (this.oHash == null)
+			return false;
 		byte[] baDecode = super.decodeRSA(this.oHash, this.oCode);
-		if (baDecode == null) return false;
+		if (baDecode == null)
+			return false;
 		String sDecode;
 		try {
 			sDecode = new String(baDecode, "UTF-8");
 		} catch (UnsupportedEncodingException e) {
 			sDecode = new String(baDecode);
 		}
-		if (sDecode.compareTo(this.toValidateString())==0) return true;
+		if (sDecode.compareTo(this.toValidateString()) == 0)
+			return true;
 		return false;
 	}
 

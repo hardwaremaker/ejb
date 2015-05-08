@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -48,7 +48,13 @@ import org.hibernate.SessionFactory;
 import com.lp.server.eingangsrechnung.fastlanereader.generated.FLREingangsrechnungzahlung;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungDto;
 import com.lp.server.eingangsrechnung.service.EingangsrechnungFac;
+import com.lp.server.eingangsrechnung.service.EingangsrechnungzahlungDto;
+import com.lp.server.partner.service.LieferantDto;
+import com.lp.server.partner.service.PartnerDto;
 import com.lp.server.rechnung.service.RechnungFac;
+import com.lp.server.system.jcr.service.PrintInfoDto;
+import com.lp.server.system.jcr.service.docnode.DocNodeErZahlung;
+import com.lp.server.system.jcr.service.docnode.DocPath;
 import com.lp.server.util.Facade;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.server.util.fastlanereader.UseCaseHandler;
@@ -150,7 +156,7 @@ public class EingangsrechnungzahlungHandler extends UseCaseHandler {
 							.getEingangsrechnungartCNr()
 							.equals(EingangsrechnungFac.EINGANGSRECHNUNGART_SCHLUSSZAHLUNG)) {
 						bdOffen = bdOffen.subtract(getEingangsrechnungFac()
-								.getAnzahlungenZuSchlussrechnungFw(
+								.getAnzahlungenGestelltZuSchlussrechnungFw(
 										erDto.getIId()));
 					}
 				}
@@ -164,6 +170,18 @@ public class EingangsrechnungzahlungHandler extends UseCaseHandler {
 				rows[row][SPALTE_OFFEN] = bdOffen;
 
 				String zahlungsart = zahlung.getZahlungsart_c_nr();
+				String bezahlungsbelegart = zahlung.getFlreingangsrechnung().getEingangsrechnungart_c_nr().trim() ;
+				if (bezahlungsbelegart.equals(RechnungFac.RECHNUNGART_GUTSCHRIFT) || 
+						bezahlungsbelegart.equals(RechnungFac.RECHNUNGART_WERTGUTSCHRIFT)) {
+
+					if (!zahlung.getZahlungsart_c_nr().equals(
+							RechnungFac.ZAHLUNGSART_BANK)
+							&& !zahlung.getZahlungsart_c_nr().equals(
+									RechnungFac.ZAHLUNGSART_BAR)) {
+						zahlungsart = RechnungFac.RECHNUNGART_RECHNUNG;
+					}
+				}				
+				
 				String zahlungsartUebersetzt = getRechnungServiceFac()
 						.uebersetzeZahlungsartOptimal(zahlungsart,
 								theClientDto.getLocUi(),
@@ -178,6 +196,9 @@ public class EingangsrechnungzahlungHandler extends UseCaseHandler {
 					art = zahlung.getFlrkassenbuch().getC_bez();
 				} else if (zahlungsart
 						.equalsIgnoreCase(RechnungFac.ZAHLUNGSART_GUTSCHRIFT) && zahlung.getFlreingangsrechnung() != null) {
+					art = zahlung.getFlreingangsrechnunggutschrift().getC_nr();
+				} else if (zahlungsart
+						.equalsIgnoreCase(RechnungFac.RECHNUNGART_RECHNUNG) && zahlung.getFlreingangsrechnung() != null) {
 					art = zahlung.getFlreingangsrechnunggutschrift().getC_nr();
 				} else if (zahlungsart
 						.equalsIgnoreCase(RechnungFac.ZAHLUNGSART_GEGENVERRECHNUNG) && zahlung.getFlrrechnungzahlung() != null) {
@@ -347,10 +368,6 @@ public class EingangsrechnungzahlungHandler extends UseCaseHandler {
 	 * 
 	 * @see UseCaseHandler#sort(SortierKriterium[], Object)
 	 * @throws EJBExceptionLP
-	 * @param sortierKriterien
-	 *            SortierKriterium[]
-	 * @param selectedId
-	 *            Object
 	 * @return QueryResult
 	 */
 	public QueryResult sort(SortierKriterium[] sortierKriterien,
@@ -430,5 +447,37 @@ public class EingangsrechnungzahlungHandler extends UseCaseHandler {
 							Facade.NICHT_SORTIERBAR }));
 		}
 		return super.getTableInfo();
+	}
+	
+	@Override
+	public PrintInfoDto getSDocPathAndPartner(Object key) {
+		EingangsrechnungDto rechnungDto = null;
+		EingangsrechnungzahlungDto zahlung = null;
+		LieferantDto lieferantDto = null;
+		PartnerDto partnerDto = null;
+		try {
+			zahlung = getEingangsrechnungFac().eingangsrechnungzahlungFindByPrimaryKey((Integer)key);
+			rechnungDto = getEingangsrechnungFac().eingangsrechnungFindByPrimaryKey(zahlung.getEingangsrechnungIId());
+			lieferantDto = getLieferantFac().lieferantFindByPrimaryKey(rechnungDto.getLieferantIId(), theClientDto);
+			partnerDto = getPartnerFac().partnerFindByPrimaryKey(
+					lieferantDto.getPartnerIId(), theClientDto);
+		} catch (Exception e) {
+			// Nicht gefunden
+		}
+		if (rechnungDto != null && zahlung != null) {
+			DocPath docPath = new DocPath(new DocNodeErZahlung(zahlung, rechnungDto));
+			Integer iPartnerIId = null;
+			if (partnerDto != null) {
+				iPartnerIId = partnerDto.getIId();
+			}
+			return new PrintInfoDto(docPath, iPartnerIId, getSTable());
+		} else {
+			return null;
+		}
+	}
+	
+	@Override
+	public String getSTable() {
+		return "ER ZAHLUNG";
 	}
 }

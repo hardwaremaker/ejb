@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -90,6 +90,17 @@ public class Inventur implements Serializable {
 	@Column(name = "LAGER_I_ID")
 	private Integer lagerIId;
 
+	@Column(name = "B_NICHTINVENTIERTEARTIKELABBUCHEN")
+	private Short bNichtinventierteartikelabbuchen;
+	public Short getBNichtinventierteartikelabbuchen() {
+		return bNichtinventierteartikelabbuchen;
+	}
+
+	public void setBNichtinventierteartikelabbuchen(
+			Short bNichtinventierteartikelabbuchen) {
+		this.bNichtinventierteartikelabbuchen = bNichtinventierteartikelabbuchen;
+	}
+
 	private static final long serialVersionUID = 1L;
 
 	public Inventur() {
@@ -102,7 +113,7 @@ public class Inventur implements Serializable {
 			Short abwertungdurchgefuehrt,
 			String bez,
 			Integer personalIIdAendern2,
-			String mandantCNr2) {
+			String mandantCNr2, Short bNichtinventierteartikelabbuchen) {
 		setIId(id);
 		setTInventurdatum(inventurdatum);
 		setCBez(bez);
@@ -111,6 +122,7 @@ public class Inventur implements Serializable {
 		setMandantCNr(mandantCNr2);
 		setBInventurdurchgefuehrt(inventurdurchgefuehrt);
 		setBAbwertungdurchgefuehrt(abwertungdurchgefuehrt);
+		setBNichtinventierteartikelabbuchen(bNichtinventierteartikelabbuchen);
 
 	}
 

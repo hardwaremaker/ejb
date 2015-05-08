@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -83,6 +83,7 @@ import com.lp.server.fertigung.service.FertigungFac;
 import com.lp.server.fertigung.service.InternebestellungDto;
 import com.lp.server.fertigung.service.InternebestellungDtoAssembler;
 import com.lp.server.fertigung.service.InternebestellungFac;
+import com.lp.server.fertigung.service.LosAusAuftragDto;
 import com.lp.server.fertigung.service.LosDto;
 import com.lp.server.fertigung.service.LossollmaterialDto;
 import com.lp.server.fertigung.service.MaterialbedarfDto;
@@ -100,6 +101,7 @@ import com.lp.server.stueckliste.service.StuecklistepositionDto;
 import com.lp.server.system.pkgenerator.PKConst;
 import com.lp.server.system.service.LocaleFac;
 import com.lp.server.system.service.MandantDto;
+import com.lp.server.system.service.MandantFac;
 import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
@@ -140,7 +142,8 @@ public class InternebestellungFacBean extends Facade implements
 					internebestellungDto.getStuecklisteIId(),
 					internebestellungDto.getNMenge(), new Timestamp(
 							internebestellungDto.getTLiefertermin().getTime()),
-					internebestellungDto.getPersonalIIdAendern());
+					internebestellungDto.getPersonalIIdAendern(),
+					internebestellungDto.getTProduktionsbeginn());
 			em.persist(internebestellung);
 			em.flush();
 			internebestellungDto.setTAendern(internebestellung.getTAendern());
@@ -239,6 +242,8 @@ public class InternebestellungFacBean extends Facade implements
 				.getInternebestellungIIdElternlos());
 		internebestellung.setIBelegpositionIId(internebestellungDto
 				.getIBelegpositionIId());
+		internebestellung.setTProduktionsbeginn(internebestellungDto
+				.getTProduktionsbeginn());
 		em.merge(internebestellung);
 		em.flush();
 	}
@@ -310,7 +315,9 @@ public class InternebestellungFacBean extends Facade implements
 					&& Helper
 							.short2boolean(stuecklisteDto.getBFremdfertigung()) == false) {
 				if (stuecklisteDto.getStuecklisteartCNr().equals(
-						StuecklisteFac.STUECKLISTEART_STUECKLISTE)) {
+						StuecklisteFac.STUECKLISTEART_STUECKLISTE)
+						|| stuecklisteDto.getStuecklisteartCNr().equals(
+								StuecklisteFac.STUECKLISTEART_HILFSSTUECKLISTE)) {
 
 					if (Helper.short2Boolean(artikelDto
 							.getBLagerbewirtschaftet())) {
@@ -339,9 +346,56 @@ public class InternebestellungFacBean extends Facade implements
 									.getIInternebestellungIIdElternlos());
 							ibDto.setMandantCNr(theClientDto.getMandant());
 
+							// PJ18451
+							if (artikelDto.getFUeberproduktion() != null) {
+								matBed.setNMenge(matBed
+										.getNMenge()
+										.add(Helper.getProzentWert(
+												matBed.getNMenge(),
+												new BigDecimal(artikelDto
+														.getFUeberproduktion()),
+												4)));
+							}
+
 							ibDto.setNMenge(matBed.getNMenge());
 							ibDto.setStuecklisteIId(matBed.getIStuecklisteIId());
+
+							// SP2708
+							// Durchlaufzeit der uebergeordneten
+							// Stueckliste bestimmen.
+							Integer iDurchlaufzeit;
+							if (stuecklisteDto.getNDefaultdurchlaufzeit() != null) {
+								// Ist optional in der Stueckliste
+								// definiert.
+								iDurchlaufzeit = stuecklisteDto
+										.getNDefaultdurchlaufzeit().intValue();
+							} else {
+								// Falls in der Stueckliste nicht
+								// definiert, dann zieht der
+								// Mandantenparameter
+								ParametermandantDto parameter = getParameterFac()
+										.getMandantparameter(
+												theClientDto.getMandant(),
+												ParameterFac.KATEGORIE_FERTIGUNG,
+												ParameterFac.INTERNEBESTELLUNG_DEFAULTDURCHLAUFZEIT);
+								iDurchlaufzeit = ((Integer) parameter
+										.getCWertAsObject()).intValue();
+							}
+
+							// Hilfsstueckliste hat Durchlaufzeit von 0
+							if (stuecklisteDto
+									.getStuecklisteartCNr()
+									.equals(StuecklisteFac.STUECKLISTEART_HILFSSTUECKLISTE)) {
+								iDurchlaufzeit = 0;
+							}
+
 							ibDto.setTLiefertermin(matBed.getTTermin());
+
+							java.sql.Date dProduktionbeginnTermin = Helper
+									.addiereTageZuDatum(matBed.getTTermin(),
+											-iDurchlaufzeit);
+							ibDto.setTProduktionsbeginn(dProduktionbeginnTermin);
+
 							ibDto.setStuecklisteIId(stuecklisteIId);
 							// anlegen
 
@@ -386,6 +440,7 @@ public class InternebestellungFacBean extends Facade implements
 										bewegungsvorschauDto
 												.setCBelegnummer(matBed
 														.getCBelegnummer());
+
 										bewegungsvorschauDto
 												.setIBelegIId(matBed
 														.getIBelegIId());
@@ -396,36 +451,29 @@ public class InternebestellungFacBean extends Facade implements
 										// uebergeordneten * positionsmenge
 										BigDecimal bdMenge = matBed.getNMenge()
 												.multiply(stkpos.getNMenge());
+
+										// SP2700
+										if (stuecklisteDto
+												.getIErfassungsfaktor() != null
+												&& stuecklisteDto
+														.getIErfassungsfaktor()
+														.intValue() != 0) {
+											bdMenge = bdMenge
+													.divide(new BigDecimal(
+															stuecklisteDto
+																	.getIErfassungsfaktor()
+																	.doubleValue()),
+															4,
+															BigDecimal.ROUND_HALF_EVEN);
+										}
+
 										bewegungsvorschauDto.setNMenge(bdMenge
 												.negate().setScale(4,
 														RoundingMode.HALF_UP));
 										bewegungsvorschauDto
 												.setPartnerDto(matBed
 														.getPartnerDto());
-										// Durchlaufzeit der uebergeordneten
-										// Stueckliste bestimmen.
-										Integer iDurchlaufzeit;
-										if (stuecklisteDto
-												.getNDefaultdurchlaufzeit() != null) {
-											// Ist optional in der Stueckliste
-											// definiert.
-											iDurchlaufzeit = stuecklisteDto
-													.getNDefaultdurchlaufzeit()
-													.intValue();
-										} else {
-											// Falls in der Stueckliste nicht
-											// definiert, dann zieht der
-											// Mandantenparameter
-											ParametermandantDto parameter = getParameterFac()
-													.getMandantparameter(
-															theClientDto
-																	.getMandant(),
-															ParameterFac.KATEGORIE_FERTIGUNG,
-															ParameterFac.INTERNEBESTELLUNG_DEFAULTDURCHLAUFZEIT);
-											iDurchlaufzeit = ((Integer) parameter
-													.getCWertAsObject())
-													.intValue();
-										}
+
 										// Termin ist der Termin der
 										// uebergeordneten minus deren
 										// durchlaufzeit
@@ -445,6 +493,11 @@ public class InternebestellungFacBean extends Facade implements
 										// einfuegen
 										bewegungsvorschauDto
 												.setBTemporaererEintrag(true);
+
+										bewegungsvorschauDto
+												.setMandantCNr(ibDto
+														.getMandantCNr());
+
 										alZusatzeintraegeBewegungsvorschau
 												.add(bewegungsvorschauDto);
 										// interne Bestellung der
@@ -577,20 +630,48 @@ public class InternebestellungFacBean extends Facade implements
 			Integer iVorlaufzeit, Integer iToleranz,
 			java.sql.Date dLieferterminFuerArtikelOhneReservierung,
 			Boolean bVerdichten, Integer iVerdichtungsTage,
-			boolean bInterneBestellung, TheClientDto theClientDto)
-			throws EJBExceptionLP, RemoteException, IllegalStateException {
+			boolean bInterneBestellung, Integer losIId,
+			TheClientDto theClientDto) throws EJBExceptionLP, RemoteException,
+			IllegalStateException {
 		Session session = null;
 		try {
 			// falls gewuenscht - vorhandene IB-Daten loeschen
 			if (bVorhandeneLoeschen) {
 				context.getBusinessObject(InternebestellungFac.class)
-						.removeInternebestellungEinesMandanten(theClientDto);
+						.removeInternebestellungEinesMandanten(false,
+								theClientDto);
 			}
 			SessionFactory factory = FLRSessionFactory.getFactory();
 			session = factory.openSession();
 			// Alle Stuecklisten dieses Mandanten
 			Criteria c = session.createCriteria(FLRStueckliste.class);
 			c.add(Restrictions.eq("mandant_c_nr", theClientDto.getMandant()));
+
+			// PJ18740
+			if (losIId != null) {
+				ArrayList alStkls = new ArrayList();
+				LossollmaterialDto[] sollDtos = getFertigungFac()
+						.lossollmaterialFindByLosIId(losIId);
+				for (int i = 0; i < sollDtos.length; i++) {
+					if (sollDtos[i].getArtikelIId() != null) {
+						StuecklisteDto stklDto = getStuecklisteFac()
+								.stuecklisteFindByMandantCNrArtikelIIdOhneExc(
+										sollDtos[i].getArtikelIId(),
+										theClientDto);
+						if (stklDto != null) {
+							alStkls.add(stklDto.getIId());
+						}
+					}
+				}
+
+				// Wenn keine Stkl-Vorhanden, dann beenden
+				if (alStkls.size() == 0) {
+					return;
+				}
+
+				c.add(Restrictions.in("i_id", alStkls));
+			}
+
 			List<?> list = c.list();
 			// Liste mit Zusatzeintraegen anlegen
 			ArrayList<BewegungsvorschauDto> alZusatzeintraegeBewegungsvorschau = new ArrayList<BewegungsvorschauDto>();
@@ -643,6 +724,12 @@ public class InternebestellungFacBean extends Facade implements
 				}
 				alUterstuecklisten = alTempUnterstuecklisten;
 			}
+
+			// SP3203 Alle Hilfsstuecklsten entfernen
+
+			context.getBusinessObject(InternebestellungFac.class)
+					.removeInternebestellungEinesMandanten(true, theClientDto);
+
 		} finally {
 			closeSession(session);
 		}
@@ -740,8 +827,19 @@ public class InternebestellungFacBean extends Facade implements
 			// .getLagerstandAllerLagerEinesMandanten(artikelDto.getIId(),
 			// theClientDto);
 			BigDecimal bdVoraussLagerstand = new BigDecimal(0);
-			LagerDto[] lagerdto = getLagerFac().lagerFindByMandantCNr(
-					theClientDto.getMandant());
+			LagerDto[] lagerdto = null;
+
+			// PJ18609
+			if (getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(
+					MandantFac.ZUSATZFUNKTION_ZENTRALER_ARTIKELSTAMM,
+					theClientDto)) {
+				lagerdto = getLagerFac().lagerFindAll();
+
+			} else {
+				lagerdto = getLagerFac().lagerFindByMandantCNr(
+						theClientDto.getMandant());
+			}
+
 			for (int i = 0; i < lagerdto.length; i++) {
 				if (bInterneBestellung) {
 					// Interne Bestellung
@@ -765,6 +863,7 @@ public class InternebestellungFacBean extends Facade implements
 					}
 				}
 			}
+
 			ArrayList<BewegungsvorschauDto> aBewegungsvorschau = getBewegungsvorschauSortiert(
 					artikelDto, bInternebestellungMiteinbeziehen,
 					alZusatzeintraegeBewegungsvorschau, true, theClientDto,
@@ -964,6 +1063,11 @@ public class InternebestellungFacBean extends Facade implements
 						materialbedarfDto.setProjektIId(bDto.getProjektIId());
 						materialbedarfDto.setSBelegartCNr(bDto
 								.getCBelegartCNr());
+						materialbedarfDto.setNEinkaufpreis(bDto
+								.getNEinkaufpreis());
+						materialbedarfDto.setLieferantIId(bDto
+								.getLieferantIId());
+						materialbedarfDto.setXTextinhalt(bDto.getXTextinhalt());
 					} else {
 						// Versuch die Bewegungsvorschau auf einen Eintrag zu
 						// minimieren
@@ -1032,11 +1136,18 @@ public class InternebestellungFacBean extends Facade implements
 										.getCBelegnummer());
 								materialbedarfDto.setIBelegIId(bDto
 										.getIBelegIId());
-								materialbedarfDto.setProjektIId(bDto.getProjektIId());
+								materialbedarfDto.setProjektIId(bDto
+										.getProjektIId());
 								materialbedarfDto.setIBelegpositionIId(bDto
 										.getIBelegPositionIId());
 								materialbedarfDto.setSBelegartCNr(bDto
 										.getCBelegartCNr());
+								materialbedarfDto.setNEinkaufpreis(bDto
+										.getNEinkaufpreis());
+								materialbedarfDto.setLieferantIId(bDto
+										.getLieferantIId());
+								materialbedarfDto.setXTextinhalt(bDto
+										.getXTextinhalt());
 							} else {
 
 							}
@@ -1150,6 +1261,11 @@ public class InternebestellungFacBean extends Facade implements
 						materialbedarfDto.setPartnerDto(bDto.getPartnerDto());
 						materialbedarfDto.setTTermin(dTermin);
 						materialbedarfDto.setProjektIId(bDto.getProjektIId());
+						materialbedarfDto.setLieferantIId(bDto
+								.getLieferantIId());
+						materialbedarfDto.setXTextinhalt(bDto.getXTextinhalt());
+						materialbedarfDto.setNEinkaufpreis(bDto
+								.getNEinkaufpreis());
 						bedarfe.add(materialbedarfDto);
 						// diese Menge wird fuer kuenftige bewegungen als
 						// bereits vorhanden betrachtet
@@ -1171,7 +1287,8 @@ public class InternebestellungFacBean extends Facade implements
 	 *            String
 	 * @throws EJBExceptionLP
 	 */
-	public void removeInternebestellungEinesMandanten(TheClientDto theClientDto)
+	public void removeInternebestellungEinesMandanten(
+			boolean bNurHilfsstuecklisten, TheClientDto theClientDto)
 			throws EJBExceptionLP {
 		Session session = null;
 		// try {
@@ -1185,11 +1302,20 @@ public class InternebestellungFacBean extends Facade implements
 			FLRInternebestellung ib = (FLRInternebestellung) iter.next();
 			Internebestellung toRemove = em.find(Internebestellung.class,
 					ib.getI_id());
+
 			if (toRemove == null) {
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
 			}
 			try {
+				if (bNurHilfsstuecklisten == true) {
+					if (!ib.getFlrstueckliste()
+							.getStuecklisteart_c_nr()
+							.equals(StuecklisteFac.STUECKLISTEART_HILFSSTUECKLISTE)) {
+						continue;
+					}
+				}
+
 				em.remove(toRemove);
 				em.flush();
 			} catch (EntityExistsException er) {
@@ -1298,33 +1424,32 @@ public class InternebestellungFacBean extends Facade implements
 							if (bestpos.getBestellpositionstatusCNr() != null
 									&& !bestpos.getBestellpositionstatusCNr()
 											.equals(LocaleFac.STATUS_ERLEDIGT)) {
-								if (bestellung.getMandantCNr().equals(
-										theClientDto.getMandant())) {
-									// Bewegungsvorschaueintrag erzeugen
-									BewegungsvorschauDto dto = new BewegungsvorschauDto();
-									dto.setArtikelIId(item.getFlrartikel()
-											.getI_id());
-									dto.setCBelegartCNr(LocaleFac.BELEGART_BESTELLUNG);
-									dto.setCProjekt(bestellung.getCBez());
-									dto.setIBelegIId(bestellung.getIId());
-									dto.setIBelegPositionIId(item
-											.getI_belegartpositionid());
-									dto.setNMenge(item.getN_menge());
-									dto.setTLiefertermin(new Timestamp(item
-											.getT_liefertermin().getTime()));
-									dto.setTABTerminBestellung(bestpos
-											.getTAuftragsbestaetigungstermin());
-									dto.setCBelegnummer(bestellung.getCNr());
-									// Lieferant holen
-									LieferantDto lieferantDto = getLieferantFac()
-											.lieferantFindByPrimaryKey(
-													bestellung
-															.getLieferantIIdBestelladresse(),
-													theClientDto);
-									dto.setPartnerDto(lieferantDto
-											.getPartnerDto());
-									bewegungsvorschau.add(dto);
-								}
+
+								// Bewegungsvorschaueintrag erzeugen
+								BewegungsvorschauDto dto = new BewegungsvorschauDto();
+								dto.setArtikelIId(item.getFlrartikel()
+										.getI_id());
+								dto.setCBelegartCNr(LocaleFac.BELEGART_BESTELLUNG);
+								dto.setCProjekt(bestellung.getCBez());
+								dto.setIBelegIId(bestellung.getIId());
+								dto.setIBelegPositionIId(item
+										.getI_belegartpositionid());
+								dto.setNMenge(item.getN_menge());
+								dto.setTLiefertermin(new Timestamp(item
+										.getT_liefertermin().getTime()));
+								dto.setTABTerminBestellung(bestpos
+										.getTAuftragsbestaetigungstermin());
+								dto.setCBelegnummer(bestellung.getCNr());
+								// Lieferant holen
+								LieferantDto lieferantDto = getLieferantFac()
+										.lieferantFindByPrimaryKey(
+												bestellung
+														.getLieferantIIdBestelladresse(),
+												theClientDto);
+								dto.setPartnerDto(lieferantDto.getPartnerDto());
+								dto.setMandantCNr(bestellung.getMandantCNr());
+								bewegungsvorschau.add(dto);
+
 							}
 							// }
 						}
@@ -1370,38 +1495,39 @@ public class InternebestellungFacBean extends Facade implements
 					if (aufpos != null) {
 						AuftragDto auftragDto = getAuftragFac()
 								.auftragFindByPrimaryKey(aufpos.getBelegIId());
-						if (auftragDto.getMandantCNr().equals(
-								theClientDto.getMandant())) {
-							// Bewegungsvorschaueintrag erzeugen
-							BewegungsvorschauDto dto = new BewegungsvorschauDto();
-							dto.setArtikelIId(item.getFlrartikel().getI_id());
-							dto.setCBelegartCNr(LocaleFac.BELEGART_AUFTRAG);
-							dto.setCProjekt(auftragDto
-									.getCBezProjektbezeichnung());
-							dto.setProjektIId(auftragDto.getProjektIId());
-							dto.setIBelegIId(auftragDto.getIId());
-							dto.setIBelegPositionIId(item
-									.getI_belegartpositionid());
-							dto.setNMenge(item.getN_menge().negate());
-							// Termine vor heute werden auf heute umgerechnet
-							Timestamp tsTermin = new Timestamp(item
-									.getT_liefertermin().getTime());
-							if (tsTermin.before(getTimestamp())
-									&& bTermineVorHeuteAufHeute) {
-								tsTermin = Helper.cutTimestamp(getTimestamp());
-							}
-							dto.setTLiefertermin(tsTermin);
-							dto.setCBelegnummer(auftragDto.getCNr());
-							// Kunde holen
-							KundeDto kundeDto = getKundeFac()
-									.kundeFindByPrimaryKey(
-											auftragDto
-													.getKundeIIdAuftragsadresse(),
-											theClientDto);
-							dto.setPartnerDto(kundeDto.getPartnerDto());
-							dto.setKundeDto(kundeDto);
-							bewegungsvorschau.add(dto);
+
+						// Bewegungsvorschaueintrag erzeugen
+						BewegungsvorschauDto dto = new BewegungsvorschauDto();
+						dto.setArtikelIId(item.getFlrartikel().getI_id());
+						dto.setCBelegartCNr(LocaleFac.BELEGART_AUFTRAG);
+						dto.setCProjekt(auftragDto.getCBezProjektbezeichnung());
+						dto.setProjektIId(auftragDto.getProjektIId());
+						dto.setIBelegIId(auftragDto.getIId());
+						dto.setIBelegPositionIId(item.getI_belegartpositionid());
+						dto.setNMenge(item.getN_menge().negate());
+						// Termine vor heute werden auf heute umgerechnet
+						Timestamp tsTermin = new Timestamp(item
+								.getT_liefertermin().getTime());
+						if (tsTermin.before(getTimestamp())
+								&& bTermineVorHeuteAufHeute) {
+							tsTermin = Helper.cutTimestamp(getTimestamp());
 						}
+						dto.setTLiefertermin(tsTermin);
+						dto.setCBelegnummer(auftragDto.getCNr());
+						// Kunde holen
+						KundeDto kundeDto = getKundeFac()
+								.kundeFindByPrimaryKey(
+										auftragDto.getKundeIIdAuftragsadresse(),
+										theClientDto);
+						dto.setPartnerDto(kundeDto.getPartnerDto());
+						dto.setKundeDto(kundeDto);
+
+						dto.setXTextinhalt(aufpos.getXTextinhalt());
+						dto.setLieferantIId(aufpos.getLieferantIId());
+						dto.setNEinkaufpreis(aufpos.getBdEinkaufpreis());
+						dto.setMandantCNr(auftragDto.getMandantCNr());
+						bewegungsvorschau.add(dto);
+
 					} else {
 						// es wurde eine Auftragsreservierung gefunden, zu der
 						// es keine Auftragsposition gibt.
@@ -1419,77 +1545,75 @@ public class InternebestellungFacBean extends Facade implements
 					if (losmat != null) {
 						LosDto losDto = getFertigungFac().losFindByPrimaryKey(
 								losmat.getLosIId());
-						if (losDto.getMandantCNr().equals(
-								theClientDto.getMandant())) {
 
-							if (arLosIId != null) {
+						if (arLosIId != null) {
 
-								// Nur bestimmte Lose beruecksichtigen
-								boolean bGefunden = false;
-								for (int i = 0; i < arLosIId.size(); i++) {
+							// Nur bestimmte Lose beruecksichtigen
+							boolean bGefunden = false;
+							for (int i = 0; i < arLosIId.size(); i++) {
 
-									if (losDto.getIId().equals(arLosIId.get(i))) {
-										bGefunden = true;
-										break;
-									}
-
-								}
-
-								if (bGefunden == false) {
-									// auslassen
-									continue;
+								if (losDto.getIId().equals(arLosIId.get(i))) {
+									bGefunden = true;
+									break;
 								}
 
 							}
 
-							// Bewegungsvorschaueintrag erzeugen
-							BewegungsvorschauDto dto = new BewegungsvorschauDto();
-							dto.setArtikelIId(item.getFlrartikel().getI_id());
-							dto.setCBelegartCNr(LocaleFac.BELEGART_LOS);
-							dto.setCProjekt(losDto.getCProjekt());
-
-							dto.setIBelegIId(losDto.getIId());
-							dto.setIBelegPositionIId(item
-									.getI_belegartpositionid());
-							dto.setNMenge(item.getN_menge().negate());
-							// Termine vor heute werden auf heute umgerechnet
-							Timestamp tsTermin = new Timestamp(item
-									.getT_liefertermin().getTime());
-							if (tsTermin.before(getTimestamp())
-									&& bTermineVorHeuteAufHeute) {
-								tsTermin = Helper.cutTimestamp(getTimestamp());
+							if (bGefunden == false) {
+								// auslassen
+								continue;
 							}
-							dto.setTLiefertermin(tsTermin);
-							dto.setCBelegnummer(losDto.getCNr());
-							// wenn das Los auftragsbezogen ist, dann hol ich
-							// auch den Kunden
-							if (losDto.getAuftragpositionIId() != null
-									|| losDto.getAuftragIId() != null) {
 
-								Integer auftragIId = losDto.getAuftragIId();
-								if (auftragIId == null) {
-									AuftragpositionDto aufposDto = getAuftragpositionFac()
-											.auftragpositionFindByPrimaryKey(
-													losDto.getAuftragpositionIId());
-									auftragIId = aufposDto.getBelegIId();
-								}
-
-								// den finde ich ueber die Auftragsposition
-
-								AuftragDto auftragDto = getAuftragFac()
-										.auftragFindByPrimaryKey(auftragIId);
-
-								dto.setProjektIId(auftragDto.getProjektIId());
-
-								KundeDto kundeDto = getKundeFac()
-										.kundeFindByPrimaryKey(
-												auftragDto
-														.getKundeIIdAuftragsadresse(),
-												theClientDto);
-								dto.setPartnerDto(kundeDto.getPartnerDto());
-							}
-							bewegungsvorschau.add(dto);
 						}
+
+						// Bewegungsvorschaueintrag erzeugen
+						BewegungsvorschauDto dto = new BewegungsvorschauDto();
+						dto.setArtikelIId(item.getFlrartikel().getI_id());
+						dto.setCBelegartCNr(LocaleFac.BELEGART_LOS);
+						dto.setCProjekt(losDto.getCProjekt());
+						dto.setMandantCNr(losDto.getMandantCNr());
+
+						dto.setIBelegIId(losDto.getIId());
+						dto.setIBelegPositionIId(item.getI_belegartpositionid());
+						dto.setNMenge(item.getN_menge().negate());
+						// Termine vor heute werden auf heute umgerechnet
+						Timestamp tsTermin = new Timestamp(item
+								.getT_liefertermin().getTime());
+						if (tsTermin.before(getTimestamp())
+								&& bTermineVorHeuteAufHeute) {
+							tsTermin = Helper.cutTimestamp(getTimestamp());
+						}
+						dto.setTLiefertermin(tsTermin);
+						dto.setCBelegnummer(losDto.getCNr());
+						// wenn das Los auftragsbezogen ist, dann hol ich
+						// auch den Kunden
+						if (losDto.getAuftragpositionIId() != null
+								|| losDto.getAuftragIId() != null) {
+
+							Integer auftragIId = losDto.getAuftragIId();
+							if (auftragIId == null) {
+								AuftragpositionDto aufposDto = getAuftragpositionFac()
+										.auftragpositionFindByPrimaryKey(
+												losDto.getAuftragpositionIId());
+								auftragIId = aufposDto.getBelegIId();
+							}
+
+							// den finde ich ueber die Auftragsposition
+
+							AuftragDto auftragDto = getAuftragFac()
+									.auftragFindByPrimaryKey(auftragIId);
+
+							dto.setProjektIId(auftragDto.getProjektIId());
+
+							KundeDto kundeDto = getKundeFac()
+									.kundeFindByPrimaryKey(
+											auftragDto
+													.getKundeIIdAuftragsadresse(),
+											theClientDto);
+							dto.setPartnerDto(kundeDto.getPartnerDto());
+						}
+						bewegungsvorschau.add(dto);
+
 					} else {
 						// es wurde eine Auftragsreservierung gefunden, zu der
 						// es keine Auftragsposition gibt.
@@ -1542,6 +1666,7 @@ public class InternebestellungFacBean extends Facade implements
 						dto.setIBelegIId(speiseplanDto.getIId());
 						dto.setIBelegPositionIId(item.getI_belegartpositionid());
 						dto.setNMenge(item.getN_menge().negate());
+						dto.setMandantCNr(speiseplanDto.getMandantCNr());
 						// Termine vor heute werden auf heute umgerechnet
 						Timestamp tsTermin = new Timestamp(item
 								.getT_liefertermin().getTime());
@@ -1578,10 +1703,7 @@ public class InternebestellungFacBean extends Facade implements
 			for (Iterator<?> iter = listFehlmenge.iterator(); iter.hasNext();) {
 				FLRFehlmenge item = (FLRFehlmenge) iter.next();
 				// kontrollieren, ob das los auch von diesem mandanten ist
-				if (item.getFlrlossollmaterial() != null
-						&& item.getFlrlossollmaterial().getFlrlos()
-								.getMandant_c_nr()
-								.equals(theClientDto.getMandant())) {
+				if (item.getFlrlossollmaterial() != null) {
 					// Los holen
 					LosDto losDto = getFertigungFac().losFindByPrimaryKey(
 							item.getFlrlossollmaterial().getFlrlos().getI_id());
@@ -1610,6 +1732,7 @@ public class InternebestellungFacBean extends Facade implements
 					BewegungsvorschauDto dto = new BewegungsvorschauDto();
 					dto.setArtikelIId(item.getFlrartikel().getI_id());
 					dto.setCBelegartCNr(LocaleFac.BELEGART_LOS);
+					dto.setMandantCNr(losDto.getMandantCNr());
 					dto.setIBelegIId(losDto.getIId());
 					dto.setIBelegPositionIId(item.getFlrlossollmaterial()
 							.getI_id());
@@ -1633,9 +1756,9 @@ public class InternebestellungFacBean extends Facade implements
 						AuftragDto auftragDto = getAuftragFac()
 								.auftragFindByPrimaryKey(
 										aufposDto.getBelegIId());
-						
+
 						dto.setProjektIId(auftragDto.getProjektIId());
-						
+
 						KundeDto kundeDto = getKundeFac()
 								.kundeFindByPrimaryKey(
 										auftragDto.getKundeIIdAuftragsadresse(),
@@ -1685,6 +1808,7 @@ public class InternebestellungFacBean extends Facade implements
 					dto.setIBelegIId(los.getI_id());
 					dto.setIBelegPositionIId(null);
 					dto.setNMenge(bdOffen);
+					dto.setMandantCNr(los.getMandant_c_nr());
 					dto.setTLiefertermin(new Timestamp(los
 							.getT_produktionsende().getTime()));
 					dto.setCBelegnummer(los.getC_nr());
@@ -1714,13 +1838,10 @@ public class InternebestellungFacBean extends Facade implements
 				Criteria cIB = session
 						.createCriteria(FLRInternebestellung.class);
 				// Filter nach Mandant
-				cIB.add(Restrictions.eq(
-						FertigungFac.FLR_INTERNE_BESTELLUNG_MANDANT_C_NR,
-						theClientDto.getMandant()))
-						.
-						// Filter nach Artikel
-						createCriteria(
-								FertigungFac.FLR_INTERNE_BESTELLUNG_FLRSTUECKLISTE)
+				cIB.
+				// Filter nach Artikel
+				createCriteria(
+						FertigungFac.FLR_INTERNE_BESTELLUNG_FLRSTUECKLISTE)
 						.createCriteria(
 								StuecklisteFac.FLR_STUECKLISTE_FLRARTIKEL)
 						.add(Restrictions.eq("i_id", artikelDto.getIId()));
@@ -1740,6 +1861,7 @@ public class InternebestellungFacBean extends Facade implements
 					dto.setNMenge(ib.getN_menge());
 					dto.setTLiefertermin(new Timestamp(ib.getT_liefertermin()
 							.getTime()));
+					dto.setMandantCNr(ib.getMandant_c_nr());
 					bewegungsvorschau.add(dto);
 				}
 			}
@@ -1795,7 +1917,7 @@ public class InternebestellungFacBean extends Facade implements
 							ParameterFac.INTERNEBESTELLUNG_DEFAULTDURCHLAUFZEIT);
 			int iStandarddurchlaufzeit = ((Integer) parameter
 					.getCWertAsObject()).intValue();
-
+			int iLieferdauerKunde = 0;
 			// nun den Eintrag ueberleiten
 			InternebestellungDto ib = internebestellungFindByPrimaryKey(interneBestellungIId);
 			StuecklisteDto stuecklisteDto = getStuecklisteFac()
@@ -1816,6 +1938,11 @@ public class InternebestellungFacBean extends Facade implements
 					losDto.setCProjekt(auftragDto.getCBezProjektbezeichnung());
 					// Kostenstelle
 					losDto.setKostenstelleIId(auftragDto.getKostIId());
+
+					iLieferdauerKunde = getKundeFac().kundeFindByPrimaryKey(
+							auftragDto.getKundeIIdAuftragsadresse(),
+							theClientDto).getILieferdauer();
+
 				}
 				// Zusatznummer ist wie ueblich das I_SORT der Auftragsposition
 				parameter = getParameterFac().getMandantparameter(
@@ -1888,29 +2015,32 @@ public class InternebestellungFacBean extends Facade implements
 			losDto.setStuecklisteIId(ib.getStuecklisteIId());
 			losDto.setFertigungsgruppeIId(stuecklisteDto
 					.getFertigungsgruppeIId());
-			// Produktionszeitraum
-			// Endetermin: "Faelligkeit" des Bedarfs. Die Vorlaufzeit wurde
-			// bereits bei der internen Bestellung beruecksichtigt.
-			java.sql.Date tEndTermin = new java.sql.Date(ib.getTLiefertermin()
-					.getTime()); // bloedes hibernate mag kein sql.Date
-			losDto.setTProduktionsende(tEndTermin);
-			int iDurchlaufzeit;
+
 			if (stuecklisteDto.getNDefaultdurchlaufzeit() != null) {
-				// Durchlaufzeit aus der Stueckliste, falls dort definiert.
-				iDurchlaufzeit = stuecklisteDto.getNDefaultdurchlaufzeit()
-						.intValue();
-			} else {
-				// sonst Defaultwert lt. Mandantenparameter.
-				iDurchlaufzeit = iStandarddurchlaufzeit;
+				iStandarddurchlaufzeit = stuecklisteDto
+						.getNDefaultdurchlaufzeit().intValue();
 			}
-			// Starttermin ist grundsaetzlich Endtermin minus
-			// standarddurchlaufzeit, darf aber nicht vor heute liegen.
-			java.sql.Date tStartTermin = Helper.addiereTageZuDatum(tEndTermin,
-					-iDurchlaufzeit);
-			if (tStartTermin.before(getDate())) {
-				tStartTermin = getDate();
+
+			Timestamp tAuftragsliefertermin = new Timestamp(ib
+					.getTLiefertermin().getTime());
+
+			Timestamp tEnde = Helper.addiereTageZuTimestamp(
+					tAuftragsliefertermin, -iLieferdauerKunde);
+
+			Timestamp tBeginn = Helper.addiereTageZuTimestamp(tEnde,
+					-iStandarddurchlaufzeit);
+
+			if (tBeginn.before(Helper.cutTimestamp(new Timestamp(System
+					.currentTimeMillis())))) {
+				tBeginn = Helper.cutTimestamp(new Timestamp(System
+						.currentTimeMillis()));
+				tEnde = Helper.addiereTageZuTimestamp(tBeginn,
+						iStandarddurchlaufzeit);
 			}
-			losDto.setTProduktionsbeginn(Helper.cutDate(tStartTermin));
+
+			losDto.setTProduktionsbeginn(new java.sql.Date(tBeginn.getTime()));
+			losDto.setTProduktionsende(new java.sql.Date(tEnde.getTime()));
+
 			// Los anlegen
 
 			try {
@@ -1956,6 +2086,16 @@ public class InternebestellungFacBean extends Facade implements
 			closeSession(session);
 		}
 		return set;
+	}
+
+	public void verdichteInterneBestellung(HashSet<Integer> stuecklisteIIds,
+			TheClientDto theClientDto) {
+		Iterator it = stuecklisteIIds.iterator();
+		while (it.hasNext()) {
+			Integer stuecklisteIId = (Integer) it.next();
+			verdichteInterneBestellungEinerStuecklisteEinesMandanten(
+					stuecklisteIId, 9999, theClientDto);
+		}
 	}
 
 	private void verdichteInterneBestellungEinerStuecklisteEinesMandanten(
@@ -2038,7 +2178,8 @@ public class InternebestellungFacBean extends Facade implements
 	 * 
 	 * @param iVerdichtungsTage
 	 *            Integer
-	 * @param theClientDto der aktuelle Benutzer
+	 * @param theClientDto
+	 *            der aktuelle Benutzer
 	 * @throws EJBExceptionLP
 	 */
 	public void verdichteInterneBestellung(Integer iVerdichtungsTage,

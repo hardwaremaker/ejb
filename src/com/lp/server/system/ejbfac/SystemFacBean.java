@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,7 +34,9 @@ package com.lp.server.system.ejbfac;
 
 import java.awt.Font;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InvalidClassException;
@@ -51,9 +53,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
 import java.util.TreeMap;
 
 import javax.ejb.Stateless;
+import javax.management.MBeanServerConnection;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
 import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
@@ -66,10 +73,11 @@ import net.sf.jasperreports.engine.JasperReport;
 import net.sf.jasperreports.engine.util.JRLoader;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.jboss.mx.util.MBeanServerLocator;
 import org.modelmapper.ModelMapper;
 
 import com.lp.server.artikel.service.ArtikelDto;
@@ -78,6 +86,7 @@ import com.lp.server.finanz.service.BelegbuchungDto;
 import com.lp.server.partner.ejb.HvTypedQuery;
 import com.lp.server.partner.ejb.Partner;
 import com.lp.server.partner.service.KundeDto;
+import com.lp.server.rechnung.ejbfac.CoinRoundingHelper;
 import com.lp.server.stueckliste.service.StuecklisteDto;
 import com.lp.server.stueckliste.service.StuecklistepositionDto;
 import com.lp.server.system.ejb.Anwender;
@@ -127,6 +136,8 @@ import com.lp.server.system.service.GeschaeftsjahrMandantDto;
 import com.lp.server.system.service.GeschaeftsjahrMandantDtoAssembler;
 import com.lp.server.system.service.IVersandwegDto;
 import com.lp.server.system.service.IVersandwegPartnerDto;
+import com.lp.server.system.service.JavaInfoController;
+import com.lp.server.system.service.JavaInfoDto;
 import com.lp.server.system.service.KostenstelleDto;
 import com.lp.server.system.service.KostenstelleDtoAssembler;
 import com.lp.server.system.service.LandDto;
@@ -149,6 +160,7 @@ import com.lp.server.system.service.VersandwegCCDto;
 import com.lp.server.system.service.VersandwegCCPartnerDto;
 import com.lp.server.util.Facade;
 import com.lp.server.util.HelperServer;
+import com.lp.server.util.ServerConfiguration;
 import com.lp.server.util.Validator;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.service.BelegVerkaufDto;
@@ -248,6 +260,11 @@ public class SystemFacBean extends Facade implements SystemFac {
 			// nothing here
 		}
 
+		
+		if(landDto.getBPlznachort()==null){
+			landDto.setBPlznachort(Helper.boolean2Short(false));
+		}
+		
 		try {
 			// generieren von primary key
 			PKGeneratorObj pkGen = new PKGeneratorObj();
@@ -256,7 +273,7 @@ public class SystemFacBean extends Facade implements SystemFac {
 
 			Land land = new Land(landDto.getIID(), landDto.getCLkz(),
 					landDto.getCName(), landDto.getILaengeuidnummer(),
-					landDto.getBSepa());
+					landDto.getBSepa(),landDto.getBPlznachort());
 			em.persist(land);
 			em.flush();
 
@@ -430,6 +447,7 @@ public class SystemFacBean extends Facade implements SystemFac {
 		land.setNMuenzRundung(landDto.getNMuenzRundung());
 		land.setLandIIdGemeinsamespostland(landDto
 				.getLandIIdGemeinsamespostland());
+		land.setBPlznachort(landDto.getBPlznachort());
 		em.merge(land);
 		em.flush();
 	}
@@ -1539,7 +1557,8 @@ public class SystemFacBean extends Facade implements SystemFac {
 				.singleByYearMandant(em, iGeschaeftsjahr, mandantCnr);
 		if (toRemove == null) {
 			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+				EJBExceptionLP.FEHLER_FINANZ_GESCHAEFTSJAHR_EXISTIERT_NICHT, 
+					iGeschaeftsjahr.toString(), iGeschaeftsjahr.toString());
 		}
 
 		try {
@@ -1578,7 +1597,8 @@ public class SystemFacBean extends Facade implements SystemFac {
 
 			if (geschaeftsjahr == null) {
 				throw new EJBExceptionLP(
-						EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+						EJBExceptionLP.FEHLER_FINANZ_GESCHAEFTSJAHR_EXISTIERT_NICHT, 
+						iGeschaeftsjahr.toString(), iGeschaeftsjahr.toString());
 			}
 			setGeschaeftsjahrMandantFromGeschaeftsjahrMandantDto(
 					geschaeftsjahr, geschaeftsjahrDto);
@@ -1604,9 +1624,8 @@ public class SystemFacBean extends Facade implements SystemFac {
 						theClientDto.getMandant());
 		if (geschaeftsjahr == null)
 			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-					"Gesch\u00E4ftsjahr " + iGeschaeftsjahr
-							+ " nicht vorhanden!");
+					EJBExceptionLP.FEHLER_FINANZ_GESCHAEFTSJAHR_EXISTIERT_NICHT,
+					iGeschaeftsjahr.toString(), iGeschaeftsjahr.toString());
 		else {
 			geschaeftsjahr
 					.setTSperre(new Timestamp(System.currentTimeMillis()));
@@ -1622,27 +1641,51 @@ public class SystemFacBean extends Facade implements SystemFac {
 				.singleByYearMandant(em, iGeschaeftsjahr, mandantCnr);
 		if (geschaeftsjahr == null) {
 			throw new EJBExceptionLP(
-					EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY, "");
+					EJBExceptionLP.FEHLER_FINANZ_GESCHAEFTSJAHR_EXISTIERT_NICHT, 
+					iGeschaeftsjahr.toString(), iGeschaeftsjahr.toString());
 		}
 		return assembleGeschaeftsjahrMandantDto(geschaeftsjahr);
 	}
 
 	public byte[][] konvertierePDFFileInEinzelneBilder(String pdfFile,
+			int resolution) throws Throwable {
+
+		File file = new File(pdfFile);
+
+		byte[] b = new byte[(int) file.length()];
+
+		FileInputStream fileInputStream = new FileInputStream(file);
+		fileInputStream.read(b);
+		fileInputStream.close();
+
+		return konvertierePDFFileInEinzelneBilder(b, resolution);
+	}
+
+	public byte[][] konvertierePDFFileInEinzelneBilder(byte[] pdf,
 			int resolution) {
 		PDDocument document = null;
 		byte[][] oBilder = null;
+
+		ByteArrayInputStream bis = new ByteArrayInputStream(pdf);
+
 		try {
-			document = PDDocument.load(pdfFile);
-			List pages = document.getDocumentCatalog().getAllPages();
+			document = PDDocument.load(bis);
+			
+			int numPages = document.getNumberOfPages();
 
-			oBilder = new byte[pages.size()][];
+			oBilder = new byte[numPages][];
 
-			for (int i = 0; i < pages.size(); i++) {
-				PDPage page = (PDPage) pages.get(i);
-				BufferedImage image = page.convertToImage(
-						BufferedImage.TYPE_INT_RGB, resolution);
+			PDFRenderer renderer = new PDFRenderer(document);
+			for (int i = 0; i < numPages; i++) {
+
+				BufferedImage image = renderer.renderImageWithDPI(i, resolution); // Windows
+				// native
+				// DPI
 				oBilder[i] = Helper.imageToByteArray(image);
+
 			}
+			
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, e.getMessage());
@@ -1809,17 +1852,8 @@ public class SystemFacBean extends Facade implements SystemFac {
 		}
 		anwenderDto = assembleAnwenderDto(anwender);
 
-		// Extra
-		anwenderDto.setCVersionServer(HelperServer.getLPResourceBundle()
-				.getString("lp.version.server"));
-		anwenderDto.setIBuildnummerServer(new Integer(Integer
-				.parseInt(HelperServer.getLPResourceBundle().getString(
-						"lp.version.server.build"))));
-		// }
-		// catch (FinderException ex) {
-		// throw new EJBExceptionLP(EJBExceptionLP.FEHLER_BEI_FINDBYPRIMARYKEY,
-		// ex);
-		// }
+		anwenderDto.setCVersionServer(getServerVersion());
+		anwenderDto.setIBuildnummerServer(getServerBuildNumber());
 		return anwenderDto;
 	}
 
@@ -2750,8 +2784,8 @@ public class SystemFacBean extends Facade implements SystemFac {
 				String gjValue = geschaeftsjahr.toString();
 				throw new EJBExceptionLP(
 						EJBExceptionLP.FEHLER_FINANZ_GESCHAEFTSJAHR_GESPERRT,
-						"Gesch\u00E4ftsjahr " + gjValue,
-						gjValue, new String[]{gjValue});
+						"Gesch\u00E4ftsjahr " + gjValue, gjValue,
+						new String[] { gjValue });
 			}
 		}
 	}
@@ -2781,13 +2815,11 @@ public class SystemFacBean extends Facade implements SystemFac {
 	}
 
 	public String getServerVersion() {
-		return HelperServer.getLPResourceBundle()
-				.getString("lp.version.server");
+		return ServerConfiguration.getVersion() ; 
 	}
 
 	public Integer getServerBuildNumber() {
-		return Integer.parseInt(HelperServer.getLPResourceBundle().getString(
-				"lp.version.server.build"));
+		return ServerConfiguration.getBuildNumber() ;
 	}
 
 	public IVersandwegDto versandwegFindByPrimaryKey(Integer versandwegId) {
@@ -2872,7 +2904,8 @@ public class SystemFacBean extends Facade implements SystemFac {
 	public boolean enthaeltEineVKPositionKeineMwstObwohlKundeSteuerpflichtig(
 			Integer kundeIId,
 			BelegpositionVerkaufDto[] belegpositionVerkaufDtos,
-			BelegVerkaufDto belegVerkaufDto, TheClientDto theClientDto) {
+			BelegVerkaufDto belegVerkaufDto, TheClientDto theClientDto)
+			throws RemoteException {
 		// SP2010
 		KundeDto kdDto = getKundeFac().kundeFindByPrimaryKey(kundeIId,
 				theClientDto);
@@ -2887,27 +2920,43 @@ public class SystemFacBean extends Facade implements SystemFac {
 
 		if (mwstSatzDto != null && mwstSatzDto.getFMwstsatz() != 0) {
 
+			CoinRoundingHelper helper = new CoinRoundingHelper(null, null,
+					getArtikelFac(), getParameterFac(), null);
+			ArtikelDto rundungsArtikel = helper
+					.getItemIIdForRounding(theClientDto);
+			Integer rArtIId = rundungsArtikel == null ? null : rundungsArtikel
+					.getIId();
+
 			for (int i = 0; i < belegpositionVerkaufDtos.length; i++) {
-				if (belegpositionVerkaufDtos[i].getPositionsartCNr().equals(
-						LocaleFac.POSITIONSART_IDENT)
-						|| belegpositionVerkaufDtos[i].getPositionsartCNr()
-								.equals(LocaleFac.POSITIONSART_HANDEINGABE)) {
 
-					BigDecimal bdmwst = belegpositionVerkaufDtos[i]
-							.getNMwstbetrag();
-					if (bdmwst == null) {
-						bdmwst = belegpositionVerkaufDtos[i]
-								.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte()
-								.subtract(
-										belegpositionVerkaufDtos[i]
-												.getNBruttoeinzelpreis());
+				//SP2480 Set-Positionen auslassen, da die MWST hier eigentlich irrelevant ist
+				if (belegpositionVerkaufDtos[i].getPositioniIdArtikelset() == null) {
+					if (rArtIId != null) {
+						if (rArtIId.equals(belegpositionVerkaufDtos[i]
+								.getArtikelIId()))
+							continue;
 					}
+					if (belegpositionVerkaufDtos[i].getPositionsartCNr()
+							.equals(LocaleFac.POSITIONSART_IDENT)
+							|| belegpositionVerkaufDtos[i].getPositionsartCNr()
+									.equals(LocaleFac.POSITIONSART_HANDEINGABE)) {
 
-					if (belegpositionVerkaufDtos[i]
-							.getNNettoeinzelpreisplusversteckteraufschlag()
-							.doubleValue() != 0
-							&& bdmwst.doubleValue() == 0) {
-						return true;
+						BigDecimal bdmwst = belegpositionVerkaufDtos[i]
+								.getNMwstbetrag();
+						if (bdmwst == null) {
+							bdmwst = belegpositionVerkaufDtos[i]
+									.getNNettoeinzelpreisplusversteckteraufschlagminusrabatte()
+									.subtract(
+											belegpositionVerkaufDtos[i]
+													.getNBruttoeinzelpreis());
+						}
+
+						if (belegpositionVerkaufDtos[i]
+								.getNNettoeinzelpreisplusversteckteraufschlag()
+								.doubleValue() != 0
+								&& bdmwst.doubleValue() == 0) {
+							return true;
+						}
 					}
 				}
 
@@ -2925,4 +2974,154 @@ public class SystemFacBean extends Facade implements SystemFac {
 		return info;
 	}
 
+	private File getScriptFileFromLPDir(String modulI, String filenameI,
+			String mandantCNrI, Locale spracheI, String cSubdirectory) {
+		String scriptRoot = SystemServicesFacBean.getScriptDir();
+
+		// ----------------------------------------------------------------------
+		// --
+		// Falls ein kostenstellenspezeifisches Verzeichnis definiert ist, dann
+		// zuerst dort suchen
+		// ----------------------------------------------------------------------
+		// --
+		if (cSubdirectory != null) {
+			// erster Versuch fuer modul/mandant/locale
+			String reportDir = scriptRoot + modulI + File.separator
+					+ cSubdirectory + File.separator + mandantCNrI
+					+ File.separator + spracheI.toString();
+			File f = new File(reportDir + File.separator + filenameI);
+			if (f.exists())
+				return f;
+
+			// zweiter Versuch fuer modul/mandant
+			reportDir = scriptRoot + modulI + File.separator + cSubdirectory
+					+ File.separator + mandantCNrI;
+			f = new File(reportDir + File.separator + filenameI);
+			if (f.exists())
+				return f;
+
+			// dritter Versuch fuer anwender-ebene
+			reportDir = scriptRoot + modulI + File.separator + cSubdirectory;
+			f = new File(reportDir + File.separator + filenameI);
+			if (f.exists())
+				return f;
+		}
+
+		// ----------------------------------------------------------------------
+		// --
+		// ansonsten im "normalen" Reportverzeichnis
+		// ----------------------------------------------------------------------
+		// --
+		// erster Versuch fuer modul/mandant/locale spracheLAND z.B en_US
+		String reportDir = scriptRoot + modulI + File.separator + "anwender"
+				+ File.separator + mandantCNrI + File.separator
+				+ spracheI.toString();
+		File f = new File(reportDir + File.separator + filenameI);
+		if (f.exists())
+			return f;
+
+		// zweiter Versuch fuer modul/mandant/locale sprache z.B en
+		reportDir = scriptRoot + modulI + File.separator + "anwender"
+				+ File.separator + mandantCNrI + File.separator
+				+ spracheI.getLanguage();
+		f = new File(reportDir + File.separator + filenameI);
+		if (f.exists())
+			return f;
+
+		// dritter Versuch fuer modul/mandant
+		reportDir = scriptRoot + modulI + File.separator + "anwender"
+				+ File.separator + mandantCNrI;
+		f = new File(reportDir + File.separator + filenameI);
+		if (f.exists())
+			return f;
+
+		// vierter Versuch fuer anwender-ebene
+		reportDir = scriptRoot + modulI + File.separator + "anwender";
+		f = new File(reportDir + File.separator + filenameI);
+		if (f.exists())
+			return f;
+
+		// fuenfter Versuch fuer modul (mitgelieferter Original-Report)
+		reportDir = scriptRoot + modulI;
+		f = new File(reportDir + File.separator + filenameI);
+		if (f.exists())
+			return f;
+
+		// wenn nicht vorhanden
+		return null;
+	}
+
+	public String getScriptContentFromLPDir(String modulI, String filenameI,
+			String mandantCNrI, Locale spracheI, String cSubdirectory) {
+		File f = getScriptFileFromLPDir(modulI, filenameI, mandantCNrI,
+				spracheI, cSubdirectory);
+		if (f == null) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_SCRIPT_NICHT_GEFUNDEN, filenameI);
+		}
+		String contents = null;
+		Scanner scanner = null;
+		try {
+			scanner = new Scanner(f);
+			contents = scanner.useDelimiter("\\Z").next();
+		} catch (FileNotFoundException e) {
+			throw new EJBExceptionLP(
+					EJBExceptionLP.FEHLER_SCRIPT_NICHT_GEFUNDEN, e);
+		} finally {
+			if (scanner != null) {
+				scanner.close();
+			}
+		}
+
+		return contents;
+	}
+	
+	public String getServerWebPortJBoss(){
+		String port = "8080" ;
+		
+		try {
+			MBeanServerConnection server = MBeanServerLocator.locateJBoss() ;
+			ObjectName on = new ObjectName("jboss.web:type=Connector,*") ;
+//			Set<?> beans = server.queryNames(on, null) ;
+			
+			// Es gibt 2 connectoren, nur der Webport (default 8080) hat HTTP/1.1 Protokoll
+			Set<ObjectName> s = server.queryNames(on,
+//			       new ObjectName("jboss.web:type=Connector,*"), 
+//		           new ObjectName("jboss.web:type=Connector,address=*,port=*"), 
+		           javax.management.Query.match(
+		        		   javax.management.Query.attr("protocol"), 
+		        		   javax.management.Query.value("HTTP/1.1"))) ;
+			if(s.size() > 0) {
+//				for (ObjectName objectName : s) {
+//					String enabled = objectName.getKeyProperty("SSLEnabled") ;
+//					port = objectName.getKeyProperty("port") ;									
+//				}
+				
+				ObjectName objectName = s.iterator().next();
+//				String enabled = objectName.getKeyProperty("SSLEnabled") ;
+				port = objectName.getKeyProperty("port") ;				
+			}
+		} catch(MalformedObjectNameException e) {
+		} catch(IOException e) {
+		}
+		
+       return port ;
+	}
+
+	public String getServerWebPort(){
+		String port = "8080" ;
+	
+		String webPort = System.getProperty("hv.webport") ;
+		if(webPort != null) {
+			port = webPort ;
+		}
+
+       return port ;
+	}
+	
+	public JavaInfoDto getServerJavaInfo(){
+		JavaInfoController javaInfoController = new JavaInfoController();
+		JavaInfoDto javaInfo = javaInfoController.getJavaInfo();
+		return javaInfo;
+	}
 }

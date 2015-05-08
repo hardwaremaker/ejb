@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -77,6 +77,16 @@ public class AgstklDto implements Serializable {
 
 	public void setCNr(String cNr) {
 		this.cNr = cNr;
+	}
+
+	private Integer projektIId;
+
+	public Integer getProjektIId() {
+		return projektIId;
+	}
+
+	public void setProjektIId(Integer projektIId) {
+		this.projektIId = projektIId;
 	}
 
 	public String getBelegartCNr() {
@@ -166,6 +176,16 @@ public class AgstklDto implements Serializable {
 
 	public void setTBelegdatum(Timestamp tBelegdatum) {
 		this.tBelegdatum = tBelegdatum;
+	}
+
+	private Integer iEkpreisbasis;
+
+	public Integer getIEkpreisbasis() {
+		return iEkpreisbasis;
+	}
+
+	public void setIEkpreisbasis(Integer iEkpreisbasis) {
+		this.iEkpreisbasis = iEkpreisbasis;
 	}
 
 	public boolean equals(Object obj) {

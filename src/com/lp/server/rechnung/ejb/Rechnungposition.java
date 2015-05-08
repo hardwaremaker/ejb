@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -34,6 +34,7 @@ package com.lp.server.rechnung.ejb;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -51,6 +52,7 @@ import com.lp.server.util.IZwsPosition;
 		@NamedQuery(name = "RechnungPositionfindByLieferscheinIId", query = "SELECT OBJECT(o) FROM Rechnungposition o WHERE o.lieferscheinIId=?1"),
 		@NamedQuery(name = "RechnungPositionfindByArtikelIId", query = "SELECT OBJECT(o) FROM Rechnungposition o WHERE o.artikelIId=?1"),
 		@NamedQuery(name = "RechnungPositionfindByRechnungIIdAuftragpositionIId", query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.rechnungIId=?1 AND o.auftragpositionIId=?2"),
+		@NamedQuery(name = "RechnungPositionfindByAuftragpositionIId", query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.auftragpositionIId=?1"),
 		@NamedQuery(name = "RechnungPositionfindByRechnungIIdArtikelIId", query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.rechnungIId=?1 AND o.artikelIId=?2"),
 		@NamedQuery(name = "RechnungpositionfindByPositionartCNr", query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.positionsartCNr=?1 AND o.nMenge IS NOT NULL"),
 		@NamedQuery(name = "RechnungpositionfindByRechnungIIdPositionsartCNr", query = "SELECT OBJECT (o) FROM Rechnungposition o WHERE o.rechnungIId=?1 AND o.positionsartCNr=?2 ORDER BY o.iSort"),
@@ -194,9 +196,35 @@ public class Rechnungposition implements Serializable, IISort, IPositionIIdArtik
 		nMaterialzuschlag = materialzuschlag;
 	}
 	
+	@Column(name = "T_MATERIALZUSCHLAG_DATUM")
+	private Timestamp tMaterialzuschlagDatum ;
 	
+
+	public Timestamp getTMaterialzuschlagDatum() {
+		return tMaterialzuschlagDatum;
+	}
+
+	public void setTMaterialzuschlagDatum(Timestamp tMaterialzuschlagDatum) {
+		this.tMaterialzuschlagDatum = tMaterialzuschlagDatum;
+	}
+
+	@Column(name = "N_MATERIALZUSCHLAG_KURS")
+	private BigDecimal nMaterialzuschlagKurs ;
+
+	
+	public BigDecimal getNMaterialzuschlagKurs() {
+		return nMaterialzuschlagKurs;
+	}
+
+	public void setNMaterialzuschlagKurs(BigDecimal nMaterialzuschlagKurs) {
+		this.nMaterialzuschlagKurs = nMaterialzuschlagKurs;
+	}
 	@Column(name = "N_ZWSNETTOSUMME") 
 	private BigDecimal zwsNettoSumme ;
+	
+	@Column(name = "B_ZWSPOSITIONSPREISZEIGEN")
+	private Short bZwsPositionspreisZeigen ;
+	
 	
 	public Integer getKostentraegerIId() {
 		return kostentraegerIId;
@@ -519,4 +547,11 @@ public class Rechnungposition implements Serializable, IISort, IPositionIIdArtik
 		this.zwsNettoSumme = zwsNettoSumme;
 	}
 
+	public Short getBZwsPositionspreisZeigen() {
+		return bZwsPositionspreisZeigen;
+	}
+
+	public void setBZwsPositionspreisZeigen(Short bZwsPositionpreisZeigen) {
+		this.bZwsPositionspreisZeigen = bZwsPositionpreisZeigen;
+	}
 }

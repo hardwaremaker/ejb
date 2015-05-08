@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -32,12 +32,10 @@
  ******************************************************************************/
 package com.lp.server.finanz.ejbfac;
 
-import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.rmi.RemoteException;
 import java.sql.Date;
 import java.sql.Timestamp;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -48,6 +46,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import javax.ejb.Stateless;
@@ -106,9 +105,11 @@ import com.lp.server.system.service.ParameterFac;
 import com.lp.server.system.service.ParametermandantDto;
 import com.lp.server.system.service.TheClientDto;
 import com.lp.server.util.Facade;
+import com.lp.server.util.HelperServer;
 import com.lp.server.util.fastlanereader.FLRSessionFactory;
 import com.lp.util.EJBExceptionLP;
 import com.lp.util.Helper;
+import com.lp.util.HelperReport;
 
 @Stateless
 public class BuchenFacBean extends Facade implements BuchenFac {
@@ -134,6 +135,7 @@ public class BuchenFacBean extends Facade implements BuchenFac {
 			TheClientDto theClientDto) throws EJBExceptionLP {
 		myLogger.logData(buchungDto, theClientDto.getIDUser());
 		// Pruefen der Buchung
+//		HelperServer.printBuchungssatz(buchungdetailDtos, getFinanzFac(), System.out);
 		pruefeBuchung(buchungDto, buchungdetailDtos, pruefeBuchungsregeln);
 		// Buchungskopfdaten anlegen
 		BuchungDto neueBuchung = createBuchung(buchungDto, theClientDto);
@@ -152,45 +154,6 @@ public class BuchenFacBean extends Facade implements BuchenFac {
 		buchenAbstimmkonto(buchungDto, buchungdetailDtos, theClientDto);
 		return neueBuchung;
 	}
-	
-	private String outPrintBuchungssatz(List<BuchungdetailDto> list) {
-		return outPrintBuchungssatz(list, null);
-	}
-	private String outPrintBuchungssatz(List<BuchungdetailDto> list, PrintStream out) {
-		StringBuffer bf = new StringBuffer("\n");
-		//_________<-------30-------------------> <-----10-> <-----16------->|<------16------>
-		bf.append("Konto                            Kontonr.            SOLL | HABEN\n"); 
-		bf.append("__________________________________________________________|________________\n");
-		Map<Integer, KontoDto> map = new HashMap<Integer, KontoDto>();
-		for(BuchungdetailDto dto : list) {
-			Integer id = dto.getKontoIId();
-			if(!map.containsKey(id)) {
-				try {
-					map.put(id, getFinanzFac().kontoFindByPrimaryKey(id));
-				} catch(Throwable t) {
-				}
-			}
-			String bez;
-			String nr;
-			if(map.get(id) == null) {
-				bez = id+"";
-				nr = "";
-			} else {
-				bez = map.get(id).getCBez();
-				nr = map.get(id).getCNr();
-			}
-			DecimalFormat df = new DecimalFormat();
-			df.setMaximumFractionDigits(2);
-			df.setMinimumFractionDigits(2);
-			df.setGroupingUsed(true);
-			bf.append(String.format("%30.30s %10.10s %16s|%16s%n", bez, nr, BuchenFac.SollBuchung.equals(dto.getBuchungdetailartCNr()) ? df.format(dto.getNBetrag()) : "",
-					BuchenFac.HabenBuchung.equals(dto.getBuchungdetailartCNr()) ? df.format(dto.getNBetrag()) : ""
-					));
-		}
-		if(out != null)
-			out.println(bf.toString());
-		return bf.toString();
-	}
 
 	public void buchenAbstimmkonto(BuchungDto buchungDto,
 			BuchungdetailDto[] buchungdetailDtos, TheClientDto theClientDto) {
@@ -198,14 +161,15 @@ public class BuchenFacBean extends Facade implements BuchenFac {
 				.darfAnwenderAufZusatzfunktionZugreifen(
 						MandantFac.ZUSATZFUNKTION_ISTVERSTEURER,
 						theClientDto.getMandant());
+		boolean mischVersteurer = getMandantFac().darfAnwenderAufZusatzfunktionZugreifen(MandantFac.ZUSATZFUNKTION_MISCHVERSTEURER, theClientDto.getMandant());
 		if (!istVersteurer) {
 			for (int i = 0; i < buchungdetailDtos.length; i++) {
 				Konto konto = em.find(Konto.class,
 						buchungdetailDtos[i].getKontoIId());
 				if (konto != null) {
 					BuchungdetailDto buchungdetailDto = null;
-					if (konto.getKontotypCNr().equals(
-							FinanzServiceFac.KONTOTYP_DEBITOR)) {
+					if (!mischVersteurer && konto.getKontotypCNr().equals(FinanzServiceFac.KONTOTYP_DEBITOR)) {
+						// bei Mischversteurer und Debitor keine Buchung auf Abstimmkonto
 						Steuerkategorie stk = em.find(Steuerkategorie.class,
 								konto.getSteuerkategorieIId());
 						if (stk == null)
@@ -1780,7 +1744,8 @@ public class BuchenFacBean extends Facade implements BuchenFac {
 		if (!(summeHaben.compareTo(summeSoll) == 0)) {
 			myLogger.logData("Haben: " + summeHaben);
 			myLogger.logData("Soll:  " + summeSoll);
-			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, "!summeHaben.equals(summeSoll)", "\n"+outPrintBuchungssatz(Arrays.asList(buchungDetailDtos)));
+			String s = HelperServer.printBuchungssatz(Arrays.asList(buchungDetailDtos), getFinanzFac());
+			throw new EJBExceptionLP(EJBExceptionLP.FEHLER, "!summeHaben.equals(summeSoll)", "\n" + s);
 		}
 	}
 
@@ -1806,7 +1771,7 @@ public class BuchenFacBean extends Facade implements BuchenFac {
 				if(getFinanzFac().isMitlaufendesKonto(detail.getKontoIId())) {
 					KontoDto konto = getFinanzFac().kontoFindByPrimaryKey(detail.getKontoIId());
 					throw new EJBExceptionLP(EJBExceptionLP.FEHLER_FINANZ_BUCHUNG_AUF_MITLAUFENDES_KONTO_NICHT_ERLAUBT,
-							outPrintBuchungssatz(Arrays.asList(buchungDetailDtos)),
+							HelperServer.printBuchungssatz(Arrays.asList(buchungDetailDtos), getFinanzFac()),
 							konto.getCNr()	+ ", " + konto.getCBez());
 				}
 			} catch (RemoteException e) {
@@ -1830,6 +1795,21 @@ public class BuchenFacBean extends Facade implements BuchenFac {
 	public BuchungDto verbucheUmbuchung(BuchungDto buchungDto,
 			BuchungdetailDto[] buchungen, TheClientDto theClientDto)
 			throws EJBExceptionLP {
+		if (buchungDto.getBuchungsartCNr().equals(FinanzFac.BUCHUNGSART_MWST_ABSCHLUSS)) {
+			//pruefen ob am letzten des Monats gebucht wird
+			Calendar cal = Calendar.getInstance();
+			cal.setTimeInMillis(buchungDto.getDBuchungsdatum().getTime());
+			int day = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+			if (day != cal.get(Calendar.DAY_OF_MONTH)) {
+				throw new EJBExceptionLP( EJBExceptionLP.FEHLER_FINANZ_DATUM_NICHT_LETZTER_TAG_DES_MONATS, "Datum nicht letzter Tag des Monats" );
+			}
+			cal.set(Calendar.HOUR_OF_DAY, 23);
+			cal.set(Calendar.MINUTE, 59);
+			cal.set(Calendar.SECOND, 59);
+			buchungDto.setDBuchungsdatum(new Date(cal.getTimeInMillis()));
+			buchungDto.setAutomatischeBuchung(true);
+			
+		}
 		if (buchungDto.getIId() != null) {
 			// ist eine Aenderungsbuchung, alte stornieren
 			storniereBuchung(buchungDto.getIId(), theClientDto);
@@ -2312,8 +2292,9 @@ public class BuchenFacBean extends Facade implements BuchenFac {
 				new Timestamp(buchung.getTBuchungsdatum().getTime()), false);
 		BuchungdetailDto[] details = buchungdetailsFindByBuchungIId(buchungIId);
 		Konto konto = em.find(Konto.class, details[0].getKontoIIdGegenkonto());
-
-		outPrintBuchungssatz(Arrays.asList(details));
+		
+//		HelperServer.printBuchungssatz(Arrays.asList(details), getFinanzFac());
+		
 		int steuerIndex = 0;
 		boolean keineSteuer = true;
 		for (int i = 1; i < details.length; i++) {
@@ -3007,23 +2988,18 @@ public class BuchenFacBean extends Facade implements BuchenFac {
 		BuchungdetailDto[] details = buchungdetailsFindByBuchungIId(buchungIId);
 		ArrayList<BuchungdetailDto> list = new ArrayList<BuchungdetailDto>();
 		Konto konto = em.find(Konto.class, details[0].getKontoIId());
-		SteuerkategorieDto[] stkDtos = getFinanzServiceFac()
-				.steuerkategorieFindByFinanzamtIId(konto.getFinanzamtIId(),
-						theClientDto);
-		HashMap<Integer, SteuerkategorieDto> hm = new HashMap<Integer, SteuerkategorieDto>();
-		for (int i = 0; i < stkDtos.length; i++) {
-			hm.put(stkDtos[i].getKontoIIdForderungen(), stkDtos[i]);
-			hm.put(stkDtos[i].getKontoIIdVerbindlichkeiten(), stkDtos[i]);
-		}
+		
+		Set<Integer> hm = getFinanzServiceFac().getAllMitlaufendeKonten(konto.getFinanzamtIId(), theClientDto);
+	
 		for (int i = 0; i < details.length; i++) {
-			if (hm.get(details[i].getKontoIId()) == null)
+			if (!hm.contains(details[i].getKontoIId()))
 				list.add(details[i]);
 		}
 		details = new BuchungdetailDto[list.size()];
 		return list.toArray(details);
 	}
 
-	public void storniereFinanzamtsbuchungen(int geschaeftsjahr,
+	public HashMap<String,Integer> storniereFinanzamtsbuchungen(int geschaeftsjahr,
 			Date buchungsDatum, int finanzamtIId, TheClientDto theClientDto) {
 		Query query = em
 				.createNamedQuery(Buchung.QueryBuchungfindByGeschaeftsjahrDatumAutomatik);
@@ -3031,11 +3007,20 @@ public class BuchenFacBean extends Facade implements BuchenFac {
 		query.setParameter(Buchung.QueryParameterBuchungsDatum, buchungsDatum);
 		Collection<Buchung> cl = query.getResultList();
 
+		HashMap<String, Integer> hmAZ = new HashMap<String,Integer>();
+		
 		Iterator<Buchung> it = cl.iterator();
 		while (it.hasNext()) {
 			Buchung buchung = it.next();
 			BuchungdetailDto[] details = getBuchenFac()
 					.buchungdetailsFindByBuchungIId(buchung.getIId());
+			for (int i=0; i<details.length; i++) {
+				if (details[i].getIAusziffern() != null) {
+					String key = getKeyForAZ(buchung, details[i]);
+					hmAZ.put(key, details[i].getIAusziffern());
+					System.out.println(key + " " + details[i].getIAusziffern().toString());
+				}
+			}
 			try {
 				if (details != null && details.length > 0) {
 					KontoDto konto = getFinanzFac().kontoFindByPrimaryKey(
@@ -3055,8 +3040,50 @@ public class BuchenFacBean extends Facade implements BuchenFac {
 								+ details[0].getIId(), e);
 			}
 		}
+		return hmAZ;
 	}
 
+	private String getKeyForAZ(Buchung buchung, BuchungdetailDto detail) {
+		String key = "";
+		if (detail.getKontoIId() == null)
+			key = "null";
+		else
+			key = detail.getKontoIId().toString();
+		if (detail.getKontoIIdGegenkonto() == null)
+			key += "null";
+		else
+			key += detail.getKontoIIdGegenkonto().toString();
+		key = buchung.getCBelegnummer().trim() + key;
+		return key;
+	}
+
+	public void setAuszifferungenFinanzamtsbuchungen(int geschaeftsjahr,
+			Date buchungsDatum, int finanzamtIId, HashMap<String, Integer> hmAZ, TheClientDto theClientDto) {
+		Query query = em
+				.createNamedQuery(Buchung.QueryBuchungfindByGeschaeftsjahrDatumAutomatik);
+		query.setParameter(Buchung.QueryParameterGeschaeftsjahr, geschaeftsjahr);
+		query.setParameter(Buchung.QueryParameterBuchungsDatum, buchungsDatum);
+		Collection<Buchung> cl = query.getResultList();
+
+		Iterator<Buchung> it = cl.iterator();
+		while (it.hasNext()) {
+			Buchung buchung = it.next();
+			BuchungdetailDto[] details = getBuchenFac()
+					.buchungdetailsFindByBuchungIId(buchung.getIId());
+			for (int i=0; i<details.length; i++) {
+				if (details[i].getIAusziffern() == null) {
+					String key = getKeyForAZ(buchung, details[i]);
+					System.out.println(key + " ");
+					if (hmAZ.containsKey(key)) {
+						details[i].setIAusziffern(hmAZ.get(key));
+						updateBuchungdetail(details[i], theClientDto);
+						System.out.println("Update: " + key + " " + hmAZ.get(key).toString());
+					}
+				}
+			}
+		}
+	}
+	
 	public boolean isKontoMitEBKonsistent(Integer kontoIId, int geschaeftsjahr,
 			TheClientDto theClientDto) {
 		Konto konto = em.find(Konto.class, kontoIId);
@@ -3074,29 +3101,71 @@ public class BuchenFacBean extends Facade implements BuchenFac {
 		Session session = null;
 		try {
 			session = FLRSessionFactory.getFactory().openSession();
-			String queryString = "SELECT COUNT(*) FROM FLRFinanzBuchungDetail o"
+//			String queryString = "SELECT COUNT(*) FROM FLRFinanzBuchungDetail o"
+//					+ " WHERE o.konto_i_id= :kontoiid"
+//					+ " AND o.flrbuchung.t_storniert IS null"
+//					+ " AND o.flrbuchung.d_buchungsdatum >= :pVon AND o.flrbuchung.d_buchungsdatum < :pEnd"
+//					+ " AND o.flrbuchung.t_anlegen >= :pTEbAnlegen";
+			String queryString = "SELECT o.flrbuchung.i_id FROM FLRFinanzBuchungDetail o"
 					+ " WHERE o.konto_i_id= :kontoiid"
 					+ " AND o.flrbuchung.t_storniert IS null"
+					+ " AND o.flrbuchung.geschaeftsjahr_i_geschaeftsjahr = :pIGeschaeftsjahr"
 					+ " AND o.flrbuchung.d_buchungsdatum >= :pVon AND o.flrbuchung.d_buchungsdatum < :pEnd"
 					+ " AND o.flrbuchung.t_anlegen >= :pTEbAnlegen";
 
 			org.hibernate.Query query = session.createQuery(queryString);
 			query.setParameter("kontoiid", kontoIId);
+			query.setParameter("pIGeschaeftsjahr", geschaeftsjahr) ;
 			query.setParameter("pVon", tVonbis[0]);
 			query.setParameter("pEnd", tVonbis[1]);
 			query.setParameter("pTEbAnlegen", konto.getTEBAnlegen());
 
 			List<?> results = query.list();
-			if (results.size() != 0) {
-				Long anzahl = (Long) results.get(0);
-				return anzahl.longValue() == 0;
+			if(results.size() > 0) {
+				Integer[] intArray = results.toArray(new Integer[0]) ;
+				String s = Arrays.toString(intArray) ;
+				myLogger.warn("KontoId " + kontoIId + " im GJ " + geschaeftsjahr + " hat inkonsistente BuchungIds: " + s);
 			}
+			return results.size() == 0 ;
+//			
+//			if (results.size() != 0) {
+//				Long anzahl = (Long) results.get(0);
+//				return anzahl.longValue() == 0;
+//			}
 		} finally {
 			if (session != null)
 				session.close();
 		}
 
-		return false;
+//		return false;
+	}
+	
+	public BigDecimal getAktuellenSaldoVonKonto(Integer kontoIId) {
+		org.hibernate.Query query = FLRSessionFactory.getFactory().openSession().createQuery(
+				"SELECT SUM(CASE WHEN bd.buchungdetailart_c_nr LIKE 'HABEN%' THEN -bd.n_betrag ELSE bd.n_betrag END) " +
+				"FROM FLRFinanzBuchungDetail bd " +
+				"WHERE bd.konto_i_id = :konto AND bd.flrbuchung.t_storniert IS NULL AND " +
+				"bd.flrbuchung.d_buchungsdatum <= :datum");
+		query.setParameter("konto", kontoIId);
+		query.setParameter("datum", getTimestamp());
+		List<?> list = query.list();
+		if(list.size() == 0) return BigDecimal.ZERO;
+		return (BigDecimal)list.get(0);
+	}
+
+	public BigDecimal getAktuellenSaldoVonKontoFuerGeschaeftsjahr(Integer kontoIId, Integer geschaftsjahrIId) {
+		org.hibernate.Query query = FLRSessionFactory.getFactory().openSession().createQuery(
+				"SELECT SUM(CASE WHEN bd.buchungdetailart_c_nr LIKE 'HABEN%' THEN -bd.n_betrag ELSE bd.n_betrag END) " +
+				"FROM FLRFinanzBuchungDetail bd " +
+				"WHERE bd.konto_i_id = :konto AND bd.flrbuchung.t_storniert IS NULL AND " +
+				"bd.flrbuchung.d_buchungsdatum <= :datum AND " +
+				"bd.flrbuchung.geschaeftsjahr_i_geschaeftsjahr = :geschaeftsjahr");
+		query.setParameter("konto", kontoIId);
+		query.setParameter("datum", getTimestamp());
+		query.setParameter("geschaeftsjahr", geschaftsjahrIId);
+		List<?> list = query.list();
+		if(list.size() == 0) return BigDecimal.ZERO;
+		return (BigDecimal)list.get(0);
 	}
 
 }

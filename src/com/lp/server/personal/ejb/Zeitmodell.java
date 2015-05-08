@@ -1,7 +1,7 @@
 /*******************************************************************************
  * HELIUM V, Open Source ERP software for sustained success
  * at small and medium-sized enterprises.
- * Copyright (C) 2004 - 2014 HELIUM V IT-Solutions GmbH
+ * Copyright (C) 2004 - 2015 HELIUM V IT-Solutions GmbH
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published 
@@ -60,12 +60,45 @@ public class Zeitmodell implements Serializable {
 	@Column(name = "B_DYNAMISCH")
 	private Short bDynamisch;
 
+	@Column(name = "B_FEIERTAGSSOLL_ADDIEREN")
+	private Short bFeiertagssollAddieren;
+
+	@Column(name = "N_MAXIMALES_WOCHENIST")
+	private BigDecimal nMaximalesWochenist;
+
+	public BigDecimal getNMaximalesWochenist() {
+		return nMaximalesWochenist;
+	}
+
+	public void setNMaximalesWochenist(BigDecimal nMaximalesWochenist) {
+		this.nMaximalesWochenist = nMaximalesWochenist;
+	}
+
+	public Short getBFeiertagssollAddieren() {
+		return bFeiertagssollAddieren;
+	}
+
+	public void setBFeiertagssollAddieren(Short bFeiertagssollAddieren) {
+		this.bFeiertagssollAddieren = bFeiertagssollAddieren;
+	}
+
 	public Short getBDynamisch() {
 		return bDynamisch;
 	}
 
 	public void setBDynamisch(Short bDynamisch) {
 		this.bDynamisch = bDynamisch;
+	}
+
+	@Column(name = "B_FIXEPAUSE_TROTZKOMMTGEHT")
+	private Short bFixepauseTrotzkommtgeht;
+
+	public Short getBFixepauseTrotzkommtgeht() {
+		return bFixepauseTrotzkommtgeht;
+	}
+
+	public void setBFixepauseTrotzkommtgeht(Short bFixepauseTrotzkommtgeht) {
+		this.bFixepauseTrotzkommtgeht = bFixepauseTrotzkommtgeht;
 	}
 
 	@Column(name = "T_AENDERN")
@@ -121,7 +154,8 @@ public class Zeitmodell implements Serializable {
 
 	public Zeitmodell(Integer id, String mandant2, String nr,
 			Integer personalIIdAendern2, Double fUrlaubstageprowoche,
-			Short bDynamisch, Integer iMinutenabzug) {
+			Short bDynamisch, Integer iMinutenabzug,
+			Short bFeiertagssollAddieren, Short bFixepauseTrotzkommtgeht) {
 		setIId(id);
 		setMandantCNr(mandant2);
 		setCNr(nr);
@@ -132,6 +166,8 @@ public class Zeitmodell implements Serializable {
 		setFUrlaubstageprowoche(fUrlaubstageprowoche);
 		setBDynamisch(bDynamisch);
 		setIMinutenabzug(iMinutenabzug);
+		setBFeiertagssollAddieren(bFeiertagssollAddieren);
+		setBFixepauseTrotzkommtgeht(bFixepauseTrotzkommtgeht);
 	}
 
 	public Integer getIId() {
